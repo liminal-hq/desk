@@ -4,6 +4,19 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 use rt::{dpmi, env, println, timer, vga};
 
+static mut BEFORE: (u16, u32) = (0, 0);
+
+/// Registered first, so it runs last: says whether exit left the machine as it was found.
+fn report() {
+    // SAFETY: single-threaded; BEFORE was set before this was registered.
+    let before = unsafe { BEFORE };
+    let back = dpmi::get_pm_vector(8).unwrap() == before && vga::get_mode() == 0x03;
+    println!(
+        "hw: after the clean-up list the timer vector and text mode are back: {}",
+        back
+    );
+}
+
 pub fn main() -> i32 {
     let args = env::args();
     let (maj, min, _, _, master, slave) = dpmi::version();
@@ -63,6 +76,9 @@ pub fn main() -> i32 {
 
     // The interrupt left hooked on purpose when asked: the exit path must put it back.
     if args.first().map(alloc::string::String::as_str) == Some("leave-hooked") {
+        // SAFETY: single-threaded, before the hook.
+        unsafe { BEFORE = before };
+        rt::cleanup::register(report);
         timer::hook().expect("hook");
         vga::enter_mode13();
         println!("hw: exiting with the timer hooked and mode 13h set");

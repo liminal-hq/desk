@@ -83,8 +83,9 @@ echo "$out | status $status" | tail -2
 step "Exit with the timer hooked and mode 13h set: the clean-up list runs on exit"
 run dist/d0 HW.EXE leave-hooked
 [ "$status" = 0 ] || fail "HW.EXE leave-hooked exited with status $status"
-case "$out" in *'exiting with the timer hooked and mode 13h set') ;; *) fail "unexpected output: $out" ;; esac
-echo "ok"
+case "$out" in *'exiting with the timer hooked and mode 13h set'*) ;; *) fail "unexpected output: $out" ;; esac
+case "$out" in *'the timer vector and text mode are back: true') ;; *) fail "exit did not put the machine back: $out" ;; esac
+echo "$out" | tail -2
 
 step "Allocation failure is a panic"
 run dist/d0 HELLO.EXE oom
