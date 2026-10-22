@@ -1,10 +1,12 @@
 # Desk SDK
 
-The C ABI that `DESKCORE.EXE` exports to apps. Every function is `extern "C"`, cdecl, and takes and returns only integers, pointers and lengths. Handles are `u32`; `0` is never a valid handle. Strings are UTF-8 with a length, never NUL-terminated across the boundary. Rust apps use the `desk-sdk` crate, which wraps these in safe types.
+The C ABI that `DESKCORE.EXE` offers to apps. Every function is `extern "C"`, cdecl, and takes and returns only integers, pointers and lengths. Handles are `u32`; `0` is never a valid handle. Strings are UTF-8 with a length, never NUL-terminated across the boundary. Rust apps use the `desk-sdk` crate, which wraps these in safe types.
+
+The core does not export these to a linker: it registers them in a table with `dlregsym`, and `dlopen` resolves a module's imports from that table by name. In COFF every C symbol has a leading underscore (`desk_log` is `_desk_log`), which matters in two places: the table's names, and `dlsym`. The spike `s1-dxe3` ([`S1-DXE3.md`](S1-DXE3.md)) proved this route with `desk_log`, `desk_alloc`, `desk_free`, `desk_window_new` (a stub) and `desk_panic`; every other function below is still a design.
 
 ## An app's entry points
 
-An app's `APP.DXE` exports three symbols:
+An app's `APP.DXE` exports three symbols, found with `dlsym(handle, "_app_start")` and so on (the leading underscore is part of the name: `dlsym(handle, "app_start")` returns null):
 
 ```c
 int  app_start(u32 app, const char *args, u32 args_len);   /* 0 = started */
@@ -12,7 +14,20 @@ void app_event(u32 app, const DeskEvent *e);               /* one event at a tim
 void app_stop(u32 app);                                    /* free everything */
 ```
 
-`DeskEvent` is the one struct shared by pointer (never by value): `{ u32 kind; u32 window; u32 control; i32 x; i32 y; u32 key; u32 mods; u32 data; }`. Kinds: `open_file`, `close`, `paint`, `mouse_down`, `mouse_up`, `mouse_move`, `key`, `char`, `menu`, `control`, `timer`, `resize`, `focus`, `blur`, `clipboard`, `settings_changed`.
+`DeskEvent` is the one struct shared by pointer (never by value): `{ u32 kind; u32 window; u32 control; i32 x; i32 y; u32 key; u32 mods; u32 data; }` (passed by pointer to a module in the spike and read intact). Kinds: `open_file`, `close`, `paint`, `mouse_down`, `mouse_up`, `mouse_move`, `key`, `char`, `menu`, `control`, `timer`, `resize`, `focus`, `blur`, `clipboard`, `settings_changed`.
+
+## Memory, logging and failure
+
+```c
+void *desk_alloc(size_t size);                  /* 8-byte aligned, NULL if there is none */
+void  desk_free(void *ptr);
+void  desk_log(const char *text, size_t len);   /* one line to the core's log (Inspector) */
+void  desk_panic(const char *msg, size_t len);  /* never returns */
+```
+
+An app's heap is the core's: a Rust app's global allocator forwards to `desk_alloc` and `desk_free`, so the core can count what each app holds and free all of it when the app is unloaded or crashes (the spike reclaimed the six blocks a panicking module held). Apps do not call `malloc` themselves. `memcpy`, `memset`, `memmove` and `memcmp` are the C library's and are linked into the module from `libc.a` (a module's `dxe3gen` line names `libc.a` and `libgcc.a` by path), not imported.
+
+`desk_panic` is what a Rust app's panic handler calls with the formatted message. The core does not return to the app: it unwinds to the frame that called into it, marks the app crashed, unloads it, closes its windows and shows the toast. The core does this for every call it makes into an app.
 
 ## Windows
 
@@ -181,9 +196,14 @@ u32  desk_ticks(void);                           /* ms since start */
 void desk_now(u32 *date, u32 *time);             /* BCD, from INT 1Ah */
 ```
 
+## Building and loading an app
+
+A Rust app is a `staticlib` built for `core/dos.json` with `-Zbuild-std`, `opt-level = "s"`, **LTO** (required: without it the module is 193 KB and does not load) and `panic = "abort"`, converted by `tools/coff2go32.py`, unpacked to its one object and linked with `dxe3gen -o APP.DXE -E _app_ -U <object> <libgcc.a> <libc.a>`. A module whose imports are not all in the core's table is refused by `dlopen`, which names the first missing symbol. One `.DXE` file is one instance: loading a file that is already loaded returns the same module with the same static data, so an app that wants several windows opens several windows. `S1-DXE3.md` has the exact commands, sizes and the failures on the way.
+
 ## Rules
 
 - Never allocate in an interrupt handler; the SDK never calls an app from one.
 - Never touch the hardware. `desk_opl_write` and `desk_palette_lend` are the only ways past the Desk, and both act only for the focused app.
 - Use integers in pixel loops. The x87 is set to 53-bit precision at start and must not be changed.
-- An app that panics is unloaded; save often with `desk_setting_put` if it matters.
+- An app that panics is unloaded; save often with `desk_setting_put` if it matters. A CPU fault in an app (a divide error, a wild pointer to an unmapped page) is turned into the same unload by signal handlers the core installs around every call. A **stack overflow cannot be recovered** and takes the whole Desk down, so apps do not recurse without a bound and keep their frames small.
+- All apps share the core's one address space: nothing stops an app writing to the core's memory. The unload on a crash is not a sandbox.

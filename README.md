@@ -42,7 +42,7 @@ The full list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), and [`docs/OPEN-Q
 | `core` | The shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
 | `c` | The hardware layer in C for DJGPP; today `main`, result output and the panic exit |
 | `launcher` | `DESK.COM`, the real-mode launcher (empty until the handoff spike) |
-| `sdk` | The app interface (empty until the first spike settles how apps load) |
+| `sdk` | The app interface (empty until milestone 2; the first spike settled that apps are DXE3 modules, `docs/S1-DXE3.md`) |
 | `spikes` | Experiments that decide the architecture |
 | `tests/dos` | Test programs of our own for the headless DOS runs |
 | `tools` | Repository checks, the DOS build pipeline (setup, fetch, build, object converter, headless DOSBox runner) and the banner builder |
