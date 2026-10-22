@@ -133,7 +133,7 @@ Small, testable and in order. Each track's list starts from what exists.
 
 1. The walking skeleton (open as PR #3 at the time of writing): a build that runs headless in DOSBox and produces a frame.
 2. The DXE3 spike (s1-dxe3; the result is in, pull request #4: yes, with limits): a Rust module loaded into the core, calling back into it.
-3. **d0 Rust-DOS** (planned): a Rust-only DOS program with its own runtime, run headless in DOSBox; if it works, retire the C layer and `coff2go32.py`.
+3. **d0 Rust-DOS** (done, pull request #7: yes): a Rust-only DOS program with its own runtime, linked by `rust-lld` and packed by a small script, runs headless in DOSBox under CWSDPMI with no gcc, libc or crt0; retiring the C layer and `coff2go32.py` is the next decision.
 4. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`), moving into the shared Rust drivers if d0 works.
 5. Shell: compositor, windows, launcher bar, cursor, keyboard focus.
 6. The handoff to DOS programs and back.

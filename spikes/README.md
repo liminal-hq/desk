@@ -3,7 +3,7 @@
 Small experiments that decide the architecture. Spikes s1 to s5 below belong to the hosted track (Desk on DOS). Native-track spikes will be listed here as they start; the first is **n0 boot**: a bootable Rust kernel in QEMU. Each spike lives in its own folder and ends with a written result in `docs/` (what worked, what did not, what it changes):
 
 - **s1-dxe3**: can Rust code run as a DXE3 module that calls back into the core? The result is in (pull request #4, on the spike branch, `docs/S1-DXE3.md`): yes, with limits.
-- **d0-rust-dos** (planned, hosted track): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld` and packed with CWSDPMI's stub, run headless in DOSBox; if it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
+- **d0-rust-dos** (done, hosted track; pull request #7, `docs/D0-RUST-DOS.md`: yes, a pure Rust DOS program with no gcc, no libc and no crt0 runs under CWSDPMI): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld` and packed with CWSDPMI's stub, run headless in DOSBox; if it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
 - **s2-vbe**: VBE 2.0 linear frame buffer and VGA mode 12h from Rust.
 - **s3-mouse**: INT 33h from Rust.
 - **s4-handoff**: `DESK.COM` hands the machine to a real-mode program and takes it back.

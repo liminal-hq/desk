@@ -87,7 +87,7 @@ Costs to weigh:
 | hosted walking skeleton | Hosted | Scott Morris | PR #3 | done: Rust `no_std` plus a C layer, run headless in DOSBox |
 | s1-dxe3 | Hosted | Scott Morris | PR #4 (on PR #3) | done: Rust modules as DXE3 files, yes with limits (`docs/S1-DXE3.md`) |
 | native walking skeleton | Native | Scott Morris | PR #6 | done: NASM boot sector and a Rust kernel in QEMU with a 486 CPU (`docs/NATIVE-BOOT.md`) |
-| d0-rust-dos | Hosted | Scott Morris | branch `spike/d0-rust-dos` (on PR #3), not yet a PR | in progress; result in `docs/D0-RUST-DOS.md` once it lands |
+| d0-rust-dos | Hosted | Scott Morris | PR #7 (on PR #3) | done: yes, a pure Rust DOS program with no gcc, libc or crt0 (a `rust-lld` link, a 139-line packer and a roughly 1,600-line runtime, `docs/D0-RUST-DOS.md`); next: a freestanding ELF target, `rt` as a top-level crate, Rust drivers |
 | s-std-stubs | Any | Not assigned | None | planned: build `std` for an unknown OS name and measure |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |
