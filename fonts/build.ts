@@ -6,7 +6,7 @@
 //
 // usage: bun build.ts                      write every face to generated/
 //        bun build.ts --check              rebuild in memory and fail if generated/ is stale
-//        bun build.ts --specimen <file>    also write the specimen page (glyph charts, samples, editor)
+//        bun build.ts --site <dir>         also write the specimen site and its publishing manifest to <dir>
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -98,12 +98,18 @@ if (import.meta.main) {
     }
     console.log(`fonts: wrote ${files.map((f) => f.name).join(', ')}`);
   }
-  const at = args.indexOf('--specimen');
+  const at = args.indexOf('--site');
   if (at >= 0) {
     const target = args[at + 1];
-    if (!target) throw new Error('--specimen needs a file name');
-    const { specimen } = await import('./src/specimen');
-    writeFileSync(target, specimen(files.filter((f) => !f.name.startsWith('emoji/'))));
-    console.log(`fonts: wrote the specimen to ${target}`);
+    if (!target) throw new Error('--site needs a directory');
+    const { manifest, site } = await import('./src/site/build');
+    const pages = site(files);
+    for (const f of pages) {
+      mkdirSync(dirname(join(target, f.path)), { recursive: true });
+      writeFileSync(join(target, f.path), f.data);
+    }
+    writeFileSync(join(target, 'manifest.json'), `${JSON.stringify(manifest(pages), null, 2)}\n`);
+    const total = pages.reduce((n, f) => n + f.data.length, 0);
+    console.log(`fonts: wrote the site to ${target}: ${pages.length} files, ${(total / 1048576).toFixed(1)} MB, and manifest.json`);
   }
 }
