@@ -14,12 +14,13 @@ import { encodeDfn } from './src/dfn';
 import { dosGlyphs } from './src/dos';
 import { buildEmoji } from './src/emoji/build';
 import { pixelOtfWithEmoji } from './src/emoji/faces';
+import { modernOtfWithEmoji } from './src/emoji/vector/font';
 import { assemble } from './src/face';
 import { FACES } from './src/faces';
 import { namesOf } from './src/names';
 import { buildOtf } from './src/otf';
 import { assembleModern } from './src/modern/assemble';
-import { buildModernOtf, buildModernTtf } from './src/modern/files';
+import { buildModernTtf } from './src/modern/files';
 import { STYLES } from './src/modern/kit';
 import { buildTtf } from './src/ttf';
 
@@ -35,7 +36,8 @@ export function buildModern(): { name: string; data: Uint8Array }[] {
   return STYLES.flatMap((s) => {
     const glyphs = assembleModern(s);
     return [
-      { name: `${s.file}.otf`, data: buildModernOtf(s, glyphs) },
+      // The OpenType files also carry the monochrome vector emoji (src/emoji/vector/font.ts); the TrueType files do not.
+      { name: `${s.file}.otf`, data: modernOtfWithEmoji(s, glyphs) },
       { name: `${s.file}.ttf`, data: buildModernTtf(s, glyphs) },
     ];
   });
