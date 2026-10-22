@@ -66,12 +66,12 @@ export function checksum(data: Uint8Array, from = 0, length = data.length): numb
  * Assembles an sfnt: the table directory in tag order, each table 4-byte aligned with its checksum,
  * and `head.checkSumAdjustment` set over the whole file.
  */
-export function sfnt(tables: Record<string, Uint8Array>): Uint8Array {
+export function sfnt(tables: Record<string, Uint8Array>, version = 0x00010000): Uint8Array {
   const tags = Object.keys(tables).sort();
   const n = tags.length;
   let pow = 1;
   while (pow * 2 <= n) pow *= 2;
-  const dir = new Buf().u32(0x00010000).u16(n).u16(pow * 16).u16(Math.log2(pow)).u16(n * 16 - pow * 16);
+  const dir = new Buf().u32(version).u16(n).u16(pow * 16).u16(Math.log2(pow)).u16(n * 16 - pow * 16);
   let offset = 12 + 16 * n;
   const body = new Buf();
   for (const tag of tags) {

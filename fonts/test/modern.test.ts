@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test';
 import * as ot from 'opentype.js';
 import { BLOCKS, BOX, REQUIRED } from '../src/charset';
 import { assembleModern, LINE, type MGlyph } from '../src/modern/assemble';
-import { buildModernOtf, buildModernTtf } from '../src/modern/files';
+import { buildModernOtf, buildModernTtf, modernGlyphName } from '../src/modern/files';
 import { type Contour, contourArea, extremaParams, type P, sampleContour } from '../src/modern/geom';
 import { STYLES } from '../src/modern/kit';
 import { cmapLookup, pathArea } from './sfnt';
@@ -58,7 +58,8 @@ for (const s of STYLES) {
   const name = `${s.family}${s.bold ? ' Bold' : ''}${s.italic ? ' Italic' : ''}`;
   describe(name, () => {
     const glyphs = assembleModern(s);
-    const by = new Map(glyphs.map((g) => [g.ch, g]));
+    // The encoded glyphs by character; ligatures and alternates (no code point) are reached by name.
+    const by = new Map(glyphs.filter((g) => g.cp >= 0).map((g) => [g.ch, g]));
 
     test('covers code page 1252, French, the shell symbols and (Mono) box drawing and blocks', () => {
       const want = s.kind === 'mono' ? REQUIRED : REQUIRED.filter((c) => !BOX.includes(c) && !BLOCKS.includes(c));
@@ -170,12 +171,19 @@ for (const s of STYLES) {
       const ttfBytes = buildModernTtf(s, glyphs);
       const ttf = ot.parse(ttfBytes.slice().buffer);
       const win = cmapLookup(ttfBytes, 3, 1);
+      const named = (f: ot.Font): Map<string, ot.Glyph> => {
+        const m = new Map<string, ot.Glyph>();
+        for (let i = 0; i < f.glyphs.length; i++) m.set(f.glyphs.get(i).name as string, f.glyphs.get(i));
+        return m;
+      };
+      const otfNamed = named(otf);
+      const ttfNamed = named(ttf);
       for (const g of glyphs) {
-        const a = otf.charToGlyph(g.ch);
+        const a = g.cp >= 0 ? otf.charToGlyph(g.ch) : (otfNamed.get(modernGlyphName(g)) as ot.Glyph);
         expect(a.index).toBeGreaterThan(0);
         expect(a.advanceWidth).toBe(g.adv);
         if (g.cp > 0xffff) continue;
-        const b = ttf.glyphs.get(win.glyph(g.cp));
+        const b = g.cp >= 0 ? ttf.glyphs.get(win.glyph(g.cp)) : (ttfNamed.get(modernGlyphName(g)) as ot.Glyph);
         expect(b.advanceWidth).toBe(g.adv);
         const area = g.contours.reduce((sum, c) => sum + contourArea(c), 0);
         const ca = pathArea(a.path);
