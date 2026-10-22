@@ -1,0 +1,18 @@
+entry: eflags=00003212 (DF=0 IF=1)
+entry: cs=00a7 ds=00af es=00af fs=008f gs=0000 ss=008f
+entry: x87 control word 0x037f, status word 0x0000
+selector cs: 00a7 base Some(4194304) limit 0x4ffff lar 0x40fb
+selector ds: 00af base Some(4194304) limit 0xffffffff lar 0xc0f3
+selector es: 00af base Some(4194304) limit 0xffffffff lar 0xc0f3
+selector fs: 008f base Some(6672) limit 0xffff lar 0x40f2
+selector gs: 0000 base None limit 0x0 lar 0x0000
+selector ss: 008f base Some(6672) limit 0xffff lar 0x40f2
+stubinfo: magic "go32stub, v 2.05" size 0x54 minstack 0x80000 memory_handle 0x400000 initial_size 0x50000
+stubinfo: minkeep 0x4000 ds_selector 0x8f ds_segment 0x1a1 psp_selector 0x97 cs_selector 0x87 env_size 0x35
+stubinfo: basename "" argv0 "" dpmi_server "CWSDPMI.EXE"
+image base (linear) 0x400000, psp base Ok(6416)
+command tail "one two"
+args ["one", "two"]
+environment: 2 variables, first Some("COMSPEC")
+program path Some("C:\\CTX.EXE")
+x87 control word now 0x037f

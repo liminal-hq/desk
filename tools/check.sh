@@ -51,4 +51,7 @@ esac
 grep -q 'DESK-SKELETON PANIC' dist/OUT.TXT || fail "the panic report is missing from OUT.TXT"
 echo "$actual (exit status $status)"
 
+step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
+spikes/d0-rust-dos/check.sh
+
 printf '\nAll checks passed.\n'

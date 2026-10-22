@@ -1,0 +1,5 @@
+panicky: vector changed by the hook: true
+panicky: about to index 5 of 3
+panicky: IRQ 0 vector restored by the clean-up list: true
+RT PANIC: panicked at progs/src/panicky.rs:L:C:
+index out of bounds: the len is 3 but the index is 5

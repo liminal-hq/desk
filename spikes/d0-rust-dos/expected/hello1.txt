@@ -1,0 +1,22 @@
+D0-HELLO ok
+args: 0 []
+comspec: true
+path: true
+console: AH=09h ok
+alloc: squares=10 sum=385 big=385001155
+alloc: 1 MB vec of 1000000 bytes, byte 999999 = 63
+alloc: churn kept 142500 bytes
+float: sqrt(385)=19.621417 sin(1)=0.841471 cos(1)=0.540302 atan2(1,1)*4=3.141593
+float: 0.3333333333333333 6.02214076e23 0.3
+float: control word 0x037f
+dpmi: version 0.90
+dpmi: 1 MiB block write/read/free ok
+dpmi: real-mode vector 0201h/0200h round trip true
+dpmi: protected-mode vector 0205h/0204h round trip true
+dpmi: lock/unlock true
+dpmi: simulated real-mode INT 10h reports mode 0x03, as the direct call does: true
+dpmi: direct INT 21h AH=40h with a pointer: DOS reports 4 bytes, file holds the buffer: false
+file: wrote 300000 bytes, length 300000
+file: one read call: 300000 bytes, match true
+file: 4 KiB reads: 300000 bytes, match true
+file: missing file gives Some(DosError(2))
