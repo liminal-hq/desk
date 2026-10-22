@@ -139,6 +139,23 @@ export const VECTOR: Record<string, () => Layer[]> = {
   '😭': () => [...face(), closedEyes(420), L('cyan', union(box(270, 470, 380, 900, 40), box(620, 470, 730, 900, 40))), L('ink', disc(500, 700, 110, 90))],
   '😠': () => [...face(), eyes(430, 46, 70), L('ink', union(line([[250, 300], [420, 360]], 58), line([[750, 300], [580, 360]], 58))), frown(820, 200, 140)],
   '😡': () => [...face('rose', 'roseDark'), eyes(430, 46, 70), L('ink', union(line([[250, 300], [420, 360]], 58), line([[750, 300], [580, 360]], 58))), frown(820, 200, 140)],
+  '🥵': () => [
+    ...face('rose', 'roseDark'),
+    eyes(370, 46, 70),
+    L('ink', disc(500, 650, 175, 160)),
+    L('roseLight', intersection(grow(disc(500, 650, 175, 160), -30), disc(500, 800, 120, 100)), 'hole'),
+    // The sweat sits on the face's edge, where its outline would read as ears in the monochrome glyph.
+    S('cyan', drop(120, 250, 55, 440)),
+    S('cyan', drop(880, 250, 55, 440)),
+  ],
+  '🥶': () => [
+    ...face('blue', 'blueDark'),
+    L('white', intersection(FACE, union(box(0, 0, 1000, 230), poly([290, 220], [370, 220], [330, 330]), poly([460, 220], [540, 220], [500, 360]), poly([630, 220], [710, 220], [670, 320])))),
+    eyes(440, 46, 70),
+    L('ink', box(240, 590, 760, 790, 60)),
+    L('white', box(274, 624, 726, 756, 34), 'hole'),
+    L('ink', union(line([[274, 690], [726, 690]], 26), line([[387, 624], [387, 756]], 24), line([[500, 624], [500, 756]], 24), line([[613, 624], [613, 756]], 24))),
+  ],
   '😎': () => [
     ...face(),
     L('ink', union(box(160, 300, 470, 500, 90), box(530, 300, 840, 500, 90), line([[140, 330], [860, 330]], 60))),

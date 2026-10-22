@@ -874,6 +874,60 @@ export const ART: Art = {
       .....kkkkkk.....
       ................
   `,
+  '🥵': `
+      ................
+      ..c..kkkkkk.....
+      .cwckrrrrrrkk...
+      .cckrwrrrrrrrk..
+      ..kwrrrrrrrrrk.c
+      .krrkrrrrrrkrrkw
+      .krrkrrrrrrkrrkc
+      .krrrrrrrrrrrrk.
+      .krrrrkkkkrrrrk.
+      .krrrkuuuukrrrk.
+      .krrrkurrukrrrk.
+      ..krrkrrrrkrrk..
+      ..krrrkkkkrrrk..
+      ...kkrrrrrrkk...
+      .....kkkkkk.....
+      ................
+  `,
+  '🥶': `
+      ................
+      .....kkkkkk.....
+      ...kkwwwwwwkk...
+      ..kwwwwwwwwwwk..
+      ..kwbwbbwbbwbk..
+      .kbbbbbbbbbbbbk.
+      .kbbkbbbbbbkbbk.
+      .kbbkbbbbbbkbbk.
+      .kbbbbbbbbbbbbk.
+      .kbbkkkkkkkkbbk.
+      .kbbkwkwwkwkbbk.
+      .kbbkkkkkkkkbbk.
+      ..kbbbbbbbbbbk..
+      ...kkbbbbbbkk...
+      .....kkkkkk.....
+      ................
+  `,
+  '🫪': `
+      ................
+      .....kkkkkk.....
+      ...kkooooookk...
+      ..kowwoooooook..
+      ..kwooooooooook.
+      .kookkoooooooonk
+      ..kokkooooooonk.
+      ..koooooooooook.
+      .kooooooookook..
+      kooooooooooonk.k
+      koookokoookonk.k
+      .kokokokokookk..
+      ..koooooooonnk..
+      ...kkooonnnkk...
+      .....kkkkkk.....
+      ................
+  `,
   '🤯': `
       ....kk.kk.kk....
       ...krrkookrrk...
@@ -1266,6 +1320,48 @@ export const FIX12: Art = {
       ..kkoonnkk..
       ....kkkk....
   `,
+  '🥵': `
+      ....kkkk....
+      ..kkrrrrkk.c
+      .krwrrrrrrkc
+      .kwrkrrkrrk.
+      krrrkrrkrrrk
+      krrrrrrrrrrk
+      krrrkkkkrrrk
+      krrkuuuukrrk
+      .krkurrukrk.
+      .krrkrrkrrk.
+      ..kkkkkkkk..
+      ....kkkk....
+  `,
+  '🥶': `
+      ....kkkk....
+      ..kkwwwwkk..
+      .kwwwwwwwwk.
+      .kwbwbbwbwk.
+      kbbkbbbbkbbk
+      kbbkbbbbkbbk
+      kbbbbbbbbbbk
+      kbkkkkkkkkbk
+      kbkwkwkwkkbk
+      .kkkkkkkkkk.
+      ..kkbbbbkk..
+      ....kkkk....
+  `,
+  '🫪': `
+      ....kkkk....
+      ..kkooookk..
+      .kowoooooook
+      .kokkoooonk.
+      .kokkooooonk
+      kooooooooonk
+      kooooookoonk
+      kooooooonk.k
+      kokokokonk.k
+      .kokokoonk..
+      ..kkoonnkk..
+      ....kkkk....
+  `,
   '😤': `
       ....kkkk....
       ..kkooookk..
@@ -1296,4 +1392,72 @@ export const MONO_RULES: Record<string, MonoRule> = {
 
 /** Hand-drawn monochrome grids (`#` and `.`) where no rule gives a readable glyph, by size. */
 export const MONO_HAND: MonoHand = {
+  '🥵': {
+    16: `
+      ................
+      ..#..######.....
+      .#.##......##...
+      .###.........#..
+      ..#..........#.#
+      .#..#......#..##
+      .#..#......#..##
+      .#............#.
+      .#....####....#.
+      .#...######...#.
+      .#...##..##...#.
+      ..#..#....#..#..
+      ..#...####...#..
+      ...##......##...
+      .....######.....
+      ................
+    `,
+    12: `
+      ....####....
+      ..##....##.#
+      .#........##
+      .#..#..#..#.
+      #...#..#...#
+      #..........#
+      #...####...#
+      #..######..#
+      .#.##..##.#.
+      .#..#..#..#.
+      ..########..
+      ....####....
+    `,
+  },
+  '🥶': {
+    16: `
+      ................
+      .....######.....
+      ...##......##...
+      ..#..........#..
+      ..#.#.##.##.##..
+      .#............#.
+      .#..#......#..#.
+      .#..#......#..#.
+      .#............#.
+      .#..########..#.
+      .#..#.#..#.#..#.
+      .#..########..#.
+      ..#..........#..
+      ...##......##...
+      .....######.....
+      ................
+    `,
+    12: `
+      ....####....
+      ..##....##..
+      .#........#.
+      .#.#.##.#.#.
+      #..#....#..#
+      #..#....#..#
+      #..........#
+      #.########.#
+      #.#.#.#.##.#
+      .##########.
+      ..##....##..
+      ....####....
+    `,
+  },
 };
