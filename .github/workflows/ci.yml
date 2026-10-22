@@ -1,4 +1,5 @@
-# Runs tools/check.sh: licence headers, and the markdown style and link check. The DOS build and tests join it as the code arrives.
+# Runs tools/check.sh: licence headers, the markdown style and link check, and the native boot test. The DOS build and tests join
+# it as the code arrives.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -33,5 +34,13 @@ jobs:
       # The checkout is owned by another user inside the container, and git refuses to list its files without this.
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The native boot test needs QEMU and NASM, which the image does not carry yet. This adds roughly half a minute, mostly the
+      # apt download; the install is skipped when the image has them, so it can go once they move into ci-dos.
+      - name: Install QEMU and NASM
+        run: |
+          if ! command -v qemu-system-i386 > /dev/null || ! command -v nasm > /dev/null; then
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends qemu-system-x86 nasm
+          fi
       - name: Check
         run: tools/check.sh
