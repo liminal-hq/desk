@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Validates the emoji files with third-party tools: fontTools reads the colour fonts and checks COLR, CPAL and the
 # cmaps, OTS sanitises them, FreeType renders every colour emoji and every monochrome emoji glyph in the faces and
-# compares the pixels with the .DEM files, and the era TrueType files are checked to carry no emoji beyond their own.
+# compares the pixels with the .DEM files, the vector emoji are checked in colour and in the outline faces, and the
+# era TrueType files are checked to carry no emoji beyond their own.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -131,16 +132,19 @@ def check_colour_font(gen, path, dem):
     colr, cpal = font["COLR"], font["CPAL"]
     if colr.version != 0:
         fail(f"{name}: COLR version {colr.version}")
-    if cpal.version != 0 or len(cpal.palettes) != 1 or cpal.numPaletteEntries != 16:
-        fail(f"{name}: CPAL should be version 0 with one palette of 16")
+    pixel = "pixel" in name
+    if cpal.version != 0 or len(cpal.palettes) != 1 or (pixel and cpal.numPaletteEntries != 16):
+        fail(f"{name}: CPAL should be version 0 with one palette (of 16 for the pixel font)")
     pal = ["#%02x%02x%02x" % (c.red, c.green, c.blue) for c in cpal.palettes[0]]
-    if pal != PALETTE:
+    if pixel and pal != PALETTE:
         fail(f"{name}: CPAL is not the Desk 16-colour set: {pal}")
+    if any(c.alpha != 255 for c in cpal.palettes[0]):
+        fail(f"{name}: CPAL has colours that are not opaque")
     order = font.getGlyphOrder()
     bad = []
     for base, layers in colr.ColorLayers.items():
         for layer in layers:
-            if layer.name not in order or not (layer.colorID < 16 or layer.colorID == 0xFFFF):
+            if layer.name not in order or not (layer.colorID < cpal.numPaletteEntries or layer.colorID == 0xFFFF):
                 bad.append(base)
     if bad:
         fail(f"{name}: bad layers in {bad[:10]}")
@@ -161,7 +165,8 @@ def check_colour_font(gen, path, dem):
     if len(family) > 31 or "Open Font License" not in licence:
         fail(f"{name}: family '{family}' or licence '{licence[:40]}'")
     ok(f"{name}: fontTools reads it; {len(colr.ColorLayers)} colour glyphs, "
-       f"{sum(len(v) for v in colr.ColorLayers.values())} layers, {len(order)} glyphs; CPAL is the Desk set; "
+       f"{sum(len(v) for v in colr.ColorLayers.values())} layers, {len(order)} glyphs; CPAL of {cpal.numPaletteEntries}"
+       f"{' (the Desk set)' if pixel else ''}; "
        f"cmap {sorted(subtables.items())}")
 
 
@@ -268,6 +273,38 @@ def main(gen, proof_dir=None):
                 fail(line + f"; differ: {''.join(wrong[:20])}")
             else:
                 ok(line)
+
+    vector = os.path.join(emoji_dir, "desk-emoji.ttf")
+    if os.path.exists(vector):
+        vfont = TTFont(vector)
+        vcps = sorted(cp for cp, g in vfont.getBestCmap().items() if g in vfont["COLR"].ColorLayers)
+        print(f"\n== Desk Emoji: {len(vcps)} vector emoji in colour, and in the outline faces' OpenType files")
+        face = freetype.Face(vector)
+        face.set_pixel_sizes(0, 48)
+        grey = []
+        for cp in vcps:
+            got = colour_render(face, cp, 40)
+            # A colour rendering has opaque pixels that are not grey.
+            if not got or not any(a == 255 and not (r == g == b) for (r, g, b, a) in got.values()):
+                grey.append(chr(cp))
+        if grey:
+            fail(f"desk-emoji.ttf: FreeType did not render in colour: {''.join(grey[:20])}")
+        else:
+            ok(f"desk-emoji.ttf at 48 px: {len(vcps)}/{len(vcps)} emoji render through COLR in colour")
+        for base in ("desk-sans", "desk-sans-bold", "desk-mono", "desk-mono-bold", "desk-serif", "desk-serif-bold"):
+            otf = TTFont(os.path.join(gen, f"{base}.otf"))
+            sub = {(t.platformID, t.platEncID): t.format for t in otf["cmap"].tables}
+            full = otf["cmap"].getcmap(3, 10)
+            missing = [hex(cp) for cp in vcps if not full or cp not in full.cmap]
+            ttf = TTFont(os.path.join(gen, f"{base}.ttf"))
+            in_ttf = [hex(cp) for cp in vcps if cp in ttf.getBestCmap()]
+            if sub.get((3, 10)) != 12 or sub.get((0, 4)) != 12 or missing or in_ttf:
+                fail(f"{base}: cmap {sub}; missing from the .otf {missing[:10]}; in the .ttf {in_ttf[:10]}")
+            else:
+                ok(f"{base}.otf reaches all {len(vcps)} vector emoji through format 12; {base}.ttf has none")
+            r = subprocess.run([sys.executable, "-m", "ots", os.path.join(gen, f"{base}.otf"), os.devnull], capture_output=True, text=True)
+            if r.returncode != 0:
+                fail(f"{base}.otf: ots-sanitize: {(r.stdout + r.stderr).strip()}")
 
     if proof_dir:
         for path in [p for p in colour_fonts if p.endswith(".ttf")]:
