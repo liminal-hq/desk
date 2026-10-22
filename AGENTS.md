@@ -168,10 +168,11 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
 - `tools/` — repository checks and scripts
+- `fonts/` — the four bitmap faces as pixel grids, and the Bun build that writes them as OTF, TTF and `.DFN` files (`docs/FONTS.md`)
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
+Directories for apps, the installer and the icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
 
 ## Licence and Copyright
 

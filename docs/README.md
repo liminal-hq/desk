@@ -14,5 +14,6 @@ Working design documents for Desk, derived from a design-agent brainstorm that h
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
+| [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
 
 The prototypes and boards the documents point at are in [`../design/`](../design/), kept as reference only.
