@@ -1,6 +1,6 @@
 # Emoji
 
-Desk has its own emoji in two styles. The **pixel** emoji are 399 original pictures at their real Unicode code points, drawn as pixel art in the 16-colour Desk set ([`PALETTE.md`](PALETTE.md)). They come as monochrome glyphs in the OpenType files of the pixel faces, as a colour font, Desk Emoji Pixel, for modern systems, and as `.DEM` files ([`FORMATS.md`](FORMATS.md#dem-colour-emoji)) for the Desk on DOS, all built from the same letter grids in `fonts/src/emoji/pixel/`. The **vector** emoji are 155 of the same set drawn as flat geometric shapes for use beside Desk Sans, Mono and Serif: a colour font, Desk Emoji, and monochrome glyphs in the outline faces' OpenType files (see [Vector emoji](#vector-emoji)). The font build ([`FONTS.md`](FONTS.md)) writes everything, so the forms cannot drift apart.
+Desk has its own emoji in two styles. The **pixel** emoji are 480 original pictures at their real Unicode code points, drawn as pixel art in the 16-colour Desk set ([`PALETTE.md`](PALETTE.md)). They come as monochrome glyphs in the OpenType files of the pixel faces, as a colour font, Desk Emoji Pixel, for modern systems, and as `.DEM` files ([`FORMATS.md`](FORMATS.md#dem-colour-emoji)) for the Desk on DOS, all built from the same letter grids in `fonts/src/emoji/pixel/`. The **vector** emoji are 155 of the same set drawn as flat geometric shapes for use beside Desk Sans, Mono and Serif: a colour font, Desk Emoji, and monochrome glyphs in the outline faces' OpenType files (see [Vector emoji](#vector-emoji)). The font build ([`FONTS.md`](FONTS.md)) writes everything, so the forms cannot drift apart.
 
 ## The set
 
@@ -10,17 +10,17 @@ Every emoji is a single code point with the `Emoji` property in Unicode 17.0, na
 |---|---|---|
 | Computer and media | 38 | 💾 💿 🖥 ⌨ 🖱 🖨 🎮 🔊 🔇 🔔 🔒 🔑 ⏰ |
 | Office and paper | 32 | 📁 📂 📄 📝 📅 📋 📚 ✉ 📌 ✂ 🗑 |
-| Faces | 57 | 🙂 😀 😉 😮 😢 😠 😎 😍 🤔 😴 🥵 🥶 🫪 💀 👽 🤖 |
+| Faces | 111 | 🙂 😀 😉 😮 😢 😠 😎 😍 🤔 😴 🥵 🥶 🫪 🤣 🥰 🤩 🫠 🥹 🤫 🫡 🧐 🤬 🥴 🤒 🤑 💀 👽 🤖 |
 | Hands and body | 22 | 👍 👎 👌 ✌ 👋 👏 🙏 💪 👀 |
-| Hearts and feelings | 20 | ❤ 🧡 💛 💚 💙 💜 💔 💯 💬 💤 |
-| Animals | 32 | 🐶 🐱 🦊 🐻 🐼 🐸 🐧 🐝 🦋 🐟 |
+| Hearts and feelings | 35 | ❤ 🧡 💛 💚 💙 💜 🩵 🩷 🩶 🤎 💔 💘 💝 💌 💋 💯 💬 💤 🫯 |
+| Animals | 44 | 🐶 🐱 🦊 🐻 🐼 🐸 🐧 🐝 🦋 🐟 😺 😻 😿 🙈 🙉 🙊 |
 | Food and drink | 34 | 🍎 🍌 🍕 🍔 🍩 🎂 ☕ 🥤 🍷 |
 | Nature and weather | 33 | ☀ 🌙 ⭐ ✨ ☁ 🌈 ⚡ ❄ 🔥 💧 🍁 🌲 |
 | Activities and objects | 38 | 🏆 🎁 🎈 ⚽ 🎲 🎸 💡 🔧 ⚙ 💎 |
 | Travel and places | 32 | 🚗 🚌 🚲 ✈ 🚀 🛸 ⛵ 🏠 🏁 |
 | Symbols and signs | 61 | ✔ ❌ ⚠ ⛔ ❓ ❗ ⬆ ➡ ▶ ⏸ ⏹ 🔴 🟢 🔵 |
 
-Of the 399, 325 are outside the Basic Multilingual Plane, which matters for the TrueType files (see [Which file to install](#which-file-to-install)).
+Of the 480, 403 are outside the Basic Multilingual Plane, which matters for the TrueType files (see [Which file to install](#which-file-to-install)).
 
 🫪 U+1FAEA distorted face (proposal L2/24-250) is one of the newest emoji, added in Unicode 17.0, so many systems do not have it in their own fonts yet; that is why it matters that the Desk emoji fonts carry it. 🥵 hot face and 🥶 cold face are in the set too, each with a hand-drawn 12 × 12 and a hand-drawn monochrome glyph, because the monochrome rule fills a rose or blue face solid.
 
@@ -30,9 +30,9 @@ Of the 399, 325 are outside the Basic Multilingual Plane, which matters for the 
 |---|---|---|---|---|
 | Core | 40 | drawn | drawn | drawn |
 | Essential | 40 | drawn | drawn | — |
-| Extended | 319 | drawn | derived (280) or a hand fix of the derived grid (39) | — |
+| Extended | 400 | drawn | derived (280) or hand-drawn (120) | — |
 
-Every 16 × 16 is drawn by hand. The 80 core and essential emoji (the shell's pictures, Fizz's set and the commonest faces) have hand-drawn 12 × 12 grids, and the 40 core ones hand-drawn 8 × 8 grids for Desk Small. The other 12 × 12 grids are derived from the 16 × 16 by the rule below, and a hand fix replaces the derived grid where it does not read. There is no derived 8 × 8: removing half the rows and columns of a drawing does not leave a picture, so the 8 × 8 set is the hand-drawn core only.
+Every 16 × 16 is drawn by hand. The 80 core and essential emoji (the shell's pictures, Fizz's set and the commonest faces) have hand-drawn 12 × 12 grids, and the 40 core ones hand-drawn 8 × 8 grids for Desk Small. The other 12 × 12 grids are derived from the 16 × 16 by the rule below, and a hand-drawn grid in `FIX12` replaces the derived one where it does not read; every emoji added since the first set (the faces, cat and monkey faces and hearts from the Gboard list) has one, since a derived 12 × 12 loses a face's features. There is no derived 8 × 8: removing half the rows and columns of a drawing does not leave a picture, so the 8 × 8 set is the hand-drawn core only.
 
 **The 12 × 12 derivation** (`fonts/src/emoji/derive.ts`). Four rows are removed, then four columns, one at a time; nothing is resampled, so every remaining pixel is one the artist drew, in its own colour. First the blank margin goes, from whichever side has more of it so the drawing stays centred. When the margin runs out, the row (or column) removed is the one that differs from its more similar neighbour in the fewest pixels, so runs of repeated rows (the middle of a disc, the side of a box) shrink first and one-pixel outlines and features survive; ties go to the row nearest the middle, then the upper one. Text (🆕 🆒 🆓 🆘), thin diagonals and dense faces are what the rule breaks; those have hand fixes in the category file's `FIX12`.
 
@@ -98,7 +98,7 @@ In each face, the face's own drawing wins where it already has one: the folder a
 
 ### Which file to install
 
-- **Windows 3.1, 95, NT 3.5x and OS/2 Warp:** the `.ttf` faces, pixel and outline, which carry no emoji. 325 emoji are beyond the Basic Multilingual Plane and need a format 12 cmap, which those systems do not read, and adding the rest would change files whose behaviour on those systems is described in [`FONTS.md`](FONTS.md); the era TrueType files are byte-for-byte what they were before the emoji. Those systems have no colour fonts either.
+- **Windows 3.1, 95, NT 3.5x and OS/2 Warp:** the `.ttf` faces, pixel and outline, which carry no emoji. 403 emoji are beyond the Basic Multilingual Plane and need a format 12 cmap, which those systems do not read, and adding the rest would change files whose behaviour on those systems is described in [`FONTS.md`](FONTS.md); the era TrueType files are byte-for-byte what they were before the emoji. Those systems have no colour fonts either.
 - **Windows 10 and 11, Linux, macOS:** install the `.otf` faces for emoji in Desk text (monochrome, in the face's own size and weight), and Desk Emoji Pixel (beside the pixel faces) or Desk Emoji (beside Desk Sans, Mono and Serif) for colour. For colour, put Desk Emoji Pixel before the text face in a font list (`font-family: "Desk Emoji Pixel", "Desk UI"`), or let the system's fallback find it; the text faces' monochrome emoji win wherever the text face comes first.
 - **Browsers:** `@font-face` with `desk-emoji-pixel.ttf` (or `.otf`) and list it first for colour emoji; the pixel faces' `.otf` files give monochrome emoji.
 - **DOS:** the `.DEM` files; the Desk reads the size that matches the text (16 for Desk Fixed, 12 for Desk UI and Title, 8 for Desk Small).
@@ -113,20 +113,20 @@ The palette is defined once (`VCOLOURS` in `kit.ts`): the brand colours of the 1
 
 **Monochrome glyphs** follow the pixel rule, by layer: a layer in a dark or saturated colour is ink; a layer in a light colour (white, light grey, amber, cyan and their light tints) is paper with an ink edge, so a face becomes its outline, eyes and mouth and a page its outline and lines. A drawing can mark a layer as a clean hole (the keys of a keyboard, the check on ✅, the glyph on a media button) or leave a shading layer out. The edge is 64 units in Desk Emoji's base glyphs and in the Regular outline faces, and 120 in the Bold ones, so the emoji in Desk Sans Bold are heavier, like its letters.
 
-**What is drawn:** 155 of the 399 emoji, chosen for value and for what simple geometry can draw well. All of Lt. Fizz's 24 and every shell picture are in it, with the commonest faces and hearts and most of the symbols:
+**What is drawn:** 155 of the 480 emoji, chosen for value and for what simple geometry can draw well. All of Lt. Fizz's 24 and every shell picture are in it, with the commonest faces and hearts and most of the symbols:
 
 | Category | Vector | Of |
 |---|---|---|
 | Symbols and signs | 53 | 61 |
-| Faces | 28 | 57 |
+| Faces | 28 | 111 |
 | Computer and media | 25 | 38 |
 | Nature and weather | 18 | 33 |
-| Hearts and feelings | 14 | 20 |
+| Hearts and feelings | 14 | 35 |
 | Office and paper | 8 | 32 |
 | Activities and objects | 5 | 38 |
 | Food and drink | 2 | 34 |
 | Hands and body, Travel and places | 1 each | 22, 32 |
-| Animals | 0 | 32 |
+| Animals | 0 | 44 |
 
 **What is left out, and why:** animals, food, hands, vehicles, buildings and most objects. Their identity is in organic silhouettes (a cat's head, a hand's fingers, a car's body) that circles and boxes turn into stiff, generic shapes; drawn this way they would read worse than the pixel versions, which already cover them. Where a vector emoji is missing, a font list that names Desk Emoji Pixel after Desk Emoji fills the gap with the pixel drawing. The faces that need hands or props (🤔 🤗 🤠 🥳) and the busy symbols (☯ ♻ ☮) are also out, and so is 🫪: a wobbling outline with mismatched eyes needs freehand curves that circles and boxes cannot draw, so the pixel drawing stands in for it.
 
