@@ -1,4 +1,5 @@
-# Runs tools/check.sh: licence headers, and the markdown style and link check. The DOS build and tests join it as the code arrives.
+# Runs tools/check.sh: licence headers, the markdown style and link check, and the font build check. The DOS build and tests join it
+# as the code arrives.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -33,5 +34,9 @@ jobs:
       # The checkout is owned by another user inside the container, and git refuses to list its files without this.
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The font tools (opentype.js) come from the lockfile; the image carries Bun. Without them tools/check.sh skips the font check.
+      - name: Install the font tools
+        run: bun install --frozen-lockfile
+        working-directory: fonts
       - name: Check
         run: tools/check.sh
