@@ -323,7 +323,7 @@ export function specimen(files: { name: string; data: Uint8Array }[]): string {
     `\n@font-face{font-family:'Desk Fixed DOS';src:url(data:font/otf;base64,${b64(byName.get('desk-fixed-dos.otf') as Uint8Array)}) format('opentype');font-display:block}` +
     STYLES.map(
       (st) =>
-        `\n@font-face{font-family:'${st.family}';src:url(data:font/otf;base64,${b64(byName.get(`${st.file}.otf`) as Uint8Array)}) format('opentype');font-weight:${st.bold ? 700 : 400};font-display:block}`,
+        `\n@font-face{font-family:'${st.family}';src:url(data:font/otf;base64,${b64(byName.get(`${st.file}.otf`) as Uint8Array)}) format('opentype');font-weight:${st.bold ? 700 : 400};font-style:${st.italic ? 'italic' : 'normal'};font-display:block}`,
     ).join('');
   const data = JSON.stringify({ faces: faces.map(({ face, glyphs }) => faceData(face, glyphs)) }).replace(/</g, '\\u003c');
   const client = readFileSync(join(import.meta.dir, 'specimen-client.js'), 'utf8');
