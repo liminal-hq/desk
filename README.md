@@ -45,7 +45,7 @@ The full list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), and [`docs/OPEN-Q
 | `sdk` | The app interface (empty until the first spike settles how apps load) |
 | `spikes` | Experiments that decide the architecture |
 | `tests/dos` | Test programs of our own for the headless DOS runs |
-| `fonts` | The four bitmap faces as pixel grids and their build into OTF, TTF (Square and Round) and `.DFN` files ([`docs/FONTS.md`](docs/FONTS.md)); the fonts are under the SIL Open Font License 1.1 |
+| `fonts` | The four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), and their build into OTF, TTF and `.DFN` files ([`docs/FONTS.md`](docs/FONTS.md)); the fonts are under the SIL Open Font License 1.1 |
 | `tools` | Repository checks and the banner builder; the DOS toolchain scripts arrive with the first spike |
 
 ## Working on it
