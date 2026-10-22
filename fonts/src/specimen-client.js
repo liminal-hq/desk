@@ -286,6 +286,20 @@
     }, () => showSave());
   }
 
+  // ---- the type tester ----
+  const tt = { text: $('#tt-text'), face: $('#tt-face'), size: $('#tt-size'), out: $('#tt-out') };
+  if (tt.out) {
+    const show = () => {
+      const [family, weight] = tt.face.value.split('|');
+      tt.out.style.fontFamily = `'${family}'`;
+      tt.out.style.fontWeight = weight;
+      tt.out.style.fontSize = `${tt.size.value}px`;
+      tt.out.textContent = tt.text.value || ' ';
+    };
+    for (const el of [tt.text, tt.face, tt.size]) el.addEventListener('input', show);
+    show();
+  }
+
   for (const f of DATA.faces) f.render();
   listEdits();
 })();

@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { assemble, type FaceDef, type Glyph } from './face';
 import { FACES } from './faces';
 import { format } from './grid';
+import { STYLES } from './modern/kit';
 import { metrics } from './otf';
 
 /** CRC-32 (IEEE), for the zip. */
@@ -230,6 +231,80 @@ function dosSection(): string {
 </section>`;
 }
 
+const PARAGRAPH =
+  'Desk keeps your files, programs and notes in one calm place. Open a window, drag a file to the desktop, and run any DOS program with the whole machine to itself; the Desk comes back when it exits. Les accents du français, comme à Québec ou à Montréal, s’affichent sans détour : élève, garçon, Noël, cœur.';
+const CODE = `fn app_start(desk: &mut Desk) -> i32 {
+    let win = desk.open("Notes", 640, 480)?;   // 0O Il1 {}[]
+    for (i, line) in lines.iter().enumerate() {
+        win.text(8, 16 * i as i32, line);      // == != <= >=
+    }
+    0
+}`;
+
+/** The Modern section: the outline faces at real sizes, beside the pixel faces, a proof sheet each and a tester. */
+function modernSection(): string {
+  const fams = [
+    { name: 'Desk Sans', css: "'Desk Sans'", note: 'UI and body text, figures tabular. Regular for text, Bold for titles.' },
+    { name: 'Desk Mono', css: "'Desk Mono'", note: 'Code and terminals: one advance, a dotted zero, a tailed l, slab i, serifed I and 1, box drawing to the cell.' },
+    { name: 'Desk Serif', css: "'Desk Serif'", note: 'Long reading (Notes, documents): moderate contrast, slab serifs with brackets, lining tabular figures.' },
+  ];
+  const sizes = [11, 12, 14, 16, 18, 24, 32, 48];
+  const proof = (css: string, mono: boolean): string => `
+    <div class="mod-proof" style="font-family:${css}">
+      <div class="mp-big">Aa Gg Rr 357 &amp;@</div>
+      <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+      <div>abcdefghijklmnopqrstuvwxyz</div>
+      <div>0123456789 ¼ ½ ¾ ² ³ % ‰ € £ ¥ ¢</div>
+      <div>!?.,:;…·•–—‘’“”‚„«»‹›()[]{}/\\|@#&amp;*+=&lt;&gt;^~_</div>
+      <div>ÀÂÄÆÇÈÉÊËÎÏÔŒÙÛÜŸ àâäæçèéêëîïôœùûüÿ ÁÍÑÓÚÝÞßðøþ Šš Žž</div>
+      <div>←↑→↓↔↕ ►◄▲▼ ●○■□ ✓✗ ™ © ® ° ± × ÷</div>
+      <p class="mp-para" style="font-weight:400">${esc(PARAGRAPH)}</p>
+      <p class="mp-para" style="font-weight:700">${esc(PARAGRAPH.slice(0, 120))}…</p>
+      <div class="mp-ui"><span>File</span><span>Edit</span><span>View</span><span>Help</span><span class="mp-dim">C:\\DESK\\NOTES · 12:45 · ✓ Saved</span></div>
+      <table class="mp-table"><tr><td>AUTO.SAV</td><td>2 048</td><td>22 Oct</td></tr><tr><td>FIZZ.EXE</td><td>912 384</td><td>21 Oct</td></tr><tr><td>README.TXT</td><td>1 117</td><td>20 Oct</td></tr></table>
+      ${mono ? `<pre class="mp-code">${esc(CODE)}\n${esc('┌──────┬──────┐\n│ ░▒▓█ │ ▀▄▌▐ │\n╞══════╪══════╡\n└──────┴──────┘')}</pre>` : ''}
+    </div>`;
+  return `
+<section class="face" id="modern" aria-labelledby="h-modern">
+  <header class="face-head">
+    <h2 id="h-modern" style="font-family:'Desk Sans';font-weight:700;font-size:40px;line-height:48px">Modern: Desk Sans, Mono and Serif</h2>
+    <p class="purpose">Outline faces drawn from stroke skeletons in the build (no tracing of any other font), each Regular and Bold, as OTF and TrueType. They are for larger sizes and modern systems; the pixel faces above stay the Desk's own text at its native sizes. They carry no hinting, so below about 14 px they look soft and uneven. An italic is a later option.</p>
+  </header>
+  <h3>Sizes, beside the pixel faces</h3>
+  <div class="screen-wrap"><div class="mod-sizes">
+    ${sizes
+      .map(
+        (z) => `<div class="ms-row"><span class="ms-z">${z} px</span>
+        <span style="font:${z}px/1.25 'Desk Sans'">Files · déjà vu</span>
+        <span style="font:700 ${z}px/1.25 'Desk Sans'">Files</span>
+        <span style="font:${z}px/1.25 'Desk Mono'">C:\\DESK 0O1l</span>
+        <span style="font:${z}px/1.25 'Desk Serif'">Lettre à Noël</span></div>`,
+      )
+      .join('')}
+    <div class="ms-row"><span class="ms-z">pixel</span>
+      <span style="font:12px/14px 'Desk UI'">Files · déjà vu</span>
+      <span style="font:12px/14px 'Desk Title'">Files</span>
+      <span style="font:16px/16px 'Desk Fixed'">C:\\DESK 0O1l</span>
+      <span style="font:24px/28px 'Desk UI'">Files · déjà vu (2×)</span></div>
+  </div></div>
+  <h3>Type tester</h3>
+  <div class="tester">
+    <label class="label" for="tt-text">Text</label>
+    <input id="tt-text" type="text" value="Ébauche, à côté, déjà vu — 0O Il1 {}" aria-label="Text to render">
+    <label class="label" for="tt-face">Face</label>
+    <select id="tt-face">
+      ${['Desk Sans', 'Desk Mono', 'Desk Serif'].flatMap((f) => [`<option value="${f}|400">${f} Regular</option>`, `<option value="${f}|700">${f} Bold</option>`]).join('')}
+      <option value="Desk UI|400">Desk UI (pixel)</option><option value="Desk Title|700">Desk Title (pixel)</option><option value="Desk Fixed|400">Desk Fixed (pixel)</option><option value="Desk Small|400">Desk Small (pixel)</option>
+      <option value="Desk UI Round|400">Desk UI Round</option><option value="Desk Fixed DOS|400">Desk Fixed DOS</option>
+    </select>
+    <label class="label" for="tt-size">Size</label>
+    <select id="tt-size">${[8, 11, 12, 14, 16, 18, 24, 32, 48, 72].map((z) => `<option value="${z}"${z === 24 ? ' selected' : ''}>${z} px</option>`).join('')}</select>
+  </div>
+  <div class="screen-wrap"><div id="tt-out" class="tt-out" style="font-family:'Desk Sans';font-size:24px">Ébauche, à côté, déjà vu — 0O Il1 {}</div></div>
+  ${fams.map((f) => `<h3>${f.name}</h3><p class="hint">${esc(f.note)}</p>${proof(f.css, f.name === 'Desk Mono')}`).join('')}
+</section>`;
+}
+
 /** The whole specimen page, ready to publish. */
 export function specimen(files: { name: string; data: Uint8Array }[]): string {
   const byName = new Map(files.map((f) => [f.name, f.data]));
@@ -245,7 +320,11 @@ export function specimen(files: { name: string; data: Uint8Array }[]): string {
       }),
     )
     .join('\n') +
-    `\n@font-face{font-family:'Desk Fixed DOS';src:url(data:font/otf;base64,${b64(byName.get('desk-fixed-dos.otf') as Uint8Array)}) format('opentype');font-display:block}`;
+    `\n@font-face{font-family:'Desk Fixed DOS';src:url(data:font/otf;base64,${b64(byName.get('desk-fixed-dos.otf') as Uint8Array)}) format('opentype');font-display:block}` +
+    STYLES.map(
+      (st) =>
+        `\n@font-face{font-family:'${st.family}';src:url(data:font/otf;base64,${b64(byName.get(`${st.file}.otf`) as Uint8Array)}) format('opentype');font-weight:${st.bold ? 700 : 400};font-display:block}`,
+    ).join('');
   const data = JSON.stringify({ faces: faces.map(({ face, glyphs }) => faceData(face, glyphs)) }).replace(/</g, '\\u003c');
   const client = readFileSync(join(import.meta.dir, 'specimen-client.js'), 'utf8');
   const total = faces.reduce((n, f) => n + f.glyphs.length, 0);
@@ -349,6 +428,21 @@ pre.cmd{background:var(--surface);border:1px solid var(--line);padding:12px 14px
 table.dfn{border-collapse:collapse;font-size:14px}
 table.dfn td,table.dfn th{border-bottom:1px solid var(--line);padding:6px 12px 6px 0;text-align:left;vertical-align:top}
 .table-wrap{overflow-x:auto}
+.mod-sizes{padding:12px 16px;color:var(--screen-fg);display:flex;flex-direction:column;gap:6px;width:max-content;min-width:100%}
+.ms-row{display:flex;align-items:baseline;gap:28px;white-space:nowrap}
+.ms-z{font:11px var(--font-mono);color:var(--muted);width:44px}
+.tester{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.tester input{flex:1 1 260px;min-width:0;font:15px var(--font-body);padding:6px 8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.tt-out{padding:16px;color:var(--screen-fg);white-space:pre-wrap;word-break:break-word;line-height:1.3}
+.mod-proof{background:var(--screen-bg);color:var(--screen-fg);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:6px;font-size:18px;line-height:1.35;overflow-x:auto}
+.mp-big{font-size:56px;line-height:1.1}
+.mp-para{max-width:64ch;margin:4px 0}
+.mp-ui{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;border-top:1px solid var(--line);padding-top:6px}
+.mp-dim{color:var(--muted)}
+.mp-table{border-collapse:collapse;font-size:15px}
+.mp-table td{padding:2px 16px 2px 0}
+.mp-table td+td{text-align:right}
+.mp-code{font:inherit;font-size:15px;line-height:1.2;margin:6px 0 0;white-space:pre}
 table.cp437{border-collapse:collapse;background:var(--screen-bg);color:var(--screen-fg)}
 table.cp437 th{font:11px var(--font-mono);color:var(--muted);padding:2px 6px;font-weight:normal}
 table.cp437 td{border:1px solid var(--line);padding:0;width:24px;text-align:center}
@@ -362,7 +456,7 @@ table.cp437 .dos{font-family:'Desk Fixed DOS';font-size:16px;line-height:16px;di
     <p class="lede">Four pixel faces for Desk, the graphical shell for MS-DOS. Each glyph is a grid of pixels written once in <code>fonts/src/faces/*.ts</code>. The build traces those grids into OpenType outlines at 100 units a pixel and writes the same pixels as <code>.DFN</code> files for the DOS side.</p>
     <div class="facts"><span>${total} glyphs in 4 faces</span><span>ASCII · code page 1252 · Latin-1 · French Œ œ Ÿ · code page 437 box drawing and blocks</span><span>Square and Round · OTF and TrueType</span><span>SIL Open Font License 1.1</span></div>
     <p class="status">Everything on this page is generated from the build's own data: the samples use the built OTF files, and the charts draw the grids the build traced. FreeType renders the TrueType and OTF files pixel-exact at the native sizes. Not yet checked: the faces have not been seen in the Desk itself, in DOSBox or on a real VGA screen, no DOS program reads the <code>.DFN</code> files yet, and the TrueType files have not been installed on Windows 3.1 or OS/2.</p>
-    <nav class="toc" aria-label="Faces">${faces.map(({ face }) => `<a href="#${face.id}" style="font-family:'${face.family}';font-size:${face.size * 2}px;line-height:${face.height * 2}px">${esc(face.family)}</a>`).join('')}<a href="#dos" style="font-family:'Desk Fixed';font-size:32px;line-height:32px">Desk Fixed DOS</a></nav>
+    <nav class="toc" aria-label="Faces">${faces.map(({ face }) => `<a href="#${face.id}" style="font-family:'${face.family}';font-size:${face.size * 2}px;line-height:${face.height * 2}px">${esc(face.family)}</a>`).join('')}<a href="#dos" style="font-family:'Desk Fixed';font-size:32px;line-height:32px">Desk Fixed DOS</a><a href="#modern" style="font-family:'Desk Sans';font-size:24px;line-height:32px">Modern</a></nav>
     <div class="actions">
       <button type="button" class="primary" id="zip-save" data-needs-downloads hidden>Save desk-fonts.zip</button>
       <span class="hint" id="no-downloads">The OTF and .DFN files are in <code>fonts/generated/</code> in the repository; this view cannot save files.</span>
@@ -371,6 +465,7 @@ table.cp437 .dos{font-family:'Desk Fixed DOS';font-size:16px;line-height:16px;di
   </section>
 ${faces.map(({ face, glyphs }) => faceSection(face, glyphs)).join('\n')}
 ${dosSection()}
+${modernSection()}
   <section class="notes" aria-labelledby="h-edits">
     <h3 id="h-edits">Your edits</h3>
     <p>Edits stay in this browser only. Paste the lines into the named face file, replacing the glyph's existing line, then rebuild.</p>
