@@ -11,9 +11,9 @@ The four Desk bitmap faces as pixel grids, the modern outline faces (Desk Sans, 
 | `src/otf.ts`, `src/ttf.ts`, `src/dfn.ts`, `src/names.ts` | The OpenType (CFF), TrueType and `.DFN` writers and their shared names |
 | `src/specimen.ts`, `src/specimen-client.js` | The specimen page with glyph charts and the pixel editor |
 | `build.ts` | The command line |
-| `src/modern/` | The outline faces: the geometry (union, fit, quadratics), the drawing kit and styles, the letters, symbols and marks, the assembler and the file writers |
+| `src/modern/` | The outline faces: the geometry (union, fit, quadratics), the drawing kit and styles, the letters, symbols and marks, the italics, the assembler, the kerning, ligatures and other OpenType features, and the file and layout-table writers |
 | `test/` | `bun test` |
-| `validate.sh`, `validate.py` | Optional third-party validation (fontTools, OTS, FreeType) in Docker |
+| `validate.sh`, `validate.py` | Optional third-party validation (fontTools, OTS, FreeType, HarfBuzz) in Docker |
 | `generated/` | The built files, committed, with `OFL.txt` |
 
 ```bash
