@@ -168,7 +168,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
 - `tools/` — repository checks and scripts
-- `fonts/` — the four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), and the Bun build that writes them as OTF, TTF and `.DFN` files (`docs/FONTS.md`)
+- `fonts/` — the four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), the emoji (`fonts/src/emoji/`, `docs/EMOJI.md`), and the Bun build that writes them as OTF, TTF, `.DFN` and `.DEM` files (`docs/FONTS.md`)
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
