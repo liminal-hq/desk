@@ -30,7 +30,8 @@ The OS-independent Desk core (compositor, window manager, widgets, palette, font
 | Apps (modules) and the SDK | Shared | Shared |
 | Desk core: compositor, windows, widgets, fonts, palette | Shared | Shared |
 | HAL: display, input, timer, sound, storage, memory, module loading | Implemented over DOS, the BIOS, VBE, INT 33h and DJGPP | Implemented over our own drivers |
-| Kernel and runtime | DOS with CWSDPMI | Rust kernel: memory, interrupts, scheduling, filesystem |
+| Drivers (VGA and VBE, keyboard, PIT, OPL, Sound Blaster), written once against a small port-I/O and IRQ abstraction | Shared (target) | Shared (target) |
+| Kernel and runtime | DOS with CWSDPMI, and a Rust runtime crate instead of the C layer and DJGPP's libc (target) | Rust kernel: memory, interrupts, scheduling, filesystem |
 | Boot | `DESK.COM` from the DOS prompt | Own boot sector or loader |
 
 The HAL surface is not designed yet. It should be as small as the core's real needs allow, and it should be written against the first two consumers (the hosted skeleton and the native walking skeleton) rather than in the abstract. A native bench build of the core (the `i586-unknown-linux-gnu` bench in `SPEC.md`) is a third consumer that costs little and is worth keeping.
@@ -40,6 +41,19 @@ The HAL surface is not designed yet. It should be as small as the core's real ne
 **Hosted track.** A shell that runs under DOS: compositor, windows, launcher bar, cursor and keyboard focus, then apps loaded as modules, then the handoff to DOS programs, then the core apps. Tested headless in DOSBox Staging with frame checksums, and later in the browser through js-dos. DOSBox and js-dos emulate DOS, not PC hardware, so they can run only this track.
 
 **Native track.** A kernel that boots, draws, takes input, reads a disk, loads a module and runs the shared core. Tested in QEMU with `-cpu 486`, in 86Box and in Bochs, which emulate PC hardware. For the browser, an x86 emulator such as v86 can boot the same disk image. Emulators are not real hardware and each has its own inaccuracies; see the risks below.
+
+## Rust for DOS: shared machinery
+
+The Desk is the product layer: a shell with apps above whatever sits below it. The owner wants a path for more native machinery below the shell, so that a future DOS game such as Lieutenant Fizz Episode 2 could be a plain native Rust DOS program instead of the pipeline Episode 1 needed: a gcc-built C layer, `coff2go32.py` patching rustc's COFF objects, and DJGPP's libc. None of this exists yet beyond the hosted skeleton and the spike on other branches; all of it is a target, and the extender in item 3 is research.
+
+1. **A Rust compile target for 32-bit DOS programs.** Today that is `core/dos.json` on the hosted-skeleton branch (pull request #3). A published prebuilt sysroot or an upstream Tier 3 target are ideas only.
+2. **A Rust runtime crate** that replaces the C layer and DJGPP's libc: startup, a DPMI client (INT 31h) for memory and real-mode calls, INT 21h file and console I/O, and drivers for VGA and VBE, the keyboard, the PIT timer, OPL and the Sound Blaster.
+3. **A small packer** that wraps a linked Rust program for CWSDPMI. Much later, and only if CWSDPMI becomes a constraint, an extender of our own could replace it; that would need VCPI, XMS and DPMI-compatibility work, and is research, not planned.
+4. **Drivers written once** against a small port-I/O and IRQ abstraction, so Lieutenant Fizz Episode 2 on DOS, the Desk hosted on DOS and the Desk native kernel can share them. This sits beside the HAL: the HAL is what the core needs, the abstraction is what the drivers need.
+5. **Its own repository.** Once stable, this machinery may belong in its own repository (for example `liminal-hq/dos-rs`). It incubates in this repository until then.
+6. **The d0 Rust-DOS spike** (hosted track, planned): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld`, packed with CWSDPMI's stub and run headless in DOSBox. If it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
+
+The s1-dxe3 result is in (pull request #4, on the spike branch, `docs/S1-DXE3.md`): yes, with limits. It is a hosted-track result. A native module loader would need the same properties: symbol import, per-module state, panic containment and clean unload.
 
 ## DOS programs: bundle FreeDOS
 
@@ -115,12 +129,13 @@ Small, testable and in order. Each track's list starts from what exists.
 
 **Hosted track**
 
-1. The walking skeleton (pull request #3, not merged at the time of writing): a build that runs headless in DOSBox and produces a frame.
-2. The DXE3 spike: a Rust module loaded into the core, calling back into it.
-3. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`).
-4. Shell: compositor, windows, launcher bar, cursor, keyboard focus.
-5. The handoff to DOS programs and back.
-6. Core apps, then optional apps, then release (see `SPEC.md#milestones`).
+1. The walking skeleton (open as PR #3 at the time of writing): a build that runs headless in DOSBox and produces a frame.
+2. The DXE3 spike (s1-dxe3; the result is in, pull request #4: yes, with limits): a Rust module loaded into the core, calling back into it.
+3. **d0 Rust-DOS** (planned): a Rust-only DOS program with its own runtime, run headless in DOSBox; if it works, retire the C layer and `coff2go32.py`.
+4. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`), moving into the shared Rust drivers if d0 works.
+5. Shell: compositor, windows, launcher bar, cursor, keyboard focus.
+6. The handoff to DOS programs and back.
+7. Core apps, then optional apps, then release (see `SPEC.md#milestones`).
 
 **Native track**
 
@@ -135,5 +150,7 @@ Small, testable and in order. Each track's list starts from what exists.
 9. The same image booting in 86Box and Bochs, and in the browser through v86.
 10. FreeDOS bundled, and a DOS program launched from the Desk.
 11. A real 486, when one is available.
+
+Across both tracks, the shared drivers and the runtime crate (see "Rust for DOS: shared machinery") may be moved to their own repository once stable.
 
 The order of the later native steps is expected to change with what the first ones teach.
