@@ -32,6 +32,12 @@ What was open before scaffolding `liminal-hq/desk`, and what was decided. The re
 | Test programs | Our own, never commercial or shareware games: `TONETEST.EXE` (sound), `REALMODE.COM` (a tiny real-mode program that sets mode 13h, reads the keyboard and exits), `NEEDEMS.EXE` (checks for EMS) |
 | CI | `ghcr.io/liminal-hq/ci-dos`, pinned by digest. Frame checksums of the desktop at 256 and 16 colours, the handoff round trip with `REALMODE.COM`, and an EMS run with `NEEDEMS.EXE` |
 
+## The walking skeleton
+
+Done: `tools/check.sh` builds a program from Rust (`core/`, `no_std` with `alloc`) and C (`c/`, DJGPP), links it into `DESK.EXE` and runs it under headless DOSBox Staging, in CI and locally. It proves the target specification, the object converter, the allocator and panic glue, an x87 operation, exit-status propagation and the headless run, and it records what changed from Fizz DOS in `TOOLCHAIN.md`. It does not touch the open questions below: no module loading, no video, no input.
+
+The next spike is `s1-dxe3` (milestone 1): can Rust code run as a DXE3 module that calls back into the core? It starts from `tools/coff2go32.py`, which the module build will need to extend, and from the same `tools/check.sh` run.
+
 ## Still open
 
 - Which Rust/DXE route wins (after the spike).

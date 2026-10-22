@@ -1,6 +1,6 @@
 # Docs
 
-Working design documents for Desk, derived from a design-agent brainstorm that had no code to check against. Nothing here has been built or measured. Numbers, versions and formats are targets until a spike confirms them, and when code and a document disagree, the code wins and the document is corrected in the same branch.
+Working design documents for Desk, derived from a design-agent brainstorm that had no code to check against. The design in these documents has not been built or measured; only the toolchain has (see `TOOLCHAIN.md`). Numbers, versions and formats are targets until a spike confirms them, and when code and a document disagree, the code wins and the document is corrected in the same branch.
 
 "Fizz DOS" below means [`ScottMorris/lieutenant-fizz-dos`](https://github.com/ScottMorris/lieutenant-fizz-dos), the Rust-on-DOS port this project learns from. Its code is a reference, not something to copy.
 
@@ -13,6 +13,7 @@ Working design documents for Desk, derived from a design-agent brainstorm that h
 | [`PALETTE.md`](PALETTE.md) | The 256-colour layout and the 16-colour fallback |
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
+| [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 
 The prototypes and boards the documents point at are in [`../design/`](../design/), kept as reference only.

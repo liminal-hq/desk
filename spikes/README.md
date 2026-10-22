@@ -8,4 +8,6 @@ Small experiments that decide the architecture, each in its own folder and each 
 4. **s4-handoff**: `DESK.COM` hands the machine to a real-mode program and takes it back.
 5. **s5-jsdos**: does the browser build work with the linear frame buffer?
 
+The walking skeleton that proves the build toolchain is done (`docs/TOOLCHAIN.md`); the next spike is `s1-dxe3`.
+
 Spike code is experimental and may be thrown away; it is labelled `spike` and `experimental` on GitHub.
