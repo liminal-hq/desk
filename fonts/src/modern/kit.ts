@@ -39,13 +39,43 @@ export interface Style {
 
 const base = { cap: 700, xh: 528, asc: 742, desc: -208, os: 11 };
 
+/**
+ * Desk Serif's contrast: how much thinner its horizontals, hairlines and serifs are than its stems, as a
+ * fraction of the stem (0 is monoline). Bold keeps more of its hairlines so it holds up at 16 px.
+ */
+export const SERIF_CONTRAST = { regular: 0.64, bold: 0.58 };
+
+function serif(bold: boolean): Style {
+  const V = bold ? 162 : 104;
+  const H = Math.round(V * (1 - (bold ? SERIF_CONTRAST.bold : SERIF_CONTRAST.regular)));
+  return {
+    ...base,
+    cap: 690,
+    xh: 498,
+    asc: 735,
+    desc: -222,
+    kind: 'serif',
+    bold,
+    family: 'Desk Serif',
+    file: bold ? 'desk-serif-bold' : 'desk-serif',
+    V,
+    H,
+    n: 2.05,
+    wide: bold ? 1.08 : 1.02,
+    sb: bold ? 30 : 34,
+    serifLen: bold ? 50 : 54,
+    serifH: Math.round(H * 0.86),
+    bracket: bold ? 24 : 28,
+  };
+}
+
 export const STYLES: Style[] = [
   { ...base, kind: 'sans', bold: false, family: 'Desk Sans', file: 'desk-sans', V: 86, H: 76, n: 2.35, wide: 1, sb: 62, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, kind: 'sans', bold: true, family: 'Desk Sans', file: 'desk-sans-bold', V: 144, H: 104, n: 2.2, wide: 1.1, sb: 52, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, xh: 536, kind: 'mono', bold: false, family: 'Desk Mono', file: 'desk-mono', V: 82, H: 74, n: 2.4, wide: 0.86, sb: 60, advance: 600, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, xh: 536, kind: 'mono', bold: true, family: 'Desk Mono', file: 'desk-mono-bold', V: 140, H: 120, n: 2.3, wide: 0.86, sb: 50, advance: 600, serifLen: 0, serifH: 0, bracket: 0 },
-  { ...base, cap: 690, xh: 498, asc: 735, desc: -222, kind: 'serif', bold: false, family: 'Desk Serif', file: 'desk-serif', V: 98, H: 50, n: 2.05, wide: 1.02, sb: 34, serifLen: 52, serifH: 38, bracket: 26 },
-  { ...base, cap: 690, xh: 498, asc: 735, desc: -222, kind: 'serif', bold: true, family: 'Desk Serif', file: 'desk-serif-bold', V: 156, H: 68, n: 2.05, wide: 1.08, sb: 30, serifLen: 50, serifH: 50, bracket: 24 },
+  serif(false),
+  serif(true),
 ];
 
 /** Where a stem gets serifs, in the Serif face: none, both sides, or one side. */
@@ -234,7 +264,7 @@ export class Kit {
     const o = bowlPoint(x0, x1, y0, y1, a, n);
     const i = bowlPoint(x0 + v, x1 - v, y0 + h, y1 - h, a, n);
     const side = o.x > (x0 + x1) / 2 ? 1 : -1;
-    return this.add([o, { x: o.x, y: o.y + dir * len }, { x: o.x - side * v * 0.5, y: o.y + dir * len * 0.82 }, i]);
+    return this.add([o, { x: o.x, y: o.y + dir * len }, { x: o.x - side * v * 0.62, y: o.y + dir * len * 0.78 }, i]);
   }
 
 }

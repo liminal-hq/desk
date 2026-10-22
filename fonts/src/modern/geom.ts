@@ -499,21 +499,26 @@ export function roundContour(c: Contour): Contour {
   if (tail && (tail.p.x !== start.x || tail.p.y !== start.y)) segs.push({ t: 'L', p: start });
   // Merge consecutive lines that run straight on.
   const merged: Seg[] = [];
-  let prev = start;
   for (const s of segs) {
     const m = merged[merged.length - 1];
     if (s.t === 'L' && m && m.t === 'L') {
       const before = merged.length > 1 ? (merged[merged.length - 2] as Seg).p : start;
       if ((m.p.x - before.x) * (s.p.y - m.p.y) - (m.p.y - before.y) * (s.p.x - m.p.x) === 0) {
         merged[merged.length - 1] = s;
-        prev = s.p;
         continue;
       }
     }
     merged.push(s);
-    prev = s.p;
   }
-  return { start, segs: merged.length >= 2 ? merged : segs, ...(prev ? {} : {}) };
+  // Merging a spike can leave a segment that goes nowhere; drop those.
+  const out: Seg[] = [];
+  let at = start;
+  for (const g of merged.length >= 2 ? merged : segs) {
+    if (g.p.x === at.x && g.p.y === at.y) continue;
+    out.push(g);
+    at = g.p;
+  }
+  return { start, segs: out };
 }
 
 /** Outline contours of a shape, fitted and rounded: outer contours counter-clockwise, holes clockwise. */

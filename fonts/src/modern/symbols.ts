@@ -319,8 +319,10 @@ const S: Record<string, Draw> = {
     const w = k.mono ? 280 : 260;
     const t = k.V * 0.86;
     const c = (k.asc + k.desc) / 2 + 40;
+    // The foot stays inside the line's descender however heavy the stroke.
+    const foot = Math.max(k.desc + 40, -250 + t / 2 + 6);
     k.path(smooth([{ x: w, y: k.asc + 40 }, { x: w * 0.5, y: k.asc }, { x: w * 0.45, y: c + 160 }, { x: w * 0.35, y: c + 30 }, { x: 0, y: c }]), t);
-    k.path(smooth([{ x: 0, y: c }, { x: w * 0.35, y: c - 30 }, { x: w * 0.45, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: w, y: k.desc + 40 }]), t);
+    k.path(smooth([{ x: 0, y: c }, { x: w * 0.35, y: c - 30 }, { x: w * 0.45, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: w, y: foot }]), t);
     return { w, sides: ['o', 'o'] };
   },
   '|': (k) => {
@@ -331,8 +333,10 @@ const S: Record<string, Draw> = {
     const w = k.mono ? 280 : 260;
     const t = k.V * 0.86;
     const c = (k.asc + k.desc) / 2 + 40;
+    // The foot stays inside the line's descender however heavy the stroke.
+    const foot = Math.max(k.desc + 40, -250 + t / 2 + 6);
     k.path(smooth([{ x: 0, y: k.asc + 40 }, { x: w * 0.5, y: k.asc }, { x: w * 0.55, y: c + 160 }, { x: w * 0.65, y: c + 30 }, { x: w, y: c }]), t);
-    k.path(smooth([{ x: w, y: c }, { x: w * 0.65, y: c - 30 }, { x: w * 0.55, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: 0, y: k.desc + 40 }]), t);
+    k.path(smooth([{ x: w, y: c }, { x: w * 0.65, y: c - 30 }, { x: w * 0.55, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: 0, y: foot }]), t);
     return { w, sides: ['o', 'o'] };
   },
   '~': (k) => {
@@ -547,7 +551,8 @@ const S: Record<string, Draw> = {
     return d;
   },
   ß: (k) => {
-    if (k.bold && k.s.kind === 'sans') return sansBoldSharpS(k);
+    // Sans Bold and Serif take the open form; Sans and Mono Regular keep the first drawing.
+    if ((k.bold && k.s.kind === 'sans') || k.serif) return sansBoldSharpS(k);
     const w = k.w(520, 440);
     const t = k.V;
     const ry = 170;
