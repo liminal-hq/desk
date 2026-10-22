@@ -1,0 +1,8 @@
+# The same DOS target as core/ (its dos.json is reused, not copied), with core, alloc and compiler_builtins built from rust-src.
+# Both options are unstable; spikes/s1-dxe3/build.sh sets RUSTC_BOOTSTRAP=1 so the pinned stable toolchain accepts them.
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+json-target-spec = true
+
+[build]
+target = "../../../core/dos.json"
