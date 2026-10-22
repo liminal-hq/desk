@@ -53,6 +53,8 @@ The Desk is the product layer: a shell with apps above whatever sits below it. T
 5. **Its own repository.** Once stable, this machinery may belong in its own repository (for example `liminal-hq/dos-rs`). It incubates in this repository until then.
 6. **The d0 Rust-DOS spike** (hosted track, planned): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld`, packed with CWSDPMI's stub and run headless in DOSBox. If it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
 
+[`RUST-TARGETS.md`](RUST-TARGETS.md) tracks how Rust is built for each application space.
+
 The s1-dxe3 result is in (pull request #4, on the spike branch, `docs/S1-DXE3.md`): yes, with limits. It is a hosted-track result. A native module loader would need the same properties: symbol import, per-module state, panic containment and clean unload.
 
 ## DOS programs: bundle FreeDOS

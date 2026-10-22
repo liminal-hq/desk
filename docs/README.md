@@ -14,6 +14,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`PALETTE.md`](PALETTE.md) | The 256-colour layout and the 16-colour fallback |
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
+| [`RUST-TARGETS.md`](RUST-TARGETS.md) | How Rust is built for each application space: target specifications, `core`, `alloc` and `std`, and the spikes that track them |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 
 The prototypes and boards the documents point at are in [`../design/`](../design/), kept as reference only.
