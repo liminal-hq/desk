@@ -1,4 +1,5 @@
-# Runs tools/check.sh: licence headers, and the markdown style and link check. The DOS build and tests join it as the code arrives.
+# Runs tools/check.sh: licence headers, the markdown style and link check, Rust format and lints, then the DOS build and a headless
+# DOSBox run of DESK.EXE.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -33,5 +34,10 @@ jobs:
       # The checkout is owned by another user inside the container, and git refuses to list its files without this.
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The image already holds Rust 1.98.0 with rust-src, DJGPP, DOSBox Staging and CWSDPMI under DOS_TOOLCHAIN; setup links vendor/ to
+      # them and confirms each one runs. Cargo downloads the crates that -Zbuild-std's standard library sources depend on, so the job
+      # needs network access.
+      - name: Set up the DOS toolchain
+        run: tools/setup.sh
       - name: Check
         run: tools/check.sh
