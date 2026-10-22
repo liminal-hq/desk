@@ -1,7 +1,7 @@
 # Desk
 
 <p align="center">
-  <img src="assets/hero.svg" alt="Desk — a pixel-art desktop with a Files window behind a focused Terminal window, a launcher bar and a pointer, beside the name and a DOS prompt running DESK.COM" width="100%">
+  <img src="assets/hero.svg" alt="Desk — a pixel-art desktop with a Files window behind a focused Terminal window, a launcher bar and a pointer, beside the name, the tagline "A calm graphical OS in Rust for old hardware" and a DOS prompt running DESK.COM for the hosted track" width="100%">
 </p>
 
 <p align="center">
