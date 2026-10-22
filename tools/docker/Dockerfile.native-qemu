@@ -1,0 +1,5 @@
+# QEMU and NASM for the native track, for machines without them. tools/native-run.sh builds this once as desk-native-qemu:1.
+FROM ubuntu:24.04
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 nasm \
+    && rm -rf /var/lib/apt/lists/*
