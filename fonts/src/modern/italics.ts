@@ -15,7 +15,8 @@ const TAIL = 78;
 /** A stem from y0 up to y1 that turns out to the right at its foot, as a pen leaving the letter. */
 function tailStem(k: Kit, x: number, y0: number, y1: number): void {
   const r = TAIL;
-  k.add(rect(x, y0 + r, x + k.V, y1));
+  // The stem reaches down to the middle of the turn (which sits `os` below the line), so the two overlap.
+  k.add(rect(x, y0 + r - k.os - 1, x + k.V, y1));
   k.arc(x, x + k.V + 2 * r * 1.25, y0 - k.os, y0 + 2 * r - k.os, 180, 320, k.V, k.H);
 }
 
@@ -88,11 +89,19 @@ export const SERIF_ITALIC: Record<string, Draw> = {
     const w = k.w(360);
     const x = Math.round(w * 0.42);
     const r = 120;
-    k.add(rect(x, k.desc + r, x + k.V * 0.9, k.asc - r + 4));
+    // The stem overlaps both hooks to their middles, where their ends are cut level.
+    k.add(rect(x, k.desc + r - k.os - 1, x + k.V * 0.9, k.asc + k.os - r + 1));
     k.arc(x, x + 2 * (w - x), k.asc + k.os - 2 * r, k.asc + k.os, 40, 180, k.V * 0.9, k.H);
     k.arc(x + k.V * 0.9 - 2 * (x + k.V * 0.9), x + k.V * 0.9, k.desc - k.os, k.desc + 2 * r - k.os, 220, 360, k.V * 0.9, k.H);
-    k.add(rect(x - w * 0.3, k.xh - k.H, x + k.V + w * 0.32, k.xh));
-    return { w, sides: [-10, -10] };
+    const bar0 = x - w * 0.3;
+    const bar1 = x + k.V + w * 0.32;
+    k.add(rect(bar0, k.xh - k.H, bar1, k.xh));
+    // Spaced by the crossbar, as an open side: the hooks reach under the letter before and over the one after.
+    const pts = k.shape().outer.flat();
+    const minX = Math.min(...pts.map((p) => p.x));
+    const maxX = Math.max(...pts.map((p) => p.x));
+    const open = Math.round(k.s.sb * 0.5);
+    return { w, sides: [Math.round(open - (bar0 - minX)), Math.round(open - (maxX - bar1))] };
   },
   g: (k) => {
     const w = k.w(470);
@@ -270,7 +279,7 @@ export const MONO_ITALIC: Record<string, Draw> = {
     const w = 400;
     const x = Math.round(w * 0.42);
     const r = 110;
-    k.add(rect(x, k.desc + r, x + k.V, k.asc - r + 4));
+    k.add(rect(x, k.desc + r - k.os - 1, x + k.V, k.asc + k.os - r + 1));
     k.arc(x, x + 2 * (w - x), k.asc + k.os - 2 * r, k.asc + k.os, 45, 180, k.V, k.H);
     k.arc(x + k.V - 2 * (x + k.V) * 0.9, x + k.V, k.desc - k.os, k.desc + 2 * r - k.os, 215, 360, k.V, k.H);
     k.add(rect(x - w * 0.28, k.xh - k.H, x + k.V + w * 0.3, k.xh));

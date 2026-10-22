@@ -218,3 +218,16 @@ describe('italic names and flags', () => {
     });
   }
 });
+
+describe('italic joins', () => {
+  // The exit strokes of Desk Serif Italic and the hooks of the italic f are separate parts that must overlap
+  // their stems: a gap leaves the turn as a loose piece of ink under a hairline of white.
+  const outers = (g: MGlyph): number => g.contours.filter((c) => contourArea(c) > 0).length;
+  for (const s of STYLES.filter((x) => x.italic && x.kind !== 'sans')) {
+    test(`${s.file}: exit strokes and hooks are one piece with their stems`, () => {
+      const glyphs = assembleModern(s);
+      const pieces: Record<string, number> = s.kind === 'serif' ? { a: 1, d: 1, f: 1, h: 1, i: 2, l: 1, m: 1, n: 1, t: 1, u: 1 } : { f: 1 };
+      for (const [ch, n] of Object.entries(pieces)) expect([ch, outers(glyphs.find((g) => g.ch === ch) as MGlyph)]).toEqual([ch, n]);
+    });
+  }
+});
