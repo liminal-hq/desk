@@ -8,10 +8,12 @@
 //        bun build.ts --check              rebuild in memory and fail if generated/ is stale
 //        bun build.ts --specimen <file>    also write the specimen page (glyph charts, samples, editor)
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { encodeDfn } from './src/dfn';
 import { dosGlyphs } from './src/dos';
+import { buildEmoji } from './src/emoji/build';
+import { pixelOtfWithEmoji } from './src/emoji/faces';
 import { assemble } from './src/face';
 import { FACES } from './src/faces';
 import { namesOf } from './src/names';
@@ -25,7 +27,7 @@ const OUT = join(import.meta.dir, 'generated');
 
 /** Every generated file: its name in `generated/` and its bytes. */
 export function buildAll(): { name: string; data: Uint8Array }[] {
-  return [...buildPixel(), ...buildModern()];
+  return [...buildPixel(), ...buildModern(), ...buildEmoji()];
 }
 
 /** The outline faces: Desk Sans, Desk Mono and Desk Serif, each Regular and Bold, as OTF and TTF. */
@@ -47,7 +49,8 @@ export function buildPixel(): { name: string; data: Uint8Array }[] {
       ...(['square', 'round'] as const).flatMap((style) => {
         const file = namesOf(face, style).file;
         return [
-          { name: `${file}.otf`, data: buildOtf(face, glyphs, style) },
+          // The OpenType files also carry the monochrome emoji (src/emoji/faces.ts); the TrueType files do not.
+          { name: `${file}.otf`, data: pixelOtfWithEmoji(face, glyphs, style) },
           { name: `${file}.ttf`, data: buildTtf(face, glyphs, style) },
         ];
       }),
@@ -85,7 +88,10 @@ if (import.meta.main) {
     }
     console.log(`fonts: ${files.length} generated files are up to date`);
   } else {
-    for (const f of files) writeFileSync(join(OUT, f.name), f.data);
+    for (const f of files) {
+      mkdirSync(dirname(join(OUT, f.name)), { recursive: true });
+      writeFileSync(join(OUT, f.name), f.data);
+    }
     console.log(`fonts: wrote ${files.map((f) => f.name).join(', ')}`);
   }
   const at = args.indexOf('--specimen');
@@ -93,7 +99,7 @@ if (import.meta.main) {
     const target = args[at + 1];
     if (!target) throw new Error('--specimen needs a file name');
     const { specimen } = await import('./src/specimen');
-    writeFileSync(target, specimen(files));
+    writeFileSync(target, specimen(files.filter((f) => !f.name.startsWith('emoji/'))));
     console.log(`fonts: wrote the specimen to ${target}`);
   }
 }
