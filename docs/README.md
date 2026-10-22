@@ -13,6 +13,7 @@ Working design documents for Desk, derived from a design-agent brainstorm that h
 | [`PALETTE.md`](PALETTE.md) | The 256-colour layout and the 16-colour fallback |
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
+| [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 
 The prototypes and boards the documents point at are in [`../design/`](../design/), kept as reference only.
