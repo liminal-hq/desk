@@ -51,4 +51,14 @@ esac
 grep -q 'DESK-SKELETON PANIC' dist/OUT.TXT || fail "the panic report is missing from OUT.TXT"
 echo "$actual (exit status $status)"
 
+step "Spike s1-dxe3: Rust format and lints for the modules"
+(cd spikes/s1-dxe3/modules && cargo fmt --check)
+(cd spikes/s1-dxe3/modules && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
+step "Spike s1-dxe3: build the Rust modules (DXE3) and the host"
+spikes/s1-dxe3/build.sh
+
+step "Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox"
+spikes/s1-dxe3/run.sh
+
 printf '\nAll checks passed.\n'

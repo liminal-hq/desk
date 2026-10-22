@@ -1,0 +1,26 @@
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='before' window=1 events=7
+  log> counter: start app=2 events=100
+  log> hello[1]: event 8 kind=1 x=1 y=1
+  log> crash: start app=3
+  log> crash: ordinary event 1 (count 1)
+host: crash holds 0 blocks before the fault
+  log> crash: holding 5 blocks, then panicking
+host: module CRASH crashed: panic: panic with heap (line 60)
+host: state crashed
+host: unloaded CRASH (dlclose 0, reclaimed 6 blocks, 1560 bytes)
+  log> hello[1]: event 9 kind=2 x=2 y=2
+  log> crash: start app=4
+host: module CRASH crashed: panic: deliberate panic number 1 (line 39)
+host: unloaded CRASH (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  window> app 5 opens 'Hello' 200x100 as window 2
+  log> hello: start app=5 args='after' window=2 events=7
+  log> hello[5]: event 8 kind=1 x=7 y=7
+  log> hello[1]: event 10 kind=3 x=3 y=3
+  log> hello: stop app=5 events=8 kept=1
+host: unloaded HELLO2 (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  log> counter: stop app=2 events=103 sum=18.0 mean=6.000 sqrt=4.2426
+  log> hello: stop app=1 events=10 kept=3
+host: unloaded COUNTER (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: panic ok, the core kept running

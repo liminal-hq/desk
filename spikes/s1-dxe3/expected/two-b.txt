@@ -1,0 +1,21 @@
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='one' window=1 events=7
+  log> counter: start app=2 events=100
+  window> app 3 opens 'Hello' 200x100 as window 2
+  log> hello: start app=3 args='three' window=2 events=7
+  log> hello[1]: event 8 kind=1 x=3 y=0
+  log> hello[3]: event 8 kind=1 x=9 y=0
+  log> hello[1]: event 9 kind=2 x=4 y=0
+  log> counter: stop app=2 events=103 sum=12.0 mean=4.000 sqrt=3.4641
+  log> hello: stop app=1 events=9 kept=2
+  log> hello: stop app=3 events=8 kept=1
+host: HELLO loaded again while open: the same handle
+  window> app 4 opens 'Hello' 200x100 as window 3
+  log> hello: start app=4 args='again' window=3 events=9
+  log> hello[4]: event 10 kind=1 x=1 y=1
+  log> hello: stop app=4 events=10 kept=1
+host: unloaded HELLO-AGAIN (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: unloaded HELLO2 (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: unloaded COUNTER (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: two ok
