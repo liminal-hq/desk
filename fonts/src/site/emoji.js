@@ -159,6 +159,8 @@ function zip(entries) {
   e.setUint32(0, 0x06054b50, true); e.setUint16(8, entries.length, true); e.setUint16(10, entries.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
   return new Blob([...parts, ...dir, new Uint8Array(e.buffer)]);
 }
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
 (async () => {
   const downloads = window.claude ? await window.claude.use('downloads') : null;
   if (!downloads) return;
@@ -168,6 +170,7 @@ function zip(entries) {
     try {
       const entries = [];
       for (const [n] of DATA.files) {
+        if (DATA.dems[n]) { entries.push(['desk-emoji/emoji/' + n, unb64(DATA.dems[n])]); continue; }
         const res = await fetch('fonts/emoji/' + n);
         if (!res.ok) throw { code: 'missing', message: n + ' could not be loaded' };
         entries.push(['desk-emoji/emoji/' + n, new Uint8Array(await res.arrayBuffer())]);

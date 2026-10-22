@@ -1,6 +1,7 @@
 // The Desk Type Specimens site: five pages with a shared header (Overview, Pixel faces, Outline faces, Emoji and
-// Downloads), the built font files served beside them, a zip of every file, and a manifest of every published path
-// for publishing the site as a multi-file artifact.
+// Downloads), the built font files served beside them, the files artifacts do not serve (.dfn, .dem) as base64 in
+// downloads.json for the zip the pages build, and a manifest of every published path for publishing the site as a
+// multi-file artifact.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -49,10 +50,9 @@ const TYPES: Record<string, string> = {
   ttf: 'font/ttf',
   png: 'image/png',
   txt: 'text/plain; charset=utf-8',
-  zip: 'application/zip',
-  dfn: 'application/octet-stream',
-  dem: 'application/octet-stream',
 };
+/** Whether an artifact serves a file of this name as a file of its own. */
+export const served = (path: string): boolean => path.slice(path.lastIndexOf('.') + 1) in TYPES;
 const typeOf = (path: string): string => TYPES[path.slice(path.lastIndexOf('.') + 1)] ?? 'application/octet-stream';
 
 const GOOGLE_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -94,7 +94,9 @@ ${content}</body>
 
 const size = (n: number): string => (n >= 1024 * 1024 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 /** The file types the viewer's downloads capability accepts, of those the site publishes. */
-const SAVEABLE = new Set(['ttf', 'png', 'txt', 'zip']);
+const SAVEABLE = new Set(['ttf', 'png', 'txt']);
+/** The zip button: site.js builds desk-fonts.zip from the published files and downloads.json. */
+const ZIP_BUTTON = '<button type="button" class="primary" data-zip="desk-fonts.zip" data-needs-downloads hidden>Save desk-fonts.zip</button>';
 
 /** The overview: what each family is for, which file to use where, what has been checked, and how it is built. */
 function overviewBody(files: { name: string; data: Uint8Array }[], zipBytes: number): string {
@@ -112,7 +114,7 @@ function overviewBody(files: { name: string; data: Uint8Array }[], zipBytes: num
     <p class="lede">The type of Desk, the graphical shell for MS-DOS: four pixel faces for the Desk's own screens, three outline families for larger sizes and modern systems, and emoji in pixel and vector form. Everything is generated from the build's own data in <code>fonts/</code> of the repository.</p>
     <div class="facts"><span>${FACES.length} pixel faces, Square and Round</span><span>${STYLES.length / 4} outline families in four styles</span><span>OTF, TrueType, .DFN and .DEM</span><span>SIL Open Font License 1.1</span></div>
     <div class="actions">
-      <button type="button" class="primary" data-save="desk-fonts.zip" data-needs-downloads hidden>Save desk-fonts.zip</button>
+      ${ZIP_BUTTON}
       <span class="hint" data-needs-downloads hidden>Every file on the Downloads page and the licence, ${size(zipBytes)}.</span>
       <span class="hint" data-no-downloads>The files are on the <a href="downloads.html">Downloads</a> page and in <code>fonts/generated/</code> in the repository.</span>
     </div>
@@ -171,7 +173,8 @@ function downloadsBody(files: { name: string; data: Uint8Array }[], zipBytes: nu
     const save = SAVEABLE.has(ext)
       ? `<button type="button" data-save="${path}" data-needs-downloads hidden>Save</button>`
       : '<span class="hint">in the zip</span>';
-    return `<tr><td><a href="${path}"><code>${esc(name)}</code></a></td><td>${what}</td><td class="num">${size(data.length)}</td><td>${save}</td></tr>`;
+    const file = served(name) ? `<a href="${path}"><code>${esc(name)}</code></a>` : `<code>${esc(name)}</code>`;
+    return `<tr><td>${file}</td><td>${what}</td><td class="num">${size(data.length)}</td><td>${save}</td></tr>`;
   };
   const table = (id: string, title: string, rows: string[]): string => `
   <section class="notes" aria-labelledby="h-${id}">
@@ -211,10 +214,10 @@ function downloadsBody(files: { name: string; data: Uint8Array }[], zipBytes: nu
     <h1 id="top">Downloads</h1>
     <p class="lede">Every built file, as the build writes it to <code>fonts/generated/</code>. The fonts are under the SIL Open Font License 1.1.</p>
     <div class="actions">
-      <button type="button" class="primary" data-save="desk-fonts.zip" data-needs-downloads hidden>Save desk-fonts.zip</button>
+      ${ZIP_BUTTON}
       <span class="hint">desk-fonts.zip holds all ${files.length - 1} files and the licence, ${size(zipBytes)}.</span>
     </div>
-    <p class="hint">Each name links to the file itself. Where this view can save files, a Save button offers the TrueType, PNG and licence files one at a time; the viewer saves only those types, so the OTF, .DFN and .DEM files come in the zip. <span data-no-downloads>This view cannot save files: use the links, or <code>fonts/generated/</code> in the repository.</span></p>
+    <p class="hint">Each linked name is the file itself; the .DFN and .DEM files are not served on their own and come in the zip. Where this view can save files, a Save button offers the TrueType, PNG and licence files one at a time; the viewer saves only those types, so the OTF files come in the zip too. <span data-no-downloads>This view cannot save files: use the links, or <code>fonts/generated/</code> in the repository.</span></p>
   </section>
   ${table('pixel', 'Pixel faces', pixel)}
   ${table('dos', 'Desk Fixed DOS', dos)}
@@ -244,11 +247,15 @@ export function site(files: { name: string; data: Uint8Array }[]): SiteFile[] {
     'specimen.css': `${SPECIMEN_CSS}\ntable.dl td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}\ntable.dl td{vertical-align:middle}\ntable.dl button{padding:3px 10px;font-size:13px}\n`,
     'fonts.css': `/* The built fonts, served beside the pages. */\n${fontFacesCss(FONTS_DIR)}\n`,
     'specimen.js': readFileSync(join(import.meta.dir, '..', 'specimen-client.js'), 'utf8'),
+    // What the zip holds, in order: each entry's name in the zip and either its published path or its bytes in base64.
+    'downloads.json': JSON.stringify({
+      zip: 'desk-fonts.zip',
+      entries: all.map((f) => [`desk-fonts/${f.name}`, served(f.name) ? { path: `${FONTS_DIR}/${f.name}` } : { base64: Buffer.from(f.data).toString('base64') }]),
+    }),
   };
   return [
     ...Object.entries(pages).map(([path, s]) => ({ path, data: text(s), contentType: typeOf(path) })),
-    ...all.map((f) => ({ path: `${FONTS_DIR}/${f.name}`, data: f.data, contentType: typeOf(f.name) })),
-    { path: 'desk-fonts.zip', data: bundle, contentType: typeOf('desk-fonts.zip') },
+    ...all.filter((f) => served(f.name)).map((f) => ({ path: `${FONTS_DIR}/${f.name}`, data: f.data, contentType: typeOf(f.name) })),
   ];
 }
 

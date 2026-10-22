@@ -56,6 +56,8 @@ export function emojiData(files: { name: string; data: Uint8Array }[]) {
       .filter((f) => f.name.startsWith(dir))
       .map((f): [string, number] => [f.name.slice(dir.length), f.data.length])
       .sort((a, b) => (a[0] < b[0] ? -1 : 1)),
+    // The .dem files go in the page itself: artifacts do not serve them as files.
+    dems: Object.fromEntries(files.filter((f) => f.name.startsWith(dir) && f.name.endsWith('.dem')).map((f) => [f.name.slice(dir.length), Buffer.from(f.data).toString('base64')])),
     letters: Object.fromEntries(SLOTS.map((s) => [s.letter, s.hex])),
     vcolours: VCOLOURS,
     cats: CATEGORIES,

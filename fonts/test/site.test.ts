@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { buildAll } from '../build';
 import { MANIFEST } from '../src/emoji/manifest';
-import { manifest, site } from '../src/site/build';
+import { manifest, served, site } from '../src/site/build';
 
 describe('the specimen site', () => {
   const files = buildAll();
@@ -24,13 +24,20 @@ describe('the specimen site', () => {
     }
   });
 
-  test('every font file the build writes is served unchanged, with the licence and the zip', () => {
-    for (const f of files) expect([f.name, byPath.get(`fonts/${f.name}`)?.data]).toEqual([f.name, f.data]);
+  test('every built file is served unchanged or carried in downloads.json, and the zip lists them all', () => {
+    const list = JSON.parse(text('downloads.json')) as { entries: [string, { path?: string; base64?: string }][] };
+    const entry = new Map(list.entries);
+    expect(list.entries).toHaveLength(files.length + 1);
+    for (const f of files) {
+      const src = entry.get(`desk-fonts/${f.name}`);
+      const data = served(f.name) ? byPath.get(`fonts/${f.name}`)?.data : new Uint8Array(Buffer.from(src?.base64 ?? '', 'base64'));
+      expect([f.name, served(f.name) ? src?.path : 'base64', data]).toEqual([f.name, served(f.name) ? `fonts/${f.name}` : 'base64', f.data]);
+    }
     expect(byPath.has('fonts/OFL.txt')).toBe(true);
-    const zip = byPath.get('desk-fonts.zip')?.data as Uint8Array;
-    const end = new DataView(zip.buffer, zip.byteOffset + zip.length - 22);
-    expect(end.getUint32(0, true)).toBe(0x06054b50);
-    expect(end.getUint16(10, true)).toBe(files.length + 1);
+  });
+
+  test('the site publishes only file types an artifact serves', () => {
+    for (const f of pages) expect([f.path, served(f.path)]).toEqual([f.path, true]);
   });
 
   test('every page links only to files the site publishes or to the web', () => {
@@ -49,7 +56,7 @@ describe('the specimen site', () => {
     expect(Object.keys(m.files).sort()).toEqual(pages.map((f) => f.path).filter((p) => p !== 'index.html').sort());
     expect(m.files['fonts/desk-ui.otf']?.contentType).toBe('font/otf');
     expect(m.files['fonts/emoji/desk-emoji.ttf']?.contentType).toBe('font/ttf');
-    expect(m.files['fonts/emoji/emoji16.dem']?.contentType).toBe('application/octet-stream');
+    expect(m.files['fonts/emoji/pixel-16.png']?.contentType).toBe('image/png');
   });
 
   test('the main page has no document skeleton and the other pages have their own', () => {
