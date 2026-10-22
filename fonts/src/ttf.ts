@@ -6,7 +6,7 @@
 
 import type { FaceDef, Glyph } from './face';
 import { SYMBOL_BASE } from './dos';
-import { COPYRIGHT, FONT_EPOCH, LICENCE, LICENCE_URL, namesOf, REVISION, TIMESTAMP, type Variant } from './names';
+import { COPYRIGHT, FONT_EPOCH, LICENCE, LICENCE_URL, type Names, namesOf, REVISION, TIMESTAMP, type Variant } from './names';
 import { glyphName, metrics, notdef } from './otf';
 import { outlineOf, PIXEL, type OPt, type Style } from './round';
 
@@ -86,12 +86,36 @@ export function sfnt(tables: Record<string, Uint8Array>): Uint8Array {
   return out;
 }
 
-/** One glyph as the TrueType tables need it. */
-interface TGlyph {
+/** One glyph as the TrueType tables need it: advance in font units, contours clockwise outside. */
+export interface TGlyph {
   name: string;
   cps: number[];
   adv: number;
   contours: OPt[][];
+}
+
+/** Everything a TrueType file is written from, whatever face it comes from. */
+export interface TtfSpec {
+  names: Names;
+  upm: number;
+  ascender: number;
+  descender: number;
+  lineGap: number;
+  /** Smallest readable size in pixels, for `head.lowestRecPPEM`. */
+  ppem: number;
+  /** Integer ppem (head flags bit 3): set for pixel faces, whose outlines need whole pixels. */
+  integerPpem: boolean;
+  bold: boolean;
+  fixed: boolean;
+  /** The symbol cmap of Desk Fixed DOS. */
+  symbol: boolean;
+  /** Claim code page 437 in OS/2. */
+  cp437: boolean;
+  /** Strikeout size and position, underline position and thickness, in font units. */
+  lines: { strikeSize: number; strikePos: number; underPos: number; underSize: number };
+  glyphs: TGlyph[];
+  /** Further tables, such as `gasp` and `kern`. */
+  extra?: Record<string, Uint8Array>;
 }
 
 /** A simple glyf entry (no instructions) and its bounds. */
@@ -259,24 +283,43 @@ const RANGE_BITS: [number, number, number][] = [
  */
 export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square', variant: Variant = 'unicode'): Uint8Array {
   const { upm, ascender, descender } = metrics(face);
-  const names = namesOf(face, style, variant);
   const dos = variant === 'dos';
-  const bold = face.style === 'Bold';
-  const fixed = face.cell !== undefined;
   // The traditional first four glyphs, then every BMP glyph in code-point order. TrueType wants outer
   // contours clockwise, the reverse of the CFF outlines.
   const cw = (cs: OPt[][]): OPt[][] => cs.map((c) => [...c].reverse());
   const nd = notdef(face);
-  const list: TGlyph[] = [{ name: '.notdef', cps: [], adv: nd.adv, contours: cw(outlineOf(nd.rows, face.ascent, style)) }];
+  const list: TGlyph[] = [{ name: '.notdef', cps: [], adv: nd.adv * PIXEL, contours: cw(outlineOf(nd.rows, face.ascent, style)) }];
   if (!dos) {
     list.push({ name: '.null', cps: [0], adv: 0, contours: [] });
-    list.push({ name: 'nonmarkingreturn', cps: [0x0d], adv: face.space, contours: [] });
+    list.push({ name: 'nonmarkingreturn', cps: [0x0d], adv: face.space * PIXEL, contours: [] });
   }
   for (const g of glyphs) {
     if (g.cp > 0xffff) continue;
     const cps = dos && g.from && g.from !== '\u0000' ? [g.cp, g.from.codePointAt(0) as number] : [g.cp];
-    list.push({ name: glyphName(g.cp), cps, adv: g.adv, contours: cw(outlineOf(g.rows, face.ascent, style)) });
+    list.push({ name: glyphName(g.cp), cps, adv: g.adv * PIXEL, contours: cw(outlineOf(g.rows, face.ascent, style)) });
   }
+  return writeTtf({
+    names: namesOf(face, style, variant),
+    upm,
+    ascender,
+    descender,
+    lineGap: 0,
+    ppem: face.size,
+    integerPpem: true,
+    bold: face.style === 'Bold',
+    fixed: face.cell !== undefined,
+    symbol: dos,
+    cp437: face.id === 'fixed',
+    lines: { strikeSize: PIXEL, strikePos: Math.round(((face.ascent - face.xTop) * PIXEL) / 2) + 50, underPos: -PIXEL, underSize: PIXEL },
+    glyphs: list,
+  });
+}
+
+/** Writes a TrueType file from a spec. */
+export function writeTtf(spec: TtfSpec): Uint8Array {
+  const { names, upm, ascender, descender, lineGap, bold, fixed } = spec;
+  const dos = spec.symbol;
+  const list = spec.glyphs;
   const glyf = new Buf();
   const loca = new Buf();
   const hmtx = new Buf();
@@ -291,7 +334,7 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     const e = glyfEntry(g.contours);
     loca.u32(glyf.length);
     glyf.raw(e.data);
-    const adv = g.adv * PIXEL;
+    const adv = g.adv;
     const lsb = e.points ? e.box[0] : 0;
     hmtx.u16(adv).i16(lsb);
     if (e.points) {
@@ -308,7 +351,7 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     for (const cp of g.cps) cmap.set(cp, gid);
   });
   loca.u32(glyf.length);
-  const advances = list.map((g) => g.adv * PIXEL);
+  const advances = list.map((g) => g.adv);
   const inked = advances.filter((a) => a > 0);
   // The symbol variant's character range is its 0xF000 block, which Windows uses to find the bytes.
   const cps = [...cmap.keys()].filter((c) => (dos ? c >= SYMBOL_BASE : c >= 0x20));
@@ -325,20 +368,20 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     .u32(REVISION)
     .u32(0) // checkSumAdjustment, set by sfnt()
     .u32(0x5f0f3cf5)
-    .u16(0b1011) // baseline at y=0, left side bearing at x=0, integer ppem
+    .u16(spec.integerPpem ? 0b1011 : 0b0011) // baseline at y=0, left side bearing at x=0, integer ppem
     .u16(upm)
     .u32(0).u32(TIMESTAMP + FONT_EPOCH)
     .u32(0).u32(TIMESTAMP + FONT_EPOCH)
     .i16(xMin).i16(yMin).i16(xMax).i16(yMax)
     .u16(bold ? 1 : 0)
-    .u16(face.size)
+    .u16(spec.ppem)
     .i16(2)
     .i16(1) // long loca
     .i16(0)
     .done();
   const hhea = new Buf()
     .u32(0x00010000)
-    .i16(ascender).i16(descender).i16(0)
+    .i16(ascender).i16(descender).i16(lineGap)
     .u16(Math.max(...advances))
     .i16(minLsb).i16(minRsb).i16(maxExtent)
     .i16(1).i16(0).i16(0)
@@ -363,8 +406,8 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     .u16(0) // fsType 0: installable embedding
     .i16(sub).i16(sub).i16(0).i16(Math.round(upm * 0.14))
     .i16(sub).i16(sub).i16(0).i16(Math.round(upm * 0.48))
-    .i16(PIXEL)
-    .i16(Math.round(((face.ascent - face.xTop) * PIXEL) / 2) + 50)
+    .i16(spec.lines.strikeSize)
+    .i16(spec.lines.strikePos)
     .i16(0)
     .raw([2, 11, bold ? 8 : 5, fixed ? 9 : 3, 0, 0, 0, 0, 0, 0])
     .u32(r1).u32(r2).u32(0).u32(0)
@@ -372,17 +415,17 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     .u16(bold ? 0x20 : 0x40)
     .u16(Math.min(...cps))
     .u16(Math.min(0xffff, Math.max(...cps)))
-    .i16(ascender).i16(descender).i16(0)
+    .i16(ascender).i16(descender).i16(lineGap)
     .u16(ascender).u16(-descender)
     // Code pages: Latin 1 (1252) and Macintosh Roman, or the symbol character set for the DOS variant;
     // the fixed face also claims code page 437.
     .u32(dos ? 0x80000000 : (1 << 0) | (1 << 29))
-    .u32(face.id === 'fixed' ? 0x80000000 : 0)
+    .u32(spec.cp437 ? 0x80000000 : 0)
     .done();
   const post = new Buf()
     .u32(0x00020000)
     .u32(0)
-    .i16(-PIXEL).i16(PIXEL)
+    .i16(spec.lines.underPos).i16(spec.lines.underSize)
     .u32(fixed ? 1 : 0)
     .u32(0).u32(0).u32(0).u32(0)
     .u16(list.length);
@@ -417,5 +460,6 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
     glyf: glyf.done(),
     name,
     post: post.done(),
+    ...spec.extra,
   });
 }

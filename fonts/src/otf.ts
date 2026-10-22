@@ -128,7 +128,7 @@ function checksum(data: Uint8Array, from: number, length: number): number {
  * which would make every build differ, and it writes 3 as the smallest readable size. Both dates
  * are pinned, the smallest size becomes the face's pixel size, and the checksums are recomputed.
  */
-function finish(file: Uint8Array, ppem: number): Uint8Array {
+export function finish(file: Uint8Array, ppem: number): Uint8Array {
   const out = Uint8Array.from(file);
   const dv = new DataView(out.buffer);
   const tables = dv.getUint16(4);
