@@ -1,6 +1,7 @@
 #!/bin/bash
 # Validates the built fonts with third-party tools: fc-scan and otfinfo on the host if present, then fontTools, OTS
 # and FreeType in a throwaway Docker image. Optional and not part of tools/check.sh; nothing is installed on the host.
+# Set PROOF_DIR to a directory to also get FreeType proof sheets of the outline faces.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -29,6 +30,14 @@ FROM python:3.12-slim
 RUN pip install --no-cache-dir fonttools==4.55.3 opentype-sanitizer==9.2.0 freetype-py==2.5.1
 EOF
 echo
-docker run --rm --network none \
-  -v "$PWD/generated:/fonts:ro" -v "$PWD/validate.py:/validate.py:ro" \
-  "$IMAGE" python3 /validate.py /fonts
+# PROOF_DIR=<dir> also writes FreeType proof sheets of the outline faces there.
+if [ -n "${PROOF_DIR:-}" ]; then
+  mkdir -p "$PROOF_DIR"
+  docker run --rm --network none --user "$(id -u):$(id -g)" \
+    -v "$PWD/generated:/fonts:ro" -v "$PWD/validate.py:/validate.py:ro" -v "$(cd "$PROOF_DIR" && pwd):/proof" \
+    "$IMAGE" python3 /validate.py /fonts /proof
+else
+  docker run --rm --network none \
+    -v "$PWD/generated:/fonts:ro" -v "$PWD/validate.py:/validate.py:ro" \
+    "$IMAGE" python3 /validate.py /fonts
+fi

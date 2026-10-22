@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 # Validates the built fonts with third-party tools: fontTools reads every table of every file, OTS sanitises each,
-# and FreeType renders every glyph at the native size and at twice it to compare with the .DFN bitmaps.
+# FreeType renders every pixel-face glyph at the native size and at twice it to compare with the .DFN bitmaps, compares
+# the outline faces' OTF and TTF renderings, and optionally writes proof sheets.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: python3 validate.py <generated-dir>    (run inside the container that fonts/validate.sh starts)
+# usage: python3 validate.py <generated-dir> [proof-dir]    (run inside the container that fonts/validate.sh starts)
 import glob
 import os
 import struct
 import subprocess
 import sys
+import zlib
 
 import freetype
 from fontTools.ttLib import TTFont
@@ -78,7 +80,7 @@ def render(face, cp, flags, scale_rows):
     return inked, grey
 
 
-def main(gen):
+def main(gen, proof_dir=None):
     print("== fontTools: read and recompile every table")
     for path in sorted(glob.glob(os.path.join(gen, "*.ttf")) + glob.glob(os.path.join(gen, "*.otf"))):
         name = os.path.basename(path)
@@ -221,11 +223,92 @@ def main(gen):
         else:
             print("ok   " + msg + (" (Round compared in monochrome)" if "-round" in path else ""))
 
+    print("\n== FreeType: the outline faces, OTF against TTF, and proof sheets")
+    modern = ["desk-sans", "desk-sans-bold", "desk-mono", "desk-mono-bold", "desk-serif", "desk-serif-bold"]
+    for base in modern:
+        faces = {ext: freetype.Face(os.path.join(gen, f"{base}.{ext}")) for ext in ("otf", "ttf")}
+        chars = [chr(c) for c in range(0x20, 0x7F)] + [chr(c) for c in range(0xA1, 0x100) if c != 0xAD] + list("ŒœŸŠšŽž€‚ƒ„…†‡ˆ‰‹‘’“”•–—˜™›")
+        worst, worst_ch = 0.0, ""
+        for ch in chars:
+            out = {}
+            for ext, face in faces.items():
+                face.set_pixel_sizes(0, 48)
+                face.load_char(ch, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_HINTING)
+                g = face.glyph
+                out[ext] = {(g.bitmap_left + x, -g.bitmap_top + y): g.bitmap.buffer[y * g.bitmap.pitch + x] for y in range(g.bitmap.rows) for x in range(g.bitmap.width)}
+            keys = set(out["otf"]) | set(out["ttf"])
+            ink = sum(out["otf"].values()) or 1
+            diff = sum(abs(out["otf"].get(k, 0) - out["ttf"].get(k, 0)) for k in keys) / ink
+            if diff > worst:
+                worst, worst_ch = diff, ch
+        # Grey edges of small marks differ a little between FreeType's CFF and TrueType paths even for equal shapes.
+        line = f"{base}: OTF and TTF rendered at 48 px differ by at most {worst * 100:.2f} % of the ink ({worst_ch})"
+        if worst > 0.05:
+            fail(line)
+        else:
+            print("ok   " + line)
+    if proof_dir:
+        for base in modern:
+            proof(os.path.join(gen, f"{base}.ttf"), os.path.join(proof_dir, f"{base}.png"))
+        print(f"note proof sheets written to the proof directory")
+
     print(f"\n{len(failures)} failures, {len(warnings)} warnings")
     for w in warnings:
         print("warn", w)
     return 1 if failures else 0
 
 
+PROOF_LINES = [
+    "Hamburgefonstiv agyks e 357 &@ 0O Il1 rn m",
+    "The quick brown fox jumps over the lazy dog.",
+    "Ébauche, à côté, déjà vu, crème brûlée — « Ça va ? »",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 $%#*",
+    "File  Edit  View  Help   C:\\DESK\\NOTES  12:45  ✓ ► ▼",
+]
+
+
+def write_png(path, w, h, rows):
+    raw = b"".join(b"\x00" + bytes(r) for r in rows)
+
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def proof(path, out):
+    """A proof sheet: the sample lines at 11, 12, 14, 16, 24 and 48 px, grey then monochrome, unhinted."""
+    face = freetype.Face(path)
+    sizes = [11, 12, 14, 16, 24, 48]
+    W = 1900
+    H = sum((int(s * 1.25) + 2) * (len(PROOF_LINES) if s < 24 else 2) + 4 for s in sizes) * 2 + 8
+    canvas = [[255] * W for _ in range(H)]
+    y = 4
+    for mono in (False, True):
+        for size in sizes:
+            face.set_pixel_sizes(0, size)
+            flags = freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_HINTING | (freetype.FT_LOAD_TARGET_MONO if mono else 0)
+            for line in PROOF_LINES if size < 24 else PROOF_LINES[:2]:
+                pen = 6
+                for ch in line:
+                    face.load_char(ch, flags)
+                    g = face.glyph
+                    bm = g.bitmap
+                    for by in range(bm.rows):
+                        for bx in range(bm.width):
+                            if bm.pixel_mode == freetype.FT_PIXEL_MODE_MONO:
+                                v = 255 if (bm.buffer[by * bm.pitch + (bx >> 3)] >> (7 - (bx & 7))) & 1 else 0
+                            else:
+                                v = bm.buffer[by * bm.pitch + bx]
+                            cx, cy = pen + g.bitmap_left + bx, y + int(size * 0.95) - g.bitmap_top + by
+                            if 0 <= cy < H and 0 <= cx < W:
+                                canvas[cy][cx] = min(canvas[cy][cx], 255 - v)
+                    pen += g.advance.x >> 6
+                y += int(size * 1.25) + 2
+            y += 4
+    write_png(out, W, y, canvas[:y])
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1]))
+    sys.exit(main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None))
