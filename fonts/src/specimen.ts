@@ -241,6 +241,35 @@ const CODE = `fn app_start(desk: &mut Desk) -> i32 {
     0
 }`;
 
+/** The tester's feature switches: the OpenType tag, its label and whether it starts on (as browsers set it). */
+const TESTER_FEATURES: [string, string, boolean][] = [
+  ['kern', 'Kerning', true],
+  ['liga', 'Ligatures', true],
+  ['calt', 'Code ligatures (Mono)', true],
+  ['onum', 'Old-style figures (Serif)', false],
+  ['pnum', 'Proportional figures', false],
+  ['frac', 'Fractions', false],
+  ['smcp', 'Small capitals (Serif)', false],
+  ['dlig', 'ct st (Serif)', false],
+  ['ss01', 'Alternates a l 0 (Sans)', false],
+];
+
+/** The feature rows: a label, the face, the CSS with the feature off and on, and the sample. */
+const FEATURE_ROWS: [string, string, string, string, string][] = [
+  ['kern', "'Desk Sans'", 'font-kerning:none', 'font-kerning:normal', 'To AVATAR, Yo! LT P. r. fox'],
+  ['kern', "'Desk Serif'", 'font-style:italic;font-kerning:none', 'font-style:italic;font-kerning:normal', 'Type To Wayward “Avoid.”'],
+  ['liga', "'Desk Sans'", 'font-variant-ligatures:no-common-ligatures', '', 'office fluffy fiord'],
+  ['liga', "'Desk Serif'", 'font-variant-ligatures:no-common-ligatures', '', 'office fluffy fiord'],
+  ['liga', "'Desk Serif'", 'font-style:italic;font-variant-ligatures:no-common-ligatures', 'font-style:italic', 'office fluffy fiord'],
+  ['calt', "'Desk Mono'", 'font-variant-ligatures:no-contextual', '', 'a -> b => c != d <= e === f :: g /* h */ |> i'],
+  ['onum', "'Desk Serif'", '', "font-feature-settings:'onum'", 'In 1984, 2026 and 357'],
+  ['pnum', "'Desk Sans'", '', "font-feature-settings:'pnum'", '1111 2026 0101'],
+  ['frac', "'Desk Sans'", '', "font-feature-settings:'frac'", '1/2 3/4 2/3 7/8 cup'],
+  ['smcp', "'Desk Serif'", '', "font-feature-settings:'smcp'", 'Small Capitals, déjà vu'],
+  ['dlig', "'Desk Serif'", '', "font-feature-settings:'dlig'", 'strict act, the first'],
+  ['ss01', "'Desk Sans'", '', "font-feature-settings:'ss01'", 'a ballad, l 0 à'],
+];
+
 /** The Modern section: the outline faces at real sizes, beside the pixel faces, a proof sheet each and a tester. */
 function modernSection(): string {
   const fams = [
@@ -260,6 +289,8 @@ function modernSection(): string {
       <div>←↑→↓↔↕ ►◄▲▼ ●○■□ ✓✗ ™ © ® ° ± × ÷</div>
       <p class="mp-para" style="font-weight:400">${esc(PARAGRAPH)}</p>
       <p class="mp-para" style="font-weight:700">${esc(PARAGRAPH.slice(0, 120))}…</p>
+      <p class="mp-para" style="font-style:italic">${esc(PARAGRAPH.slice(0, 160))}…</p>
+      <p class="mp-para" style="font-style:italic;font-weight:700">${esc(PARAGRAPH.slice(0, 90))}…</p>
       <div class="mp-ui"><span>File</span><span>Edit</span><span>View</span><span>Help</span><span class="mp-dim">C:\\DESK\\NOTES · 12:45 · ✓ Saved</span></div>
       <table class="mp-table"><tr><td>AUTO.SAV</td><td>2 048</td><td>22 Oct</td></tr><tr><td>FIZZ.EXE</td><td>912 384</td><td>21 Oct</td></tr><tr><td>README.TXT</td><td>1 117</td><td>20 Oct</td></tr></table>
       ${mono ? `<pre class="mp-code">${esc(CODE)}\n${esc('┌──────┬──────┐\n│ ░▒▓█ │ ▀▄▌▐ │\n╞══════╪══════╡\n└──────┴──────┘')}</pre>` : ''}
@@ -268,7 +299,7 @@ function modernSection(): string {
 <section class="face" id="modern" aria-labelledby="h-modern">
   <header class="face-head">
     <h2 id="h-modern" style="font-family:'Desk Sans';font-weight:700;font-size:40px;line-height:48px">Modern: Desk Sans, Mono and Serif</h2>
-    <p class="purpose">Outline faces drawn from stroke skeletons in the build (no tracing of any other font), each Regular and Bold, as OTF and TrueType. They are for larger sizes and modern systems; the pixel faces above stay the Desk's own text at its native sizes. They carry no hinting, so below about 14 px they look soft and uneven. An italic is a later option.</p>
+    <p class="purpose">Outline faces drawn from stroke skeletons in the build (no tracing of any other font), each Regular, Bold, Italic and Bold Italic, as OTF and TrueType. They are for larger sizes and modern systems; the pixel faces above stay the Desk's own text at its native sizes. They carry no hinting, so below about 14 px they look soft and uneven. Sans and Serif are kerned and have f ligatures; Mono has code ligatures; every feature is optional and the plain characters are unchanged.</p>
   </header>
   <h3>Sizes, beside the pixel faces</h3>
   <div class="screen-wrap"><div class="mod-sizes">
@@ -278,7 +309,8 @@ function modernSection(): string {
         <span style="font:${z}px/1.25 'Desk Sans'">Files · déjà vu</span>
         <span style="font:700 ${z}px/1.25 'Desk Sans'">Files</span>
         <span style="font:${z}px/1.25 'Desk Mono'">C:\\DESK 0O1l</span>
-        <span style="font:${z}px/1.25 'Desk Serif'">Lettre à Noël</span></div>`,
+        <span style="font:${z}px/1.25 'Desk Serif'">Lettre à Noël</span>
+        <span style="font:italic ${z}px/1.25 'Desk Serif'">en italique</span></div>`,
       )
       .join('')}
     <div class="ms-row"><span class="ms-z">pixel</span>
@@ -290,17 +322,29 @@ function modernSection(): string {
   <h3>Type tester</h3>
   <div class="tester">
     <label class="label" for="tt-text">Text</label>
-    <input id="tt-text" type="text" value="Ébauche, à côté, déjà vu — 0O Il1 {}" aria-label="Text to render">
+    <input id="tt-text" type="text" value="The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y" aria-label="Text to render">
     <label class="label" for="tt-face">Face</label>
     <select id="tt-face">
-      ${['Desk Sans', 'Desk Mono', 'Desk Serif'].flatMap((f) => [`<option value="${f}|400">${f} Regular</option>`, `<option value="${f}|700">${f} Bold</option>`]).join('')}
+      ${['Desk Sans', 'Desk Mono', 'Desk Serif'].flatMap((f) => [`<option value="${f}|400">${f}</option>`, `<option value="${f}|700">${f} Bold</option>`]).join('')}
       <option value="Desk UI|400">Desk UI (pixel)</option><option value="Desk Title|700">Desk Title (pixel)</option><option value="Desk Fixed|400">Desk Fixed (pixel)</option><option value="Desk Small|400">Desk Small (pixel)</option>
       <option value="Desk UI Round|400">Desk UI Round</option><option value="Desk Fixed DOS|400">Desk Fixed DOS</option>
     </select>
     <label class="label" for="tt-size">Size</label>
     <select id="tt-size">${[8, 11, 12, 14, 16, 18, 24, 32, 48, 72].map((z) => `<option value="${z}"${z === 24 ? ' selected' : ''}>${z} px</option>`).join('')}</select>
   </div>
-  <div class="screen-wrap"><div id="tt-out" class="tt-out" style="font-family:'Desk Sans';font-size:24px">Ébauche, à côté, déjà vu — 0O Il1 {}</div></div>
+  <div class="tt-feats" role="group" aria-label="Style and OpenType features">
+    <label><input type="checkbox" id="tt-italic"> Italic</label>
+    ${TESTER_FEATURES.map(([id, label, on]) => `<label><input type="checkbox" id="tt-f-${id}" data-feature="${id}"${on ? ' checked' : ''}> ${esc(label)}</label>`).join('\n    ')}
+  </div>
+  <div class="screen-wrap"><div id="tt-out" class="tt-out" style="font-family:'Desk Sans';font-size:24px">The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y</div></div>
+  <h3>Kerning, ligatures and features</h3>
+  <p class="hint">Each row shows the feature off, then on. Browsers kern and set <code>liga</code> and <code>calt</code> by default; the others are asked for with <code>font-feature-settings</code> or <code>font-variant-*</code>. Windows 3.1 reads only the old <code>kern</code> table.</p>
+  <div class="screen-wrap"><div class="feat-rows">
+    ${FEATURE_ROWS.map(
+      ([label, css, off, on, text]) =>
+        `<div class="feat-row"><span class="ms-z">${esc(label)}</span><span style="font-family:${css};${off}">${esc(text)}</span><span class="feat-arrow">→</span><span style="font-family:${css};${on}">${esc(text)}</span></div>`,
+    ).join('')}
+  </div></div>
   ${fams.map((f) => `<h3>${f.name}</h3><p class="hint">${esc(f.note)}</p>${proof(f.css, f.name === 'Desk Mono')}`).join('')}
 </section>`;
 }
@@ -433,6 +477,11 @@ table.dfn td,table.dfn th{border-bottom:1px solid var(--line);padding:6px 12px 6
 .ms-z{font:11px var(--font-mono);color:var(--muted);width:44px}
 .tester{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .tester input{flex:1 1 260px;min-width:0;font:15px var(--font-body);padding:6px 8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.tt-feats{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--fg)}
+.tt-feats label{display:inline-flex;gap:6px;align-items:center}
+.feat-rows{padding:12px 16px;color:var(--screen-fg);display:flex;flex-direction:column;gap:8px;width:max-content;min-width:100%;font-size:26px;line-height:1.3}
+.feat-row{display:flex;align-items:baseline;gap:20px;white-space:nowrap}
+.feat-arrow{color:var(--muted);font-size:16px}
 .tt-out{padding:16px;color:var(--screen-fg);white-space:pre-wrap;word-break:break-word;line-height:1.3}
 .mod-proof{background:var(--screen-bg);color:var(--screen-fg);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:6px;font-size:18px;line-height:1.35;overflow-x:auto}
 .mp-big{font-size:56px;line-height:1.1}
@@ -460,7 +509,7 @@ table.cp437 .dos{font-family:'Desk Fixed DOS';font-size:16px;line-height:16px;di
     <div class="actions">
       <button type="button" class="primary" id="zip-save" data-needs-downloads hidden>Save desk-fonts.zip</button>
       <span class="hint" id="no-downloads">The OTF and .DFN files are in <code>fonts/generated/</code> in the repository; this view cannot save files.</span>
-      <span class="hint" data-needs-downloads hidden>Ten OTF and ten TrueType files (Square and Round, with Desk Fixed DOS), four .DFN files and the licence, ${Math.round(bundle.length / 1024)} KB.</span>
+      <span class="hint" data-needs-downloads hidden>${files.filter((f) => f.name.endsWith('.otf')).length} OTF and ${files.filter((f) => f.name.endsWith('.ttf')).length} TrueType files (the pixel faces Square and Round with Desk Fixed DOS, and Desk Sans, Mono and Serif in four styles each), ${files.filter((f) => f.name.endsWith('.dfn')).length} .DFN files and the licence, ${Math.round(bundle.length / 1024)} KB.</span>
     </div>
   </section>
 ${faces.map(({ face, glyphs }) => faceSection(face, glyphs)).join('\n')}
