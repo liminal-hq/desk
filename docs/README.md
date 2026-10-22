@@ -14,6 +14,7 @@ Working design documents for Desk, derived from a design-agent brainstorm that h
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
+| [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 
 The prototypes and boards the documents point at are in [`../design/`](../design/), kept as reference only.
