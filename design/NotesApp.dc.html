@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskToolbar" items="{{ tools }}" hint-size="100%,26px"></dc-import>
+  <dc-import name="DeskTabs" tabs="{{ tabs }}" on-new="{{ newNote }}" hint-size="100%,22px"></dc-import>
+
+  <sc-if value="{{ findOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: 4px; padding: 3px 6px; background: #14161d; border-bottom: 1px solid #1f2230; flex-shrink: 0; flex-wrap: wrap;">
+      <input ref="{{ findRef }}" value="{{ findQ }}" onChange="{{ onFindQ }}" onKeyDown="{{ onFindKey }}" placeholder="Find" spellcheck="false" style="width: 96px; height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; outline: none; caret-color: #ffaa40;">
+      <sc-if value="{{ replaceOpen }}" hint-placeholder-val="{{ false }}">
+        <input value="{{ findR }}" onChange="{{ onFindR }}" onKeyDown="{{ onFindKey }}" placeholder="Replace with" spellcheck="false" style="width: 96px; height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; outline: none; caret-color: #ffaa40;">
+      </sc-if>
+      <span onClick="{{ findNext }}" style="padding: 1px 7px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Next</span>
+      <sc-if value="{{ replaceOpen }}" hint-placeholder-val="{{ false }}">
+        <span onClick="{{ replaceOne }}" style="padding: 1px 7px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Replace</span>
+        <span onClick="{{ replaceAll }}" style="padding: 1px 7px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">All</span>
+      </sc-if>
+      <span style="color: #7c8796; padding: 0 4px; white-space: nowrap;">{{ findCount }}</span>
+      <span style="flex: 1;"></span>
+      <span onClick="{{ closeFind }}" style="width: 16px; text-align: center; color: #7c8796; cursor: pointer;" style-hover="color: #fff;">×</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasDoc }}" hint-placeholder-val="{{ true }}">
+    <textarea ref="{{ taRef }}" value="{{ text }}" onChange="{{ onText }}" onKeyDown="{{ onTaKey }}" onKeyUp="{{ onCaret }}" onClick="{{ onTaClick }}" onSelect="{{ onCaret }}" onContextMenu="{{ onTaCtx }}" readonly="{{ readOnly }}" spellcheck="false" style="flex: 1; min-height: 0; resize: none; border: none; background: #050507; color: #e0e0e0; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 16px; padding: 8px 10px; caret-color: #ffaa40; user-select: text; white-space: {{ ws }}; overflow-wrap: {{ ow }};"></textarea>
+    <sc-if value="{{ hasLinks }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; gap: 4px; padding: 3px 6px; background: #0c0c10; border-top: 1px solid #1f2230; flex-shrink: 0; overflow: hidden;">
+        <span style="color: #7c8796; white-space: nowrap;">Links</span>
+        <sc-for list="{{ links }}" as="l" hint-placeholder-count="2"><span onClick="{{ l.open }}" style="padding: 0 6px; cursor: pointer; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ l.fg }}; border: 1px solid {{ l.line }};" style-hover="background: #172538;">{{ l.label }}</span></sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+  <sc-if value="{{ noDoc }}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #7c8796; background: #050507;">
+      <span>No note open.</span>
+      <div style="display: flex; gap: 6px;"><span onClick="{{ newNote }}" style="padding: 3px 10px; background: #ffaa40; color: #0a0a0c; font-weight: 600; cursor: pointer;">New note</span><span onClick="{{ openNote }}" style="padding: 3px 10px; border: 1px solid #333847; color: #e0e0e0; cursor: pointer;">Open…</span></div>
+    </div>
+  </sc-if>
+
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ statusLeft }}</span><span style="white-space: nowrap;">{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static TEXT = ['TXT', 'MD', 'INI', 'CFG', 'INF', 'DIF', 'BAT', 'C', 'H', 'RS', 'ASM', 'BAS', 'PAS', 'CSV', 'LOG', 'M3U', 'ME', 'NFO', 'DOC'];
+  state = { tabs: [], active: 0, wrap: true, find: null, line: 1, col: 1, navN: null };
+  taRef = (el) => { this.ta = el; };
+  findRef = (el) => { if (el && !this._ff) { this._ff = true; el.focus(); el.select(); } if (!el) this._ff = false; };
+  componentDidMount() {
+    if (this.props.nav) this.take(this.props.nav); else if (this.props.ops.stat('C:\\NOTES\\TODAY.TXT')) this.openPath('C:\\NOTES\\TODAY.TXT');
+    this.onKey = (e) => this.key(e);
+    document.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    if (this.props.nav && this.props.nav.n !== this.state.navN) this.take(this.props.nav);
+    const ops = this.props.ops, p = this.path();
+    const t = 'Notes' + (p ? ' · ' + ops.base(p) : '');
+    if (t !== this._t) { this._t = t; ops.setTitle(this.props.winId, t); }
+  }
+  take(nav) {
+    if (!nav) return;
+    this.setState({ navN: nav.n });
+    (nav.paths || (nav.path ? [nav.path] : [])).forEach(p => this.openPath(p));
+  }
+  path() { const t = this.state.tabs[this.state.active]; return t ? t.path : null; }
+  isText(p) { const st = this.props.ops.stat(p); return st && !st.dir && (typeof st.text === 'string' || Component.TEXT.includes(this.props.ops.ext(st.n))); }
+  openPath(p) {
+    const ops = this.props.ops;
+    if (!this.isText(p)) return ops.toast('Notes opens text files', ops.base(p) + " isn't text. Try Open with… in Files.");
+    this.setState(s => {
+      const i = s.tabs.findIndex(t => t.path === p);
+      if (i >= 0) return { active: i };
+      return { tabs: [...s.tabs, { path: p }], active: s.tabs.length };
+    });
+  }
+  closeTab(i) { this.setState(s => { const tabs = s.tabs.filter((_, j) => j !== i); return { tabs, active: Math.max(0, Math.min(tabs.length - 1, s.active > i ? s.active - 1 : s.active)) }; }); }
+  newNote() { const p = this.props.ops.create('C:\\NOTES', 'UNTITLED.TXT', ''); if (p) this.openPath(p); }
+  openNote() { this.props.ops.pick({ mode: 'open', title: 'Open a note', dir: this.path() ? this.props.ops.parent(this.path()) : 'C:\\NOTES', types: [{ label: 'Text', ext: Component.TEXT }] }).then(p => p && this.openPath(p)); }
+  saveAs() {
+    const ops = this.props.ops, p = this.path(); if (!p) return;
+    ops.pick({ mode: 'save', title: 'Save a copy as', dir: ops.parent(p), name: ops.base(p), types: [{ label: 'Text', ext: ['TXT', 'MD', 'INI', 'BAT'] }] }).then(d => {
+      if (!d) return; ops.write(d, this.text()); this.setState(s => ({ tabs: s.tabs.map((t, i) => i === s.active ? { path: d } : t) })); ops.toast('Saved as ' + ops.base(d), 'In ' + ops.parent(d) + '. Changes save as you type.');
+    });
+  }
+  text() { const st = this.path() && this.props.ops.stat(this.path()); return st && typeof st.text === 'string' ? st.text : ''; }
+  setText(v, caret) { const p = this.path(); if (!p) return; this.props.ops.write(p, v); if (caret !== undefined) setTimeout(() => { if (this.ta) { this.ta.focus(); this.ta.setSelectionRange(caret, caret); } }, 0); }
+  edit(fn) { const el = this.ta; if (!el) return; const r = fn(el.value, el.selectionStart, el.selectionEnd); if (r) this.setText(r.v, r.c); }
+  caret() { const el = this.ta; if (!el) return; const before = el.value.slice(0, el.selectionStart).split('\n'); this.setState({ line: before.length, col: before[before.length - 1].length + 1 }); }
+  linkAt(pos) { const v = this.text(); const re = /\[\[([A-Za-z0-9_\-]{1,8})\]\]/g; let m; while ((m = re.exec(v))) { if (pos >= m.index && pos <= m.index + m[0].length) return m[1].toUpperCase(); } return null; }
+  openLink(name) {
+    const ops = this.props.ops, dir = this.path() ? ops.parent(this.path()) : 'C:\\NOTES';
+    const hit = ['TXT', 'MD'].map(e => ops.join(dir, name + '.' + e)).find(p => ops.stat(p));
+    if (hit) return this.openPath(hit);
+    ops.ask({ title: 'Make ' + name + '.TXT?', text: "There's no note called " + name + ' in ' + dir + ' yet.', yes: 'Make it', no: 'Not now', run: () => { const p = ops.create(dir, name + '.TXT', ''); if (p) this.openPath(p); } });
+  }
+  openFind(replace) { this.setState(s => ({ find: { q: s.find ? s.find.q : (this.ta ? this.ta.value.slice(this.ta.selectionStart, this.ta.selectionEnd) : ''), r: s.find ? s.find.r : '', replace } })); }
+  findNext() {
+    const f = this.state.find; if (!f || !f.q || !this.ta) return;
+    const v = this.ta.value.toUpperCase(), q = f.q.toUpperCase();
+    let i = v.indexOf(q, this.ta.selectionEnd); if (i < 0) i = v.indexOf(q);
+    if (i < 0) return this.props.ops.toast('Not found', '"' + f.q + '" isn\'t in this note.');
+    this.ta.focus(); this.ta.setSelectionRange(i, i + q.length); this.caret();
+  }
+  replaceOne() {
+    const f = this.state.find, el = this.ta; if (!f || !el) return;
+    if (el.value.slice(el.selectionStart, el.selectionEnd).toUpperCase() === f.q.toUpperCase() && f.q) this.edit((v, a, b) => ({ v: v.slice(0, a) + f.r + v.slice(b), c: a + f.r.length }));
+    setTimeout(() => this.findNext(), 10);
+  }
+  replaceAll() {
+    const f = this.state.find; if (!f || !f.q) return;
+    const re = new RegExp(f.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); const v = this.text(); const n = (v.match(re) || []).length;
+    this.setText(v.replace(re, f.r)); this.props.ops.toast('Replaced ' + n, n === 1 ? 'One match changed.' : n + ' matches changed.');
+  }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    let used = true;
+    if (ctrl && k === 'n') this.newNote();
+    else if (ctrl && k === 'o') this.openNote();
+    else if (ctrl && e.shiftKey && k === 's') this.saveAs();
+    else if (ctrl && k === 's') this.props.ops.toast('Already saved', 'Notes saves as you type.');
+    else if (ctrl && k === 'w') this.closeTab(this.state.active);
+    else if (ctrl && k === 'f') this.openFind(false);
+    else if (ctrl && k === 'h') this.openFind(true);
+    else if (e.key === 'F3') this.findNext();
+    else if (ctrl && e.key === 'Tab') this.setState(s => ({ active: s.tabs.length ? (s.active + (e.shiftKey ? s.tabs.length - 1 : 1)) % s.tabs.length : 0 }));
+    else if (e.key === 'Escape' && this.state.find) this.setState({ find: null });
+    else used = false;
+    if (used) e.preventDefault();
+  }
+  editMenu() {
+    const ops = this.props.ops, el = this.ta, has = el && el.selectionEnd > el.selectionStart, clip = ops.getClipText();
+    const link = el && this.linkAt(el.selectionStart);
+    return [
+      ...(link ? [{ label: 'Open [[' + link + ']]', bold: true, run: () => this.openLink(link) }] : []),
+      { label: 'Cut', hint: 'Ctrl+X', sep: !!link, disabled: !has, run: () => this.edit((v, a, b) => { ops.clipText(v.slice(a, b), true); return { v: v.slice(0, a) + v.slice(b), c: a }; }) },
+      { label: 'Copy', hint: 'Ctrl+C', disabled: !has, run: () => ops.clipText(el.value.slice(el.selectionStart, el.selectionEnd), true) },
+      { label: 'Paste', hint: 'Ctrl+V', disabled: !clip, run: () => this.edit((v, a, b) => ({ v: v.slice(0, a) + clip + v.slice(b), c: a + clip.length })) },
+      { label: 'Select all', hint: 'Ctrl+A', run: () => { if (el) { el.focus(); el.select(); } } },
+      { label: 'Find…', hint: 'Ctrl+F', sep: true, run: () => this.openFind(false) },
+      { label: 'Replace…', hint: 'Ctrl+H', run: () => this.openFind(true) },
+      { label: 'Insert date', sep: true, run: () => this.edit((v, a, b) => { const t = ops.fmtDate(Date.now(), true); return { v: v.slice(0, a) + t + v.slice(b), c: a + t.length }; }) },
+      { label: 'Insert a link…', run: () => this.edit((v, a, b) => { const sel = v.slice(a, b).toUpperCase().replace(/[^A-Z0-9_\-]/g, '').slice(0, 8) || 'NOTE'; const t = '[[' + sel + ']]'; return { v: v.slice(0, a) + t + v.slice(b), c: a + t.length }; }) },
+    ];
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tools: [], tabs: [], links: [] };
+    const s = this.state, p = this.path(), st = p && ops.stat(p);
+    const hasDoc = !!p, text = st && typeof st.text === 'string' ? st.text : (p ? '(This note has moved or been deleted.)' : '');
+    const links = [...new Set((text.match(/\[\[([A-Za-z0-9_\-]{1,8})\]\]/g) || []).map(x => x.slice(2, -2).toUpperCase()))].map(n => {
+      const dir = p ? ops.parent(p) : 'C:\\NOTES', exists = ['TXT', 'MD'].some(e => ops.stat(ops.join(dir, n + '.' + e)));
+      return { label: n, fg: exists ? '#60a5fa' : '#7c8796', line: exists ? '#31527c' : '#333847', open: () => this.openLink(n) };
+    });
+    const f = s.find;
+    const count = f && f.q ? (text.toUpperCase().split(f.q.toUpperCase()).length - 1) : 0;
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [
+          { label: 'New note', hint: 'Ctrl+N', run: () => this.newNote() },
+          { label: 'Open…', hint: 'Ctrl+O', run: () => this.openNote() },
+          { label: 'Save a copy as…', hint: 'Ctrl+Shift+S', disabled: !hasDoc, run: () => this.saveAs() },
+          { label: 'Show in Files', sep: true, disabled: !hasDoc, run: () => ops.reveal(p) },
+          { label: 'Properties', disabled: !hasDoc, run: () => ops.properties(p) },
+          { label: 'Close tab', hint: 'Ctrl+W', sep: true, disabled: !hasDoc, run: () => this.closeTab(s.active) },
+          { label: 'Close window', run: () => ops.closeWindow(this.props.winId) },
+        ] },
+        { label: 'Edit', items: () => this.editMenu() },
+        { label: 'View', items: () => [{ label: 'Word wrap', check: s.wrap, run: () => this.setState({ wrap: !s.wrap }) }, { label: 'Next tab', hint: 'Ctrl+Tab', sep: true, disabled: s.tabs.length < 2, run: () => this.setState({ active: (s.active + 1) % s.tabs.length }) }] },
+        { label: 'Help', items: () => [{ label: 'Writing links', run: () => ops.toast('Links between notes', 'Type [[NAME]] to link to NAME.TXT beside this note. Ctrl+click a link, or use the Links strip, to open it.') }, { label: 'About Notes', sep: true, run: () => ops.about('notes') }] },
+      ],
+      tools: [
+        { glyph: '+', label: 'New', run: () => this.newNote() }, { glyph: '▤', label: 'Open', run: () => this.openNote() }, { glyph: '⎘', title: 'Save a copy as', disabled: !hasDoc, run: () => this.saveAs() }, '|',
+        { glyph: '⌕', label: 'Find', on: !!f, disabled: !hasDoc, run: () => f ? this.setState({ find: null }) : this.openFind(false) },
+        { glyph: '⇄', title: 'Replace', on: !!(f && f.replace), disabled: !hasDoc, run: () => this.openFind(true) }, '|',
+        { glyph: '↵', label: 'Wrap', on: s.wrap, run: () => this.setState({ wrap: !s.wrap }) }, '~',
+        { text: 'Saves as you type' },
+      ],
+      tabs: s.tabs.map((t, i) => ({ label: ops.base(t.path), kind: ops.kind(ops.base(t.path), false), active: i === s.active, drop: '', pick: () => this.setState({ active: i }), close: () => this.closeTab(i),
+        ctx: (e) => ops.menu(e, [{ label: 'Close tab', run: () => this.closeTab(i) }, { label: 'Close other tabs', disabled: s.tabs.length < 2, run: () => this.setState({ tabs: [t], active: 0 }) }, { label: 'Show in Files', sep: true, run: () => ops.reveal(t.path) }]) })),
+      newNote: () => this.newNote(), openNote: () => this.openNote(),
+      hasDoc, noDoc: !hasDoc, text, readOnly: !(st && typeof st.text === 'string'), taRef: this.taRef,
+      ws: s.wrap ? 'pre-wrap' : 'pre', ow: s.wrap ? 'anywhere' : 'normal',
+      onText: (e) => { if (st && typeof st.text === 'string') this.setText(e.target.value); },
+      onTaKey: (e) => { if (e.key === 'Tab' && !e.ctrlKey) { e.preventDefault(); this.edit((v, a, b) => ({ v: v.slice(0, a) + '  ' + v.slice(b), c: a + 2 })); } },
+      onCaret: () => this.caret(),
+      onTaClick: (e) => { this.caret(); if (e.ctrlKey || e.metaKey) { const l = this.linkAt(this.ta.selectionStart); if (l) this.openLink(l); } },
+      onTaCtx: (e) => { e.stopPropagation(); ops.menu(e, this.editMenu()); },
+      hasLinks: links.length > 0, links,
+      findOpen: !!f, replaceOpen: !!(f && f.replace), findQ: f ? f.q : '', findR: f ? f.r : '', findRef: this.findRef,
+      onFindQ: (e) => this.setState({ find: { ...f, q: e.target.value } }), onFindR: (e) => this.setState({ find: { ...f, r: e.target.value } }),
+      onFindKey: (e) => { e.stopPropagation(); if (e.key === 'Enter') this.findNext(); if (e.key === 'Escape') this.setState({ find: null }); },
+      findNext: () => this.findNext(), replaceOne: () => this.replaceOne(), replaceAll: () => this.replaceAll(), closeFind: () => this.setState({ find: null }),
+      findCount: f && f.q ? (count === 1 ? '1 match' : count + ' matches') : '',
+      statusLeft: hasDoc ? 'Ln ' + s.line + ', Col ' + s.col + ' · ' + text.length + ' characters' + (links.length ? ' · ' + links.length + (links.length === 1 ? ' link' : ' links') : '') : 'No note open',
+      statusRight: hasDoc ? (s.wrap ? 'Wrap on' : 'Wrap off') + ' · ' + p : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

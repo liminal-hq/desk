@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskToolbar" items="{{ tools }}" hint-size="100%,26px"></dc-import>
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <div style="width: 108px; flex-shrink: 0; background: #0c0c10; border-right: 1px solid #1f2230; padding: 4px 0; display: flex; flex-direction: column;">
+      <sc-for list="{{ sections }}" as="x" hint-placeholder-count="3">
+        <div onClick="{{ x.pick }}" style="height: 20px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; cursor: default; background: {{ x.bg }}; color: {{ x.fg }};"><span>{{ x.label }}</span><span style="color: #7c8796; font-size: 10px;">{{ x.n }}</span></div>
+      </sc-for>
+    </div>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+      <div style="padding: 6px 10px; color: #7c8796; border-bottom: 1px solid #1f2230; flex-shrink: 0; line-height: 14px;">{{ intro }}</div>
+      <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 1px 0;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+          <div onClick="{{ r.pick }}" onDoubleClick="{{ r.dbl }}" onContextMenu="{{ r.ctx }}" style="display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 52px; gap: 6px; height: 20px; flex-shrink: 0; align-items: center; padding: 0 8px; cursor: default; background: {{ r.bg }}; color: {{ r.fg }};">
+            <span onClick="{{ r.tick }}" style="width: 8px; height: 8px; border: 1px solid {{ r.boxLine }}; background: {{ r.boxFill }}; visibility: {{ r.boxVis }};"></span>
+            <dc-import name="FileIcon" kind="{{ r.kind }}" size="16" hint-size="16px,16px"></dc-import>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.name }}</span>
+            <span style="text-align: right; color: {{ r.muted }};">{{ r.size }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding: 16px; text-align: center; color: #7c8796;">{{ emptyText }}</div></sc-if>
+      </div>
+      <sc-if value="{{ installing }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 6px 10px; border-top: 1px solid #1f2230; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;"><span style="color: #b4bfce;">{{ installText }}</span><div style="height: 4px; background: #1f2230;"><div style="height: 4px; width: {{ installPct }}%; background: #ffaa40;"></div></div></div>
+      </sc-if>
+    </div>
+    <div style="width: 138px; flex-shrink: 0; border-left: 1px solid #1f2230; background: #0c0c10; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;">
+      <sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ false }}">
+        <dc-import name="FileIcon" kind="{{ d.kind }}" size="32" hint-size="32px,32px"></dc-import>
+        <div style="display: flex; flex-direction: column; gap: 1px;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">{{ d.name }}</span><span style="color: #7c8796;">{{ d.meta }}</span></div>
+        <span style="color: #b4bfce; line-height: 15px;">{{ d.blurb }}</span>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <sc-for list="{{ d.actions }}" as="a" hint-placeholder-count="0"><span onClick="{{ a.run }}" style="padding: 3px 8px; text-align: center; cursor: pointer; background: {{ a.bg }}; color: {{ a.fg }}; border: 1px solid {{ a.line }};" style-hover="filter: brightness(1.2);">{{ a.label }}</span></sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noDetail }}" hint-placeholder-val="{{ true }}"><span style="color: #5a6273; line-height: 15px;">Pick a program to see what it does.</span></sc-if>
+    </div>
+  </div>
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span>{{ statusLeft }}</span><span>{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sec: 'installed', sel: null, picks: {} };
+  componentDidMount() { this.onKey = (e) => this.key(e); document.addEventListener('keydown', this.onKey); this.t = setInterval(() => { if (this.props.ops.installState()) this.forceUpdate(); }, 160); }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey); clearInterval(this.t); }
+  list() {
+    const ops = this.props.ops, cat = ops.catalog();
+    if (this.state.sec === 'installed') return cat.filter(a => a.installed).map(a => ({ ...a, kind: 'package', key: 'app:' + a.key }));
+    if (this.state.sec === 'disk') return cat.filter(a => !a.installed).map(a => ({ ...a, kind: 'package', key: 'app:' + a.key }));
+    return ops.dosPrograms().map(p => ({ key: 'dos:' + p.path, path: p.path, name: ops.getDif(p.path).title, file: p.n, size: p.size, kind: ops.kind(p.n, false), dos: true }));
+  }
+  install() { const k = Object.keys(this.state.picks).filter(x => this.state.picks[x]); if (k.length) { this.props.ops.install(k); this.setState({ picks: {} }); } }
+  fromPackage() {
+    const ops = this.props.ops;
+    ops.pick({ mode: 'open', title: 'Install from a package', dir: 'A:\\', types: [{ label: 'Desk app packages', ext: ['DAP'] }] }).then(p => {
+      if (!p) return; const a = ops.catalog().find(x => x.id + '.DAP' === ops.base(p));
+      if (!a) return ops.toast("That package isn't for this Desk", ops.base(p) + ' has no APP.INF we know.');
+      if (a.installed) return ops.toast(a.name + ' is already installed', 'Nothing to do.');
+      ops.install([a.key]);
+    });
+  }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const rows = this.list(), i = rows.findIndex(r => r.key === this.state.sel);
+    if (e.key === 'ArrowDown') { e.preventDefault(); const r = rows[Math.min(rows.length - 1, i + 1)]; if (r) this.setState({ sel: r.key }); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); const r = rows[Math.max(0, i - 1)]; if (r) this.setState({ sel: r.key }); }
+    else if (e.key === ' ' && this.state.sec === 'disk' && rows[i]) { e.preventDefault(); const k = rows[i].key.slice(4); this.setState(s => ({ picks: { ...s.picks, [k]: !s.picks[k] } })); }
+    else if (e.key === 'Enter' && rows[i]) { e.preventDefault(); this.primary(rows[i]); }
+  }
+  primary(r) { const ops = this.props.ops; if (r.dos) return ops.open(r.path); if (r.installed) return ops.openApp(r.key.slice(4)); this.setState(s => ({ picks: { ...s.picks, [r.key.slice(4)]: !s.picks[r.key.slice(4)] } })); }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tools: [], sections: [], rows: [], d: { actions: [] } };
+    const s = this.state, cat = ops.catalog(), rows = this.list(), inst = ops.installState(), c = ops.drive('C:\\');
+    const pickKeys = Object.keys(s.picks).filter(k => s.picks[k] && cat.some(a => a.key === k && !a.installed));
+    const pickKb = pickKeys.reduce((n, k) => n + cat.find(a => a.key === k).size, 0);
+    const sel = rows.find(r => r.key === s.sel);
+    const btn = (label, run, primary) => ({ label, run, bg: primary ? '#ffaa40' : 'transparent', fg: primary ? '#0a0a0c' : '#e0e0e0', line: primary ? '#ffaa40' : '#333847' });
+    let d = { actions: [] };
+    if (sel && sel.dos) d = { kind: sel.kind, name: sel.name, meta: sel.file + ' · ' + ops.fmtSize(sel.size), blurb: 'A DOS program. It runs full-screen with the whole machine, then you come back here.',
+      actions: [btn('Run full-screen', () => ops.open(sel.path), true), btn('Program settings…', () => ops.properties(sel.path)), btn('Make a desktop icon', () => ops.addShortcut(sel.path)), btn('Show in Files', () => ops.reveal(sel.path))] };
+    else if (sel) d = { kind: 'package', name: sel.name, meta: sel.core ? 'Core · always installed' : sel.size + ' KB · ' + (sel.installed ? 'installed' : 'on A:'), blurb: sel.blurb,
+      actions: sel.core ? [btn('Open', () => ops.openApp(sel.key.slice(4)), true)] : sel.installed ? [btn('Open', () => ops.openApp(sel.key.slice(4)), true), btn('Remove…', () => ops.uninstall(sel.key.slice(4))), btn('Show its folder', () => ops.open('C:\\DESK\\APPS\\' + sel.id))]
+        : [btn(s.picks[sel.key.slice(4)] ? 'Picked' : 'Pick to install', () => this.setState(st => ({ picks: { ...st.picks, [sel.key.slice(4)]: !st.picks[sel.key.slice(4)] } })), true), btn('Show package on A:', () => ops.reveal('A:\\' + sel.id + '.DAP'))] };
+    const counts = { installed: cat.filter(a => a.installed).length, disk: cat.filter(a => !a.installed).length, dos: ops.dosPrograms().length };
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [{ label: 'Install from a package…', run: () => this.fromPackage() }, { label: 'Install picked', disabled: !pickKeys.length || !!inst, run: () => this.install() }, { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'Edit', items: () => [{ label: 'Pick everything on A:', run: () => this.setState({ sec: 'disk', picks: Object.fromEntries(cat.filter(a => !a.installed).map(a => [a.key, true])) }) }, { label: 'Unpick all', disabled: !pickKeys.length, run: () => this.setState({ picks: {} }) }] },
+        { label: 'View', items: () => [['installed', 'Installed'], ['disk', 'On A:'], ['dos', 'DOS programs']].map(([k, l]) => ({ label: l, check: s.sec === k, run: () => this.setState({ sec: k, sel: null }) })) },
+        { label: 'Help', items: () => [{ label: 'About Programs', run: () => ops.about('programs') }] },
+      ],
+      tools: [
+        { glyph: '↓', label: 'Install' + (pickKeys.length ? ' ' + pickKeys.length : ''), on: pickKeys.length > 0, disabled: !pickKeys.length || !!inst, run: () => this.install() },
+        { glyph: '−', label: 'Remove', disabled: !(sel && !sel.dos && sel.installed && !sel.core), run: () => ops.uninstall(sel.key.slice(4)) }, '|',
+        { glyph: '▶', label: 'Run', disabled: !(sel && (sel.dos || sel.installed)), run: () => this.primary(sel) },
+        { glyph: '⚙', title: 'Program settings', disabled: !(sel && sel.dos), run: () => ops.properties(sel.path) }, '~',
+        { glyph: '▤', label: 'From a package…', run: () => this.fromPackage() },
+      ],
+      sections: [['installed', 'Installed'], ['disk', 'On A:'], ['dos', 'DOS programs']].map(([k, l]) => ({ label: l, n: counts[k], bg: s.sec === k ? '#372612' : 'transparent', fg: s.sec === k ? '#ffaa40' : '#e0e0e0', pick: () => this.setState({ sec: k, sel: null }) })),
+      intro: { installed: 'The core (Files, Programs, Settings) stays. Everything else can come and go.', disk: 'Disk "DESK APPS" is in A:. Tick what you want, then Install.', dos: 'DOS programs found on your drives. They run full-screen and hand the Desk back after.' }[s.sec],
+      rows: rows.map(r => {
+        const on = r.key === s.sel, k = r.key.slice(4), picked = !!s.picks[k];
+        return { name: r.name, kind: r.kind, size: r.dos ? ops.fmtSize(r.size) : r.core ? 'Core' : r.size + ' KB', bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#e0e0e0', muted: on ? '#ffaa40' : '#7c8796',
+          boxVis: s.sec === 'disk' ? 'visible' : 'hidden', boxLine: '#ffaa40', boxFill: picked ? '#ffaa40' : 'transparent',
+          tick: (e) => { e.stopPropagation(); this.setState(st => ({ picks: { ...st.picks, [k]: !st.picks[k] }, sel: r.key })); },
+          pick: () => this.setState({ sel: r.key }), dbl: () => this.primary(r),
+          ctx: (e) => { this.setState({ sel: r.key }); ops.menu(e, r.dos ? [{ label: 'Run full-screen', bold: true, run: () => ops.open(r.path) }, { label: 'Program settings…', run: () => ops.properties(r.path) }, { label: 'Make a desktop icon', run: () => ops.addShortcut(r.path) }, { label: 'Show in Files', sep: true, run: () => ops.reveal(r.path) }]
+            : r.installed ? [{ label: 'Open', bold: true, run: () => ops.openApp(k) }, ...(r.core ? [] : [{ label: 'Remove…', run: () => ops.uninstall(k) }])] : [{ label: picked ? 'Unpick' : 'Pick to install', bold: true, run: () => this.setState(st => ({ picks: { ...st.picks, [k]: !picked } })) }, { label: 'Install now', run: () => ops.install([k]) }]); } };
+      }),
+      empty: !rows.length, emptyText: s.sec === 'disk' ? 'Everything on A: is installed.' : 'Nothing here.',
+      installing: !!inst, installText: inst ? 'Copying ' + inst.names + ' to C:\\DESK\\APPS… ' + Math.min(100, inst.pct) + '%' : '', installPct: inst ? Math.min(100, inst.pct) : 0,
+      hasDetail: !!sel, noDetail: !sel, d,
+      statusLeft: pickKeys.length ? pickKeys.length + ' picked · ' + pickKb + ' KB' : counts.installed + ' installed · ' + counts.disk + ' on A:',
+      statusRight: 'C: ' + ops.fmtSize(c.free) + ' free',
+    };
+  }
+}
+</script>
+</body>
+</html>

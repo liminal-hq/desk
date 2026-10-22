@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+# DOS-side text fixtures are CRLF on disk
+*.bat text eol=crlf
+*.inf text eol=crlf
+*.ini text eol=crlf
+*.dif text eol=crlf
+*.m3u text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.bmp binary
+*.pcx binary
+*.dfn binary
+*.ico binary
+*.dap binary

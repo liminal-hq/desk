@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 22px; display: flex; align-items: flex-end; gap: 2px; padding: 0 4px; flex-shrink: 0; background: #0c0c10; font-family: Inter, sans-serif; font-size: 11px; overflow: hidden;">
+  <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="1">
+    <div data-drop-path="{{ t.drop }}" onMouseDown="{{ t.pick }}" onContextMenu="{{ t.ctx }}" style="height: 19px; max-width: 140px; display: flex; align-items: center; gap: 5px; cursor: default; flex-shrink: 0; padding: 0 {{ t.padR }}px 0 8px; background: {{ t.bg }}; color: {{ t.fg }}; box-shadow: {{ t.shadow }};">
+      <sc-if value="{{ t.hasIcon }}" hint-placeholder-val="{{ false }}"><dc-import name="FileIcon" kind="{{ t.kind }}" size="12" hint-size="12px,12px"></dc-import></sc-if>
+      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.label }}</span>
+      <sc-if value="{{ t.dirty }}" hint-placeholder-val="{{ false }}"><span style="width: 5px; height: 5px; background: #ffaa40; flex-shrink: 0;"></span></sc-if>
+      <sc-if value="{{ t.closable }}" hint-placeholder-val="{{ false }}"><span onMouseDown="{{ t.close }}" style="width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; color: #7c8796;" style-hover="background: #333847; color: #fff;">×</span></sc-if>
+    </div>
+  </sc-for>
+  <sc-if value="{{ canNew }}" hint-placeholder-val="{{ false }}">
+    <span onMouseDown="{{ onNew }}" title="New tab" style="height: 19px; width: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #7c8796; cursor: default;" style-hover="color: #fff; background: #1b1e28;">+</span>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 360, &quot;height&quot;: 22}, &quot;tabs&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;{label: string, kind?: string, active?: boolean, dirty?: boolean, drop?: string, pick?: () =&gt; void, close?: () =&gt; void, ctx?: (e) =&gt; void}[]&quot;}, &quot;closable&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;}, &quot;onNew&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const closable = this.props.closable !== false;
+    const tabs = (this.props.tabs || []).map(t => ({
+      label: t.label, kind: t.kind || 'blank', hasIcon: !!t.kind, drop: t.drop || '', dirty: !!t.dirty, closable,
+      padR: closable ? 4 : 8,
+      bg: t.active ? '#111116' : 'transparent', fg: t.active ? '#fff' : '#7c8796', shadow: t.active ? 'inset 0 2px 0 #ffaa40' : 'none',
+      pick: (e) => { if (e.button === 1 && closable && t.close) { e.preventDefault(); t.close(); } else if (e.button === 0 && t.pick) t.pick(); },
+      close: (e) => { e.stopPropagation(); e.preventDefault(); if (t.close) t.close(); },
+      ctx: (e) => { if (t.ctx) t.ctx(e); },
+    }));
+    return { tabs, canNew: !!this.props.onNew, onNew: (e) => { e.preventDefault(); this.props.onNew && this.props.onNew(); } };
+  }
+}
+</script>
+</body>
+</html>

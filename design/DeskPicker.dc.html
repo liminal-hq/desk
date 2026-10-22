@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="width: 100%; height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <div style="height: 22px; display: flex; align-items: center; padding: 0 8px; background: #0c0c10; border-bottom: 1px solid #262a37; flex-shrink: 0;">
+    <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; flex: 1;">{{ title }}</span>
+  </div>
+  <div style="height: 26px; display: flex; align-items: center; gap: 3px; padding: 0 4px; background: #14161d; border-bottom: 1px solid #1f2230; flex-shrink: 0;">
+    <span onClick="{{ goBack }}" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; color: {{ backFg }};" style-hover="background: #1b1e28;">←</span>
+    <span onClick="{{ goUp }}" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; color: {{ upFg }};" style-hover="background: #1b1e28;">↑</span>
+    <div style="flex: 1; height: 18px; display: flex; align-items: center; padding: 0 6px; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; font-family: 'JetBrains Mono', monospace; font-size: 10px; overflow: hidden; white-space: nowrap;">{{ path }}</div>
+    <span onClick="{{ newFolder }}" style="height: 18px; padding: 0 6px; display: flex; align-items: center; cursor: default;" style-hover="background: #1b1e28;">+ New folder</span>
+  </div>
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <div style="width: 112px; flex-shrink: 0; background: #0c0c10; border-right: 1px solid #1f2230; padding: 3px 0; overflow-y: auto; display: flex; flex-direction: column;">
+      <sc-for list="{{ places }}" as="p" hint-placeholder-count="5">
+        <div onClick="{{ p.go }}" style="height: 18px; flex-shrink: 0; display: flex; align-items: center; gap: 5px; padding: 0 6px; cursor: default; background: {{ p.bg }}; color: {{ p.fg }}; margin-top: {{ p.gap }}px;">
+          <dc-import name="FileIcon" kind="{{ p.kind }}" size="12" hint-size="12px,12px"></dc-import><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 52px 46px; gap: 6px; padding: 3px 8px; color: #7c8796; font-size: 10px; border-bottom: 1px solid #1f2230; flex-shrink: 0;"><span>Name</span><span style="text-align: right;">Size</span><span style="text-align: right;">Modified</span></div>
+      <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 1px 0;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+          <div onClick="{{ r.pick }}" onDoubleClick="{{ r.open }}" style="display: grid; grid-template-columns: minmax(0, 1fr) 52px 46px; gap: 6px; height: 18px; flex-shrink: 0; align-items: center; padding: 0 8px; cursor: default; background: {{ r.bg }}; color: {{ r.fg }};">
+            <span style="display: flex; align-items: center; gap: 5px; min-width: 0;"><dc-import name="FileIcon" kind="{{ r.kind }}" size="16" hint-size="16px,16px"></dc-import><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.name }}</span></span>
+            <span style="text-align: right; color: {{ r.muted }};">{{ r.size }}</span><span style="text-align: right; color: {{ r.muted }};">{{ r.date }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding: 16px; text-align: center; color: #7c8796;">{{ emptyText }}</div></sc-if>
+      </div>
+    </div>
+  </div>
+  <div style="padding: 8px; display: flex; flex-direction: column; gap: 6px; background: #0c0c10; border-top: 1px solid #1f2230; flex-shrink: 0;">
+    <div style="display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 6px;">
+      <span style="color: #7c8796;">{{ nameLabel }}</span>
+      <input ref="{{ nameRef }}" value="{{ name }}" onChange="{{ onName }}" onKeyDown="{{ onNameKey }}" readonly="{{ nameRO }}" spellcheck="false" style="height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; outline: none; caret-color: #ffaa40;">
+    </div>
+    <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><div style="padding: 3px 6px; background: #1e160d; color: #ffd096;">{{ err }}</div></sc-if>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="color: #7c8796; width: 60px;">Show</span>
+      <sc-for list="{{ types }}" as="t" hint-placeholder-count="2"><span onClick="{{ t.pick }}" style="padding: 1px 7px; cursor: pointer; white-space: nowrap; background: {{ t.bg }}; color: {{ t.fg }}; border: 1px solid {{ t.line }};">{{ t.label }}</span></sc-for>
+      <span style="flex: 1;"></span>
+      <span onClick="{{ cancel }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Cancel</span>
+      <span onClick="{{ submit }}" style="padding: 3px 12px; font-weight: 600; cursor: pointer; background: {{ okBg }}; color: {{ okFg }};">{{ okLabel }}</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 440, &quot;height&quot;: 300}, &quot;req&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;{mode: 'open'|'save'|'folder', title?: string, dir?: string, name?: string, types?: {label: string, ext: string[]}[]}&quot;}, &quot;ops&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;DeskOps&quot;}}">
+class Component extends DCLogic {
+  state = { path: null, back: [], sel: null, name: null, filter: 0, err: null };
+  nameRef = (el) => { this.nameEl = el; if (el && !this._f && this.props.req && this.props.req.mode === 'save') { this._f = true; setTimeout(() => { el.focus(); const i = el.value.lastIndexOf('.'); el.setSelectionRange(0, i > 0 ? i : el.value.length); }, 0); } };
+  componentDidMount() {
+    this.onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.done(null); } };
+    document.addEventListener('keydown', this.onKey, true);
+  }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey, true); }
+  req() { return this.props.req || { mode: 'open', types: [] }; }
+  cur() { const ops = this.props.ops; return this.state.path || ops.norm(this.req().dir || 'C:\\'); }
+  types() { const t = this.req().types || []; return t.length ? t.concat(t.some(x => x.ext.includes('*')) ? [] : [{ label: 'All files', ext: ['*'] }]) : [{ label: 'All files', ext: ['*'] }]; }
+  go(p) { this.setState(s => ({ path: p, back: [...s.back, this.cur()], sel: null, err: null })); }
+  done(path) { this.props.ops.pickDone(path); }
+  submit() {
+    const ops = this.props.ops, r = this.req(), dir = this.cur();
+    if (r.mode === 'folder') return this.done(dir);
+    let name = String(this.state.name ?? r.name ?? '').trim().toUpperCase();
+    if (!name && this.state.sel) name = ops.base(this.state.sel);
+    if (!name) return this.setState({ err: r.mode === 'save' ? 'Type a name for the file.' : 'Pick a file.' });
+    const ty = this.types()[this.state.filter];
+    if (r.mode === 'save' && !name.includes('.') && ty.ext[0] !== '*') name += '.' + ty.ext[0];
+    const full = ops.join(dir, name), st = ops.stat(full);
+    if (st && st.dir) return this.go(full);
+    if (r.mode === 'open') { if (!st) return this.setState({ err: name + " isn't in " + dir + '.' }); return this.done(full); }
+    if (!ops.valid83(name)) return this.setState({ err: 'Names are 8.3 on DOS: up to 8 letters or numbers, a dot, then up to 3 more.' });
+    if (st) return ops.ask({ title: 'Replace ' + name + '?', text: 'There is already a ' + name + ' in ' + dir + '. Replacing it loses what is in it now.', yes: 'Replace', no: 'Keep it', run: () => this.done(full) });
+    this.done(full);
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { places: [], rows: [], types: [] };
+    const r = this.req(), s = this.state, dir = this.cur();
+    const types = this.types(), ty = types[s.filter] || types[0];
+    const match = (n) => ty.ext.includes('*') || ty.ext.includes(ops.ext(n));
+    const list = ops.list(dir, false).filter(x => x.dir || (r.mode !== 'folder' && match(x.n))).sort((a, b) => a.dir !== b.dir ? (a.dir ? -1 : 1) : a.n.localeCompare(b.n));
+    const place = (path, label, kind, gap = 0) => ({ label, kind, gap, bg: dir === path ? '#372612' : 'transparent', fg: dir === path ? '#ffaa40' : '#e0e0e0', go: () => this.go(path) });
+    const places = [place('C:\\DESK\\DESKTOP', 'Desktop', 'desktop'), ...(r.places || []).map(p => place(p, ops.base(p), 'folder')), ...ops.drives().map((d, i) => place(d.id + '\\', d.id + ' ' + d.label, d.id === 'A:' ? 'drive-a' : 'drive-c', i === 0 ? 6 : 0))];
+    const rows = list.map(x => {
+      const on = s.sel === x.path;
+      return { name: x.n, kind: ops.kind(x.n, x.dir), size: x.dir ? '' : ops.fmtSize(x.size), date: ops.fmtDate(x.t), bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#e0e0e0', muted: on ? '#ffaa40' : '#7c8796',
+        pick: () => this.setState({ sel: x.path, name: x.dir ? s.name : x.n, err: null }),
+        open: () => x.dir ? this.go(x.path) : (r.mode === 'open' ? this.done(x.path) : (this.setState({ name: x.n }), setTimeout(() => this.submit(), 0))) };
+    });
+    const name = s.name ?? r.name ?? '';
+    const ok = r.mode === 'folder' || !!name || !!s.sel;
+    return {
+      title: r.title || (r.mode === 'save' ? 'Save as' : r.mode === 'folder' ? 'Pick a folder' : 'Open'), path: dir, places, rows,
+      empty: !rows.length, emptyText: r.mode === 'folder' ? 'No folders here. This one can still be picked.' : 'Nothing here matches ' + ty.label.toLowerCase() + '.',
+      backFg: s.back.length ? '#e0e0e0' : '#333847', upFg: ops.parent(dir) ? '#e0e0e0' : '#333847',
+      goBack: () => { if (!s.back.length) return; this.setState({ path: s.back[s.back.length - 1], back: s.back.slice(0, -1), sel: null }); },
+      goUp: () => { const p = ops.parent(dir); if (p) this.go(p); },
+      newFolder: () => { const p = ops.mkdir(dir); if (p) this.go(p); },
+      nameLabel: r.mode === 'folder' ? 'Folder' : 'File name', name: r.mode === 'folder' ? dir : name, nameRO: r.mode === 'folder' || r.mode === 'open' && false, nameRef: this.nameRef,
+      onName: (e) => this.setState({ name: e.target.value.toUpperCase(), err: null }),
+      onNameKey: (e) => { e.stopPropagation(); if (e.key === 'Enter') this.submit(); if (e.key === 'Escape') this.done(null); },
+      err: s.err,
+      types: types.map((t, i) => ({ label: t.label, bg: i === s.filter ? '#372612' : 'transparent', fg: i === s.filter ? '#ffaa40' : '#b4bfce', line: i === s.filter ? '#ffaa40' : '#333847', pick: () => this.setState({ filter: i }) })),
+      cancel: () => this.done(null), submit: () => this.submit(),
+      okLabel: r.mode === 'save' ? 'Save' : r.mode === 'folder' ? 'Pick this folder' : 'Open',
+      okBg: ok ? '#ffaa40' : '#1b1e28', okFg: ok ? '#0a0a0c' : '#5a6273',
+    };
+  }
+}
+</script>
+</body>
+</html>

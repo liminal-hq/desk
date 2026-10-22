@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskTabs" tabs="{{ tabs }}" closable="{{ false }}" hint-size="100%,22px"></dc-import>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Wallpaper</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px;">
+        <sc-for list="{{ walls }}" as="w" hint-placeholder-count="5">
+          <div onClick="{{ w.pick }}" style="display: flex; flex-direction: column; gap: 4px; cursor: pointer;">
+            <div style="height: 44px; image-rendering: pixelated; background: {{ w.bg }}; box-shadow: {{ w.ring }};"></div>
+            <span style="color: {{ w.fg }};">{{ w.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start;"><span onClick="{{ pickPicture }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer; white-space: nowrap;" style-hover="background: #1b1e28;">Use a picture…</span><span onClick="{{ openFolder }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer; white-space: nowrap;" style-hover="background: #1b1e28;">Show wallpapers in Files</span></div>
+    </sc-if>
+    <sc-if value="{{ isWindows }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Window border</span>
+      <span style="color: #7c8796;">The focused window wears it. Others keep a quiet line.</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px 10px;">
+        <sc-for list="{{ borders }}" as="b" hint-placeholder-count="6">
+          <div onClick="{{ b.pick }}" style="display: flex; flex-direction: column; gap: 6px; cursor: pointer; padding: 6px; background: {{ b.tileBg }};">
+            <div style="height: 46px; box-sizing: border-box; background: #111116; display: flex; flex-direction: column; margin: 3px; border: {{ b.border }}; box-shadow: {{ b.shadow }}; padding: {{ b.pad }};">
+              <div style="height: 9px; background: #0c0c10; flex-shrink: 0;"></div><div style="height: {{ b.rule }}; background: linear-gradient(to right, #ffaa40 0 33%, #f43f5e 33% 66%, #a78bfa 66%);"></div>
+            </div>
+            <span style="color: {{ b.fg }};">{{ b.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isDisplay }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Screen</span>
+      <sc-for list="{{ modes }}" as="o" hint-placeholder-count="3">
+        <div onClick="{{ o.pick }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid {{ o.ring }}; background: {{ o.dot }};"></span><span style="display: flex; flex-direction: column;"><span style="color: {{ o.fg }};">{{ o.label }}</span><span style="color: #7c8796; font-size: 10px;">{{ o.note }}</span></span></div>
+      </sc-for>
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; margin-top: 4px;">Motion</span>
+      <div onClick="{{ toggleMotion }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid #ffaa40; background: {{ motionFill }};"></span><span>Fade between the Desk and DOS programs, and let Jax move</span></div>
+    </sc-if>
+    <sc-if value="{{ isSound }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Desk sounds</span>
+      <span style="color: #7c8796;">Sounds (.WAV, .VOC) always play on the Sound Blaster when there is one.</span>
+      <sc-for list="{{ effects }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.pick }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid {{ o.ring }}; background: {{ o.dot }};"></span><span style="color: {{ o.fg }};">{{ o.label }}</span></div></sc-for>
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; margin-top: 4px;">Music (.MID)</span>
+      <sc-for list="{{ midiOuts }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.pick }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid {{ o.ring }}; background: {{ o.dot }};"></span><span style="color: {{ o.fg }};">{{ o.label }}</span></div></sc-for>
+      <span onClick="{{ test }}" style="align-self: flex-start; padding: 3px 10px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Play a test sound</span>
+    </sc-if>
+    <sc-if value="{{ isJax }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Jax</span>
+      <sc-if value="{{ jaxInstalled }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleJaxOn }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid #ffaa40; background: {{ jaxOnFill }};"></span><span>Show Jax in the launcher bar</span></div>
+        <div onClick="{{ toggleJaxBox }}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><span style="width: 8px; height: 8px; border: 1px solid #ffaa40; background: {{ jaxBoxFill }};"></span><span>Let Jax out on the desktop</span></div>
+        <span style="color: #7c8796;">Jax never covers a dialog, and stays still when Motion is off.</span>
+      </sc-if>
+      <sc-if value="{{ jaxMissing }}" hint-placeholder-val="{{ true }}">
+        <span style="color: #b4bfce; line-height: 15px;">Jax isn't installed. He's 12 KB on the apps disk.</span>
+        <span onClick="{{ getJax }}" style="align-self: flex-start; padding: 3px 10px; background: #ffaa40; color: #0a0a0c; font-weight: 600; cursor: pointer;">Open Programs</span>
+      </sc-if>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static TABS = ['Desktop', 'Windows', 'Display', 'Sound', 'Jax'];
+  state = { tab: 0 };
+  componentDidMount() { this.onKey = (e) => { if (!this.props.focused || this.props.ops.busy()) return; if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ tab: (s.tab + (e.shiftKey ? 4 : 1)) % 5 })); } else if (!e.ctrlKey && /^[1-5]$/.test(e.key)) this.setState({ tab: +e.key - 1 }); }; document.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey); }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tabs: [], walls: [], borders: [], modes: [], effects: [], midiOuts: [] };
+    const s = this.state, st = ops.settings(), set = (k, v) => ops.setSetting(k, v);
+    const radio = (on) => ({ ring: on ? '#ffaa40' : '#5a6273', dot: on ? '#ffaa40' : 'transparent', fg: on ? '#fff' : '#b4bfce' });
+    const walls = ops.wallpapers().map(w => ({ label: w.label, bg: w.bg, fg: st.wallpaper === w.key ? '#ffaa40' : '#b4bfce', ring: st.wallpaper === w.key ? '0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612' : '0 0 0 1px #262a37', pick: () => set('wallpaper', w.key) }));
+    const borders = ops.borders().map(b => ({ label: b.label, border: b.f.border, shadow: b.f.shadow, pad: b.f.pad, rule: b.f.rule, fg: st.border === b.key ? '#ffaa40' : '#b4bfce', tileBg: st.border === b.key ? '#1e160d' : 'transparent', pick: () => set('border', b.key) }));
+    const modes = [['256', '640 × 480, 256 colours', 'The Afterglow look. Needs a VESA card.'], ['16', '640 × 480, 16 colours', 'Works on any VGA card.'], ['800', '800 × 600, 256 colours', 'More room. Needs a VESA card with 1 MB.']].map(([k, label, note]) => ({ label, note, ...radio(st.depth === k), pick: () => { if (st.depth === k) return; if (ops.setDepth) return ops.setDepth(k); set('depth', k); ops.toast('Display changes next start', label + ' takes effect when the Desk starts again.'); } }));
+    const effects = [['sb16', 'Sound Blaster (digital samples)'], ['adlib', 'AdLib (FM)'], ['speaker', 'PC speaker'], ['none', 'Off']].map(([k, l]) => ({ label: l, ...radio(st.effects === k), pick: () => set('effects', k) }));
+    const midiOuts = [['opl3', 'OPL3 on the Sound Blaster'], ['opl2', 'AdLib (OPL2)'], ['mpu401', 'MPU-401 MIDI out']].map(([k, l]) => ({ label: l, ...radio(st.midiOut === k), pick: () => set('midiOut', k) }));
+    const T = Component.TABS[s.tab];
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [{ label: 'Reset look to defaults', run: () => { set('wallpaper', 'horizon'); set('border', 'halo'); } }, { label: 'Open DESK.INI', run: () => ops.open('C:\\DESK\\DESK.INI') }, { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'View', items: () => Component.TABS.map((t, i) => ({ label: t, hint: String(i + 1), check: s.tab === i, run: () => this.setState({ tab: i }) })) },
+        { label: 'Help', items: () => [{ label: 'About Settings', run: () => ops.about('settings') }] },
+      ],
+      tabs: Component.TABS.map((t, i) => ({ label: t, active: s.tab === i, pick: () => this.setState({ tab: i }) })),
+      isDesktop: T === 'Desktop', isWindows: T === 'Windows', isDisplay: T === 'Display', isSound: T === 'Sound', isJax: T === 'Jax',
+      walls, borders, modes, effects, midiOuts,
+      pickPicture: () => ops.pick({ mode: 'open', title: 'Pick a wallpaper', dir: 'C:\\DESK\\WALLPAPR', types: [{ label: 'Pictures', ext: ['BMP', 'PCX'] }], places: ['C:\\DESK\\WALLPAPR', 'C:\\PAINT'] }).then(p => p && ops.useWallpaper(p)),
+      openFolder: () => ops.open('C:\\DESK\\WALLPAPR'),
+      motionFill: st.motion ? '#ffaa40' : 'transparent', toggleMotion: () => set('motion', !st.motion),
+      test: () => ops.toast('Test sound', st.effects === 'none' ? 'Desk sounds are off.' : 'A short chime on the ' + ops.soundName(st.effects) + '.'),
+      jaxInstalled: st.jaxInstalled, jaxMissing: !st.jaxInstalled, jaxOnFill: st.jaxOn ? '#ffaa40' : 'transparent', jaxBoxFill: st.jaxBox ? '#ffaa40' : 'transparent',
+      toggleJaxOn: () => set('jaxOn', !st.jaxOn), toggleJaxBox: () => set('jaxBox', !st.jaxBox), getJax: () => ops.openApp('programs'),
+    };
+  }
+}
+</script>
+</body>
+</html>

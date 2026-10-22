@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" style="display: block; flex-shrink: 0; shape-rendering: crispEdges;"><sc-for list="{{ runs }}" as="r" hint-placeholder-count="0"><rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.w }}" height="1" fill="{{ r.c }}"></rect></sc-for></svg>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 64, &quot;height&quot;: 64}, &quot;file&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;README.TXT&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;dir&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;}, &quot;kind&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;&quot;, &quot;folder&quot;, &quot;text&quot;, &quot;markdown&quot;, &quot;pdf&quot;, &quot;code&quot;, &quot;sheet&quot;, &quot;settings&quot;, &quot;font&quot;, &quot;system&quot;, &quot;blank&quot;, &quot;image&quot;, &quot;video&quot;, &quot;audio&quot;, &quot;archive&quot;, &quot;package&quot;, &quot;disk&quot;, &quot;program&quot;, &quot;batch&quot;, &quot;save&quot;, &quot;trash&quot;, &quot;drive-a&quot;, &quot;drive-c&quot;, &quot;desktop&quot;], &quot;default&quot;: &quot;&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;size&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 32, &quot;tsType&quot;: &quot;number&quot;}}">
+class Component extends DCLogic {
+  static EXT = {
+    TXT: 'text', DOC: 'text', LOG: 'text', ME: 'text', '1ST': 'text', NFO: 'text',
+    MD: 'markdown', PDF: 'pdf',
+    BMP: 'image', PCX: 'image', GIF: 'image', LBM: 'image', TGA: 'image',
+    FLI: 'video', FLC: 'video', MPG: 'video',
+    MID: 'audio', RMI: 'audio', WAV: 'audio', VOC: 'audio', MOD: 'audio', CMF: 'audio',
+    ZIP: 'archive', ARJ: 'archive', LZH: 'archive', RAR: 'archive', DAP: 'package',
+    C: 'code', H: 'code', RS: 'code', ASM: 'code', BAS: 'code', PAS: 'code', JS: 'code',
+    CSV: 'sheet', WK1: 'sheet', XLS: 'sheet', DBF: 'sheet',
+    IMG: 'disk', ISO: 'disk', IMA: 'disk',
+    EXE: 'program', COM: 'program', BAT: 'batch',
+    SYS: 'system', DLL: 'system', DXE: 'system', OVL: 'system', DRV: 'system',
+    INI: 'settings', CFG: 'settings', INF: 'settings', DIF: 'settings',
+    SAV: 'save', DAT: 'save',
+    DFN: 'font', FON: 'font', FNT: 'font', ICO: 'image',
+  };
+  static kindOf(name, dir) {
+    if (dir) return 'folder';
+    const i = name.lastIndexOf('.');
+    return (i > 0 && Component.EXT[name.slice(i + 1).toUpperCase()]) || 'blank';
+  }
+  static cache = {};
+  static build(kind) {
+    if (Component.cache[kind]) return Component.cache[kind];
+    const g = new Array(256).fill(null);
+    const px = (x, y, c) => { if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y * 16 + x] = c; };
+    const rect = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) px(i, j, c); };
+    const map = (x0, y0, rows, c) => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch === '#') px(x0 + i, y0 + j, c); }));
+    const page = (body = '#e0e0e0', edge = '#7c8796', fold = '#b4bfce') => {
+      for (let y = 1; y <= 14; y++) for (let x = 3; x <= 12; x++) {
+        const ear = x >= 10 && y <= 3, d = (x - 10) - (y - 1);
+        if (ear && d > 0) continue;
+        if (ear && d === 0) { px(x, y, edge); continue; }
+        if (ear) { px(x, y, fold); continue; }
+        px(x, y, (x === 3 || x === 12 || y === 1 || y === 14) ? edge : body);
+      }
+    };
+    const win = (title) => {
+      rect(1, 2, 14, 12, '#8d97a8'); rect(2, 3, 12, 2, title); rect(2, 5, 12, 8, '#14161d'); rect(1, 13, 14, 1, '#5a6273');
+    };
+    switch (kind) {
+      case 'folder':
+        rect(2, 3, 4, 1, '#d28c36'); rect(1, 4, 14, 1, '#d28c36'); rect(1, 5, 14, 8, '#ffaa40'); rect(2, 5, 12, 1, '#ffd096');
+        rect(1, 5, 1, 8, '#d28c36'); rect(14, 5, 1, 8, '#d28c36'); rect(1, 13, 14, 1, '#a56f2b'); break;
+      case 'text': page(); [5, 7, 9].forEach(y => rect(5, y, 6, 1, '#7c8796')); rect(5, 11, 4, 1, '#7c8796'); break;
+      case 'markdown': page(); map(5, 6, ['#...#', '##.##', '#.#.#', '#...#', '#...#'], '#3f6ba3'); rect(5, 12, 6, 1, '#60a5fa'); break;
+      case 'pdf': page(); rect(5, 5, 6, 1, '#7c8796'); rect(5, 7, 4, 1, '#7c8796'); rect(4, 10, 8, 3, '#f43f5e'); map(5, 11, ['#.#.#.'], '#ffffff'); break;
+      case 'code': page(); map(4, 6, ['..#', '.#.', '#..', '.#.', '..#'], '#1daec4'); map(9, 6, ['#..', '.#.', '..#', '.#.', '#..'], '#1daec4'); rect(7, 11, 1, 1, '#7c8796'); break;
+      case 'sheet': page(); rect(4, 5, 8, 2, '#2ec66a'); [8, 10, 12].forEach(y => rect(4, y, 8, 1, '#27a358')); rect(6, 5, 1, 8, '#196237'); rect(9, 5, 1, 8, '#196237'); break;
+      case 'settings': page(); [5, 8, 11].forEach(y => rect(5, y, 6, 1, '#7c8796')); rect(8, 4, 2, 3, '#ffaa40'); rect(5, 7, 2, 3, '#ffaa40'); rect(7, 10, 2, 3, '#ffaa40'); break;
+      case 'font': page(); map(5, 5, ['.##.', '#..#', '#..#', '####', '#..#', '#..#'], '#252038'); map(9, 9, ['##', '.#', '##'], '#53457c'); break;
+      case 'system': page('#b4bfce', '#5a6273', '#8d97a8'); map(5, 6, ['#.#.#', '.###.', '##.##', '.###.', '#.#.#'], '#333847'); break;
+      case 'blank': page(); break;
+      case 'image':
+        rect(1, 2, 14, 12, '#b4bfce');
+        ['#252038', '#252038', '#351118', '#541824', '#7d5422', '#a56f2b', '#d28c36', '#d28c36', '#d28c36'].forEach((c, i) => rect(2, 3 + i, 12, 1, c));
+        rect(10, 4, 2, 2, '#ffd096'); rect(2, 12, 12, 1, '#050507'); rect(2, 11, 6, 1, '#050507'); rect(3, 10, 3, 1, '#050507'); rect(11, 11, 3, 1, '#050507'); break;
+      case 'video':
+        rect(1, 3, 14, 10, '#333847'); for (let x = 2; x < 14; x += 2) { px(x, 4, '#050507'); px(x, 11, '#050507'); }
+        rect(3, 6, 10, 4, '#a78bfa'); map(7, 6, ['#.', '##', '##', '#.'], '#252038'); break;
+      case 'audio':
+        map(3, 2, ['....######', '....######', '....#....#', '....#....#', '....#....#', '....#....#', '....#....#', '..###..###', '.####.####', '.####.####', '..##...##.'], '#22d3ee'); break;
+      case 'archive':
+        rect(2, 2, 12, 12, '#8d97a8'); rect(2, 13, 12, 1, '#5a6273'); rect(13, 2, 1, 12, '#5a6273');
+        for (let y = 2; y < 8; y++) { px(7, y, y % 2 ? '#333847' : '#e0e0e0'); px(8, y, y % 2 ? '#e0e0e0' : '#333847'); }
+        rect(6, 8, 4, 3, '#e0e0e0'); rect(7, 9, 2, 1, '#333847'); break;
+      case 'package':
+        rect(2, 4, 12, 10, '#53457c'); rect(2, 4, 12, 2, '#8a73ce'); rect(1, 3, 14, 1, '#a78bfa'); rect(2, 13, 12, 1, '#252038');
+        rect(7, 3, 2, 11, '#ffaa40'); rect(7, 8, 2, 2, '#f43f5e'); rect(7, 10, 2, 4, '#d28c36'); break;
+      case 'disk': {
+        for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+          const d = Math.hypot(x - 7.5, y - 7.5);
+          if (d < 1.6) continue;
+          if (d < 2.7) px(x, y, '#e0e0e0');
+          else if (d < 5.6) px(x, y, (d > 3.5 && d < 4.6 && x > y) ? '#a78bfa' : '#b4bfce');
+          else if (d < 6.6) px(x, y, '#7c8796');
+        } break;
+      }
+      case 'program': win('#a78bfa'); map(3, 7, ['#..', '.#.', '#..'], '#e0e0e0'); rect(7, 9, 3, 1, '#ffaa40'); break;
+      case 'batch': win('#2ec66a'); rect(3, 7, 7, 1, '#b4bfce'); rect(3, 9, 9, 1, '#b4bfce'); rect(3, 11, 5, 1, '#b4bfce'); break;
+      case 'save':
+        rect(2, 2, 12, 12, '#53457c'); rect(2, 13, 12, 1, '#252038'); rect(5, 2, 6, 4, '#b4bfce'); rect(8, 3, 1, 2, '#333847');
+        rect(4, 8, 8, 6, '#e0e0e0'); rect(5, 10, 6, 1, '#7c8796'); break;
+      case 'trash':
+        rect(6, 2, 4, 1, '#8d97a8'); rect(3, 3, 10, 2, '#b4bfce'); rect(4, 5, 8, 9, '#5a6273'); rect(4, 13, 8, 1, '#333847');
+        rect(6, 6, 1, 6, '#333847'); rect(9, 6, 1, 6, '#333847'); break;
+      case 'drive-a':
+        rect(1, 5, 14, 7, '#8d97a8'); rect(1, 5, 14, 1, '#b4bfce'); rect(1, 11, 14, 1, '#5a6273'); rect(3, 7, 9, 1, '#050507'); px(12, 9, '#2ec66a'); rect(3, 9, 2, 1, '#5a6273'); break;
+      case 'drive-c':
+        rect(1, 4, 14, 3, '#8d97a8'); rect(1, 7, 14, 5, '#5a6273'); rect(1, 11, 14, 1, '#333847'); px(12, 9, '#ffaa40'); rect(3, 9, 6, 1, '#333847'); break;
+      case 'desktop':
+        rect(1, 2, 14, 10, '#8d97a8'); rect(2, 3, 12, 8, '#252038'); rect(2, 8, 12, 3, '#7d5422'); rect(2, 10, 12, 1, '#d28c36'); rect(6, 12, 4, 1, '#5a6273'); rect(4, 13, 8, 1, '#8d97a8'); break;
+      default: page();
+    }
+    const runs = [];
+    for (let y = 0; y < 16; y++) {
+      let x = 0;
+      while (x < 16) {
+        const c = g[y * 16 + x];
+        if (!c) { x++; continue; }
+        let w = 1; while (x + w < 16 && g[y * 16 + x + w] === c) w++;
+        runs.push({ x, y, w, c }); x += w;
+      }
+    }
+    return (Component.cache[kind] = runs);
+  }
+  renderVals() {
+    const kind = this.props.kind || Component.kindOf(this.props.file || '', !!this.props.dir);
+    return { size: this.props.size ?? 16, runs: Component.build(kind) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/typography.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/terminal.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/base.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+<style>
+html, body { margin: 0; height: 100%; background: #050507; color: #e0e0e0; font-family: Inter, system-ui, sans-serif; overflow: hidden; }
+a { color: #ffaa40; text-decoration: none; }
+a:hover { color: #ffd096; }
+textarea:focus, input:focus { outline: none; }
+input::placeholder { color: #5a6273; }
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+</helmet>
+
+<div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; user-select: none;">
+  <div ref="{{ screenRef }}" onContextMenu="{{ rootCtx }}" style="zoom: {{ zoom }}; width: {{ sw }}px; height: {{ sh }}px; position: relative; overflow: hidden; background: #050507; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; outline: 1px solid #1f2230;">
+
+    <div data-drop-desktop="1" onClick="{{ onDesktopClick }}" onContextMenu="{{ desktopCtx }}" style="position: absolute; left: 0; right: 0; top: 0; bottom: 30px; image-rendering: pixelated; background: {{ wallBg }};"></div>
+
+    <div data-drop-desktop="1" style="position: absolute; left: 10px; top: 10px; display: grid; grid-template-rows: repeat({{ iconRows }}, 56px); grid-auto-flow: column; grid-auto-columns: 66px; gap: 4px 4px; pointer-events: none;">
+      <sc-for list="{{ icons }}" as="ic" hint-placeholder-count="8">
+        <div data-drop-path="{{ ic.drop }}" onMouseDown="{{ ic.down }}" onDoubleClick="{{ ic.open }}" onContextMenu="{{ ic.ctx }}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: default; pointer-events: auto; opacity: {{ ic.op }};">
+          <sc-if value="{{ ic.isApp }}" hint-placeholder-val="{{ true }}">
+            <div style="width: 32px; height: 32px; background: {{ ic.tile }}; display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ ic.icon }}" size="16" colour="{{ ic.tint }}" hint-size="16px,16px"></x-import></div>
+          </sc-if>
+          <sc-if value="{{ ic.isFile }}" hint-placeholder-val="{{ false }}">
+            <dc-import name="FileIcon" file="{{ ic.fname }}" kind="{{ ic.kind }}" size="32" hint-size="32px,32px"></dc-import>
+          </sc-if>
+          <span style="max-width: 64px; padding: 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ ic.fg }}; background: {{ ic.bg }};">{{ ic.name }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-for list="{{ wins }}" as="w" hint-placeholder-count="2">
+      <div onMouseDown="{{ w.onFocus }}" style="position: absolute; box-sizing: border-box; background: #111116; flex-direction: column; left: {{ w.left }}px; top: {{ w.top }}px; width: {{ w.width }}px; height: {{ w.height }}px; z-index: {{ w.z }}; display: {{ w.display }}; border: {{ w.border }}; box-shadow: {{ w.shadow }}; padding: {{ w.pad }};">
+        <div style="background: #0c0c10; display: flex; flex-direction: column; flex-shrink: 0;">
+          <div onMouseDown="{{ w.onDrag }}" onDoubleClick="{{ w.onMax }}" onContextMenu="{{ w.titleCtx }}" style="height: 22px; display: flex; align-items: center; padding: 0 8px; gap: 8px; cursor: default;">
+            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ w.titleFg }};">{{ w.title }}</span>
+            <div style="display: flex; gap: 2px; align-items: center; color: {{ w.ctlFg }};">
+              <span onClick="{{ w.onMin }}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: #1b1e28; color: #fff;"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="minimise" hint-size="10px,10px"></x-import></span>
+              <span onClick="{{ w.onMax }}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: #1b1e28; color: #fff;"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ w.maxIcon }}" hint-size="10px,10px"></x-import></span>
+              <span onClick="{{ w.onClose }}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: #541824; color: #fff;"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="close" hint-size="10px,10px"></x-import></span>
+            </div>
+          </div>
+          <div style="height: {{ w.rule }}; background: linear-gradient(to right, #ffaa40 0 33%, #f43f5e 33% 66%, #a78bfa 66%);"></div>
+          <div style="height: {{ w.line }}; background: #262a37;"></div>
+        </div>
+
+        <div onContextMenu="{{ w.bodyCtx }}" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+
+          <sc-if value="{{ w.isFiles }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column;"><dc-import name="DeskFiles" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" cv="{{ clipv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+
+          <sc-if value="{{ w.isProps }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column;"><dc-import name="DeskProperties" win-id="{{ w.id }}" path="{{ w.target }}" v="{{ fsv }}" ops="{{ ops }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+
+          <sc-if value="{{ w.isMidi }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="MidiApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isNotes }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="NotesApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isPaint }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="PaintApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isCalc }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="CalcApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isClock }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="ClockApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isInspector }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="InspectorApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isPrograms }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="ProgramsApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isTerm }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="TerminalApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isMines }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; inset: 0;"><dc-import name="MinesApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ w.isSettings }}" hint-placeholder-val="{{ false }}">
+            <div data-drop-app="{{ w.id }}" style="position: absolute; inset: 0;"><dc-import name="SettingsApp" win-id="{{ w.id }}" focused="{{ w.focused }}" v="{{ fsv }}" sv="{{ sv }}" ops="{{ ops }}" nav="{{ w.nav }}" hint-size="100%,100%" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import></div>
+          </sc-if>
+        </div>
+        <div onMouseDown="{{ w.onResizeE }}" style="position: absolute; top: 0; right: -3px; width: 6px; bottom: 10px; cursor: ew-resize; display: {{ w.gripDisplay }};"></div>
+        <div onMouseDown="{{ w.onResizeS }}" style="position: absolute; left: 0; bottom: -3px; height: 6px; right: 10px; cursor: ns-resize; display: {{ w.gripDisplay }};"></div>
+        <div onMouseDown="{{ w.onResizeSE }}" style="position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; display: {{ w.gripDisplay }}; background: linear-gradient(135deg, transparent 0 55%, #5a6273 55% 62%, transparent 62% 75%, #5a6273 75% 82%, transparent 82%);"></div>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ showJaxBox }}" hint-placeholder-val="{{ false }}">
+      <div onContextMenu="{{ jaxCtx }}" style="position: absolute; right: 10px; bottom: 44px; zoom: 0.72; z-index: 900;">
+        <x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Jax" variant="box" mood="{{ jaxMood }}" paused="{{ jaxPaused }}" hint-size="250px,170px"></x-import>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ job }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; translate: {{ mdx }}px {{ mdy }}px; left: 190px; top: 150px; width: 260px; z-index: 2500; background: #16161c; box-shadow: 0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">{{ job.title }}</span>
+        <span style="color: #b4bfce; font-family: 'JetBrains Mono', monospace; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ job.now }}</span>
+        <div style="height: 4px; background: #1f2230;"><div style="height: 4px; width: {{ job.pct }}%; background: linear-gradient(to right, #ffaa40 0 33%, #f43f5e 33% 66%, #a78bfa 66%);"></div></div>
+        <div style="display: flex; justify-content: space-between; align-items: center;"><span style="color: #7c8796;">{{ job.bytes }}</span><span onClick="{{ cancelJob }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Cancel</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; right: 10px; bottom: 40px; width: 240px; z-index: 950; background: #16161c; box-shadow: inset 1px 1px 0 #333847, inset -1px -1px 0 #050507; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: #fff;">{{ toast.title }}</span>
+        <span style="color: #b4bfce; line-height: 15px;">{{ toast.text }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div data-ctx="1" style="position: absolute; left: 4px; bottom: 32px; width: 190px; z-index: 1000; background: #16161c; box-shadow: 0 0 0 1px #333847; padding: 4px; display: flex; flex-direction: column;">
+        <div style="padding: 6px 8px 8px; display: flex; flex-direction: column;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; background: linear-gradient(135deg, #ffaa40, #f43f5e, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent;">Afterglow Desk</span><span style="color: #7c8796; font-size: 10px;">Programs on this PC</span></div>
+        <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="8">
+          <div onClick="{{ m.go }}" style="display: flex; align-items: center; gap: 8px; height: 22px; padding: 0 8px; cursor: pointer; border-top: {{ m.sep }};" style-hover="background: #372612; color: #ffaa40;">
+            <x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ m.icon }}" size="12" colour="{{ m.tint }}" hint-size="12px,12px"></x-import>
+            <span>{{ m.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 30px; z-index: 990; background: #14161d; box-shadow: inset 0 1px 0 #333847; display: flex; align-items: center; gap: 4px; padding: 0 4px;">
+      <span data-ctx="1" onClick="{{ toggleMenu }}" style="padding: 4px 10px; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: #ffaa40; background: {{ deskBtn.bg }}; box-shadow: {{ deskBtn.shadow }};">Desk</span>
+      <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="2">
+        <span onClick="{{ t.click }}" onContextMenu="{{ t.ctx }}" style="padding: 4px 10px; cursor: pointer; white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; background: {{ t.bg }}; box-shadow: {{ t.shadow }}; color: {{ t.fg }};">{{ t.name }}</span>
+      </sc-for>
+      <span style="flex: 1;"></span>
+      <sc-if value="{{ showJaxMini }}" hint-placeholder-val="{{ false }}">
+        <span onClick="{{ toggleJaxBox }}" onContextMenu="{{ jaxCtx }}" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #e25d75; padding: 0 8px; white-space: nowrap; cursor: pointer;">●‿● jax {{ jaxEmoji }}</span>
+      </sc-if>
+      <span onContextMenu="{{ clockCtx }}" onDoubleClick="{{ openClock }}" style="padding: 4px 8px; background: #0c0c10; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #b4bfce; white-space: nowrap;">{{ clockBar }}</span>
+    </div>
+
+    <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; inset: 0; z-index: 2800;"></div>
+    </sc-if>
+    <sc-if value="{{ ask }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; translate: {{ mdx }}px {{ mdy }}px; left: 190px; top: 150px; width: 260px; z-index: 3000; background: #16161c; box-shadow: 0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; word-break: break-all;">{{ ask.title }}</span>
+        <span style="color: #b4bfce; line-height: 15px;">{{ ask.text }}</span>
+        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+          <span onClick="{{ askYes }}" style="padding: 3px 10px; border: 1px solid #333847; color: #e0e0e0; cursor: pointer;" style-hover="background: #1b1e28;">{{ ask.yes }}</span>
+          <span onClick="{{ askNo }}" style="padding: 3px 10px; background: #ffaa40; color: #0a0a0c; font-weight: 600; cursor: pointer; outline: 1px solid #ffd096; outline-offset: 1px;" style-hover="background: #e89930;">{{ ask.no }}</span>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ ow }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; translate: {{ mdx }}px {{ mdy }}px; left: 200px; top: 110px; width: 240px; z-index: 3000; background: #16161c; box-shadow: 0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Open {{ ow.name }} with</span>
+        <div style="display: flex; flex-direction: column; background: #050507; border: 1px solid #1f2230; padding: 2px 0;">
+          <sc-for list="{{ owApps }}" as="a" hint-placeholder-count="3">
+            <div onClick="{{ a.pick }}" onDoubleClick="{{ a.go }}" style="display: flex; align-items: center; gap: 8px; height: 22px; padding: 0 8px; cursor: default; background: {{ a.bg }}; color: {{ a.fg }};">
+              <x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ a.icon }}" size="12" colour="{{ a.tint }}" hint-size="12px,12px"></x-import><span>{{ a.name }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ owNone }}" hint-placeholder-val="{{ false }}"><div style="padding: 8px; color: #7c8796; line-height: 15px;">No installed program can open this. Programs can add one from A:.</div></sc-if>
+        </div>
+        <div onClick="{{ owToggle }}" style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><span style="width: 9px; height: 9px; border: 1px solid #ffaa40; background: {{ owAlways }};"></span><span>Always use this for .{{ ow.ext }} files</span></div>
+        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+          <span onClick="{{ owCancel }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Cancel</span>
+          <span onClick="{{ owGo }}" style="padding: 3px 12px; font-weight: 600; cursor: pointer; background: {{ owGoBg }}; color: {{ owGoFg }};">Open</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ picker }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; translate: {{ mdx }}px {{ mdy }}px; left: 100px; top: 64px; width: 440px; height: 316px; z-index: 2900; box-shadow: 0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612;">
+        <dc-import name="DeskPicker" req="{{ picker }}" ops="{{ ops }}" v="{{ fsv }}" hint-size="440px,316px" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;"></dc-import>
+      </div>
+    </sc-if>
+    <sc-if value="{{ about }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; translate: {{ mdx }}px {{ mdy }}px; left: 190px; top: 130px; width: 260px; z-index: 3000; background: #16161c; box-shadow: 0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; background: {{ about.tile }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ about.icon }}" size="16" colour="{{ about.tint }}" hint-size="16px,16px"></x-import></div>
+          <div style="display: flex; flex-direction: column;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: #fff;">{{ about.name }}</span><span style="color: #7c8796;">{{ about.version }}</span></div>
+        </div>
+        <span style="color: #b4bfce; line-height: 15px;">{{ about.blurb }}</span>
+        <span style="color: #7c8796; font-size: 10px;">{{ about.meta }}</span>
+        <div style="display: flex; justify-content: flex-end;"><span onClick="{{ closeAbout }}" style="padding: 3px 14px; background: #ffaa40; color: #0a0a0c; font-weight: 600; cursor: pointer;" style-hover="background: #e89930;">OK</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ctx }}" hint-placeholder-val="{{ false }}">
+      <div data-ctx="1" style="position: absolute; z-index: 4000; background: #16161c; box-shadow: 0 0 0 1px #333847, 2px 2px 0 1px #050507; padding: 3px 0; display: flex; flex-direction: column; left: {{ ctx.x }}px; top: {{ ctx.y }}px; width: {{ ctx.w }}px;">
+        <sc-if value="{{ ctxHeader }}" hint-placeholder-val="{{ false }}"><div style="padding: 6px 10px 8px; display: flex; flex-direction: column;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; background: linear-gradient(135deg, #ffaa40, #f43f5e, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent;">Afterglow Desk</span><span style="color: #7c8796; font-size: 10px;">{{ ctxHeaderSub }}</span></div></sc-if>
+        <sc-for list="{{ ctxItems }}" as="m" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column;">
+            <sc-if value="{{ m.sep }}" hint-placeholder-val="{{ false }}"><div style="height: 1px; background: #262a37; margin: 3px 0;"></div></sc-if>
+            <div onClick="{{ m.run }}" onMouseEnter="{{ m.enter }}" style="display: grid; align-items: center; gap: 6px; padding: 0 10px 0 6px; cursor: default; grid-template-columns: {{ m.cols }}; height: {{ m.h }}px; background: {{ m.bg }}; color: {{ m.fg }}; font-weight: {{ m.weight }};">
+              <span style="color: #ffaa40; text-align: center;">{{ m.check }}</span>
+              <sc-if value="{{ m.hasIcon }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ m.icon }}" size="12" colour="{{ m.tint }}" hint-size="12px,12px"></x-import></sc-if>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.label }}</span>
+              <span style="font-size: 10px; padding-left: 8px; white-space: nowrap; color: {{ m.hintFg }};">{{ m.hint }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ ctxSub }}" hint-placeholder-val="{{ false }}">
+        <div data-ctx="1" style="position: absolute; z-index: 4001; background: #16161c; box-shadow: 0 0 0 1px #333847, 2px 2px 0 1px #050507; padding: 3px 0; display: flex; flex-direction: column; left: {{ ctxSub.x }}px; top: {{ ctxSub.y }}px; width: {{ ctxSub.w }}px;">
+        <sc-for list="{{ ctxSubItems }}" as="m" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column;">
+            <sc-if value="{{ m.sep }}" hint-placeholder-val="{{ false }}"><div style="height: 1px; background: #262a37; margin: 3px 0;"></div></sc-if>
+            <div onClick="{{ m.run }}" onMouseEnter="{{ m.enter }}" style="display: grid; align-items: center; gap: 6px; padding: 0 10px 0 6px; cursor: default; grid-template-columns: {{ m.cols }}; height: {{ m.h }}px; background: {{ m.bg }}; color: {{ m.fg }}; font-weight: {{ m.weight }};">
+              <span style="color: #ffaa40; text-align: center;">{{ m.check }}</span>
+              <sc-if value="{{ m.hasIcon }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="LiminalHQDesignSystem_6cba27.Icon" name="{{ m.icon }}" size="12" colour="{{ m.tint }}" hint-size="12px,12px"></x-import></sc-if>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.label }}</span>
+              <span style="font-size: 10px; padding-left: 8px; white-space: nowrap; color: {{ m.hintFg }};">{{ m.hint }}</span>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ ghost }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; z-index: 4500; pointer-events: none; display: flex; align-items: center; gap: 6px; padding: 3px 8px; background: #16161c; box-shadow: 0 0 0 1px #ffaa40; color: #fff; white-space: nowrap; left: {{ ghost.x }}px; top: {{ ghost.y }}px;">
+        <dc-import name="FileIcon" kind="{{ ghost.kind }}" size="16" hint-size="16px,16px"></dc-import><span>{{ ghost.label }}</span><span style="color: {{ ghost.modeFg }};">{{ ghost.mode }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDos }}" hint-placeholder-val="{{ false }}">
+      <div data-raw="1" onClick="{{ dosClick }}" style="position: absolute; inset: 0; z-index: 5000; background: #000; font-family: 'VT323', monospace; font-size: 20px; line-height: 20px; color: #b4bfce;">
+        <sc-if value="{{ dosShowText }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 8px 10px; display: flex; flex-direction: column; white-space: pre;">
+            <sc-for list="{{ dosLines }}" as="l" hint-placeholder-count="3"><span>{{ l.t }}</span></sc-for>
+            <span>{{ dosPrompt }}<span style="animation: blink 1s steps(1) infinite;">_</span></span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ dosFizzCheck }}" hint-placeholder-val="{{ false }}"><img src="site/img/preview.png" alt="Lt. Fizz start-up check" style="width: 100%; height: 100%; image-rendering: pixelated; display: block;"></sc-if>
+        <sc-if value="{{ dosFizzGame }}" hint-placeholder-val="{{ false }}"><img src="site/img/scr-pause.png" alt="Lt. Fizz paused" style="width: 100%; height: 100%; image-rendering: pixelated; display: block;"></sc-if>
+      </div>
+    </sc-if>
+
+    <div style="position: absolute; inset: 0; z-index: 9000; background: #000; pointer-events: none; transition: opacity {{ fadeDur }}; opacity: {{ fade }};"></div>
+  </div>
+  <div style="font-size: 12px; color: #7c8796; text-align: center; max-width: 900px;">{{ hint }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;windowBorder&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;hairline&quot;, &quot;rule&quot;, &quot;halo&quot;, &quot;bevel&quot;, &quot;chunky&quot;, &quot;double&quot;], &quot;default&quot;: &quot;halo&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;wallpaper&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;horizon&quot;, &quot;ember&quot;, &quot;dusk&quot;, &quot;plum&quot;, &quot;voidwp&quot;], &quot;default&quot;: &quot;horizon&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;colours&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;256&quot;, &quot;800&quot;, &quot;16&quot;], &quot;default&quot;: &quot;256&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  static APPS = {
+    files: { name: 'Files', icon: 'assets', tint: '#ffaa40', tile: '#372612', core: true, w: 560, h: 330, blurb: 'Browse, move and open everything on your drives, in tabs.' },
+    programs: { name: 'Programs', group: 'System', icon: 'build', tint: '#a78bfa', tile: '#252038', core: true, w: 440, h: 300, blurb: 'Install and remove Desk apps, and set up DOS programs.' },
+    settings: { name: 'Settings', group: 'System', icon: 'settings', tint: '#b4bfce', tile: '#1f2230', core: true, w: 380, h: 320, blurb: 'Wallpaper, window borders, the screen, sounds and Jax.' },
+    midi: { name: 'Audio Player', group: 'Entertainment', icon: 'play', tint: '#22d3ee', tile: '#0b2e35', size: 96, id: 'AUDIO', w: 440, h: 290, blurb: 'Music (.MID) on the FM chip or MIDI out, and sounds (.WAV, .VOC) at full fidelity on the Sound Blaster, with a playlist.' },
+    notes: { name: 'Notes', group: 'Accessories', icon: 'titles', tint: '#60a5fa', tile: '#172538', size: 52, id: 'NOTES', w: 400, h: 290, blurb: 'Plain-text notes in tabs, with [[LINKS]] between them.' },
+    paint: { name: 'Paint', group: 'Accessories', icon: 'menus', tint: '#fbbf24', tile: '#362a0d', size: 118, id: 'PAINT', w: 440, h: 330, blurb: 'Draw 16-colour pictures, and use them as wallpaper.' },
+    calc: { name: 'Calculator', group: 'Accessories', icon: 'planner', tint: '#a8cefc', tile: '#0e151f', size: 21, id: 'CALC', w: 300, h: 290, blurb: 'Everyday sums, plus a programmer mode for hex and binary.' },
+    clock: { name: 'Clock', group: 'Accessories', icon: 'chapters', tint: '#f995a6', tile: '#1d0b10', size: 30, id: 'CLOCK', w: 340, h: 250, blurb: 'The time, a calendar, and quiet reminders.' },
+    inspector: { name: 'Inspector', group: 'System', icon: 'overview', tint: '#2ec66a', tile: '#0d2c1b', size: 40, id: 'INSPECT', w: 340, h: 270, blurb: 'What this PC has, and what the Desk is using.' },
+    mines: { name: 'Mines', group: 'Entertainment', icon: 'planner', tint: '#f43f5e', tile: '#351118', size: 28, id: 'MINES', w: 208, h: 276, blurb: 'Clear the field without opening a mine. Three sizes; the first click is always safe.' },
+    term: { name: 'Terminal', group: 'System', icon: 'logs', tint: '#2ec66a', tile: '#091811', size: 36, id: 'TERM', w: 440, h: 300, blurb: 'A command line in a window, for the Desk and your files. DOS programs you run from it still get the whole machine.' },
+    jax: { name: 'Jax', icon: 'project', tint: '#e25d75', tile: '#1d0b10', size: 12, id: 'JAX', widget: true, blurb: 'The Liminal HQ otter, keeping you company in the corner.' },
+    props: { name: 'Properties', w: 290, h: 360 },
+  };
+  static OPTIONAL = ['term', 'midi', 'notes', 'paint', 'calc', 'clock', 'inspector', 'mines', 'jax'];
+  static EXT = {
+    TXT: 'text', DOC: 'text', LOG: 'text', ME: 'text', NFO: 'text', MD: 'markdown', PDF: 'pdf',
+    BMP: 'image', PCX: 'image', GIF: 'image', LBM: 'image', TGA: 'image', ICO: 'image', FLI: 'video', FLC: 'video', MPG: 'video',
+    MID: 'audio', RMI: 'audio', WAV: 'audio', VOC: 'audio', MOD: 'audio', CMF: 'audio',
+    ZIP: 'archive', ARJ: 'archive', LZH: 'archive', RAR: 'archive', DAP: 'package',
+    C: 'code', H: 'code', RS: 'code', ASM: 'code', BAS: 'code', PAS: 'code', JS: 'code',
+    CSV: 'sheet', WK1: 'sheet', XLS: 'sheet', DBF: 'sheet', IMG: 'disk', ISO: 'disk', IMA: 'disk',
+    EXE: 'program', COM: 'program', BAT: 'batch', SYS: 'system', DLL: 'system', DXE: 'system', OVL: 'system', DRV: 'system',
+    INI: 'settings', CFG: 'settings', INF: 'settings', DIF: 'settings', SAV: 'save', DAT: 'save', DFN: 'font', FON: 'font', FNT: 'font',
+  };
+  static TYPE = { folder: 'Folder', text: 'Text document', markdown: 'Markdown document', pdf: 'PDF document', code: 'Source code', sheet: 'Spreadsheet', settings: 'Settings file', font: 'Bitmap font', system: 'System file', image: 'Picture', video: 'Animation', audio: 'Music', archive: 'Archive', package: 'Desk app package', disk: 'Disk image', program: 'Program', batch: 'Batch file', save: 'Saved data', blank: 'File' };
+  static TEXTY = ['text', 'markdown', 'code', 'sheet', 'settings', 'batch'];
+  static WALLPAPERS = {
+    horizon: { label: 'Horizon', bg: 'linear-gradient(to bottom, #050507 0px, #050507 20px, #0b0a11 20px, #0b0a11 44px, #15121f 44px, #15121f 66px, #252038 66px, #252038 86px, #351118 86px, #351118 104px, #541824 104px, #541824 118px, #583b1a 118px, #583b1a 130px, #7d5422 130px, #7d5422 140px, #a56f2b 140px, #a56f2b 146px, #d28c36 146px) bottom / 100% 150px no-repeat, #050507' },
+    ember: { label: 'Ember', bg: 'radial-gradient(ellipse 70% 55% at 50% 100%, #d28c36 0 12%, #a56f2b 12% 22%, #7d5422 22% 32%, #541824 32% 46%, #351118 46% 60%, #252038 60% 76%, #15121f 76% 92%, #050507 92%)' },
+    dusk: { label: 'Dusk sky', bg: 'linear-gradient(to bottom, #0b0a11 0 12%, #15121f 12% 26%, #252038 26% 40%, #3a3157 40% 52%, #541824 52% 64%, #782131 64% 74%, #7d5422 74% 84%, #a56f2b 84% 92%, #d28c36 92%)' },
+    plum: { label: 'Plum', bg: '#252038' },
+    voidwp: { label: 'Void', bg: '#050507' },
+  };
+  static BORDERS = {
+    hairline: { label: 'Hairline', u: { border: '1px solid #262a37', shadow: 'none', pad: '0px' }, f: { border: '1px solid #ffaa40', shadow: 'none', pad: '0px', rule: '0px', line: '1px' } },
+    rule: { label: 'Gradient rule', u: { border: '1px solid #262a37', shadow: 'none', pad: '0px' }, f: { border: '1px solid #333847', shadow: 'none', pad: '0px', rule: '2px', line: '0px' } },
+    halo: { label: 'Stepped halo', u: { border: 'none', shadow: '0 0 0 1px #262a37', pad: '0px' }, f: { border: 'none', shadow: '0 0 0 1px #ffaa40, 0 0 0 2px #7d5422, 0 0 0 3px #372612', pad: '0px', rule: '0px', line: '1px' } },
+    bevel: { label: 'Dark bevel', u: { border: 'none', shadow: 'inset 1px 1px 0 #333847, inset -1px -1px 0 #050507', pad: '3px' }, f: { border: 'none', shadow: 'inset 1px 1px 0 #ffaa40, inset -1px -1px 0 #7d5422, 0 0 0 1px #050507', pad: '3px', rule: '0px', line: '1px' } },
+    chunky: { label: 'Chunky 3D', u: { border: 'none', shadow: 'inset 1px 1px 0 #5a6273, inset -1px -1px 0 #050507, inset 2px 2px 0 #333847, inset -2px -2px 0 #1f2230', pad: '4px' }, f: { border: 'none', shadow: 'inset 1px 1px 0 #ffd096, inset -1px -1px 0 #583b1a, inset 2px 2px 0 #ffaa40, inset -2px -2px 0 #a56f2b', pad: '4px', rule: '0px', line: '1px' } },
+    double: { label: 'Double line', u: { border: '3px double #333847', shadow: 'none', pad: '0px' }, f: { border: '3px double #ffaa40', shadow: 'none', pad: '0px', rule: '0px', line: '1px' } },
+  };
+  static PAL16 = ['#050507', '#0c0c10', '#111116', '#1b1e28', '#333847', '#7c8796', '#b4bfce', '#e0e0e0', '#ffaa40', '#7d5422', '#372612', '#f43f5e', '#a78bfa', '#22d3ee', '#2ec66a', '#60a5fa'];
+  static MODES = {
+    '256': { label: '640 × 480 · 256 colours', title: '640 × 480, 256 colours', text: 'VESA 640 × 480 × 8 with the linear frame buffer.' },
+    '16': { label: '640 × 480 · 16 colours', title: 'Now in 16 colours', text: 'VGA mode 12h. The Desk picked its own 16, so nothing moved.' },
+    '800': { label: '800 × 600 · 256 colours', title: 'Now at 800 × 600', text: 'VESA 800 × 600 × 8. Windows kept their size; there is just more desk.' },
+  };
+  static WALL16 = {
+    horizon: 'linear-gradient(to bottom, #050507 0 96px, #372612 96px 122px, #7d5422 122px 142px, #ffaa40 142px) bottom / 100% 150px no-repeat, #050507',
+    ember: 'radial-gradient(ellipse 70% 55% at 50% 100%, #ffaa40 0 14%, #7d5422 14% 34%, #372612 34% 60%, #050507 60%)',
+    dusk: 'linear-gradient(to bottom, #0c0c10 0 26%, #1b1e28 26% 52%, #372612 52% 74%, #7d5422 74% 90%, #ffaa40 90%)',
+    plum: '#1b1e28', voidwp: '#050507',
+  };
+  static MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // ── in-memory file system ──
+  makeFS() {
+    const T = (d, h = 15, m = 6) => new Date(2026, 9, d, h, m).getTime();
+    const A = (x = {}) => ({ r: false, h: false, s: false, a: true, ...x });
+    const F = (n, size, d, extra = {}) => ({ n, dir: false, size, t: T(d), attr: A(extra.attr), ...extra, attr: A(extra.attr) });
+    const X = (n, text, d, extra = {}) => F(n, text.length, d, { text, ...extra });
+    const D = (n, kids, d = 21, attr) => ({ n, dir: true, size: 0, t: T(d), attr: A({ a: false, ...(attr || {}) }), kids });
+    const fizzDif = { title: 'Lt. Fizz Episode 1', args: '', memory: 8192, sound: 'adlib', pause: false };
+    const difText = (d) => '[program]\r\nname=' + d.title + '\r\nargs=' + d.args + '\r\n\r\n[needs]\r\nmemory=' + d.memory + '\r\nsound=' + d.sound + '\r\npause=' + (d.pause ? 'yes' : 'no') + '\r\n';
+    this.difText = difText;
+    const fizz = (saves) => [
+      F('FIZZ.EXE', 933888, 21), F('CWSDPMI.EXE', 21689, 21), X('FIZZ.DIF', difText(fizzDif), 21, { meta: { dif: fizzDif } }),
+      F('FIZZ.CFG', 64, 22), ...(saves ? [F('AUTO.SAV', 1840, 22), F('SLOT1.SAV', 1840, 20)] : []),
+      X('README.TXT', 'Lieutenant Fizz - Episode 1: The Cocoa Caper\n\nRun FIZZ.EXE. It starts at a system check;\nEnter continues to the title.\n\nSaves are AUTO.SAV and SLOT1.SAV to SLOT4.SAV,\noptions are FIZZ.CFG, all beside the game.\n', 21),
+    ];
+    const mid = (n, title, len, size) => F(n, size, 19, { meta: { title, len } });
+    const wall = (n, key) => F(n, 308278, 20, { meta: { wall: key } });
+    const app = (id, size) => D(id, [F('APP.DXE', size * 1024 - 900, 21), X('APP.INF', '[app]\r\nid=' + id + '\r\nmodule=APP.DXE\r\nsdk=1\r\n', 21), F('APP.ICO', 1062, 21)]);
+    const dap = (k) => F(Component.APPS[k].id + '.DAP', Math.round(Component.APPS[k].size * 1024 * 0.62), 21);
+    const C = D('C:', [
+      D('DESK', [
+        D('APPS', [app('FILES', 64), app('PROGRAMS', 48), app('SETTINGS', 40), app('AUDIO', 96), app('NOTES', 52), app('INSPECT', 40), app('MINES', 28), app('TERM', 36)]),
+        D('DESKTOP', [X('WELCOME.TXT', 'Welcome to Afterglow Desk.\n\nThis folder is your desktop: anything you drop\non the desktop lands here, in C:\\DESK\\DESKTOP.\n\nRight-click anything for more.\n', 22)]),
+        D('FONTS', [F('GROTESK.DFN', 9216, 21), F('INTER.DFN', 11264, 21), F('VGA16.DFN', 4096, 21)]),
+        D('WALLPAPR', [wall('HORIZON.BMP', 'horizon'), wall('EMBER.BMP', 'ember'), wall('DUSK.BMP', 'dusk'), wall('PLUM.BMP', 'plum')]),
+        F('DESK.COM', 3964, 21), F('DESKCORE.EXE', 497664, 21), F('CWSDPMI.EXE', 21689, 21),
+        X('DESK.INI', '[display]\r\nmode=640x480x8\r\nlook=afterglow\r\n\r\n[desktop]\r\nwallpaper=horizon\r\nborder=halo\r\n', 22),
+      ]),
+      D('DELETED', [], 22, { h: true }),
+      D('FIZZ', fizz(true)),
+      D('MUSIC', [mid('COCOA.MID', 'Cocoa Caper overture', 160, 18321), mid('MAP.MID', 'Overworld', 118, 12034), mid('CAVES.MID', 'Crystal Caves', 142, 15560), mid('GALLERY.MID', 'Sugar Glass Gallery', 131, 14112), mid('BOSS.MID', 'Boss theme', 96, 10240)], 19),
+      D('GAMES', [D('KEEN4', [F('KEEN4.EXE', 263482, 3, { meta: { real: true } }), X('KEEN4.DIF', '[program]\r\nname=Commander Keen 4\r\nargs=\r\n\r\n[needs]\r\nmode=real\r\nmemory=580\r\nsound=sb16\r\npause=no\r\n', 3, { meta: { dif: { title: 'Commander Keen 4', args: '', memory: 580, sound: 'sb16', pause: false } } }), F('EGAGRAPH.CK4', 557328, 3), F('GAMEMAPS.CK4', 111434, 3), F('AUDIO.CK4', 64912, 3), F('CONFIG.CK4', 128, 21)], 3)], 3),
+      D('SOUNDS', [F('CHIME.WAV', 44144, 20, { meta: { title: 'Desk chime', len: 2, fmt: '22 kHz · 8-bit mono' } }), F('RAIN.WAV', 8290404, 20, { meta: { title: 'Rain on the window', len: 94, fmt: '22 kHz · 16-bit stereo' } }), F('STING.VOC', 44126, 21, { meta: { title: 'Lt. Fizz sting', len: 4, fmt: '11 kHz · 8-bit mono' } })], 20),
+      D('NOTES', [
+        X('TODAY.TXT', 'Thursday\n\n- try the ci-dos image on the Desk\n- VBE 2.0 linear frame buffer works in DOSBox;\n  js-dos needs a check\n- mouse through INT 33h, cursor drawn by the\n  Desk, not the driver\n- fall back to mode 12h when there is no\n  VESA BIOS\n', 22),
+        X('DESK.TXT', 'Afterglow Desk\n\nCore: shell, Files, Programs, Settings.\nEverything else installs from A: or a folder.\n\nDOS programs run full-screen through DESK.COM\nand come back to the same windows.\n', 21),
+        X('SDK.MD', '# Desk SDK\n\n- desk_window_new\n- desk_pick_open\n- desk_clip_put\n- desk_toast\n', 21),
+      ]),
+      D('PAINT', [], 21),
+      D('SRC', [X('HELLO.RS', '#![no_std]\n\n#[no_mangle]\npub extern "C" fn app_start() -> i32 {\n    0\n}\n', 20), X('MAIN.C', '#include <stdio.h>\n\nint main(void) {\n  puts("hello from DOS");\n  return 0;\n}\n', 20), X('BUILD.BAT', '@ECHO OFF\r\ni586-pc-msdosdjgpp-gcc -O2 -o HELLO.EXE MAIN.C\r\n', 20)], 20),
+      X('AUTOEXEC.BAT', '@ECHO OFF\r\nPATH C:\\FDOS\\BIN;C:\\DESK\r\nSET BLASTER=A220 I5 D1 H5 T6\r\nLH CTMOUSE.EXE\r\nC:\\DESK\\DESK.COM\r\n', 12),
+      X('CONFIG.SYS', 'FILES=40\r\nBUFFERS=20\r\nDOS=HIGH,UMB\r\n', 12),
+      F('COMMAND.COM', 66945, 12),
+      F('KERNEL.SYS', 45815, 12, { attr: { r: true, h: true, s: true, a: false } }),
+    ], 12);
+    const Adrive = D('A:', [D('FIZZ', fizz(false)), X('CATALOG.INF', '[disk]\r\nlabel=DESK APPS\r\n', 21), ...Component.OPTIONAL.map(dap)], 21);
+    return {
+      'C:': { id: 'C:', label: 'LIMINAL', total: 528482304, base: 96468992, root: C },
+      'A:': { id: 'A:', label: 'DESK APPS', total: 1457664, base: 0, root: Adrive },
+    };
+  }
+
+  static norm(p) { p = String(p || '').trim().toUpperCase().replace(/\//g, '\\').replace(/\\+$/, ''); if (/^[A-Z]:$/.test(p)) p += '\\'; return p; }
+  static parts(p) { const n = Component.norm(p); const rest = n.slice(3); return [n.slice(0, 2), ...(rest ? rest.split('\\') : [])]; }
+  static join(dir, name) { return (dir.endsWith('\\') ? dir : dir + '\\') + name; }
+  static parent(p) { const ps = Component.parts(p); if (ps.length <= 1) return null; return ps.length === 2 ? ps[0] + '\\' : ps[0] + '\\' + ps.slice(1, -1).join('\\'); }
+  static base(p) { const ps = Component.parts(p); return ps[ps.length - 1]; }
+  static ext(n) { const i = n.lastIndexOf('.'); return i > 0 ? n.slice(i + 1).toUpperCase() : ''; }
+  static kind(n, dir) { return dir ? 'folder' : (Component.EXT[Component.ext(n)] || 'blank'); }
+
+  node(p) {
+    const ps = Component.parts(p); const d = this.fs[ps[0]]; if (!d) return null;
+    let n = d.root;
+    for (const name of ps.slice(1)) { n = n.dir && n.kids.find(k => k.n === name); if (!n) return null; }
+    return n;
+  }
+  size(n) { return n.dir ? n.kids.reduce((a, k) => a + this.size(k), 0) : n.size; }
+  unique(dir, name) {
+    if (!dir.kids.some(k => k.n === name)) return name;
+    const i = name.lastIndexOf('.'), b = i > 0 ? name.slice(0, i) : name, e = i > 0 ? name.slice(i) : '';
+    for (let k = 1; k < 99; k++) { const c = b.slice(0, 8 - String(k).length - 1) + '~' + k + e; if (!dir.kids.some(x => x.n === c)) return c; }
+    return name;
+  }
+  detach(p) { const par = this.node(Component.parent(p)); if (!par) return null; const i = par.kids.findIndex(k => k.n === Component.base(p)); return i < 0 ? null : par.kids.splice(i, 1)[0]; }
+  remap(map) {
+    const fix = (p) => { for (const [o, n] of map) { if (p === o) return n; if (p && p.startsWith(o + '\\')) return n + p.slice(o.length); } return p; };
+    this.setState(s => ({
+      track: fix(s.track), noteFile: fix(s.noteFile),
+      windows: s.windows.map(w => w.target ? { ...w, target: fix(w.target) } : w),
+      shortcuts: s.shortcuts.map(fix), clip: s.clip ? { ...s.clip, paths: s.clip.paths.map(fix) } : null,
+    }));
+  }
+  bump() { this.setState(s => ({ fsv: s.fsv + 1 })); }
+  driveInfo(id) { const d = this.fs[id]; const used = d.base + this.size(d.root); return { id, label: d.label, total: d.total, base: d.base, free: Math.max(0, d.total - used) }; }
+  view(n, path) { return { ...n, path }; }
+
+  fmtSize(b) { if (b < 1024000) return (b === 0 ? 0 : Math.max(1, Math.ceil(b / 1024))) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; }
+  fmtBytes(b) { return b.toLocaleString('en-CA') + ' bytes' + (b >= 1024 ? ' (' + this.fmtSize(b) + ')' : ''); }
+  fmtTime(d) { const h = d.getHours(); return ((h % 12) || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? ' a.m.' : ' p.m.'); }
+  fmtDate(t, long) {
+    if (!t) return '';
+    const d = new Date(t), y = d.getFullYear(), same = y === new Date().getFullYear();
+    if (long) return Component.WD[d.getDay()] + ' ' + d.getDate() + ' ' + Component.MON[d.getMonth()] + ' ' + y + ', ' + this.fmtTime(d);
+    return d.getDate() + ' ' + Component.MON[d.getMonth()] + (same ? '' : ' ' + y);
+  }
+  fmtLen(n) { return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0'); }
+
+  handlerFor(path) {
+    const n = Component.base(path), ext = Component.ext(n), k = Component.kind(n, false), inst = this.state.installed;
+    const assoc = this.state.assoc[ext];
+    if (assoc && (Component.APPS[assoc].core || inst[assoc])) return { key: assoc, name: Component.APPS[assoc].name };
+    if (k === 'audio' && inst.midi) return { key: 'midi', name: Component.APPS.midi.name };
+    if (Component.TEXTY.includes(k) && k !== 'batch' && inst.notes) return { key: 'notes', name: 'Notes' };
+    if (k === 'image' && inst.paint) return { key: 'paint', name: 'Paint' };
+    if (k === 'package') return { key: 'programs', name: 'Programs' };
+    return null;
+  }
+  isProgram(path) { return ['EXE', 'COM', 'BAT'].includes(Component.ext(Component.base(path))); }
+  getDif(path) {
+    const dif = this.node(path.replace(/\.[^.\\]+$/, '.DIF'));
+    if (dif && dif.meta && dif.meta.dif) return { ...dif.meta.dif };
+    const b = Component.base(path).replace(/\.[^.]+$/, '');
+    return { title: b.charAt(0) + b.slice(1).toLowerCase(), args: '', memory: 640, sound: 'none', pause: Component.ext(path) === 'BAT' };
+  }
+  launchPath(path) {
+    const n = Component.base(path), dir = Component.parent(path);
+    if (n === 'FIZZ.EXE') return this.launch({ name: n, dir, kind: 'fizz' });
+    if (n === 'DESK.COM' || n === 'DESKCORE.EXE') return this.showToast('Already running', 'This is the Desk. Exit to DOS from the Desk menu.');
+    if (n === 'COMMAND.COM') return this.launch({ name: n, dir, kind: 'prompt', exitWord: 'EXIT', intro: ['', 'A DOS prompt, with the whole machine to itself.', 'Type EXIT to return to the Desk.', ''] });
+    const node = this.node(path), d = this.getDif(path);
+    let out = ['(' + d.title + ' ran and finished.)'];
+    if (node && node.meta && node.meta.real) out = ['', d.title + ' is a real-mode game: it takes over from here.', 'It sets its own EGA mode (320x200, 16 colours), hooks the keyboard', 'and timer, and plays its music on the ' + this.ops.soundName(d.sound) + '.', '', '(This prototype has no Keen to run, so it stops here.)'];
+    if (node && typeof node.text === 'string') out = node.text.split(/\r?\n/).filter(l => l && !/^@ECHO/i.test(l));
+    if (n === 'CWSDPMI.EXE') out = ['CWSDPMI r7: a DPMI host.', 'It starts by itself with DJGPP programs.'];
+    this.launch({ name: n + (d.args ? ' ' + d.args : ''), dir, kind: 'text', out });
+  }
+  openIn(key, path) {
+    if (['midi', 'notes', 'paint'].includes(key)) return this.deliver(key, { path });
+    return this.open(key);
+  }
+  deliver(app, nav, winId) {
+    this.navN = (this.navN || 0) + 1;
+    const ex = winId ? this.state.windows.find(w => w.id === winId) : this.state.windows.find(w => w.app === app);
+    if (ex) { this.setState(s => ({ windows: s.windows.map(w => w.id === ex.id ? { ...w, nav: { ...nav, n: this.navN } } : w) })); if (!nav.drop) this.focus(ex.id); return; }
+    this.newWindow(app, { nav: { ...nav, n: this.navN } });
+  }
+  openPath(path) {
+    const node = this.node(path); if (!node) return this.showToast("That isn't there any more", path + ' has moved or been deleted.');
+    if (node.dir || Component.parts(path).length === 1) return this.openFilesAt(path);
+    if (this.isProgram(path)) return this.launchPath(path);
+    const h = this.handlerFor(path);
+    if (h) return this.openIn(h.key, path);
+    this.ops.openWith(path);
+  }
+  openFilesAt(path, newWin) {
+    const ex = !newWin && [...this.state.windows].reverse().find(w => w.app === 'files');
+    this.navN = (this.navN || 0) + 1;
+    if (ex) { this.setState(s => ({ windows: s.windows.map(w => w.id === ex.id ? { ...w, nav: { path, n: this.navN, tab: false } } : w) })); this.focus(ex.id); return; }
+    this.newWindow('files', { nav: { path, n: this.navN } });
+  }
+
+  transfer(paths, dest, mode) {
+    const dn = this.node(dest);
+    if (!dn || !dn.dir) return;
+    paths = paths.filter(p => this.node(p) && !(dest === p || dest.startsWith(p + '\\')) && (mode === 'copy' || Component.parent(p) !== dest));
+    if (!paths.length) return;
+    const bytes = paths.reduce((a, p) => a + this.size(this.node(p)), 0);
+    const toDrive = Component.parts(dest)[0];
+    const moving = mode === 'move' && paths.every(p => Component.parts(p)[0] === toDrive);
+    if (!moving && bytes > this.driveInfo(toDrive).free) return this.showToast('Not enough room on ' + toDrive, 'That needs ' + this.fmtSize(bytes) + '; ' + toDrive + ' has ' + this.fmtSize(this.driveInfo(toDrive).free) + ' free.');
+    const label = (mode === 'move' ? 'Moving ' : 'Copying ') + (paths.length === 1 ? Component.base(paths[0]) : paths.length + ' items') + ' to ' + Component.base(dest);
+    const dur = moving ? 350 : Math.min(3500, 500 + bytes / 1024 * (toDrive === 'A:' ? 6 : 2));
+    const start = Date.now();
+    clearInterval(this.jobT);
+    this.setState({ job: { title: label, pct: 0, bytes: '0 KB of ' + this.fmtSize(bytes), now: paths[0] } });
+    this.jobT = setInterval(() => {
+      const f = Math.min(1, (Date.now() - start) / dur);
+      if (f < 1) { const i = Math.min(paths.length - 1, Math.floor(f * paths.length)); this.setState({ job: { title: label, pct: Math.round(f * 100), bytes: this.fmtSize(Math.round(bytes * f)) + ' of ' + this.fmtSize(bytes), now: paths[i] } }); return; }
+      clearInterval(this.jobT);
+      const map = [];
+      paths.forEach(p => {
+        const cur = this.node(dest); if (!cur) return;
+        if (mode === 'move') { const n = this.detach(p); if (!n) return; n.n = this.unique(cur, n.n); delete n.from; cur.kids.push(n); map.push([p, Component.join(dest, n.n)]); }
+        else { const src = this.node(p); if (!src) return; const n = structuredClone(src); n.n = this.unique(cur, n.n); n.t = Date.now(); delete n.from; cur.kids.push(n); }
+      });
+      if (map.length) this.remap(map);
+      this.setState({ job: null }); this.bump();
+      this.showToast((mode === 'move' ? 'Moved ' : 'Copied ') + (paths.length === 1 ? Component.base(paths[0]) : paths.length + ' items'), 'Now in ' + dest + '.');
+    }, 80);
+  }
+
+  ops = {
+    norm: Component.norm, parts: Component.parts, parent: Component.parent, base: Component.base,
+    kind: Component.kind, typeName: (n, dir) => { const k = Component.kind(n, dir); return Component.TYPE[k] + (dir || !Component.ext(n) ? '' : ' (.' + Component.ext(n) + ')'); },
+    stat: (p) => { const n = this.node(p); return n ? this.view(n, Component.norm(p)) : null; },
+    list: (p, hidden) => { const n = this.node(p); if (!n || !n.dir) return []; return n.kids.filter(k => hidden || !k.attr.h).map(k => this.view(k, Component.join(Component.norm(p), k.n))); },
+    search: (p, q, hidden) => {
+      const pat = q.trim().toUpperCase(); if (!pat) return [];
+      const re = /[*?]/.test(pat) ? new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$') : null;
+      const out = [];
+      const walk = (dir, path) => dir.kids.forEach(k => {
+        if (k.attr.h && !hidden) return;
+        const kp = Component.join(path, k.n);
+        if (re ? re.test(k.n) : k.n.includes(pat)) out.push(this.view(k, kp));
+        if (k.dir && out.length < 200) walk(k, kp);
+      });
+      const root = this.node(p); if (root && root.dir) walk(root, Component.norm(p));
+      return out;
+    },
+    dirSize: (p) => { const n = this.node(p); return n ? this.size(n) : 0; },
+    count: (p) => { let files = 0, dirs = 0; const walk = (n) => n.kids.forEach(k => { if (k.dir) { dirs++; walk(k); } else files++; }); const n = this.node(p); if (n && n.dir) walk(n); return { files, dirs }; },
+    drive: (p) => this.driveInfo(Component.parts(p)[0]),
+    drives: () => Object.keys(this.fs).sort().map(id => this.driveInfo(id)),
+    fmtSize: (b) => this.fmtSize(b), fmtBytes: (b) => this.fmtBytes(b), fmtDate: (t, l) => this.fmtDate(t, l), fmtLen: (n) => this.fmtLen(n),
+    soundName: (k) => ({ sb16: 'Sound Blaster 16', adlib: 'AdLib', opl2: 'AdLib (OPL2)', opl3: 'OPL3 on the Sound Blaster', speaker: 'PC speaker', mpu401: 'MPU-401', none: 'None' }[k] || k),
+    toast: (t, x) => this.showToast(t, x),
+    setTitle: (id, title) => { if (this.titles[id] !== title) { this.titles[id] = title; this.setState(s => ({ tv: s.tv + 1 })); } },
+    closeWindow: (id) => this.close(id),
+    newWindow: (p) => this.openFilesAt(p, true),
+    open: (p) => this.openPath(Component.norm(p)),
+    reveal: (p) => this.openFilesAt(Component.parent(p) || p),
+    handler: (p) => this.handlerFor(p),
+    openLabel: (p) => { const n = this.node(p); if (!n) return 'Open'; if (n.dir) return 'Open'; if (this.isProgram(p)) return 'Run full-screen'; const h = this.handlerFor(p); return h ? (h.key === 'programs' ? 'Install with Programs' : 'Open in ' + h.name) : 'Open with…'; },
+    openWith: (p) => this.setState({ ow: { path: p, pick: null, always: false } }),
+    isProgram: (p) => this.isProgram(p),
+    getDif: (p) => this.getDif(p),
+    setDif: (p, d) => {
+      const dp = p.replace(/\.[^.\\]+$/, '.DIF'), dir = this.node(Component.parent(p)); if (!dir) return;
+      let n = this.node(dp);
+      if (!n) { n = { n: Component.base(dp), dir: false, size: 0, t: Date.now(), attr: { r: false, h: false, s: false, a: true } }; dir.kids.push(n); }
+      n.meta = { dif: { ...d } }; n.text = this.difText(d); n.size = n.text.length; n.t = Date.now();
+      this.bump(); this.showToast('Saved ' + n.n, d.title + ' will start with these settings.');
+    },
+    setAttr: (p, k, v) => { const n = this.node(p); if (!n) return; n.attr = { ...n.attr, [k]: v }; this.bump(); },
+    rename: (p, name) => {
+      name = name.trim().toUpperCase();
+      if (!/^[A-Z0-9_\-!#$%&'()@^`{}~]{1,8}(\.[A-Z0-9_\-!#$%&'()@^`{}~]{1,3})?$/.test(name)) return { err: 'Names are 8.3 on DOS: up to 8 letters or numbers, a dot, then up to 3 more. No spaces.' };
+      const par = this.node(Component.parent(p)), n = this.node(p);
+      if (!n || !par) return { err: 'That item has gone.' };
+      if (n.attr.r) return { err: n.n + ' is read-only. Clear Read-only in Properties first.' };
+      if (par.kids.some(k => k !== n && k.n === name)) return { err: 'There is already a ' + name + ' here.' };
+      n.n = name; n.t = Date.now();
+      const np = Component.join(Component.parent(p), name); this.remap([[p, np]]); this.bump();
+      return { path: np };
+    },
+    mkdir: (p) => { const d = this.node(p); if (!d || !d.dir) return null; const n = this.unique(d, 'NEWFOLDR'); d.kids.push({ n, dir: true, size: 0, t: Date.now(), attr: { r: false, h: false, s: false, a: false }, kids: [] }); this.bump(); return Component.join(Component.norm(p), n); },
+    remove: (paths) => {
+      let del = this.node('C:\\DELETED');
+      const map = [];
+      paths.forEach(p => {
+        if (p.startsWith('C:\\DELETED\\')) { this.detach(p); return; }
+        const from = Component.parent(p), n = this.detach(p); if (!n) return;
+        n.n = this.unique(del, n.n); n.from = from; del.kids.push(n); map.push([p, Component.join('C:\\DELETED', n.n)]);
+      });
+      if (map.length) this.remap(map);
+      this.bump();
+      this.showToast(map.length ? 'Moved to Deleted' : 'Deleted for good', map.length ? 'Restore it from Deleted in Files until you empty it.' : (paths.length === 1 ? Component.base(paths[0]) : paths.length + ' items') + ' are gone.');
+    },
+    restore: (paths) => {
+      const map = [];
+      paths.forEach(p => {
+        const n0 = this.node(p); if (!n0) return;
+        let to = n0.from && this.node(n0.from) ? n0.from : 'C:\\';
+        const n = this.detach(p), dest = this.node(to); n.n = this.unique(dest, n.n); delete n.from; dest.kids.push(n); map.push([p, Component.join(to, n.n)]);
+      });
+      this.remap(map); this.bump();
+      if (map.length) this.showToast('Restored', (map.length === 1 ? Component.base(map[0][1]) : map.length + ' items') + ' back in ' + Component.parent(map[0][1]) + '.');
+    },
+    emptyDeleted: () => { const d = this.node('C:\\DELETED'); const n = d.kids.length; d.kids = []; this.bump(); this.showToast('Deleted is empty', n + (n === 1 ? ' item' : ' items') + ' gone for good.'); },
+    clipFiles: (paths, cut) => { if (!paths.length) return; this.setState(s => ({ clip: { paths: [...paths], cut }, clipv: s.clipv + 1 })); },
+    clipState: () => this.state.clip,
+    canPaste: () => !!(this.state.clip && this.state.clip.paths.some(p => this.node(p))),
+    paste: (dest) => { const c = this.state.clip; if (!c) return; this.transfer(c.paths, Component.norm(dest), c.cut ? 'move' : 'copy'); if (c.cut) this.setState(s => ({ clip: null, clipv: s.clipv + 1 })); },
+    clipText: (t, quiet) => { this.setState(s => ({ clipText: t, sv: s.sv + 1 })); if (!quiet) this.showToast('Copied', t.length > 60 ? t.slice(0, 57) + '…' : t); },
+    properties: (p) => { p = Component.norm(p); const ex = this.state.windows.find(w => w.app === 'props' && w.target === p); if (ex) return this.focus(ex.id); this.newWindow('props', { target: p }); },
+    addShortcut: (p) => { if (this.state.shortcuts.includes(p)) return this.showToast('Already on the desktop', Component.base(p) + ' has an icon.'); this.setState(s => ({ shortcuts: [...s.shortcuts, p] })); this.showToast('Added to the desktop', this.getDif(p).title + ' has a desktop icon now.'); },
+    useWallpaper: (p) => this.useWallpaper(p),
+    wallCss: (k) => (Component.WALLPAPERS[k] || Component.WALLPAPERS.horizon).bg,
+    drawPixels: (el, px, w = 120, h = 80) => { const ctx = el.getContext('2d'), P = Component.PAL16; ctx.fillStyle = P[0]; ctx.fillRect(0, 0, w, h); for (let i = 0; i < px.length; i++) if (px[i]) { ctx.fillStyle = P[px[i]]; ctx.fillRect(i % w, Math.floor(i / w), 1, 1); } },
+    ask: (a) => this.setState({ ask: a, menu: false }),
+    resizeWindow: (id, w, h) => this.setState(s => ({ windows: s.windows.map(x => x.id === id ? { ...x, w, h, x: Math.max(0, Math.min(x.x, this.SW() - w)), y: Math.max(0, Math.min(x.y, this.SH() - 30 - h)), max: false } : x) })),
+    jax: (mood) => { this.setState({ jaxMood: mood }); setTimeout(() => this.setState({ jaxMood: 'chill' }), 3000); },
+    join: Component.join, ext: Component.ext, fmtTime: (d) => this.fmtTime(d), pal16: () => Component.PAL16,
+    valid83: (n) => /^[A-Z0-9_\-!#$%&'()@^`{}~]{1,8}(\.[A-Z0-9_\-!#$%&'()@^`{}~]{1,3})?$/.test(String(n).toUpperCase()),
+    write: (p, text) => {
+      p = Component.norm(p); let n = this.node(p);
+      if (!n) { const d = this.node(Component.parent(p)); if (!d || !d.dir) return null; n = { n: Component.base(p), dir: false, size: 0, t: Date.now(), attr: { r: false, h: false, s: false, a: true } }; d.kids.push(n); }
+      n.text = text; n.size = text.length; n.t = Date.now(); this.bump(); return p;
+    },
+    create: (dir, name, text) => { const d = this.node(dir); if (!d || !d.dir) return null; const n = this.unique(d, name); d.kids.push({ n, dir: false, size: (text || '').length, t: Date.now(), attr: { r: false, h: false, s: false, a: true }, text: text || '' }); this.bump(); return Component.join(Component.norm(dir), n); },
+    writePixels: (p, px, w, h) => {
+      p = Component.norm(p); let n = this.node(p);
+      if (!n) { const d = this.node(Component.parent(p)); if (!d || !d.dir) return null; n = { n: Component.base(p), dir: false, size: 0, t: Date.now(), attr: { r: false, h: false, s: false, a: true } }; d.kids.push(n); }
+      n.meta = { pixels: new Uint8Array(px), w, h }; delete n.text; n.size = 118 + Math.ceil(w / 2) * h; n.t = Date.now(); this.bump(); return p;
+    },
+    pick: (req) => new Promise(res => { this.pickRes = res; this.setState({ picker: { ...req, k: Date.now() }, ctx: null, menu: false }); }),
+    pickDone: (p) => { const r = this.pickRes; this.pickRes = null; this.setState({ picker: null }); if (r) r(p); },
+    about: (k) => { const a = Component.APPS[k]; this.setState({ about: { name: a.name, icon: a.icon || 'project', tint: a.tint || '#ffaa40', tile: a.tile || '#372612', blurb: a.blurb || '', version: 'Version 0.1 · Afterglow Desk', meta: (a.core ? 'Core app' : a.id + '.DXE · ' + a.size + ' KB') + ' · Apache-2.0 OR MIT · Liminal HQ' } }); },
+    getClipText: () => this.state.clipText,
+    useWallpaperPixels: (px, w, h, name) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; this.ops.drawPixels(cv, px, w, h); this.setState(s => ({ wallpaper: 'custom', wallUrl: cv.toDataURL(), sv: s.sv + 1 })); this.showToast('Wallpaper changed', (name || 'Your picture') + ' is on the desktop now.'); },
+    settings: () => { const s = this.state; return { wallpaper: s.wallpaper ?? this.props.wallpaper ?? 'horizon', wallUrl: s.wallUrl, border: s.border ?? this.props.windowBorder ?? 'halo', depth: s.depth, motion: s.motion, effects: s.effects, midiOut: s.midiOut, jaxOn: s.jaxOn, jaxBox: s.jaxBox, jaxInstalled: !!s.installed.jax }; },
+    setSetting: (k, v) => k === 'depth' ? this.setDepth(v) : this.setState(s => ({ [k]: v, sv: s.sv + 1 })),
+    setDepth: (d) => this.setDepth(d),
+    wallpapers: () => [...Object.entries(Component.WALLPAPERS).map(([key, w]) => ({ key, label: w.label, bg: w.bg })), ...(this.state.wallUrl ? [{ key: 'custom', label: 'Your picture', bg: 'url(' + this.state.wallUrl + ') center / cover no-repeat' }] : [])],
+    borders: () => Object.entries(Component.BORDERS).map(([key, b]) => ({ key, ...b })),
+    catalog: () => ['files', 'programs', 'settings', ...Component.OPTIONAL].map(k => { const a = Component.APPS[k]; return { key: k, id: a.id || k.toUpperCase(), name: a.name, size: a.size || 0, core: !!a.core, installed: !!a.core || !!this.state.installed[k], blurb: a.blurb || '' }; }),
+    installState: () => this.state.installing ? { pct: this.state.installing.pct, names: this.state.installing.picks.map(k => Component.APPS[k].name).join(', ') } : null,
+    install: (keys) => this.doInstall(keys),
+    uninstall: (k) => this.uninstall(k),
+    openApp: (k) => this.open(k),
+    runFrom: (p, winId, args) => { this.returnTo = { winId, name: Component.base(p) }; const n = this.node(p); if (n && args) { const d = this.getDif(p); this.launch({ name: Component.base(p) + ' ' + args, dir: Component.parent(p), kind: Component.base(p) === 'FIZZ.EXE' ? 'fizz' : 'text', out: ['(' + d.title + ' ran with ' + args + ' and finished.)'] }); } else this.launchPath(p); },
+    transfer: (paths, dest, mode) => this.transfer(paths, dest, mode),
+    dosPrograms: () => { const skip = ['DESK.COM', 'DESKCORE.EXE', 'CWSDPMI.EXE', 'APP.DXE']; const seen = new Set(); return ['*.EXE', '*.COM', '*.BAT'].flatMap(q => [...this.ops.search('C:\\', q, false), ...this.ops.search('A:\\', q, false)]).filter(x => !skip.includes(x.n) && !x.path.startsWith('C:\\DELETED') && !seen.has(x.path) && seen.add(x.path)); },
+    sys: () => ({ started: this.state.started, depth: this.state.depth, effects: this.state.effects, midiOut: this.state.midiOut, windows: this.state.windows.map(w => ({ name: this.titles[w.id] || Component.APPS[w.app].name, kb: Math.round(((Component.APPS[w.app].size || 48) * 1.6 + 60)) })) }),
+    reminders: () => this.state.reminders,
+    setReminders: (list) => this.setState(s => ({ reminders: list, sv: s.sv + 1 })),
+    busy: () => this.state.phase !== 'desk' || !!this.state.ask || !!this.state.ow || !!this.state.ctx || !!this.state.picker || !!this.state.about,
+    menu: (e, items) => this.showMenu(e, items),
+    beginDrag: (e, paths, label) => { this.dragInfo = { paths, label, sx: e.clientX, sy: e.clientY, active: false }; },
+  };
+
+  state = {
+    zoom: 1.5, fsv: 0, tv: 0, clipv: 0,
+    windows: [
+      { id: 2, app: 'midi', x: 192, y: 154, w: 440, h: 288, min: false, max: false },
+      { id: 1, app: 'files', x: 76, y: 8, w: 540, h: 310, min: false, max: false, nav: { path: 'C:\\FIZZ', n: 0 } },
+    ],
+    focus: 1, nextId: 3, sel: null, menu: false,
+    wallpaper: null, wallUrl: null, border: null, depth: '256', jaxOn: true, jaxBox: false, jaxMood: 'chill',
+    installed: { term: true, midi: true, notes: true, inspector: true, mines: true }, picks: {}, installing: null,
+    track: 'C:\\MUSIC\\COCOA.MID', playing: true, pos: 72,
+    noteFile: 'C:\\NOTES\\TODAY.TXT', paintFile: null,
+    calc: { disp: '0', acc: null, op: null, fresh: true }, paintColour: 9,
+    toast: null, phase: 'desk', dos: null, fade: 0, now: Date.now(), redraw: 14,
+    clip: null, clipText: '', ctx: null, ask: null, ow: null, job: null, ghost: null, shortcuts: [], assoc: {},
+    sv: 0, picker: null, about: null, motion: true, effects: 'sb16', midiOut: 'opl3', started: Date.now(),
+    reminders: [{ id: 1, date: (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })(), time: '17:30', text: 'Back up the notes to A:', done: false, fired: false }],
+  };
+
+  fs = this.makeFS();
+  titles = {};
+  paint = new Uint8Array(120 * 80);
+  painting = false;
+  canvasEl = null;
+  canvasRef = (el) => { this.canvasEl = el; if (el) this.drawCanvas(); };
+  screenRef = (el) => { this.screenEl = el; };
+  noteRef = (el) => { this.noteEl = el; };
+
+  componentDidMount() {
+    if (this.props.colours && this.props.colours !== '256') setTimeout(() => this.setDepth(this.props.colours, true), 0);
+    this.fit();
+    this.onResize = () => this.fit();
+    window.addEventListener('resize', this.onResize);
+    this.onMove = (e) => this.move(e);
+    this.onUp = (e) => this.up(e);
+    this.onDown = (e) => {
+      if (this.skipClose) { this.skipClose = false; return; }
+      if (this.state.ctx && !(e.target.closest && e.target.closest('[data-ctx]'))) this.setState({ ctx: null });
+      if (this.state.menu && !(e.target.closest && e.target.closest('[data-ctx]'))) this.setState({ menu: false });
+    };
+    document.addEventListener('mousemove', this.onMove);
+    document.addEventListener('mouseup', this.onUp);
+    document.addEventListener('mousedown', this.onDown);
+    this.onKey = (e) => this.key(e);
+    document.addEventListener('keydown', this.onKey);
+    this.tick = setInterval(() => {
+      const now = new Date(), iso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      const hm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const due = this.state.reminders.filter(r => !r.fired && !r.done && r.date === iso && r.time <= hm);
+      if (due.length && this.state.phase === 'desk') { this.setState(s => ({ reminders: s.reminders.map(r => due.includes(r) ? { ...r, fired: true } : r), sv: s.sv + 1 })); this.showToast('Reminder · ' + due[0].time, due.map(r => r.text).join(' · ')); }
+      this.setState({ now: Date.now() });
+    }, 1000);
+  }
+  componentDidUpdate(pp) { if (pp.colours !== this.props.colours && this.props.colours) this.setDepth(this.props.colours, true); }
+  // ── 16-colour mode: every colour on the Desk goes through the 16 VGA registers the Desk programs itself
+  static hex(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+  near(r, g, b) {
+    const k = r + ',' + g + ',' + b; this.nc = this.nc || {}; if (this.nc[k]) return this.nc[k];
+    let best = null, bd = 1e9;
+    for (const p of Component.PAL16) { const [pr, pg, pb] = Component.hex(p), rm = (r + pr) / 2; const d = (2 + rm / 256) * (r - pr) ** 2 + 4 * (g - pg) ** 2 + (2 + (255 - rm) / 256) * (b - pb) ** 2; if (d < bd) { bd = d; best = [pr, pg, pb]; } }
+    return (this.nc[k] = best);
+  }
+  mapStr(v) {
+    return v.replace(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/g, (m, r, g, b, a) => { if (a !== undefined && +a === 0) return m; const [nr, ng, nb] = this.near(+r, +g, +b); return a !== undefined ? 'rgba(' + nr + ', ' + ng + ', ' + nb + ', ' + a + ')' : 'rgb(' + nr + ', ' + ng + ', ' + nb + ')'; })
+      .replace(/#([0-9a-f]{6})\b/gi, (m) => { const [nr, ng, nb] = this.near(...Component.hex(m)); return 'rgb(' + nr + ', ' + ng + ', ' + nb + ')'; });
+  }
+  remapEl(el) {
+    if (!el || el.nodeType !== 1 || (el.closest && el.closest('[data-raw]'))) return;
+    const memo = el.__c16 || (el.__c16 = {});
+    const st = el.style;
+    for (let i = 0; i < st.length; i++) {
+      const prop = st[i], v = st.getPropertyValue(prop);
+      if (!/rgb|#/.test(v)) continue;
+      const m = memo[prop];
+      if (m && m.mapped === v) continue;
+      const mapped = this.mapStr(v);
+      memo[prop] = { orig: v, mapped };
+      if (mapped !== v) st.setProperty(prop, mapped, st.getPropertyPriority(prop));
+      memo[prop].mapped = st.getPropertyValue(prop);
+    }
+    for (const at of ['fill', 'stroke']) {
+      const v = el.getAttribute && el.getAttribute(at); if (!v || !/rgb|#/.test(v)) continue;
+      const m = memo['@' + at]; if (m && m.mapped === v) continue;
+      const mapped = this.mapStr(v); memo['@' + at] = { orig: v, mapped }; if (mapped !== v) el.setAttribute(at, mapped);
+    }
+  }
+  remapTree(root) { if (!root) return; this.remapEl(root); root.querySelectorAll('*').forEach(el => this.remapEl(el)); }
+  restoreTree(root) {
+    if (!root) return;
+    [root, ...root.querySelectorAll('*')].forEach(el => {
+      const memo = el.__c16; if (!memo) return;
+      for (const [k, m] of Object.entries(memo)) { if (k[0] === '@') { if (el.getAttribute(k.slice(1)) === m.mapped) el.setAttribute(k.slice(1), m.orig); } else if (el.style.getPropertyValue(k) === m.mapped) el.style.setProperty(k, m.orig); }
+      delete el.__c16;
+    });
+  }
+  watch16(on) {
+    if (this.mo) { this.mo.disconnect(); this.mo = null; }
+    if (!this.screenEl) return;
+    if (!on) return this.restoreTree(this.screenEl);
+    this.remapTree(this.screenEl);
+    this.mo = new MutationObserver(muts => { for (const m of muts) { if (m.type === 'attributes') this.remapEl(m.target); else m.addedNodes.forEach(n => { if (n.nodeType === 1) this.remapTree(n); }); } });
+    this.mo.observe(this.screenEl, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'fill', 'stroke'] });
+  }
+  setDepth(d, quiet) {
+    if (d === this.state.depth && !quiet) return;
+    const go = () => { this.setState(s => ({ depth: d, sv: s.sv + 1, windows: s.windows.map(w => { const W = d === '800' ? 800 : 640, H = (d === '800' ? 600 : 480) - 30; const ww = Math.min(w.w, W), hh = Math.min(w.h, H); return { ...w, w: ww, h: hh, x: Math.max(0, Math.min(w.x, W - ww)), y: Math.max(0, Math.min(w.y, H - hh)) }; }) }), () => { setTimeout(() => this.watch16(d === '16'), 0); this.fit(); }); };
+    if (quiet || !this.state.motion) { go(); if (!quiet) this.showToast(Component.MODES[d].title, Component.MODES[d].text); return; }
+    this.setState({ fade: 1 });
+    setTimeout(() => { go(); setTimeout(() => { this.setState({ fade: 0 }); this.showToast(Component.MODES[d].title, Component.MODES[d].text); }, 120); }, 320);
+  }
+  componentWillUnmount() {
+    if (this.mo) this.mo.disconnect();
+    window.removeEventListener('resize', this.onResize);
+    document.removeEventListener('mousemove', this.onMove);
+    document.removeEventListener('mouseup', this.onUp);
+    document.removeEventListener('mousedown', this.onDown);
+    document.removeEventListener('keydown', this.onKey);
+    clearInterval(this.tick); clearTimeout(this.toastT); clearInterval(this.instT); clearInterval(this.jobT);
+  }
+  SW() { return this.state.depth === '800' ? 800 : 640; }
+  SH() { return this.state.depth === '800' ? 600 : 480; }
+  fit() { const z = Math.max(0.5, Math.min((window.innerWidth - 32) / this.SW(), (window.innerHeight - 56) / this.SH())); this.setState({ zoom: Math.floor(z * 4) / 4 || 0.5 }); }
+  local(e) { const r = this.screenEl ? this.screenEl.getBoundingClientRect() : { left: 0, top: 0, width: this.SW() }; const z = r.width / this.SW() || this.state.zoom; return { x: (e.clientX - r.left) / z, y: (e.clientY - r.top) / z }; }
+
+  move(e) {
+    if (this.painting && this.canvasEl) this.paintAt(e);
+    const di = this.dragInfo;
+    if (di) {
+      if (!di.active && Math.hypot(e.clientX - di.sx, e.clientY - di.sy) > 4) di.active = true;
+      if (di.active) {
+        const p = this.local(e), tgt = this.dropTarget(e), mode = tgt ? this.dropMode(di.paths, tgt, e) : '';
+        const first = this.node(di.paths[0]);
+        this.setState({ ghost: { x: Math.min(this.SW() - 80, p.x + 12), y: p.y + 10, label: di.label, kind: first ? Component.kind(first.n, first.dir) : 'blank', mode: tgt ? (mode === 'open' ? '→ ' + this.winName(tgt.win) : (mode === 'copy' ? '+ copy to ' : '→ ') + Component.base(tgt)) : '', modeFg: mode === 'copy' ? '#2ec66a' : mode === 'open' ? '#22d3ee' : '#ffaa40' } });
+      }
+      return;
+    }
+    const z = this.state.zoom;
+    const r = this.resize;
+    if (r) {
+      const nw = Math.round(r.ow + (e.clientX - r.sx) / z), nh = Math.round(r.oh + (e.clientY - r.sy) / z);
+      this.setState(s => ({ windows: s.windows.map(w => w.id !== r.id ? w : { ...w, w: r.dir.includes('e') ? Math.max(200, Math.min(this.SW() - w.x, nw)) : w.w, h: r.dir.includes('s') ? Math.max(120, Math.min(this.SH() - 30 - w.y, nh)) : w.h }) }));
+      return;
+    }
+    const d = this.drag; if (!d) return;
+    const nx = Math.round(d.ox + (e.clientX - d.sx) / z), ny = Math.round(d.oy + (e.clientY - d.sy) / z);
+    this.setState(s => ({ windows: s.windows.map(w => w.id === d.id ? { ...w, x: Math.max(60 - w.w, Math.min(this.SW() - 60, nx)), y: Math.max(0, Math.min(this.SH() - 60, ny)) } : w) }));
+  }
+  dropTarget(e) {
+    let el = document.elementFromPoint(e.clientX, e.clientY);
+    while (el) {
+      const p = el.getAttribute && el.getAttribute('data-drop-path');
+      if (p) return Component.norm(p);
+      const app = el.getAttribute && el.getAttribute('data-drop-app');
+      if (app) return { win: +app };
+      if (el.getAttribute && el.getAttribute('data-drop-desktop')) return 'C:\\DESK\\DESKTOP';
+      el = el.parentElement;
+    }
+    return null;
+  }
+  dropMode(paths, dest, e) { if (typeof dest === 'object') return 'open'; if (e.ctrlKey) return 'copy'; return paths.every(p => Component.parts(p)[0] === Component.parts(dest)[0]) ? 'move' : 'copy'; }
+  winName(id) { const w = this.state.windows.find(x => x.id === id); return w ? Component.APPS[w.app].name : ''; }
+  up(e) {
+    const di = this.dragInfo; this.dragInfo = null;
+    if (di && di.active) {
+      this.setState({ ghost: null });
+      const dest = this.dropTarget(e);
+      if (dest && typeof dest === 'object') { const w = this.state.windows.find(x => x.id === dest.win); if (w) this.deliver(w.app, { paths: di.paths, drop: true }, w.id); }
+      else if (dest) this.transfer(di.paths, dest, this.dropMode(di.paths, dest, e));
+    }
+    this.drag = null; this.resize = null; this.painting = false;
+  }
+
+  menuH(items, rh) { return items.reduce((a, i) => a + rh + (i.sep ? 7 : 0), 0) + 6; }
+  showMenu(e, items, opts = {}) {
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+    this.skipClose = true; setTimeout(() => { this.skipClose = false; }, 0);
+    const rh = opts.rh || 20, w = opts.w || 190;
+    const h = this.menuH(items, rh) + (opts.header ? 38 : 0);
+    let x, y;
+    if (opts.at) { x = opts.at.x; y = opts.at.y - h; }
+    else { const p = this.local(e); x = Math.max(2, Math.min(this.SW() - w - 4, p.x)); y = p.y + h > this.SH() - 4 ? Math.max(2, p.y - h) : p.y; }
+    this.setState({ ctx: { x, y, w, rh, items, header: opts.header || null, desk: !!opts.desk, hi: -1, open: -1, subHi: -1, level: 0 }, menu: false });
+  }
+  openSub(i) {
+    const cx = this.state.ctx; if (!cx) return;
+    const it = cx.items[i]; if (!it || !it.sub || it.disabled) return this.setState({ ctx: { ...cx, hi: i, open: -1 } });
+    this.setState({ ctx: { ...cx, hi: i, open: i, subHi: -1 } });
+  }
+  subGeom(cx) {
+    const it = cx.items[cx.open]; if (!it || !it.sub) return null;
+    let off = 3 + (cx.header ? 38 : 0);
+    for (let j = 0; j < cx.open; j++) off += cx.rh + (cx.items[j].sep ? 7 : 0);
+    if (it.sep) off += 7;
+    const w = it.subW || 200, h = this.menuH(it.sub, cx.rh);
+    let x = cx.x + cx.w - 2; if (x + w > this.SW() - 2) x = cx.x - w + 2;
+    let y = cx.y + off - 3; if (y + h > this.SH() - 2) y = Math.max(2, this.SH() - 2 - h);
+    return { x, y, w, items: it.sub };
+  }
+  ctxKey(e) {
+    const cx = this.state.ctx; const k = e.key;
+    const step = (list, i, d) => { if (!list.length) return -1; let j = i; for (let n = 0; n < list.length; n++) { j = (j + d + list.length) % list.length; if (!list[j].disabled) return j; } return i; };
+    e.preventDefault();
+    if (k === 'Escape') { if (cx.level === 1) return this.setState({ ctx: { ...cx, level: 0, open: -1 } }); return this.setState({ ctx: null }); }
+    if (cx.level === 1) {
+      const sub = cx.items[cx.open].sub;
+      if (k === 'ArrowDown') return this.setState({ ctx: { ...cx, subHi: step(sub, cx.subHi, 1) } });
+      if (k === 'ArrowUp') return this.setState({ ctx: { ...cx, subHi: step(sub, cx.subHi < 0 ? 0 : cx.subHi, -1) } });
+      if (k === 'ArrowLeft') return this.setState({ ctx: { ...cx, level: 0, open: -1 } });
+      if (k === 'Enter' && sub[cx.subHi] && !sub[cx.subHi].disabled) { this.setState({ ctx: null }); return sub[cx.subHi].run && sub[cx.subHi].run(); }
+      return;
+    }
+    if (k === 'ArrowDown') return this.setState({ ctx: { ...cx, hi: step(cx.items, cx.hi, 1), open: -1 } });
+    if (k === 'ArrowUp') return this.setState({ ctx: { ...cx, hi: step(cx.items, cx.hi < 0 ? 0 : cx.hi, -1), open: -1 } });
+    const it = cx.items[cx.hi];
+    if ((k === 'ArrowRight' || k === 'Enter') && it && it.sub) return this.setState({ ctx: { ...cx, open: cx.hi, level: 1, subHi: step(it.sub, -1, 1) } });
+    if (k === 'Enter' && it && !it.disabled) { this.setState({ ctx: null }); return it.run && it.run(); }
+  }
+  deskMenu() {
+    const s = this.state, A = Component.APPS;
+    const appItem = (k) => ({ label: A[k].name, icon: A[k].icon, tint: A[k].tint, run: () => this.open(k) });
+    const inst = (k) => A[k].core || s.installed[k];
+    const groups = [['Accessories', 'titles', '#60a5fa'], ['Entertainment', 'play', '#22d3ee'], ['System', 'overview', '#2ec66a']];
+    const items = [appItem('files'), ...(inst('term') ? [appItem('term')] : [])];
+    groups.forEach(([g, icon, tint], gi) => {
+      const sub = Object.keys(A).filter(k => A[k].group === g && inst(k) && !A[k].widget).sort((a, b) => A[a].name.localeCompare(A[b].name)).map(appItem);
+      if (g === 'Entertainment') sub.push({ label: 'Lt. Fizz', icon: 'project', tint: '#f43f5e', run: () => this.open('fizz') });
+      if (sub.length) items.push({ label: g, icon, tint, sub, sep: gi === 0 });
+    });
+    const dos = this.ops.dosPrograms().filter(p => !p.path.startsWith('A:') && this.node(p.path.replace(/\.[^.\\]+$/, '.DIF')) || s.shortcuts.includes(p.path)).map(p => ({ label: this.getDif(p.path).title, icon: 'play', tint: '#b4bfce', hint: Component.base(p.path), run: () => this.launchPath(p.path) }));
+    dos.push({ label: 'Add a DOS program…', sep: dos.length > 0, run: () => this.open('programs') });
+    items.push({ label: 'DOS programs', icon: 'disc', tint: '#b4bfce', sub: dos, subW: 230 });
+    if (s.installed.jax) items.push({ label: s.jaxOn ? 'Hide Jax' : 'Show Jax', icon: 'project', tint: '#e25d75', sep: true, run: () => this.setState({ jaxOn: !s.jaxOn, jaxBox: false }) });
+    items.push(
+      { label: 'Settings', icon: 'settings', tint: '#b4bfce', sep: !s.installed.jax, run: () => this.open('settings') },
+      { label: 'About Afterglow Desk', icon: 'overview', tint: '#a78bfa', run: () => this.setState({ about: { name: 'Afterglow Desk', icon: 'project', tint: '#ffaa40', tile: '#372612', blurb: 'The place you come to after DOS boots: windows, files and programs, then back to DOS whenever you like.', version: 'Version 0.1 · SDK 1', meta: 'Rust + DJGPP · Apache-2.0 OR MIT · Liminal HQ 🍁' } }) },
+      { label: 'Exit to DOS', icon: 'logs', tint: '#7c8796', sep: true, run: () => this.launch({ name: 'Desk', dir: 'C:\\', kind: 'prompt', exitWord: 'DESK', intro: ['Afterglow Desk has closed. Your windows are saved.', 'Type DESK to start it again.', ''] }) },
+    );
+    return items;
+  }
+  toggleDeskMenu() {
+    if (this.state.ctx && this.state.ctx.desk) return this.setState({ ctx: null });
+    this.showMenu({}, this.deskMenu(), { desk: true, header: 'Programs on this PC', at: { x: 4, y: this.SH() - 32 }, rh: 22, w: 200 });
+    setTimeout(() => this.setState(s => s.ctx ? { ctx: { ...s.ctx, hi: 0 } } : null), 0);
+  }
+
+  showToast(title, text) { clearTimeout(this.toastT); this.setState({ toast: { title, text } }); this.toastT = setTimeout(() => this.setState({ toast: null }), 4000); }
+  focus(id) { this.setState(s => { const w = s.windows.find(x => x.id === id); if (!w) return null; return { focus: id, menu: false, windows: [...s.windows.filter(x => x.id !== id), { ...w, min: false }] }; }); }
+  newWindow(app, extra = {}) {
+    const A = Component.APPS[app];
+    this.setState(s => {
+      const n = s.windows.length;
+      const x = Math.min(this.SW() - A.w - 8, 90 + (n * 22) % 140), y = Math.max(4, Math.min(this.SH() - 30 - A.h - 6, 14 + (n * 22) % 110));
+      const id = s.nextId;
+      return { windows: [...s.windows, { id, app, x, y, w: A.w, h: A.h, min: false, max: false, ...extra }], focus: id, nextId: id + 1, menu: false };
+    });
+  }
+  open(app, extra) {
+    if (app === 'fizz') return this.launchPath('C:\\FIZZ\\FIZZ.EXE');
+    if (app === 'files') return this.openFilesAt((extra && extra.path) || 'C:\\');
+    const A = Component.APPS[app];
+    if (A.widget) { this.setState({ jaxOn: true, jaxBox: true, menu: false }); return; }
+    const ex = this.state.windows.find(w => w.app === app);
+    if (ex) return this.focus(ex.id);
+    this.newWindow(app);
+  }
+  close(id) { delete this.titles[id]; this.setState(s => { const ws = s.windows.filter(w => w.id !== id); const top = [...ws].reverse().find(w => !w.min); return { windows: ws, focus: top ? top.id : null }; }); }
+  minimise(id) { this.setState(s => { const ws = s.windows.map(w => w.id === id ? { ...w, min: true } : w); const top = [...ws].reverse().find(w => !w.min); return { windows: ws, focus: top ? top.id : null }; }); }
+  maximise(id) { this.setState(s => ({ windows: s.windows.map(w => w.id === id ? { ...w, max: !w.max } : w) })); }
+  startResize(e, w, dir) { if (w.max || e.button !== 0) return; e.preventDefault(); e.stopPropagation(); this.resize = { id: w.id, dir, sx: e.clientX, sy: e.clientY, ow: w.w, oh: w.h }; }
+  playlist(track) { const dir = Component.parent(track); const d = dir && this.node(dir); return d ? d.kids.filter(k => k.meta && k.meta.len).map(k => Component.join(dir, k.n)) : []; }
+  useWallpaper(p) {
+    const n = this.node(p); if (!n || !n.meta) return;
+    if (n.meta.wall) this.setState({ wallpaper: n.meta.wall });
+    else if (n.meta.pixels) { const w = n.meta.w || 120, h = n.meta.h || 80, c = document.createElement('canvas'); c.width = w; c.height = h; this.ops.drawPixels(c, n.meta.pixels, w, h); this.setState({ wallpaper: 'custom', wallUrl: c.toDataURL() }); }
+    this.setState(s => ({ sv: s.sv + 1 }));
+    this.showToast('Wallpaper changed', n.n + ' is on the desktop now.');
+  }
+
+  launch(prog) {
+    clearTimeout(this.toastT);
+    this.setState({ menu: false, ctx: null, fade: 1, toast: null });
+    const fd = this.state.motion ? 320 : 0;
+    setTimeout(() => {
+      const dos = { ...prog, lines: [], typed: '', step: prog.kind === 'fizz' ? 'prompt' : 'text' };
+      if (prog.kind === 'fizz') dos.lines = [{ t: prog.dir + '>' + prog.name }];
+      if (prog.kind === 'text') dos.lines = [{ t: 'DESK.COM: the Desk has closed and CWSDPMI has gone with it.' }, { t: 'DESK.COM: 631 KB conventional memory free. Running ' + prog.name.split(' ')[0] + '.' }, { t: '' }, { t: prog.dir + '>' + prog.name }, ...prog.out.map(t => ({ t })), { t: '' }, { t: 'Press any key to return to the Desk' }];
+      if (prog.kind === 'prompt') { dos.lines = prog.intro.map(t => ({ t })); dos.step = 'prompt'; }
+      this.setState({ phase: 'dos', dos, fade: 0, playing: false });
+      if (prog.kind === 'fizz') setTimeout(() => this.setState(s => s.dos && s.dos.kind === 'fizz' ? { dos: { ...s.dos, step: 'check' } } : null), 700);
+    }, fd);
+  }
+  back(title, text) {
+    const name = this.state.dos ? this.state.dos.name.split(' ')[0] : '';
+    this.setState({ fade: 1 });
+    setTimeout(() => { this.setState({ phase: 'desk', dos: null, fade: 0 }); const rt = this.returnTo; this.returnTo = null; if (rt && this.state.windows.some(w => w.id === rt.winId)) { const w = this.state.windows.find(x => x.id === rt.winId); this.deliver(w.app, { returned: rt.name }, w.id); } this.showToast(title || 'Welcome back', text || (name + ' closed. Your windows are where you left them.')); }, this.state.motion ? 320 : 0);
+  }
+  key(e) {
+    const s = this.state;
+    if (s.phase === 'dos' && s.dos) {
+      const d = s.dos;
+      if (d.kind === 'fizz') { if (d.step === 'check' && e.key === 'Enter') this.setState({ dos: { ...d, step: 'game' } }); else if (e.key === 'Escape' && d.step !== 'prompt') this.back(); }
+      else if (d.kind === 'text') this.back();
+      else if (d.kind === 'prompt') {
+        e.preventDefault();
+        if (e.key === 'Enter') {
+          const cmd = d.typed.trim().toUpperCase();
+          if (cmd === d.exitWord) return this.back(d.exitWord === 'DESK' ? 'Welcome back' : null, d.exitWord === 'DESK' ? 'The Desk started again, as you left it.' : null);
+          const lines = [...d.lines, { t: d.dir + '>' + d.typed }];
+          if (cmd) lines.push({ t: 'Bad command or file name' }, { t: 'Type ' + d.exitWord + ' to return to the Desk.' });
+          this.setState({ dos: { ...d, lines: lines.slice(-20), typed: '' } });
+        } else if (e.key === 'Backspace') this.setState({ dos: { ...d, typed: d.typed.slice(0, -1) } });
+        else if (e.key.length === 1 && d.typed.length < 60) this.setState({ dos: { ...d, typed: d.typed + e.key } });
+      }
+      return;
+    }
+    if (s.picker) return;
+    if (s.about) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); this.setState({ about: null }); } return; }
+    if (s.ask) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); this.setState({ ask: null }); } return; }
+    if (s.ow) { if (e.key === 'Escape') this.setState({ ow: null }); return; }
+    if (s.ctx) { if (['Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) this.ctxKey(e); return; }
+    if (e.key === 'Escape' && e.ctrlKey) return this.toggleDeskMenu();
+    if (e.key === 'Meta' || e.key === 'OS') { e.preventDefault(); return this.toggleDeskMenu(); }
+    const tag = e.target && e.target.tagName;
+    if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+    if (e.key === 'Escape') return this.setState({ menu: false });
+  }
+  calcPress(k) {
+    this.setState(s => {
+      let { disp, acc, op, fresh } = s.calc;
+      const run = (a, b, o) => o === '+' ? a + b : o === '−' ? a - b : o === '×' ? a * b : o === '÷' ? (b === 0 ? NaN : a / b) : b;
+      const fmt = (n) => !isFinite(n) ? 'Not a number' : String(Math.round(n * 1e10) / 1e10).slice(0, 14);
+      if (/^[0-9]$/.test(k)) { disp = fresh || disp === '0' ? k : (disp + k).slice(0, 14); fresh = false; }
+      else if (k === '.') { if (fresh) { disp = '0.'; fresh = false; } else if (!disp.includes('.')) disp += '.'; }
+      else if (k === 'C') { disp = '0'; acc = null; op = null; fresh = true; }
+      else if (k === '⌫') { disp = disp.length > 1 ? disp.slice(0, -1) : '0'; }
+      else if (k === '±') { disp = disp.startsWith('-') ? disp.slice(1) : (disp === '0' ? disp : '-' + disp); }
+      else if (k === '%') { disp = fmt(parseFloat(disp) / 100); fresh = true; }
+      else if (k === '=') { if (op !== null && acc !== null) { disp = fmt(run(acc, parseFloat(disp), op)); acc = null; op = null; } fresh = true; }
+      else { const cur = parseFloat(disp); if (op !== null && acc !== null && !fresh) { acc = run(acc, cur, op); disp = fmt(acc); } else acc = cur; op = k; fresh = true; }
+      return { calc: { disp, acc, op, fresh } };
+    });
+  }
+  drawCanvas() { if (this.canvasEl) this.ops.drawPixels(this.canvasEl, this.paint); }
+  paintAt(e) {
+    const r = this.canvasEl.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * 120), y = Math.floor((e.clientY - r.top) / r.height * 80);
+    const c = this.state.paintColour;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const px = x + dx, py = y + dy; if (px >= 0 && px < 120 && py >= 0 && py < 80) this.paint[py * 120 + px] = c; }
+    this.drawCanvas();
+  }
+  savePicture() {
+    const dir = this.node('C:\\PAINT'); let i = 1, n;
+    do { n = 'PICT' + String(i++).padStart(4, '0') + '.BMP'; } while (dir.kids.some(k => k.n === n));
+    dir.kids.push({ n, dir: false, size: 9718, t: Date.now(), attr: { r: false, h: false, s: false, a: true }, meta: { pixels: new Uint8Array(this.paint) } });
+    this.setState({ paintFile: 'C:\\PAINT\\' + n }); this.bump();
+    this.showToast('Saved ' + n, 'In C:\\PAINT. Right-click it in Files to use it as wallpaper.');
+  }
+  doInstall(keys) {
+    const s = this.state;
+    const picks = (keys || Object.keys(s.picks).filter(k => s.picks[k])).filter(k => !s.installed[k]);
+    if (!picks.length || s.installing) return;
+    this.setState({ installing: { pct: 0, picks } });
+    clearInterval(this.instT);
+    this.instT = setInterval(() => {
+      const st = this.state; if (!st.installing) return clearInterval(this.instT);
+      const pct = st.installing.pct + 12;
+      if (pct < 100) return this.setState(x => ({ installing: { ...st.installing, pct }, sv: x.sv + 1 }));
+      clearInterval(this.instT);
+      const done = st.installing.picks, installed = { ...st.installed }, apps = this.node('C:\\DESK\\APPS');
+      done.forEach(k => { installed[k] = true; const A = Component.APPS[k]; if (!apps.kids.some(x => x.n === A.id)) apps.kids.push({ n: A.id, dir: true, size: 0, t: Date.now(), attr: { r: false, h: false, s: false, a: false }, kids: [{ n: 'APP.DXE', dir: false, size: A.size * 1024 - 900, t: Date.now(), attr: { r: false, h: false, s: false, a: true } }, { n: 'APP.INF', dir: false, size: 64, t: Date.now(), attr: { r: false, h: false, s: false, a: true }, text: '[app]\r\nid=' + A.id + '\r\nmodule=APP.DXE\r\n' }] }); });
+      this.setState(x => ({ installed, installing: null, picks: {}, jaxMood: 'party', sv: x.sv + 1 })); this.bump();
+      setTimeout(() => this.setState({ jaxMood: 'chill' }), 4000);
+      this.showToast('Installed ' + done.length + (done.length === 1 ? ' program' : ' programs'), done.map(k => Component.APPS[k].name).join(', ') + (done.length === 1 ? ' is' : ' are') + ' ready.');
+    }, 160);
+  }
+  uninstall(k) {
+    const A = Component.APPS[k];
+    this.ops.ask({ title: 'Remove ' + A.name + '?', text: k === 'notes' ? 'Your notes stay in C:\\NOTES. You can install it again from A:.' : 'You can install it again from A: at any time.', yes: 'Remove', no: 'Keep it',
+      run: () => { const apps = this.node('C:\\DESK\\APPS'); apps.kids = apps.kids.filter(x => x.n !== A.id); this.setState(st => ({ installed: { ...st.installed, [k]: false }, windows: st.windows.filter(w => w.app !== k), jaxBox: k === 'jax' ? false : st.jaxBox })); this.bump(); this.showToast(A.name + ' removed', 'Its folder in C:\\DESK\\APPS is gone.'); } });
+  }
+  noteEdit(fn) {
+    const el = this.noteEl, n = this.node(this.state.noteFile); if (!el || !n || typeof n.text !== 'string') return;
+    const a = el.selectionStart, b = el.selectionEnd, v = n.text;
+    const r = fn(v, a, b); if (!r) return;
+    n.text = r.v; n.size = r.v.length; n.t = Date.now(); this.bump();
+    setTimeout(() => { el.focus(); el.setSelectionRange(r.c, r.c); }, 0);
+  }
+
+  appMenu(e, w) {
+    const s = this.state, ops = this.ops;
+    return;
+    let items = [];
+    if (w.app === 'notes') {
+      const el = this.noteEl, has = el && el.selectionEnd > el.selectionStart;
+      items = [
+        { label: 'Cut', hint: 'Ctrl+X', disabled: !has, run: () => this.noteEdit((v, a, b) => { this.setState({ clipText: v.slice(a, b) }); return { v: v.slice(0, a) + v.slice(b), c: a }; }) },
+        { label: 'Copy', hint: 'Ctrl+C', disabled: !has, run: () => { const v = el.value; this.setState({ clipText: v.slice(el.selectionStart, el.selectionEnd) }); } },
+        { label: 'Paste', hint: 'Ctrl+V', disabled: !s.clipText, run: () => this.noteEdit((v, a, b) => ({ v: v.slice(0, a) + s.clipText + v.slice(b), c: a + s.clipText.length })) },
+        { label: 'Select all', hint: 'Ctrl+A', run: () => { if (el) { el.focus(); el.select(); } } },
+        { label: 'Insert date', sep: true, run: () => this.noteEdit((v, a, b) => { const t = this.fmtDate(Date.now(), true); return { v: v.slice(0, a) + t + v.slice(b), c: a + t.length }; }) },
+        { label: 'Show in Files', sep: true, run: () => ops.reveal(s.noteFile) },
+        { label: 'Properties', run: () => ops.properties(s.noteFile) },
+      ];
+    } else if (w.app === 'midi') {
+      items = [
+        { label: s.playing ? 'Pause' : 'Play', run: () => this.setState({ playing: !s.playing }) },
+        { label: 'Stop', run: () => this.setState({ playing: false, pos: 0 }) },
+        { label: 'Next track', run: () => this.midiNext() },
+        { label: 'Show in Files', sep: true, run: () => ops.reveal(s.track) },
+        { label: 'Properties', run: () => ops.properties(s.track) },
+      ];
+    } else if (w.app === 'calc') {
+      items = [
+        { label: 'Copy result', run: () => ops.clipText(s.calc.disp) },
+        { label: 'Paste number', disabled: !/^-?[\d.]+$/.test(String(s.clipText).trim()), run: () => this.setState({ calc: { ...s.calc, disp: String(s.clipText).trim().slice(0, 14), fresh: false } }) },
+        { label: 'Clear', sep: true, run: () => this.calcPress('C') },
+      ];
+    } else if (w.app === 'paint') {
+      items = [
+        { label: 'Save picture to C:\\PAINT', run: () => this.savePicture() },
+        { label: 'Fill with this colour', sep: true, run: () => { this.paint.fill(s.paintColour); this.drawCanvas(); } },
+        { label: 'Clear', run: () => { this.paint.fill(0); this.drawCanvas(); } },
+        { label: 'Show C:\\PAINT in Files', sep: true, run: () => this.openFilesAt('C:\\PAINT') },
+      ];
+    } else if (w.app === 'inspector') {
+      items = [{ label: 'Copy report', run: () => ops.clipText(this.inspText) }, { label: 'Refresh', run: () => this.setState({ redraw: 9 + Math.floor(Math.random() * 9) }) }];
+    } else if (w.app === 'clock') {
+      items = [{ label: 'Copy date and time', run: () => ops.clipText(this.fmtDate(Date.now(), true)) }, { label: 'Set the clock…', run: () => this.showToast('Set it from DOS', 'Use DATE and TIME at a DOS prompt; the Desk reads the BIOS clock.') }];
+    } else if (w.app === 'settings') {
+      items = [{ label: 'Reset look to defaults', run: () => this.setState({ wallpaper: null, border: null }) }];
+    } else if (w.app === 'programs') {
+      items = [{ label: 'Show A: in Files', run: () => this.openFilesAt('A:\\') }, { label: 'Show installed apps in Files', run: () => this.openFilesAt('C:\\DESK\\APPS') }];
+    }
+    if (items.length) ops.menu(e, items);
+  }
+  windowMenu(e, w) {
+    this.ops.menu(e, [
+      { label: w.max ? 'Restore' : 'Maximise', run: () => this.maximise(w.id) },
+      { label: 'Minimise', run: () => this.minimise(w.id) },
+      ...(w.app === 'files' ? [{ label: 'New Files window', sep: true, run: () => this.openFilesAt('C:\\', true) }] : []),
+      { label: 'Close', hint: 'Alt+F4', sep: true, run: () => this.close(w.id) },
+    ]);
+  }
+  midiNext() { const list = this.playlist(this.state.track); const i = list.indexOf(this.state.track); if (list.length) this.setState({ track: list[(i + 1) % list.length], pos: 0, playing: true }); }
+
+  renderVals() {
+    const s = this.state, A = Component.APPS, ops = this.ops;
+    const B = Component.BORDERS[s.border ?? this.props.windowBorder ?? 'halo'] || Component.BORDERS.halo;
+    const wkey = s.wallpaper ?? this.props.wallpaper ?? 'horizon';
+    const W = Component.WALLPAPERS;
+    const wallBg = wkey === 'custom' && s.wallUrl ? 'url(' + s.wallUrl + ') center / cover no-repeat, #050507' : (s.depth === '16' ? (Component.WALL16[wkey] || Component.WALL16.horizon) : (W[wkey] || W.horizon).bg);
+    const now = new Date(s.now), t12 = this.fmtTime(now);
+    const wd = Component.WD[now.getDay()], mon = Component.MON[now.getMonth()];
+    const monLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][now.getMonth()];
+    const clip = s.clip;
+
+    const icons = [];
+    const appIcon = (k, a) => icons.push({ isApp: true, isFile: false, name: a.name, icon: a.icon, tint: a.tint, tile: a.tile, drop: '', op: 1, key: 'app:' + k,
+      open: () => this.open(k), down: (e) => { if (e.button === 0) this.setState({ sel: 'app:' + k }); },
+      ctx: (e) => { this.setState({ sel: 'app:' + k }); ops.menu(e, [{ label: 'Open', bold: true, run: () => this.open(k) }, ...(Component.OPTIONAL.includes(k) ? [{ label: 'Remove ' + a.name + '…', sep: true, run: () => this.uninstall(k) }] : []), ...(k === 'fizz' ? [{ label: 'Program settings…', sep: true, run: () => ops.properties('C:\\FIZZ\\FIZZ.EXE') }, { label: 'Show in Files', run: () => ops.reveal('C:\\FIZZ\\FIZZ.EXE') }] : [])]); } });
+    ['files', 'programs', 'settings'].forEach(k => appIcon(k, A[k]));
+    appIcon('fizz', { name: 'Lt. Fizz', icon: 'project', tint: '#f43f5e', tile: '#351118' });
+    Component.OPTIONAL.filter(k => s.installed[k] && k !== 'jax').forEach(k => appIcon(k, A[k]));
+    const fileIcon = (path, name, kind, extra = {}) => {
+      const n = this.node(path); if (!n) return;
+      const key = 'f:' + path + (extra.short ? ':s' : '');
+      icons.push({ isApp: false, isFile: true, name, fname: n.n, kind, drop: n.dir || Component.parts(path).length === 1 ? path : '', op: clip && clip.cut && clip.paths.includes(path) ? 0.5 : 1, key,
+        open: () => ops.open(path),
+        down: (e) => { if (e.button !== 0) return; this.setState({ sel: key }); if (!extra.fixed && !extra.short) ops.beginDrag(e, [path], n.n); },
+        ctx: (e) => { this.setState({ sel: key }); ops.menu(e, extra.short ? [
+          { label: 'Run full-screen', bold: true, run: () => ops.open(path) }, { label: 'Program settings…', run: () => ops.properties(path) }, { label: 'Show in Files', run: () => ops.reveal(path) },
+          { label: 'Remove desktop icon', sep: true, run: () => this.setState(st => ({ shortcuts: st.shortcuts.filter(x => x !== path) })) },
+        ] : extra.fixed ? [
+          { label: 'Open', bold: true, run: () => ops.open(path) }, { label: 'Open in new window', run: () => this.openFilesAt(path, true) },
+          ...(path === 'C:\\DELETED' ? [{ label: 'Empty Deleted', sep: true, disabled: !n.kids.length, run: () => ops.ask({ title: 'Empty Deleted?', text: 'Everything in Deleted goes for good.', yes: 'Empty it', no: 'Keep', run: () => ops.emptyDeleted() }) }] : []),
+          { label: 'Paste here', sep: true, disabled: !ops.canPaste(), run: () => ops.paste(path) }, { label: 'Properties', sep: true, run: () => ops.properties(path) },
+        ] : [
+          { label: ops.openLabel(path), bold: true, run: () => ops.open(path) }, ...(n.dir ? [] : [{ label: 'Open with…', run: () => ops.openWith(path) }]),
+          ...(n.meta && (n.meta.wall || n.meta.pixels) ? [{ label: 'Use as wallpaper', run: () => this.useWallpaper(path) }] : []),
+          { label: 'Cut', sep: true, run: () => ops.clipFiles([path], true) }, { label: 'Copy', run: () => ops.clipFiles([path], false) },
+          { label: 'Show in Files', sep: true, run: () => ops.reveal(path) }, { label: 'Move to Deleted', run: () => ops.ask({ title: 'Move ' + n.n + ' to Deleted?', text: 'You can restore it from Deleted until you empty it.', yes: 'Move to Deleted', no: 'Keep', run: () => ops.remove([path]) }) },
+          { label: 'Properties', sep: true, run: () => ops.properties(path) },
+        ]); } });
+    };
+    s.shortcuts.forEach(p => { const n = this.node(p); if (n) fileIcon(p, this.getDif(p).title, Component.kind(n.n, false), { short: true }); });
+    (this.node('C:\\DESK\\DESKTOP') || { kids: [] }).kids.forEach(k => fileIcon('C:\\DESK\\DESKTOP\\' + k.n, k.n, Component.kind(k.n, k.dir)));
+    fileIcon('C:\\', 'C:', 'drive-c', { fixed: true });
+    fileIcon('A:\\', 'A:', 'drive-a', { fixed: true });
+    fileIcon('C:\\DELETED', 'Deleted', 'trash', { fixed: true });
+    icons.forEach(ic => { const on = s.sel === ic.key; ic.fg = on ? '#fff' : '#e0e0e0'; ic.bg = on ? '#583b1a' : 'transparent'; });
+
+    const wins = s.windows.map((w, i) => {
+      const focused = w.id === s.focus && !w.min;
+      const v = focused ? B.f : B.u;
+      let title = A[w.app].name;
+      if (w.app === 'files') title = this.titles[w.id] || 'Files';
+      if (['notes', 'paint', 'midi', 'mines', 'term'].includes(w.app)) title = this.titles[w.id] || title;
+      if (w.app === 'props') title = 'Properties · ' + (Component.parts(w.target).length === 1 ? w.target.slice(0, 2) : Component.base(w.target));
+      return {
+        id: w.id, title, focused, nav: w.nav || null, target: w.target || '',
+        left: w.max ? 0 : w.x, top: w.max ? 0 : w.y, width: w.max ? this.SW() : w.w, height: w.max ? this.SH() - 30 : w.h, z: 10 + i,
+        display: w.min ? 'none' : 'flex', border: v.border, shadow: v.shadow, pad: v.pad,
+        rule: focused ? B.f.rule : '0px', line: focused ? B.f.line : '1px',
+        titleFg: focused ? '#fff' : '#b4bfce', ctlFg: focused ? '#b4bfce' : '#7c8796', maxIcon: w.max ? 'restore' : 'maximise',
+        isFiles: w.app === 'files', isProps: w.app === 'props', isMidi: w.app === 'midi', isNotes: w.app === 'notes', isSettings: w.app === 'settings', isMines: w.app === 'mines', isTerm: w.app === 'term', isPrograms: w.app === 'programs',
+        isCalc: w.app === 'calc', isClock: w.app === 'clock', isInspector: w.app === 'inspector', isPaint: w.app === 'paint',
+        onFocus: () => { if (s.focus !== w.id || s.menu) this.focus(w.id); },
+        onDrag: (e) => { if (w.max || e.button !== 0) return; this.drag = { id: w.id, sx: e.clientX, sy: e.clientY, ox: w.x, oy: w.y }; },
+        gripDisplay: w.max ? 'none' : 'block',
+        onResizeE: (e) => this.startResize(e, w, 'e'), onResizeS: (e) => this.startResize(e, w, 's'), onResizeSE: (e) => this.startResize(e, w, 'se'),
+        onMin: (e) => { e.stopPropagation(); this.minimise(w.id); },
+        onMax: (e) => { e.stopPropagation(); this.maximise(w.id); },
+        onClose: (e) => { e.stopPropagation(); this.close(w.id); },
+        titleCtx: (e) => this.windowMenu(e, w),
+        bodyCtx: (e) => this.appMenu(e, w),
+      };
+    });
+
+    const tn = this.node(s.track);
+    const tmeta = tn && tn.meta && tn.meta.len ? tn.meta : null;
+    const midi = tmeta ? { title: tmeta.title, meta: Component.base(s.track) + ' · AdLib OPL2 · ' + this.fmtLen(s.pos) + ' of ' + this.fmtLen(tmeta.len), pct: Math.round(s.pos / tmeta.len * 100), playLabel: s.playing ? 'Pause' : 'Play' }
+      : { title: 'Nothing playing', meta: 'Open a .MID file from Files.', pct: 0, playLabel: 'Play' };
+    const midiRows = this.playlist(s.track).map(p => { const m = this.node(p).meta; return { title: m.title, len: this.fmtLen(m.len), bg: p === s.track ? '#0b2e35' : 'transparent', fg: p === s.track ? '#22d3ee' : '#e0e0e0', play: () => this.setState({ track: p, pos: 0, playing: true }) }; });
+
+    const nn = this.node(s.noteFile);
+    const noteOk = nn && typeof nn.text === 'string';
+
+    const chip = (on) => ({ bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#b4bfce', line: on ? '#ffaa40' : '#333847' });
+    const wpChips = Object.keys(W).map(k => ({ label: W[k].label, ...chip(k === wkey), pick: () => this.setState({ wallpaper: k }) }));
+    if (s.wallUrl) wpChips.push({ label: 'Your picture', ...chip(wkey === 'custom'), pick: () => this.setState({ wallpaper: 'custom' }) });
+    const bkey = s.border ?? this.props.windowBorder ?? 'halo';
+    const borderChips = Object.keys(Component.BORDERS).map(k => ({ label: Component.BORDERS[k].label, ...chip(k === bkey), pick: () => this.setState({ border: k }) }));
+    const depthOpts = [['256', '640 × 480, 256 colours'], ['16', '640 × 480, 16 colours']].map(([k, label]) => ({ label, fg: s.depth === k ? '#fff' : '#b4bfce', ring: s.depth === k ? '#ffaa40' : '#5a6273', dot: s.depth === k ? '#ffaa40' : 'transparent',
+      pick: () => { if (s.depth !== k) { this.setState({ depth: k }); this.showToast('Display changes next start', (k === '16' ? '16 colours' : '256 colours') + ' takes effect when the Desk starts again.'); } } }));
+
+    const progRows = ['files', 'programs', 'settings', ...Component.OPTIONAL].map(k => {
+      const a = A[k], core = !!a.core, inst = core || !!s.installed[k], picked = !!s.picks[k];
+      return { name: a.name, size: core ? '' : a.size + ' KB', fg: inst ? '#e0e0e0' : '#b4bfce',
+        boxLine: inst ? '#333847' : '#ffaa40', boxFill: inst ? '#333847' : (picked ? '#ffaa40' : 'transparent'),
+        status: core ? 'Core' : inst ? 'Remove' : 'On A:', statusFg: core ? '#5a6273' : inst ? '#b4bfce' : '#7c8796',
+        toggle: () => { if (!inst && !s.installing) this.setState(st => ({ picks: { ...st.picks, [k]: !st.picks[k] } })); },
+        action: () => { if (!core && inst) this.uninstall(k); },
+        ctx: (e) => ops.menu(e, [
+          ...(inst ? [{ label: 'Open', bold: true, disabled: k === 'jax' && false, run: () => this.open(k) }] : [{ label: picked ? 'Unpick' : 'Pick to install', run: () => this.setState(st => ({ picks: { ...st.picks, [k]: !st.picks[k] } })) }]),
+          ...(!core && inst ? [{ label: 'Remove…', run: () => this.uninstall(k) }] : []),
+          ...(core ? [] : [{ label: inst ? 'Show its folder' : 'Show package on A:', sep: true, run: () => inst ? this.openFilesAt('C:\\DESK\\APPS\\' + a.id) : ops.reveal('A:\\' + a.id + '.DAP') }]),
+        ]) };
+    });
+    const pickKeys = Object.keys(s.picks).filter(k => s.picks[k] && !s.installed[k]);
+    const pickKb = pickKeys.reduce((a, k) => a + A[k].size, 0);
+    const progSummary = s.installing ? 'Copying to C:\\DESK\\APPS… ' + Math.min(100, s.installing.pct) + '%' : pickKeys.length ? pickKeys.length + ' picked · ' + pickKb + ' KB' : 'Tick what you want from A:';
+
+    const keys = ['C', '⌫', '%', '÷', '7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+', '±', '0', '.', '='];
+    const calcKeys = keys.map(k => { const op = ['÷', '×', '−', '+'].includes(k), eq = k === '=', fn = ['C', '⌫', '%', '±'].includes(k);
+      return { label: k, bg: eq ? '#ffaa40' : op ? '#372612' : fn ? '#1b1e28' : '#14161d', fg: eq ? '#0a0a0c' : op ? '#ffaa40' : fn ? '#b4bfce' : '#e0e0e0', press: () => this.calcPress(k) }; });
+
+    const first = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const calCells = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(l => ({ label: l, bg: 'transparent', fg: '#7c8796' }));
+    for (let i = 0; i < first; i++) calCells.push({ label: '', bg: 'transparent', fg: '#7c8796' });
+    for (let d = 1; d <= days; d++) calCells.push({ label: String(d), bg: d === now.getDate() ? '#ffaa40' : 'transparent', fg: d === now.getDate() ? '#0a0a0c' : '#e0e0e0' });
+
+    const open = s.windows.filter(w => !w.min).length;
+    const c = this.driveInfo('C:');
+    const inspRows = [
+      ['Processor', '486DX2 · x87 present'], ['Memory', '16 MB · ' + (11.8 - s.windows.length * 0.4).toFixed(1) + ' MB free'],
+      ['Video', s.depth === '16' ? 'VGA mode 12h · 640×480×4' : s.depth === '800' ? 'VBE 2.0 · 800×600×8 LFB' : 'VBE 2.0 · 640×480×8 LFB'], ['Mouse', 'INT 33h · 2 buttons'],
+      ['Sound', 'AdLib OPL2 · MPU-401'], ['DPMI', 'CWSDPMI r7'], ['Drive C:', this.fmtSize(c.free) + ' free of ' + this.fmtSize(c.total)],
+    ].map(([k, v]) => ({ k, v, dot: 'transparent', dotDisplay: 'none' }));
+    inspRows.push({ k: 'Redraw', v: s.redraw + ' ms · ' + (open + 1) + ' dirty rects', dot: '#2ec66a', dotDisplay: 'inline-block' });
+    this.inspText = inspRows.map(r => r.k + ': ' + r.v).join('\n');
+
+    const paintSwatches = Component.PAL16.map((col, i) => ({ c: col, ring: i === s.paintColour ? '1px solid #ffaa40' : 'none', pick: () => this.setState({ paintColour: i }) }));
+
+    const menuItems = ['files', 'programs', 'settings', 'fizz', ...Component.OPTIONAL.filter(k => s.installed[k])].map((k, i) => {
+      const a = k === 'fizz' ? { name: 'Lt. Fizz', icon: 'project', tint: '#f43f5e' } : A[k];
+      return { label: a.name, icon: a.icon, tint: a.tint, sep: i === 3 ? '1px solid #262a37' : 'none', go: () => { this.setState({ menu: false }); this.open(k); } };
+    });
+    menuItems.push({ label: 'About Afterglow Desk', icon: 'overview', tint: '#a78bfa', sep: '1px solid #262a37', go: () => { this.setState({ menu: false, about: { name: 'Afterglow Desk', icon: 'project', tint: '#ffaa40', tile: '#372612', blurb: 'The place you come to after DOS boots: windows, files and programs, then back to DOS whenever you like.', version: 'Version 0.1 · SDK 1', meta: 'Rust + DJGPP · Apache-2.0 OR MIT · Liminal HQ 🍁' } }); } });
+    menuItems.push({ label: 'Exit to DOS', icon: 'logs', tint: '#7c8796', sep: '1px solid #262a37', go: () => this.launch({ name: 'Desk', dir: 'C:\\', kind: 'prompt', exitWord: 'DESK', intro: ['Afterglow Desk has closed. Your windows are saved.', 'Type DESK to start it again.', ''] }) });
+
+    const tasks = [...s.windows].sort((a, b) => a.id - b.id).map(w => {
+      const on = w.id === s.focus && !w.min;
+      const name = w.app === 'files' ? (this.titles[w.id] || 'Files').replace('Files · ', '') : w.app === 'props' ? 'Properties' : A[w.app].name;
+      return { name, bg: on ? '#0c0c10' : '#1b1e28', shadow: on ? 'inset 1px 1px 0 #050507, inset -1px -1px 0 #333847' : 'inset 1px 1px 0 #333847, inset -1px -1px 0 #050507', fg: on ? '#ffaa40' : '#b4bfce',
+        click: () => on ? this.minimise(w.id) : this.focus(w.id), ctx: (e) => this.windowMenu(e, w) };
+    });
+
+    const mkItems = (list, level) => list.map((m, i) => {
+      const cx = s.ctx, on = level === 0 ? cx.hi === i || cx.open === i : cx.subHi === i, off = !!m.disabled;
+      const hasIcon = list.some(x => x.icon);
+      return { label: m.label, hint: m.sub ? '›' : (m.hint || ''), hintFg: m.sub ? (on ? '#ffaa40' : '#b4bfce') : '#7c8796', check: m.check ? '✓' : '', sep: !!m.sep, h: cx.rh, weight: m.bold ? 600 : 400,
+        hasIcon: !!m.icon, icon: m.icon || 'project', tint: off ? '#5a6273' : (m.tint || '#b4bfce'), cols: hasIcon && m.icon ? '10px 12px 1fr auto' : hasIcon ? '10px 12px 1fr auto' : '10px 1fr auto',
+        bg: on && !off ? '#372612' : 'transparent', fg: off ? '#5a6273' : on ? '#ffaa40' : '#e0e0e0',
+        enter: () => { if (level === 0) this.openSub(i); else this.setState(st => st.ctx ? { ctx: { ...st.ctx, subHi: i, level: 1 } } : null); },
+        run: () => { if (off) return; if (m.sub) return this.openSub(i); this.setState({ ctx: null }); m.run && m.run(); } };
+    });
+    const ctxItems = s.ctx ? mkItems(s.ctx.items, 0) : [];
+    const sg = s.ctx ? this.subGeom(s.ctx) : null;
+    const ctxSubItems = sg ? mkItems(sg.items, 1) : [];
+
+    let owApps = [], owNone = false;
+    if (s.ow) {
+      owApps = ['notes', 'midi', 'paint'].filter(k => s.installed[k]).map(k => ({ key: k, name: A[k].name, icon: A[k].icon, tint: A[k].tint, bg: s.ow.pick === k ? '#372612' : 'transparent', fg: s.ow.pick === k ? '#ffaa40' : '#e0e0e0',
+        pick: () => this.setState(st => ({ ow: { ...st.ow, pick: k } })), go: () => this.owOpen(k) }));
+      owNone = !owApps.length;
+    }
+
+    const d = s.dos;
+    const jaxInstalled = !!s.installed.jax;
+    return {
+      zoom: s.zoom, wallBg, icons, wins, sw: this.SW(), sh: this.SH(), mdx: (this.SW() - 640) / 2, mdy: (this.SH() - 480) / 2, iconRows: s.depth === '800' ? 9 : 7, fsv: s.fsv, clipv: s.clipv, sv: s.sv, ops, screenRef: this.screenRef,
+      picker: s.picker, about: s.about, closeAbout: () => this.setState({ about: null }), jaxPaused: !s.motion, fadeDur: s.motion ? '0.3s ease' : '0s',
+      rootCtx: (e) => e.preventDefault(),
+      onDesktopClick: () => this.setState({ sel: null, menu: false }),
+      desktopCtx: (e) => { this.setState({ sel: null }); ops.menu(e, [
+        { label: 'New folder on desktop', run: () => { const p = ops.mkdir('C:\\DESK\\DESKTOP'); if (p) this.showToast('Made ' + Component.base(p), 'Rename it from Files, or right-click it.'); } },
+        { label: 'Paste', disabled: !ops.canPaste(), run: () => ops.paste('C:\\DESK\\DESKTOP') },
+        { label: 'Wallpaper', sep: true, sub: Object.keys(W).map(k => ({ label: W[k].label, check: k === wkey, run: () => this.setState({ wallpaper: k }) })).concat(s.wallUrl ? [{ label: 'Your picture', check: wkey === 'custom', run: () => this.setState({ wallpaper: 'custom' }) }] : []) },
+        { label: 'Window border', sub: Object.keys(Component.BORDERS).map(k => ({ label: Component.BORDERS[k].label, check: k === bkey, run: () => this.setState({ border: k }) })) },
+        { label: 'Display', sub: ['256', '800', '16'].map(k => ({ label: Component.MODES[k].label, check: s.depth === k, run: () => this.setDepth(k) })), subW: 200 },
+        { label: 'Show desktop folder', sep: true, run: () => this.openFilesAt('C:\\DESK\\DESKTOP') },
+        { label: 'Settings…', run: () => this.open('settings') },
+        { label: 'Exit to DOS', sep: true, run: () => menuItems[menuItems.length - 1].go() },
+      ]); },
+      midi, midiRows, midiToggle: () => this.setState({ playing: !s.playing }), midiStop: () => this.setState({ playing: false, pos: 0 }), midiNext: () => this.midiNext(),
+      noteFile: s.noteFile, noteText: noteOk ? nn.text : (nn ? '(' + nn.n + " isn't a text file.)" : '(This file has moved or been deleted.)'), noteRO: !noteOk, noteRef: this.noteRef,
+      noteStatus: noteOk ? 'Saved as you type' : 'Read-only',
+      onNote: (e) => { if (!noteOk) return; nn.text = e.target.value; nn.size = nn.text.length; nn.t = Date.now(); this.bump(); },
+      wpChips, borderChips, depthOpts, jaxInstalled, jaxBoxFill: s.jaxOn ? '#ffaa40' : 'transparent', toggleJax: () => this.setState({ jaxOn: !s.jaxOn, jaxBox: false }),
+      progRows, progSummary, progPct: s.installing ? Math.min(100, s.installing.pct) : 0, progBarDisplay: s.installing ? 'block' : 'none',
+      installBg: pickKeys.length && !s.installing ? '#ffaa40' : '#1b1e28', installFg: pickKeys.length && !s.installing ? '#0a0a0c' : '#5a6273', doInstall: () => this.doInstall(),
+      calcDisp: s.calc.disp, calcKeys,
+      clockBig: t12, clockLong: wd + ' ' + now.getDate() + ' ' + monLong + ' ' + now.getFullYear(), calCells,
+      inspRows, paintSwatches, canvasRef: this.canvasRef,
+      paintDown: (e) => { if (e.button !== 0) return; this.painting = true; this.paintAt(e); },
+      showJaxBox: jaxInstalled && s.jaxOn && s.jaxBox && s.phase === 'desk', showJaxMini: jaxInstalled && s.jaxOn, jaxMood: s.jaxMood, jaxEmoji: s.jaxMood === 'party' ? '🎉' : '🦦',
+      toggleJaxBox: () => this.setState({ jaxBox: !s.jaxBox }),
+      jaxCtx: (e) => ops.menu(e, [
+        { label: 'Pet Jax', run: () => { this.setState({ jaxMood: 'party', jaxBox: true }); setTimeout(() => this.setState({ jaxMood: 'chill' }), 3000); } },
+        { label: s.jaxBox ? 'Tuck Jax away' : 'Let Jax out', run: () => this.setState({ jaxBox: !s.jaxBox }) },
+        { label: 'Hide Jax', sep: true, run: () => this.setState({ jaxOn: false, jaxBox: false }) },
+      ]),
+      clockCtx: (e) => ops.menu(e, [
+        ...(s.installed.clock ? [{ label: 'Open Clock', bold: true, run: () => this.open('clock') }] : [{ label: 'Install Clock…', run: () => this.open('programs') }]),
+        { label: 'Copy date and time', run: () => ops.clipText(this.fmtDate(Date.now(), true)) },
+      ]),
+      openClock: () => s.installed.clock ? this.open('clock') : null,
+      toast: s.toast, menuOpen: s.menu, menuItems, toggleMenu: () => this.toggleDeskMenu(),
+      deskBtn: s.ctx && s.ctx.desk ? { bg: '#0c0c10', shadow: 'inset 1px 1px 0 #050507, inset -1px -1px 0 #333847' } : { bg: '#1b1e28', shadow: 'inset 1px 1px 0 #333847, inset -1px -1px 0 #050507' },
+      tasks, clockBar: wd + ' ' + now.getDate() + ' ' + mon + ' · ' + t12,
+      ctx: s.ctx, ctxItems, ctxSub: sg, ctxSubItems, ctxHeader: !!(s.ctx && s.ctx.header), ctxHeaderSub: s.ctx && s.ctx.header ? s.ctx.header : '',
+      modalOpen: !!(s.ask || s.ow || s.picker || s.about),
+      ask: s.ask, askNo: () => this.setState({ ask: null }), askYes: () => { const a = s.ask; this.setState({ ask: null }); a && a.run && a.run(); },
+      ow: s.ow ? { name: Component.base(s.ow.path), ext: Component.ext(Component.base(s.ow.path)) || '(none)' } : null, owApps, owNone,
+      owAlways: s.ow && s.ow.always ? '#ffaa40' : 'transparent', owToggle: () => this.setState(st => ({ ow: { ...st.ow, always: !st.ow.always } })),
+      owCancel: () => this.setState({ ow: null }), owGo: () => s.ow && s.ow.pick && this.owOpen(s.ow.pick),
+      owGoBg: s.ow && s.ow.pick ? '#ffaa40' : '#1b1e28', owGoFg: s.ow && s.ow.pick ? '#0a0a0c' : '#5a6273',
+      job: s.job, cancelJob: () => { clearInterval(this.jobT); this.setState({ job: null }); this.showToast('Stopped', 'Nothing was changed.'); },
+      ghost: s.ghost,
+      isDos: s.phase === 'dos' && !!d,
+      dosShowText: !!d && (d.kind !== 'fizz' || d.step === 'prompt'), dosLines: d ? d.lines : [], dosPrompt: d && d.kind === 'prompt' ? d.dir + '>' + d.typed : '',
+      dosFizzCheck: !!d && d.kind === 'fizz' && d.step === 'check', dosFizzGame: !!d && d.kind === 'fizz' && d.step === 'game',
+      dosClick: () => { if (d && d.kind === 'fizz' && d.step === 'check') this.setState({ dos: { ...d, step: 'game' } }); else if (d && d.kind === 'text') this.back(); },
+      fade: s.fade,
+      hint: s.phase === 'dos' && d ? (d.kind === 'fizz' ? 'Running FIZZ.EXE full-screen · Enter to play · Esc to quit back to the Desk' : d.kind === 'text' ? 'Any key returns to the Desk' : 'Type ' + d.exitWord + ' and press Enter')
+        : Component.MODES[s.depth].label + ' · ' + 'Right-click the desktop to switch colours · Right-click anything · drag files between tabs, windows, the tree and the desktop (Ctrl copies) · F2 renames · Del moves to Deleted · Ctrl+Esc opens the Desk menu',
+    };
+  }
+  owOpen(k) {
+    const ow = this.state.ow; if (!ow) return;
+    const ext = Component.ext(Component.base(ow.path));
+    this.setState(s => ({ ow: null, assoc: ow.always && ext ? { ...s.assoc, [ext]: k } : s.assoc }));
+    this.openIn(k, ow.path);
+  }
+}
+</script>
+</body>
+</html>

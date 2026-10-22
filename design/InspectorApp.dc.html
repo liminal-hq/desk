@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div onContextMenu="{{ ctx }}" style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskTabs" tabs="{{ tabs }}" closable="{{ false }}" hint-size="100%,22px"></dc-import>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px;">
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <sc-if value="{{ r.isHead }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; margin-top: {{ r.gap }}px;">{{ r.k }}</span></sc-if>
+        <sc-if value="{{ r.isRow }}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: 8px;">
+            <span style="color: #7c8796; white-space: nowrap;">{{ r.k }}</span>
+            <span style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="width: 6px; height: 6px; flex-shrink: 0; background: {{ r.dot }}; display: {{ r.dotDisplay }};"></span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.v }}</span></span>
+            <sc-if value="{{ r.hasAct }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.act }}" style="padding: 1px 8px; border: 1px solid #333847; cursor: pointer; white-space: nowrap;" style-hover="background: #1b1e28;">{{ r.actLabel }}</span></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ r.hasBar }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 5px; background: #1f2230; margin-left: 100px;"><div style="height: 5px; width: {{ r.pct }}%; background: {{ r.barC }};"></div></div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; background: #2ec66a;"></span>{{ statusLeft }}</span><span>{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static TABS = ['System', 'Memory', 'Drives', 'Sound'];
+  state = { tab: 0, now: Date.now(), redraw: 14, at: Date.now() };
+  componentDidMount() { this.t = setInterval(() => this.setState({ now: Date.now(), redraw: 9 + Math.floor(Math.random() * 9) }), 1000); this.onKey = (e) => this.key(e); document.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { clearInterval(this.t); document.removeEventListener('keydown', this.onKey); }
+  refresh() { this.setState({ at: Date.now(), redraw: 9 + Math.floor(Math.random() * 9) }); }
+  rows() {
+    const ops = this.props.ops, sys = ops.sys(), s = this.state;
+    const R = (k, v, extra = {}) => ({ isRow: true, isHead: false, k, v, dot: 'transparent', dotDisplay: 'none', hasBar: false, hasAct: false, pct: 0, barC: '#ffaa40', gap: 0, ...extra });
+    const H = (k, gap = 0) => ({ isRow: false, isHead: true, k, gap, hasBar: false, hasAct: false });
+    const ok = { dot: '#2ec66a', dotDisplay: 'inline-block' };
+    const up = Math.floor((s.now - sys.started) / 1000);
+    if (s.tab === 0) return [
+      R('Processor', '486DX2 at 66 MHz'), R('Maths', 'x87 present · 53-bit precision', ok), R('DOS', 'FreeDOS 1.3 · kernel 2043'), R('DPMI host', 'CWSDPMI r7', ok),
+      R('Video', sys.depth === '16' ? 'VGA mode 12h · 640×480×4' : sys.depth === '800' ? 'VBE 2.0 · 800×600×8 · linear frame buffer' : 'VBE 2.0 · 640×480×8 · linear frame buffer', ok), R('Mouse', 'INT 33h · 2 buttons', ok),
+      R('Desk', 'Afterglow Desk 0.1 · SDK 1'), R('Running for', Math.floor(up / 60) + ' min ' + (up % 60) + ' s'),
+    ];
+    if (s.tab === 1) {
+      const heap = sys.windows.map(w => ({ name: w.name, kb: w.kb }));
+      const used = heap.reduce((a, h) => a + h.kb, 0) + 1180;
+      return [
+        R('Conventional', '592 KB free of 640 KB', { hasBar: true, pct: 7.5 }), R('Extended', ((16384 - used) / 1024).toFixed(1) + ' MB free of 16 MB', { hasBar: true, pct: Math.round(used / 16384 * 100) }),
+        R('Swap', 'CWSDPMI.SWP · not in use'), H('Desk memory by app', 6), R('Desk core', '1,180 KB', { hasBar: true, pct: 1180 / 20, barC: '#a78bfa' }),
+        ...heap.map(h => R(h.name, h.kb.toLocaleString('en-CA') + ' KB', { hasBar: true, pct: Math.min(100, h.kb / 20), barC: '#22d3ee' })),
+      ];
+    }
+    if (s.tab === 2) return ops.drives().flatMap((d, i) => {
+      const used = d.total - d.free;
+      return [H(d.id + ' ' + d.label, i ? 6 : 0), R('Free', ops.fmtSize(d.free) + ' of ' + ops.fmtSize(d.total), { hasBar: true, pct: Math.round(used / d.total * 100) }),
+        R('File system', d.id === 'A:' ? 'FAT12 · 3½-inch floppy' : 'FAT16 · hard disk', { hasAct: true, actLabel: 'Properties', act: () => ops.properties(d.id + '\\') })];
+    });
+    const tone = (dev) => ops.toast('Test tone', 'An A (440 Hz) on the ' + dev + ', like TONETEST in Lt. Fizz.');
+    return [
+      R('Sound Blaster 16', 'A220 · IRQ 5 · DMA 1 and 5 · DSP 4.05', { ...ok, hasAct: true, actLabel: 'Test sample', act: () => ops.toast('Test sample', 'A 440 Hz sample at 22 kHz, 16-bit, through the Sound Blaster\'s DMA.') }),
+      R('Digital audio', 'Up to 44.1 kHz · 16-bit stereo'),
+      R('FM synth', 'OPL3 at 220h · AdLib-compatible at 388h', { ...ok, hasAct: true, actLabel: 'Test tone', act: () => tone('AdLib') }),
+      R('PC speaker', 'Timer channel 2', { ...ok, hasAct: true, actLabel: 'Test tone', act: () => tone('PC speaker') }),
+      R('MIDI out', 'MPU-401 UART at 330h', { ...ok, hasAct: true, actLabel: 'Test tone', act: () => tone('MPU-401') }),
+      R('Effects play on', ops.soundName(sys.effects)), R('Music plays on', ops.soundName(sys.midiOut)),
+    ];
+  }
+  report() { return Component.TABS.map((t, i) => { const tab = this.state.tab; this.state.tab = i; const r = this.rows(); this.state.tab = tab; return '[' + t + ']\r\n' + r.map(x => x.isHead ? '\r\n' + x.k : x.k + ': ' + x.v).join('\r\n'); }).join('\r\n\r\n') + '\r\n'; }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (e.key === 'F5') { e.preventDefault(); this.refresh(); }
+    else if (ctrl && e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ tab: (s.tab + (e.shiftKey ? 3 : 1)) % 4 })); }
+    else if (!ctrl && /^[1-4]$/.test(e.key)) this.setState({ tab: +e.key - 1 });
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tabs: [], rows: [] };
+    const s = this.state;
+    const save = () => ops.pick({ mode: 'save', title: 'Save report', dir: 'C:\\NOTES', name: 'SYSTEM.TXT', types: [{ label: 'Text', ext: ['TXT'] }] }).then(p => { if (!p) return; ops.write(p, this.report()); ops.toast('Saved ' + ops.base(p), 'The whole report, every tab.'); });
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [{ label: 'Copy report', run: () => ops.clipText(this.report(), false) }, { label: 'Save report…', run: save }, { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'View', items: () => [...Component.TABS.map((t, i) => ({ label: t, hint: String(i + 1), check: s.tab === i, run: () => this.setState({ tab: i }) })), { label: 'Refresh', hint: 'F5', sep: true, run: () => this.refresh() }] },
+        { label: 'Help', items: () => [{ label: 'About Inspector', run: () => ops.about('inspector') }] },
+      ],
+      tabs: Component.TABS.map((t, i) => ({ label: t, active: s.tab === i, pick: () => this.setState({ tab: i }) })),
+      rows: this.rows(),
+      ctx: (e) => ops.menu(e, [{ label: 'Copy report', run: () => ops.clipText(this.report(), false) }, { label: 'Save report…', run: save }, { label: 'Refresh', hint: 'F5', sep: true, run: () => this.refresh() }]),
+      statusLeft: 'Redraw ' + s.redraw + ' ms · ' + (ops.sys().windows.length + 1) + ' dirty rects',
+      statusRight: 'Checked ' + ops.fmtTime(new Date(s.at)),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Version-update pull requests are switched off (a limit of 0), so nothing triggers Dependabot here. Raise the limits to turn them on.
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 0
+    labels:
+      - 'ci'
+
+  # There is no Cargo.toml yet.
+  - package-ecosystem: 'cargo'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 0
+    labels:
+      - 'build'

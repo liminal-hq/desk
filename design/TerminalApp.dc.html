@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskTabs" tabs="{{ tabs }}" on-new="{{ newTab }}" hint-size="100%,22px"></dc-import>
+  <div ref="{{ scrollRef }}" onClick="{{ focusInput }}" onContextMenu="{{ ctx }}" style="flex: 1; min-height: 0; overflow-y: auto; background: #050507; padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 15px; cursor: text; user-select: text;">
+    <sc-for list="{{ lines }}" as="l" hint-placeholder-count="4">
+      <div style="white-space: pre-wrap; overflow-wrap: anywhere; min-height: 15px; color: {{ l.fg }};">{{ l.t }}</div>
+    </sc-for>
+    <div style="display: flex; align-items: baseline;">
+      <span style="color: #ffaa40; white-space: pre;">{{ prompt }}</span>
+      <input ref="{{ inputRef }}" value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" spellcheck="false" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; color: #fff; font: inherit; padding: 0; outline: none; caret-color: #ffaa40;">
+    </div>
+  </div>
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span style="font-family: 'JetBrains Mono', monospace;">{{ cwd }}</span><span>Desk shell · DOS programs run full-screen</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static HELP = [
+    'Desk shell commands:',
+    '  DIR [path] [/W]    list a folder         CD path       change folder',
+    '  TYPE file          show a text file      CLS           clear the screen',
+    '  COPY src dest      copy                  MOVE src dest move',
+    '  REN file name      rename                DEL file      move to Deleted',
+    '  MD name            make a folder         TREE [path]   show folders',
+    '  OPEN file          open in its Desk app  MEM, VER, DATE, TIME, ECHO text',
+    '  EXIT               close this tab',
+    'Type a program name (FIZZ, KEEN4, BUILD.BAT) to run it full-screen.',
+    'Up and Down recall commands; Tab completes names.',
+  ];
+  state = { sessions: [], active: 0, input: '', hist: [], hi: -1, navN: null, sid: 1 };
+  inputRef = (el) => { this.inp = el; };
+  scrollRef = (el) => { this.sc = el; };
+  componentDidMount() { this.newTab(this.props.nav && this.props.nav.path); this.onKey2 = (e) => { if (this.props.focused && !this.props.ops.busy() && this.inp && document.activeElement !== this.inp && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) this.inp.focus(); }; document.addEventListener('keydown', this.onKey2); }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey2); }
+  componentDidUpdate(pp) {
+    const nav = this.props.nav;
+    if (nav && nav.n !== this.state.navN) { this.setState({ navN: nav.n }); this.take(nav); }
+    if (this.sc) this.sc.scrollTop = this.sc.scrollHeight;
+    if (this.props.focused && !pp.focused && this.inp) this.inp.focus();
+    const t = 'Terminal · ' + this.cur().cwd; if (t !== this._t) { this._t = t; this.props.ops.setTitle(this.props.winId, t); }
+  }
+  take(nav) {
+    if (nav.returned) return this.print([{ t: nav.returned + ' finished. DESK.COM started the Desk again; this tab kept its place.', fg: '#22d3ee' }, { t: '' }]);
+    if (nav.paths) { const add = nav.paths.map(p => (p.includes(' ') ? '"' + p + '"' : p)).join(' '); this.setState(s => ({ input: (s.input ? s.input + ' ' : '') + add })); if (this.inp) this.inp.focus(); return; }
+    if (nav.path) { const st = this.props.ops.stat(nav.path); this.newTab(st && st.dir ? nav.path : this.props.ops.parent(nav.path)); }
+  }
+  cur() { return this.state.sessions[this.state.active] || { cwd: 'C:\\', lines: [] }; }
+  newTab(dir) {
+    const ops = this.props.ops, cwd = ops.norm(dir || 'C:\\');
+    this.setState(s => ({ sessions: [...s.sessions, { id: s.sid, cwd, lines: [{ t: 'Afterglow Desk shell 0.1 · ' + ops.drive(cwd).id + ' ' + ops.fmtSize(ops.drive(cwd).free) + ' free', fg: '#7c8796' }, { t: 'Type HELP for commands.', fg: '#7c8796' }, { t: '' }] }], active: s.sessions.length, sid: s.sid + 1 }));
+  }
+  closeTab(i) { if (this.state.sessions.length === 1) return this.props.ops.closeWindow(this.props.winId); this.setState(s => { const sessions = s.sessions.filter((_, j) => j !== i); return { sessions, active: Math.max(0, Math.min(sessions.length - 1, s.active >= i ? s.active - 1 : s.active)) }; }); }
+  upd(patch) { this.setState(s => ({ sessions: s.sessions.map((x, i) => i === s.active ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x) })); }
+  print(lines) { this.upd(x => ({ lines: [...x.lines, ...lines.map(l => typeof l === 'string' ? { t: l } : l)].slice(-400) })); }
+  resolve(arg, cwd) {
+    const ops = this.props.ops; if (!arg) return cwd;
+    let a = arg.replace(/^"|"$/g, '').toUpperCase().replace(/\//g, '\\');
+    if (/^[A-Z]:$/.test(a)) return a + '\\';
+    if (!/^[A-Z]:/.test(a)) a = a.startsWith('\\') ? cwd.slice(0, 2) + a : ops.join(cwd, a);
+    const out = []; ops.parts(a).forEach((p, i) => { if (i === 0) out.push(p); else if (p === '..') { if (out.length > 1) out.pop(); } else if (p !== '.') out.push(p); });
+    return out.length === 1 ? out[0] + '\\' : out[0] + '\\' + out.slice(1).join('\\');
+  }
+  findProgram(name, cwd) {
+    const ops = this.props.ops, n = name.toUpperCase();
+    const dirs = [cwd, 'C:\\FIZZ', 'C:\\GAMES\\KEEN4', 'C:\\DESK', 'C:\\SRC'];
+    for (const d of dirs) for (const e of (/\.(EXE|COM|BAT)$/.test(n) ? [''] : ['.COM', '.EXE', '.BAT'])) { const p = n.includes('\\') ? this.resolve(n + e, cwd) : ops.join(d, n + e); const st = ops.stat(p); if (st && !st.dir) return p; }
+    return null;
+  }
+  run(line) {
+    const ops = this.props.ops, x = this.cur(), cwd = x.cwd;
+    const echo = { t: cwd + '>' + line, fg: '#b4bfce' };
+    const args = (line.match(/"[^"]*"|\S+/g) || []);
+    const cmd = (args.shift() || '').toUpperCase();
+    const out = [], err = (t) => out.push({ t, fg: '#ffd096' });
+    if (!cmd) return this.print([echo]);
+    if (/^[A-Z]:$/.test(cmd)) { const d = cmd + '\\'; if (ops.stat(d)) { this.upd({ cwd: d }); return this.print([echo]); } err('There is no drive ' + cmd + '.'); return this.print([echo, ...out]); }
+    const st = (p) => ops.stat(p);
+    switch (cmd) {
+      case 'HELP': case '?': out.push(...Component.HELP); break;
+      case 'CLS': this.upd({ lines: [] }); return;
+      case 'VER': out.push('Afterglow Desk 0.1 (SDK 1) on FreeDOS 1.3'); break;
+      case 'DATE': out.push(ops.fmtDate(Date.now(), true).split(',')[0]); break;
+      case 'TIME': out.push(ops.fmtTime(new Date())); break;
+      case 'ECHO': out.push(args.join(' ')); break;
+      case 'MEM': out.push('Conventional   640 KB    592 KB free', 'Extended    15360 KB    ' + (13800 - ops.sys().windows.length * 160).toLocaleString('en-CA') + ' KB free', 'A DOS program gets about 631 KB once the Desk steps aside.'); break;
+      case 'CD': case 'CHDIR': {
+        if (!args[0]) { out.push(cwd); break; }
+        const p = this.resolve(args[0], cwd), s = st(p);
+        if (s && s.dir) { this.upd({ cwd: p }); } else err('No folder called ' + args[0].toUpperCase() + ' here.');
+        break;
+      }
+      case 'DIR': {
+        const wide = args.some(a => a.toUpperCase() === '/W'), target = args.find(a => !a.startsWith('/'));
+        let p = this.resolve(target, cwd), pat = null, s = st(p);
+        if (!s && /[*?]/.test(target || '')) { pat = ops.base(p); p = ops.parent(p); s = st(p); }
+        if (!s || !s.dir) { err('File not found: ' + (target || cwd)); break; }
+        let list = ops.list(p, false).sort((a, b) => a.dir !== b.dir ? (a.dir ? -1 : 1) : a.n.localeCompare(b.n));
+        if (pat) { const re = new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$'); list = list.filter(k => re.test(k.n)); }
+        out.push({ t: ' Folder of ' + p, fg: '#7c8796' }, '');
+        if (wide) { for (let i = 0; i < list.length; i += 4) out.push(list.slice(i, i + 4).map(k => (k.dir ? '[' + k.n + ']' : k.n).padEnd(16)).join('')); }
+        else list.forEach(k => { const [b, e] = k.n.includes('.') ? [k.n.slice(0, k.n.lastIndexOf('.')), k.n.slice(k.n.lastIndexOf('.') + 1)] : [k.n, '']; out.push({ t: b.padEnd(9) + e.padEnd(4) + (k.dir ? '<DIR>'.padStart(14) : k.size.toLocaleString('en-CA').padStart(14)) + '  ' + ops.fmtDate(k.t), fg: k.dir ? '#ffaa40' : '#e0e0e0' }); });
+        const files = list.filter(k => !k.dir), bytes = files.reduce((a, k) => a + k.size, 0);
+        out.push('', { t: '  ' + files.length + ' file(s) ' + bytes.toLocaleString('en-CA').padStart(14) + ' bytes', fg: '#7c8796' }, { t: '  ' + (list.length - files.length) + ' folder(s) ' + ops.drive(p).free.toLocaleString('en-CA').padStart(12) + ' bytes free', fg: '#7c8796' });
+        break;
+      }
+      case 'TREE': {
+        const root = this.resolve(args[0], cwd), walk = (p, pre) => { const ds = ops.list(p, false).filter(k => k.dir); ds.forEach((d, i) => { const last = i === ds.length - 1; out.push({ t: pre + (last ? '└── ' : '├── ') + d.n, fg: '#ffaa40' }); walk(d.path, pre + (last ? '    ' : '│   ')); }); };
+        if (!st(root)) { err('No folder ' + root); break; } out.push(root); walk(root, ''); break;
+      }
+      case 'TYPE': {
+        const p = this.resolve(args[0], cwd), s = st(p);
+        if (!s || s.dir) err('File not found: ' + (args[0] || '')); else if (typeof s.text !== 'string') err(s.n + " isn't text. Try OPEN " + s.n + '.'); else out.push(...s.text.split(/\r?\n/));
+        break;
+      }
+      case 'MD': case 'MKDIR': {
+        if (!args[0]) { err('MD needs a name.'); break; }
+        const p = this.resolve(args[0], cwd), made = ops.mkdir(ops.parent(p)); if (!made) { err("Can't make a folder there."); break; }
+        const r = ops.rename(made, ops.base(p)); if (r.err) { err(r.err); ops.remove([made]); } break;
+      }
+      case 'REN': case 'RENAME': { const p = this.resolve(args[0], cwd); if (!st(p)) { err('File not found: ' + (args[0] || '')); break; } const r = ops.rename(p, (args[1] || '').replace(/"/g, '')); if (r.err) err(r.err); break; }
+      case 'DEL': case 'ERASE': case 'RD': case 'RMDIR': {
+        const p = this.resolve(args[0], cwd); if (!args[0] || !st(p)) { err('File not found: ' + (args[0] || '')); break; }
+        ops.ask({ title: 'Move ' + ops.base(p) + ' to Deleted?', text: 'You can restore it from Deleted in Files.', yes: 'Move to Deleted', no: 'Keep', run: () => { ops.remove([p]); this.print([{ t: ops.base(p) + ' moved to Deleted.', fg: '#7c8796' }]); } });
+        break;
+      }
+      case 'COPY': case 'MOVE': case 'XCOPY': {
+        const a = this.resolve(args[0], cwd), b = this.resolve(args[1] || '.', cwd);
+        if (!args[0] || !st(a)) { err('File not found: ' + (args[0] || '')); break; }
+        const sb = st(b); if (!sb || !sb.dir) { err('Copy into a folder: COPY ' + (args[0] || 'FILE') + ' C:\\NOTES'); break; }
+        ops.transfer([a], b, cmd === 'MOVE' ? 'move' : 'copy'); out.push({ t: (cmd === 'MOVE' ? 'Moving ' : 'Copying ') + ops.base(a) + ' to ' + b + '…', fg: '#7c8796' }); break;
+      }
+      case 'OPEN': case 'START': {
+        const p = this.resolve(args[0], cwd), s = st(p);
+        if (!s) { const prog = args[0] && this.findProgram(args[0], cwd); if (prog) { this.print([echo]); return this.launch(prog); } err('File not found: ' + (args[0] || '')); break; }
+        if (ops.isProgram(p)) { this.print([echo]); return this.launch(p); }
+        ops.open(p); out.push({ t: 'Opened ' + s.n + (s.dir ? ' in Files.' : ' with ' + ((ops.handler(p) || {}).name || 'Open with…') + '.'), fg: '#7c8796' }); break;
+      }
+      case 'EXIT': this.print([echo]); return this.closeTab(this.state.active);
+      default: {
+        const prog = this.findProgram(cmd, cwd) || (args.length === 0 && this.findProgram(line.trim(), cwd));
+        if (prog) { this.print([echo]); return this.launch(prog, args.join(' ')); }
+        const p = this.resolve(cmd, cwd), s = st(p);
+        if (s && !s.dir) { ops.open(p); out.push({ t: 'Opened ' + s.n + ' with ' + ((ops.handler(p) || {}).name || 'Open with…') + '.', fg: '#7c8796' }); break; }
+        err('Bad command or file name: ' + cmd); out.push({ t: 'Type HELP for the commands this shell knows.', fg: '#7c8796' });
+      }
+    }
+    this.print([echo, ...out, '']);
+  }
+  launch(p, args) {
+    const ops = this.props.ops, d = ops.getDif(p);
+    this.print([{ t: 'Handing ' + ops.base(p) + ' the whole machine (' + d.memory + ' KB, ' + ops.soundName(d.sound) + ')…', fg: '#22d3ee' }]);
+    setTimeout(() => ops.runFrom(p, this.props.winId, args), 250);
+  }
+  complete() {
+    const ops = this.props.ops, x = this.cur(), v = this.state.input;
+    const m = /(\S*)$/.exec(v), frag = m[1].replace(/"/g, '').toUpperCase();
+    const dir = frag.includes('\\') ? this.resolve(frag.slice(0, frag.lastIndexOf('\\') + 1) || '\\', x.cwd) : x.cwd;
+    const pre = frag.includes('\\') ? frag.slice(frag.lastIndexOf('\\') + 1) : frag;
+    const hits = ops.list(dir, false).filter(k => k.n.startsWith(pre)).map(k => k.n + (k.dir ? '\\' : ''));
+    if (hits.length === 1) this.setState({ input: v.slice(0, v.length - pre.length) + hits[0] });
+    else if (hits.length > 1) this.print([{ t: x.cwd + '>' + v, fg: '#b4bfce' }, { t: hits.join('  '), fg: '#7c8796' }]);
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tabs: [], lines: [] };
+    const s = this.state, x = this.cur();
+    const fg = (l) => l.fg || '#e0e0e0';
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [{ label: 'New tab', hint: 'Ctrl+T', run: () => this.newTab(x.cwd) }, { label: 'Open this folder in Files', run: () => ops.open(x.cwd) }, { label: 'Close tab', hint: 'Ctrl+W', sep: true, run: () => this.closeTab(s.active) }, { label: 'Close window', run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'Edit', items: () => [{ label: 'Copy all output', run: () => ops.clipText(x.lines.map(l => l.t).join('\r\n'), false) }, { label: 'Paste', hint: 'Ctrl+V', disabled: !ops.getClipText(), run: () => this.setState(st => ({ input: st.input + ops.getClipText().split(/\r?\n/)[0] })) }, { label: 'Clear screen', hint: 'Ctrl+L', sep: true, run: () => this.upd({ lines: [] }) }] },
+        { label: 'Help', items: () => [{ label: 'Commands', run: () => this.print(Component.HELP.concat([''])) }, { label: 'Windows or full-screen?', run: () => ops.toast('Windows or full-screen', 'Desk apps (.DXE) open in windows. Any .EXE, .COM or .BAT is a DOS program: it gets the whole machine, then the Desk comes back.') }, { label: 'About Terminal', sep: true, run: () => ops.about('term') }] },
+      ],
+      tabs: s.sessions.map((t, i) => ({ label: ops.base(t.cwd), kind: 'batch', active: i === s.active, pick: () => this.setState({ active: i }), close: () => this.closeTab(i) })),
+      newTab: () => this.newTab(x.cwd),
+      lines: x.lines.map(l => ({ t: l.t, fg: fg(l) })), prompt: x.cwd + '>', cwd: x.cwd,
+      input: s.input, inputRef: this.inputRef, scrollRef: this.scrollRef,
+      focusInput: () => { if (this.inp && !window.getSelection().toString()) this.inp.focus(); },
+      onInput: (e) => this.setState({ input: e.target.value, hi: -1 }),
+      onKey: (e) => {
+        e.stopPropagation();
+        const ctrl = e.ctrlKey || e.metaKey;
+        if (e.key === 'Enter') { const v = s.input; this.setState(st => ({ input: '', hi: -1, hist: v.trim() ? [v, ...st.hist.filter(h => h !== v)].slice(0, 50) : st.hist })); this.run(v); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); const hi = Math.min(s.hist.length - 1, s.hi + 1); if (hi >= 0) this.setState({ hi, input: s.hist[hi] }); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); const hi = s.hi - 1; this.setState({ hi: Math.max(-1, hi), input: hi >= 0 ? s.hist[hi] : '' }); }
+        else if (e.key === 'Tab') { e.preventDefault(); this.complete(); }
+        else if (e.key === 'Escape') this.setState({ input: '' });
+        else if (ctrl && e.key.toLowerCase() === 'l') { e.preventDefault(); this.upd({ lines: [] }); }
+        else if (ctrl && e.key.toLowerCase() === 't') { e.preventDefault(); this.newTab(x.cwd); }
+        else if (ctrl && e.key.toLowerCase() === 'w') { e.preventDefault(); this.closeTab(s.active); }
+      },
+      ctx: (e) => ops.menu(e, [{ label: 'Copy selection', disabled: !window.getSelection().toString(), run: () => ops.clipText(window.getSelection().toString(), true) }, { label: 'Paste', disabled: !ops.getClipText(), run: () => this.setState(st => ({ input: st.input + ops.getClipText().split(/\r?\n/)[0] })) }, { label: 'Clear screen', sep: true, run: () => this.upd({ lines: [] }) }, { label: 'Open this folder in Files', run: () => ops.open(x.cwd) }]),
+    };
+  }
+}
+</script>
+</body>
+</html>

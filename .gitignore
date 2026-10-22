@@ -1,0 +1,16 @@
+# Toolchain, downloads and build outputs
+vendor/
+dist/
+target/
+node_modules/
+*.exe
+*.com
+*.dxe
+*.img
+*.o
+*.a
+*.swp
+
+# Scratch
+tmp/
+.DS_Store

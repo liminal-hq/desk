@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 26px; display: flex; align-items: center; gap: 2px; padding: 0 4px; flex-shrink: 0; background: #14161d; border-bottom: 1px solid #1f2230; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; overflow: hidden;">
+  <sc-for list="{{ items }}" as="b" hint-placeholder-count="4">
+    <sc-if value="{{ b.isSep }}" hint-placeholder-val="{{ false }}"><span style="width: 1px; height: 14px; background: #262a37; margin: 0 3px; flex-shrink: 0;"></span></sc-if>
+    <sc-if value="{{ b.isGrow }}" hint-placeholder-val="{{ false }}"><span style="flex: 1;"></span></sc-if>
+    <sc-if value="{{ b.isText }}" hint-placeholder-val="{{ false }}"><span style="color: #7c8796; padding: 0 4px; white-space: nowrap;">{{ b.text }}</span></sc-if>
+    <sc-if value="{{ b.isBtn }}" hint-placeholder-val="{{ true }}">
+      <span onClick="{{ b.run }}" title="{{ b.title }}" style="height: 18px; min-width: 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: default; white-space: nowrap; flex-shrink: 0; padding: 0 {{ b.padX }}px; background: {{ b.bg }}; color: {{ b.fg }};" style-hover="background: #1b1e28;">
+        <span>{{ b.glyph }}</span><sc-if value="{{ b.hasLabel }}" hint-placeholder-val="{{ false }}"><span>{{ b.label }}</span></sc-if>
+      </span>
+    </sc-if>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 360, &quot;height&quot;: 26}, &quot;items&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;({glyph?: string, label?: string, title?: string, on?: boolean, disabled?: boolean, run?: () =&gt; void} | '|' | '~' | {text: string})[]&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const items = (this.props.items || []).map(b => {
+      if (b === '|' || b.sep) return { isSep: true };
+      if (b === '~' || b.grow) return { isGrow: true };
+      if (b.text !== undefined) return { isText: true, text: b.text };
+      const off = !!b.disabled;
+      return { isBtn: true, glyph: b.glyph || '', label: b.label || '', hasLabel: !!b.label, title: b.title || b.label || '',
+        padX: b.label ? 6 : 0, bg: b.on ? '#372612' : 'transparent', fg: off ? '#333847' : b.on ? '#ffaa40' : '#e0e0e0',
+        run: () => { if (!off && b.run) b.run(); } };
+    });
+    return { items };
+  }
+}
+</script>
+</body>
+</html>

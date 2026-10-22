@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskToolbar" items="{{ tools }}" hint-size="100%,26px"></dc-import>
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <div style="width: 128px; flex-shrink: 0; background: #0c0c10; border-right: 1px solid #1f2230; padding: 3px 0; overflow-y: auto; display: flex; flex-direction: column;">
+      <span style="padding: 3px 8px 4px; color: #7c8796; font-size: 10px;">Library</span>
+      <sc-for list="{{ lib }}" as="r" hint-placeholder-count="5">
+        <div onClick="{{ r.click }}" onDoubleClick="{{ r.dbl }}" onMouseDown="{{ r.down }}" onContextMenu="{{ r.ctx }}" style="height: 18px; flex-shrink: 0; display: flex; align-items: center; gap: 5px; cursor: default; padding: 0 6px 0 {{ r.indent }}px; background: {{ r.bg }}; color: {{ r.fg }};">
+          <dc-import name="FileIcon" kind="{{ r.kind }}" size="12" hint-size="12px,12px"></dc-import><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div data-drop-app="{{ winId }}" style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+      <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; border-bottom: 1px solid #1f2230;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ np.title }}</span><span style="color: #7c8796; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 10px;">{{ np.time }}</span></div>
+        <span style="color: #7c8796; font-size: 10px;">{{ np.meta }}</span>
+        <div onClick="{{ seek }}" style="height: 6px; background: #1f2230; cursor: pointer;"><div style="height: 6px; width: {{ np.pct }}%; background: linear-gradient(to right, #ffaa40 0 33%, #f43f5e 33% 66%, #a78bfa 66%);"></div></div>
+      </div>
+      <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: 18px minmax(0, 1fr) 76px 34px; gap: 6px; padding: 3px 8px; color: #7c8796; font-size: 10px; flex-shrink: 0; border-bottom: 1px solid #1f2230;"><span></span><span>Title</span><span>File</span><span style="text-align: right;">Time</span></div>
+        <div onContextMenu="{{ listCtx }}" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 1px 0;">
+          <sc-for list="{{ queue }}" as="q" hint-placeholder-count="5">
+            <div onClick="{{ q.pick }}" onDoubleClick="{{ q.play }}" onContextMenu="{{ q.ctx }}" style="display: grid; grid-template-columns: 18px minmax(0, 1fr) 76px 34px; gap: 6px; height: 18px; flex-shrink: 0; align-items: center; padding: 0 8px; cursor: default; background: {{ q.bg }}; color: {{ q.fg }};">
+              <span style="color: #22d3ee;">{{ q.mark }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ q.title }}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ q.muted }}; white-space: nowrap; overflow: hidden;">{{ q.file }}</span><span style="text-align: right; color: {{ q.muted }};">{{ q.len }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding: 18px; text-align: center; color: #7c8796; line-height: 16px;">The playlist is empty. Drop music (.MID) or sounds (.WAV, .VOC) here, or double-click one in the library.</div></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isChannels }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0;">
+          <sc-for list="{{ channels }}" as="c" hint-placeholder-count="8">
+            <div onClick="{{ c.mute }}" style="display: grid; grid-template-columns: 22px minmax(0, 1fr) 90px 34px; gap: 6px; height: 16px; flex-shrink: 0; align-items: center; padding: 0 10px; cursor: default; color: {{ c.fg }};" style-hover="background: #14161d;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7c8796;">{{ c.n }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.inst }}</span>
+              <span style="height: 5px; background: #1f2230;"><span style="display: block; height: 5px; width: {{ c.level }}%; background: {{ c.bar }};"></span></span>
+              <span style="text-align: right; font-size: 10px; color: {{ c.stateFg }};">{{ c.state }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span>{{ statusLeft }}</span><span>{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static GM = ['Acoustic Grand Piano', 'Bright Piano', 'Electric Piano', 'Harpsichord', 'Celesta', 'Glockenspiel', 'Music Box', 'Vibraphone', 'Marimba', 'Xylophone', 'Tubular Bells', 'Drawbar Organ', 'Accordion', 'Harmonica', 'Nylon Guitar', 'Clean Guitar', 'Fretless Bass', 'Slap Bass', 'Synth Bass', 'Violin', 'Cello', 'Pizzicato Strings', 'Orchestral Harp', 'Timpani', 'String Ensemble', 'Choir Aahs', 'Trumpet', 'Trombone', 'French Horn', 'Brass Section', 'Alto Sax', 'Oboe', 'Clarinet', 'Flute', 'Pan Flute', 'Ocarina', 'Square Lead', 'Saw Lead', 'Warm Pad', 'Halo Pad', 'Sweep Pad', 'Crystal', 'Kalimba', 'Steel Drums', 'Woodblock'];
+  state = { queue: [], cur: -1, sel: null, playing: false, pos: 0, loop: 'all', shuffle: false, view: 'list', lib: 'C:\\MUSIC', mutes: {}, navN: null, order: null };
+  componentDidMount() {
+    const ops = this.props.ops;
+    const q = ops.list('C:\\MUSIC', false).filter(x => x.meta && x.meta.len).map(x => x.path);
+    this.setState({ queue: q, cur: q.length ? 0 : -1, playing: !this.props.nav && q.length > 0, pos: this.props.nav ? 0 : 72 }, () => this.take(this.props.nav));
+    this.tick = setInterval(() => this.step(), 1000);
+    this.onKey = (e) => this.key(e);
+    document.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { clearInterval(this.tick); document.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    if (this.props.nav && this.props.nav.n !== this.state.navN) this.take(this.props.nav);
+    const p = this.state.queue[this.state.cur], mm = p && this.meta(p);
+    const t = 'Audio Player' + (mm ? ' · ' + mm.title : '');
+    if (t !== this._t) { this._t = t; this.props.ops.setTitle(this.props.winId, t); }
+  }
+  findAudio(p) { const ops = this.props.ops; return ['*.MID', '*.RMI', '*.WAV', '*.VOC'].flatMap(q => ops.search(p, q, false)).filter(x => x.meta && x.meta.len); }
+  isWave(p) { return ['WAV', 'VOC'].includes(this.props.ops.ext(this.props.ops.base(p))); }
+  device(p) { const ops = this.props.ops, m = this.meta(p); if (!m) return ''; return this.isWave(p) ? 'Sound Blaster 16 · ' + (m.fmt || 'digital') : ops.soundName(ops.settings().midiOut); }
+  meta(p) { const st = this.props.ops.stat(p); return st && st.meta && st.meta.len ? st.meta : null; }
+  take(nav) {
+    if (!nav) return;
+    this.setState({ navN: nav.n });
+    const ops = this.props.ops, paths = nav.paths || (nav.path ? [nav.path] : []);
+    let add = [];
+    paths.forEach(p => {
+      const st = ops.stat(p); if (!st) return;
+      if (st.dir) add.push(...this.findAudio(p).map(x => x.path));
+      else if (ops.ext(st.n) === 'M3U') add.push(...String(st.text || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && this.meta(ops.norm(l))).map(l => ops.norm(l)));
+      else if (this.meta(p)) add.push(p);
+      else ops.toast("Audio Player can't play that", st.n + " isn't music or a sound.");
+    });
+    if (!add.length) return;
+    this.setState(s => {
+      const queue = [...s.queue]; add.forEach(p => { if (!queue.includes(p)) queue.push(p); });
+      if (nav.drop) return { queue };
+      return { queue, cur: queue.indexOf(add[0]), pos: 0, playing: true };
+    });
+  }
+  step() {
+    const s = this.state; if (!s.playing || s.cur < 0) return;
+    const m = this.meta(s.queue[s.cur]); if (!m) return this.next();
+    if (s.pos + 1 >= m.len) { if (s.loop === 'one') return this.setState({ pos: 0 }); return this.next(true); }
+    this.setState({ pos: s.pos + 1 });
+  }
+  next(auto) {
+    const s = this.state, n = s.queue.length; if (!n) return;
+    let i = s.shuffle ? Math.floor(Math.random() * n) : s.cur + 1;
+    if (s.shuffle && n > 1 && i === s.cur) i = (i + 1) % n;
+    if (i >= n) { if (auto && s.loop === 'off') return this.setState({ playing: false, pos: 0 }); i = 0; }
+    this.setState({ cur: i, pos: 0, playing: true });
+  }
+  prev() { const s = this.state; if (s.pos > 3) return this.setState({ pos: 0 }); if (s.queue.length) this.setState({ cur: (s.cur - 1 + s.queue.length) % s.queue.length, pos: 0 }); }
+  playPath(p) { this.setState(s => { const queue = s.queue.includes(p) ? s.queue : [...s.queue, p]; return { queue, cur: queue.indexOf(p), pos: 0, playing: true }; }); }
+  remove(p) { this.setState(s => { const i = s.queue.indexOf(p); const queue = s.queue.filter(x => x !== p); let cur = s.cur; if (i < cur) cur--; else if (i === cur) cur = Math.min(cur, queue.length - 1); return { queue, cur, sel: null, playing: s.playing && queue.length > 0 }; }); }
+  openFile() { this.props.ops.pick({ mode: 'open', title: 'Open music', dir: this.state.lib, types: [{ label: 'Music, sounds, playlists', ext: ['MID', 'RMI', 'WAV', 'VOC', 'M3U'] }] }).then(p => p && this.take({ path: p, n: this.state.navN })); }
+  addFolder() { this.props.ops.pick({ mode: 'folder', title: 'Add a folder of music', dir: this.state.lib }).then(p => p && this.take({ path: p, n: this.state.navN, drop: true })); }
+  savePlaylist() {
+    const ops = this.props.ops;
+    ops.pick({ mode: 'save', title: 'Save playlist', dir: 'C:\\MUSIC', name: 'PLAYLIST.M3U', types: [{ label: 'Playlists', ext: ['M3U'] }] }).then(p => { if (!p) return; ops.write(p, this.state.queue.join('\r\n') + '\r\n'); ops.toast('Saved ' + ops.base(p), this.state.queue.length + ' tracks. Open it to play them again.'); });
+  }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const tag = e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const s = this.state, k = e.key, ctrl = e.ctrlKey || e.metaKey;
+    const si = s.queue.indexOf(s.sel);
+    let used = true;
+    if (k === ' ') this.setState({ playing: !s.playing });
+    else if (k === 'ArrowRight') this.setState({ pos: Math.min((this.meta(s.queue[s.cur]) || { len: 1 }).len - 1, s.pos + 5) });
+    else if (k === 'ArrowLeft') this.setState({ pos: Math.max(0, s.pos - 5) });
+    else if (k === 'ArrowDown') this.setState({ sel: s.queue[Math.min(s.queue.length - 1, si + 1)] || null });
+    else if (k === 'ArrowUp') this.setState({ sel: s.queue[Math.max(0, si - 1)] || null });
+    else if (k === 'Enter' && s.sel) this.playPath(s.sel);
+    else if (k === 'Delete' && s.sel) this.remove(s.sel);
+    else if (k.toLowerCase() === 'n' && !ctrl) this.next();
+    else if (k.toLowerCase() === 'p' && !ctrl) this.prev();
+    else if (k.toLowerCase() === 'l' && !ctrl) this.setState({ loop: { off: 'all', all: 'one', one: 'off' }[s.loop] });
+    else if (k.toLowerCase() === 's' && !ctrl) this.setState({ shuffle: !s.shuffle });
+    else if (ctrl && k.toLowerCase() === 'o') this.openFile();
+    else used = false;
+    if (used) e.preventDefault();
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], tools: [], lib: [], queue: [], channels: [], np: {} };
+    const s = this.state, curP = s.queue[s.cur], m = curP && this.meta(curP);
+    const fmt = (n) => ops.fmtLen(n);
+    const loopLabel = { off: 'Loop off', all: 'Loop all', one: 'Loop one' }[s.loop];
+    const folders = [...new Set([...this.findAudio('C:\\'), ...this.findAudio('A:\\')].map(x => ops.parent(x.path)))].sort();
+    if (!folders.includes(s.lib)) folders.unshift(s.lib);
+    const lib = [];
+    folders.forEach(f => {
+      const on = f === s.lib;
+      lib.push({ label: ops.base(f), kind: 'folder', indent: 6, bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#e0e0e0', click: () => this.setState({ lib: f }), dbl: () => this.take({ path: f, n: s.navN, drop: true }), down: () => {},
+        ctx: (e) => ops.menu(e, [{ label: 'Add all to playlist', run: () => this.take({ path: f, n: s.navN, drop: true }) }, { label: 'Show in Files', run: () => ops.open(f) }]) });
+      if (on) ops.list(f, false).filter(x => x.meta && x.meta.len).forEach(x => lib.push({ label: x.meta.title, kind: 'audio', indent: 16, bg: x.path === curP ? '#0b2e35' : 'transparent', fg: x.path === curP ? '#22d3ee' : '#b4bfce',
+        click: () => {}, dbl: () => this.playPath(x.path), down: (e) => { if (e.button === 0) ops.beginDrag(e, [x.path], x.n); },
+        ctx: (e) => ops.menu(e, [{ label: 'Play now', bold: true, run: () => this.playPath(x.path) }, { label: 'Add to playlist', run: () => this.take({ path: x.path, n: s.navN, drop: true }) }, { label: 'Show in Files', sep: true, run: () => ops.reveal(x.path) }, { label: 'Properties', run: () => ops.properties(x.path) }]) }));
+    });
+    const queue = s.queue.map((p, i) => {
+      const mm = this.meta(p), on = s.sel === p, playing = i === s.cur;
+      return { title: mm ? mm.title : ops.base(p), file: ops.base(p), len: mm ? fmt(mm.len) : '—', mark: playing ? (s.playing ? '▶' : '❚❚') : '',
+        bg: on ? '#372612' : playing ? '#0b2e35' : 'transparent', fg: on ? '#ffaa40' : playing ? '#22d3ee' : (mm ? '#e0e0e0' : '#5a6273'), muted: on ? '#ffaa40' : '#7c8796',
+        pick: () => this.setState({ sel: p }), play: () => this.playPath(p),
+        ctx: (e) => { e.stopPropagation(); this.setState({ sel: p }); ops.menu(e, [{ label: 'Play', bold: true, run: () => this.playPath(p) }, { label: 'Remove from playlist', hint: 'Del', run: () => this.remove(p) }, { label: 'Show in Files', sep: true, run: () => ops.reveal(p) }, { label: 'Properties', run: () => ops.properties(p) }]); } };
+    });
+    const total = s.queue.reduce((a, p) => a + ((this.meta(p) || {}).len || 0), 0);
+    const seed = curP ? [...curP].reduce((a, c) => a + c.charCodeAt(0), 0) : 0;
+    const wave = curP && this.isWave(curP);
+    const channels = wave ? ['Left', 'Right'].map((side, i) => { const lv = s.playing ? 30 + ((s.pos * 41 + i * 29 + seed) % 70) : 0; return { n: i ? 'R' : 'L', inst: side + ' · ' + ((this.meta(curP) || {}).fmt || 'digital'), level: lv, bar: '#2ec66a', fg: '#e0e0e0', state: 'Sound Blaster', stateFg: '#7c8796', mute: () => {} }; }) : Array.from({ length: 16 }, (_, i) => {
+      const used = i === 9 || (seed + i * 7) % 5 !== 0;
+      const inst = i === 9 ? 'Percussion' : Component.GM[(seed + i * 11) % Component.GM.length];
+      const muted = !!s.mutes[i], live = s.playing && used && !muted;
+      const lv = live ? 20 + ((s.pos * 37 + i * 53 + seed) % 80) : 0;
+      return { n: String(i + 1).padStart(2, '0'), inst: used ? inst : '(unused)', level: lv, bar: muted ? '#333847' : i === 9 ? '#a78bfa' : '#22d3ee', fg: used ? '#e0e0e0' : '#5a6273',
+        state: muted ? 'Muted' : used ? 'On' : '', stateFg: muted ? '#ffaa40' : '#7c8796', mute: () => used && this.setState(st => ({ mutes: { ...st.mutes, [i]: !st.mutes[i] } })) };
+    });
+    return {
+      ops, winId: this.props.winId,
+      menus: [
+        { label: 'File', items: () => [
+          { label: 'Open…', hint: 'Ctrl+O', run: () => this.openFile() }, { label: 'Add a folder…', run: () => this.addFolder() },
+          { label: 'Save playlist…', sep: true, disabled: !s.queue.length, run: () => this.savePlaylist() }, { label: 'Clear playlist', disabled: !s.queue.length, run: () => this.setState({ queue: [], cur: -1, playing: false, pos: 0 }) },
+          { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) },
+        ] },
+        { label: 'Play', items: () => [
+          { label: s.playing ? 'Pause' : 'Play', hint: 'Space', disabled: s.cur < 0, run: () => this.setState({ playing: !s.playing }) },
+          { label: 'Stop', run: () => this.setState({ playing: false, pos: 0 }) }, { label: 'Next', hint: 'N', run: () => this.next() }, { label: 'Previous', hint: 'P', run: () => this.prev() },
+          { label: 'Loop off', check: s.loop === 'off', sep: true, run: () => this.setState({ loop: 'off' }) }, { label: 'Loop all', check: s.loop === 'all', run: () => this.setState({ loop: 'all' }) }, { label: 'Loop one', check: s.loop === 'one', run: () => this.setState({ loop: 'one' }) },
+          { label: 'Shuffle', hint: 'S', check: s.shuffle, sep: true, run: () => this.setState({ shuffle: !s.shuffle }) },
+        ] },
+        { label: 'View', items: () => [{ label: 'Playlist', check: s.view === 'list', run: () => this.setState({ view: 'list' }) }, { label: 'Channels and levels', check: s.view === 'channels', run: () => this.setState({ view: 'channels' }) }] },
+        { label: 'Help', items: () => [{ label: 'About Audio Player', run: () => ops.about('midi') }] },
+      ],
+      tools: [
+        { glyph: '⏮', title: 'Previous', run: () => this.prev() }, { glyph: s.playing ? '❚❚' : '▶', title: s.playing ? 'Pause' : 'Play', on: s.playing, disabled: s.cur < 0, run: () => this.setState({ playing: !s.playing }) },
+        { glyph: '■', title: 'Stop', run: () => this.setState({ playing: false, pos: 0 }) }, { glyph: '⏭', title: 'Next', run: () => this.next() }, '|',
+        { glyph: '↻', label: loopLabel, on: s.loop !== 'off', run: () => this.setState({ loop: { off: 'all', all: 'one', one: 'off' }[s.loop] }) },
+        { glyph: '⤮', label: 'Shuffle', on: s.shuffle, run: () => this.setState({ shuffle: !s.shuffle }) }, '~',
+        { glyph: '☰', title: 'Playlist', on: s.view === 'list', run: () => this.setState({ view: 'list' }) }, { glyph: '▥', title: 'Channels', on: s.view === 'channels', run: () => this.setState({ view: 'channels' }) },
+      ],
+      lib, queue, queueEmpty: !s.queue.length, channels, isList: s.view === 'list', isChannels: s.view === 'channels',
+      np: m ? { title: m.title, time: fmt(s.pos) + ' / ' + fmt(m.len), meta: ops.base(curP) + ' · ' + this.device(curP) + ' · ' + (s.playing ? 'playing' : 'paused'), pct: Math.round(s.pos / m.len * 100) } : { title: 'Nothing playing', time: '', meta: 'Double-click a track, or drop music and sounds on the playlist.', pct: 0 },
+      seek: (e) => { if (!m) return; const r = e.currentTarget.getBoundingClientRect(); this.setState({ pos: Math.floor((e.clientX - r.left) / r.width * m.len) }); },
+      listCtx: (e) => ops.menu(e, [{ label: 'Open…', run: () => this.openFile() }, { label: 'Add a folder…', run: () => this.addFolder() }, { label: 'Save playlist…', sep: true, disabled: !s.queue.length, run: () => this.savePlaylist() }, { label: 'Clear playlist', disabled: !s.queue.length, run: () => this.setState({ queue: [], cur: -1, playing: false, pos: 0 }) }]),
+      statusLeft: s.queue.length + (s.queue.length === 1 ? ' track · ' : ' tracks · ') + fmt(total),
+      statusRight: loopLabel + (s.shuffle ? ' · shuffle' : '') + (curP ? ' · ' + (this.isWave(curP) ? 'Sound Blaster 16' : ops.soundName(ops.settings().midiOut)) : ''),
+    };
+  }
+}
+</script>
+</body>
+</html>

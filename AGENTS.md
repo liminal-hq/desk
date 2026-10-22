@@ -1,0 +1,197 @@
+# AGENTS.md
+
+## Table of Contents
+
+- [Project Status](#project-status)
+- [Source of Truth](#source-of-truth)
+- [Localization and Spelling](#localization-and-spelling)
+- [Markdown Formatting](#markdown-formatting)
+- [Authoring Voice](#authoring-voice)
+- [Commit Messages](#commit-messages)
+- [Pull Request Titles](#pull-request-titles)
+- [Pull Request Content](#pull-request-content)
+- [Pull Request Labels](#pull-request-labels)
+- [Git Workflow](#git-workflow)
+- [Local Tooling](#local-tooling)
+- [Code Conventions](#code-conventions)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Repository Layout](#repository-layout)
+- [Licence and Copyright](#licence-and-copyright)
+- [Agent Behaviour](#agent-behaviour)
+
+## Project Status
+
+Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is a graphical shell for MS-DOS: windows, files and small apps on a 486, with any DOS program run full-screen and the Desk resuming afterwards. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: there is no code yet, and the documents in `docs/` are targets, not measurements.
+
+## Source of Truth
+
+- `docs/SPEC.md` is the working design; `docs/SDK.md`, `docs/FORMATS.md`, `docs/HANDOFF.md`, `docs/PALETTE.md` and `docs/HIG.md` hold the detail, and `docs/OPEN-QUESTIONS.md` says what is decided and what is open.
+- The documents came from a design brainstorm written without access to code, so they may be wrong. Once code exists, the code is the source of truth: if code and docs disagree, resolve it deliberately by changing the code to match, or by updating the document in the same branch with the reasoning.
+- A spike ends with a written result in `docs/` (what worked, what did not, what it changes) so the design follows what was learned.
+- `design/` is reference only: boards and prototypes that are not built, tested or licence-headered. Do not port or mirror its code.
+- Lieutenant Fizz for DOS is a reference for lessons, not a source to copy. Tooling here is written for this project.
+
+## Localization and Spelling
+
+**REQUIREMENT:** All UI strings, code identifiers, comments, commit messages, pull request descriptions and documentation MUST use **Canadian English** spelling, unless exact external spelling is required by tooling, APIs, platform interfaces or published identifiers (for example the CSS `color` property or a DOS `COLOR` constant).
+
+Examples:
+
+- `colour` instead of `color`
+- `centre` instead of `center`
+- `neighbour` instead of `neighbor`
+- `behaviour` instead of `behavior`
+- `cancelled` instead of `canceled`
+- `licence` (noun) vs `license` (verb)
+
+## Markdown Formatting
+
+**REQUIREMENT:** Do not hard-wrap markdown prose. Write each paragraph or bullet as a single unwrapped line in the source, no matter how long, and let the renderer reflow it. This applies to PR descriptions, docs under `docs/`, README files and any other markdown. Commit message bodies are the one exception: hard-wrap those (see [Commit Messages](#commit-messages)).
+
+- This does not apply to genuinely separate list items, headings, or intentional line breaks.
+- Code comments are not markdown-rendered and may wrap normally at a reasonable line length.
+
+**Em dashes:** use a real em dash (`—`) in prose, never `--` as a substitute. This does not apply to a double-hyphen with another meaning (a CLI flag such as `--check`, a numeric range).
+
+`tools/check-docs.py` checks both rules and that relative links resolve.
+
+## Authoring Voice
+
+**REQUIREMENT:** Ship the result, not how the conversation arrived at it. Write every outward-facing line (code comments, identifier names, docs, PR descriptions) as the author of the artefact, for the reader who will encounter it later.
+
+- Don't reference "this PR", "the review", a reviewer's name, or a commit SHA inside code comments or PR prose. State the fact or reasoning directly.
+- When a comment is edited more than once, rewrite it as one clean explanation rather than stacking fragments.
+- Commit messages are the exception: they are the right place to record _why_ a change happened, including debugging context and measurements. The `## Test plan` section of a PR description is a similar exception.
+
+## Commit Messages
+
+**Format:** Use Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `build:`, `chore:`, `refactor:`, `perf:`). The one exception is the repository's first commit, titled `Initial Commit`, which records the plumbing and organisation the project started with.
+
+- Use `test:` for test-related changes, including fixes to tests themselves. Use `fix:` only when it fixes application code.
+- Use `ci:` or `build:` when the primary change is workflow or build behaviour.
+- Keep each commit focused on the specific change made in that commit; describe the now, not the whole project history.
+
+**Body requirements:**
+
+- Explain what and why (not how).
+- Use markdown: **bold**, _italics_, `code`, flat bullet lists. No markdown headings; use **bold labels** if sections are needed.
+- **Backtick every code-level reference**: function, type and variable names, file and directory paths, crate names, config keys and CLI flags (for example `core/src/video.rs`, `DESK.INI`, `--check`). Plain-English descriptions and in-app text use quotes, not backticks.
+- Hard-wrap paragraphs at roughly 72-100 characters.
+- End with the agent co-author trailer when an agent authored the commit.
+
+**Shell interpolation safety:**
+
+- Do not pass markdown-heavy bodies through `git commit -m "..."` when they contain backticks, `$()` or other shell-sensitive characters.
+- Write the message to a file with a single-quoted heredoc and commit with `git commit -F <file>`.
+- Verify with `git log -1 --pretty=fuller` and amend immediately if interpolation altered the text.
+
+## Pull Request Titles
+
+**REQUIREMENT:** PR titles are human-readable summaries of the change.
+
+- Start with a capital letter, use the imperative mood, and keep to roughly 70 characters.
+- Do not use Conventional Commit prefixes in PR titles.
+- Describe the outcome or behaviour change, not internal process.
+- Do not rename merged PRs unless explicitly requested.
+
+## Pull Request Content
+
+- Open pull requests ready for review by default. Use a draft only when asked or when there is a clearly communicated blocker.
+- Default structure: `## Summary` (flat bullets with bold lead-ins) followed by `## Test plan` (checklist bullets with concrete commands, and an explicit statement of anything that could not be verified).
+- Keep the summary focused on outcomes and behaviour changes, not commit chronology.
+
+## Pull Request Labels
+
+Add labels to every PR when it is created and keep them accurate as scope changes.
+
+- **Primary category (at least one):** `enhancement`, `bug`, `documentation`, `testing`, `ci`, `build`, `chore`.
+- **Scope:** `dos`, `shell`, `compositor`, `graphics`, `input`, `sound`, `sdk`, `apps`, `handoff`, `launcher`, `installer`, `rust`, `performance`, `design-docs`, `design-system`, `spike`, `experimental`, `ui`, `pages`, `deploy`.
+- Prefer GitHub category labels (`enhancement`, `bug`) over Conventional Commit terms (`feat`, `fix`).
+- `skip-changelog` and `internal` leave a PR out of the release notes (`.github/release.yml`).
+
+## Git Workflow
+
+**REQUIREMENT:** Do not push (especially force-push) unless explicitly requested by the user.
+
+- **Merge commits only.** Pull requests are merged with a merge commit: never squash and never rebase-merge. Do not rewrite history that has been pushed. Never merge without the user's explicit go-ahead.
+- **Branch naming:** `feat/<short-description>`, `docs/<short-description>`, `chore/<short-description>`, `spike/<short-description>`; for fixes, `fix/issue-<number>-<short-description>`.
+- **Focused commits:** when work splits naturally into implementation, validation and docs, use separate contextual commits.
+- **Stage explicitly:** use `git add <specific paths>`, never `git add -A` or `git commit -a`. Retry on an `index.lock` collision rather than deleting the lock.
+- Do not commit scratch files, build outputs (`*.exe`, `dist/`, `target/`, `vendor/`) or large source archives.
+- **Releases:** add the version's section to `CHANGELOG.md` in a PR and merge it; the tag `vX.Y.Z` is pushed on the merge commit only when the user asks. Release notes group the pull requests since the last release by label (`.github/release.yml`), so every PR needs its category label.
+- **The build image:** CI runs in `ghcr.io/liminal-hq/ci-dos`, the DOS tier of the shared images defined in `liminal-hq/.github`, named by digest in the workflows. A tool or Rust version change is made there; moving to a newer image is a pull request here that changes the digest, so its checks run in the new image.
+- **GitHub tooling:** prefer the `gh` CLI for repository, pull request, label, review and Actions work.
+
+## Local Tooling
+
+The stack will be **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs. None of that is installed or scripted yet: the toolchain scripts are written, for this project, with the first spike that needs them. Do not install system packages to get a build working without asking.
+
+```bash
+tools/check.sh                           # everything the CI runs
+tools/check-headers.sh                   # licence headers on source, script and workflow files
+python3 -I tools/check-docs.py           # markdown style and links
+python3 -I tools/build-hero.py [name] > assets/hero.svg    # rebuild the README banner
+```
+
+Treat the scripts as the source of truth for exact commands. Use scratch space under `$TMPDIR` (not `/tmp`) when several jobs share a machine.
+
+## Code Conventions
+
+- **Rust (`core/`, `sdk/`):** `no_std` with `alloc`; no floating-point maths from `std`; no `unsafe` without a one-line justification of what makes it sound. Only integers, pointers and lengths cross the Rust and C boundary, never structs passed by value.
+- **C (`c/`, `launcher/`):** C99 for DJGPP, one concern per file, `volatile` for anything an interrupt handler touches, no allocation in an interrupt handler.
+- **DOS limits:** file names are 8.3; every hooked interrupt vector (IRQ 0, IRQ 1, the mouse callback) is restored on exit and before a handoff; the screen goes back to text mode before a handoff.
+- **Rendering:** the Desk owns the palette. Fades and dims go through the DAC, never through the frame buffer; per-pixel work stays free of floating point.
+- No speculative scaffolding: a directory, crate or abstraction arrives with the code that needs it.
+
+## Testing
+
+- Verify relevant changes before considering work complete, and state exactly what was and was not run.
+- `tools/check.sh` is the pre-PR gate and what the CI runs. DOS builds, headless DOSBox runs and frame checksums join it as the code that needs them arrives.
+- Fix a bug with a check that fails before the fix.
+- Say plainly what could not be verified: nothing here has run on real hardware, and audio cannot be checked headless.
+
+## Documentation
+
+- Update the relevant document in the same branch when behaviour changes: `docs/SPEC.md` for what the Desk is, `docs/SDK.md` and `docs/FORMATS.md` for interfaces and file formats, `docs/HANDOFF.md` for the handoff, `README.md` for how to build and use it.
+- Prefer stable reference docs over burying decisions in code comments or PR threads.
+- No hard wrapping: see [Markdown Formatting](#markdown-formatting).
+
+## Repository Layout
+
+- `docs/` — the working design (spec, SDK, formats, handoff, palette, app guidelines, open questions, naming)
+- `design/` — boards and prototypes from the design brainstorm, reference only
+- `core/` — the shell in Rust (`no_std`)
+- `c/` — the hardware layer in C for DJGPP
+- `launcher/` — `DESK.COM`, the real-mode launcher
+- `sdk/` — the app interface: the C header and a Rust wrapper
+- `spikes/` — experiments that decide the architecture
+- `tests/dos/` — test programs of our own for headless DOS runs
+- `tools/` — repository checks and scripts
+- `assets/` — the README banner
+- `.github/` — workflows, templates, dependency updates and release-note grouping
+
+Directories for apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
+
+## Licence and Copyright
+
+This project is dual-licensed under Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`).
+
+**REQUIREMENT:** New and substantially rewritten source files (`.rs`, `.c`, `.h`, `.ts`, `.js`, `.py`, `.sh`) and workflow YAML MUST begin with a licence and copyright header:
+
+```
+// Brief one-line summary of what this file does.
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+Use `#` comments for shell scripts, Python and workflow YAML, and `/* */` for C. Do not add headers to markdown, JSON, lockfiles or other generated or config-only files, or to `design/`. Third-party material is listed in `NOTICE`. `tools/check-headers.sh` checks the headers.
+
+## Agent Behaviour
+
+- Read the relevant `docs/` section before implementing, and follow it.
+- Make the change that was asked for; avoid speculative scaffolding and unrelated refactors.
+- Do not push, merge, force-push, or alter shared settings without explicit instruction.
+- State uncertainty and unverified items plainly rather than implying success.
+- Stay within your assigned files when several agents work in the same checkout.
