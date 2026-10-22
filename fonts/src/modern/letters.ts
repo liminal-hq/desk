@@ -63,12 +63,16 @@ function headSerif(k: Kit, x: number, y: number, half = k.s.serifLen + k.V * 0.4
 
 const L: Record<string, Draw> = {
   a: (k) => {
-    const w = k.w(470, 420);
+    if (k.bold && k.s.kind !== 'mono') return boldA(k);
+    const w = k.w(k.serif && k.bold ? 494 : 470, 420);
     const top = k.xh;
     // The stem, the shoulder and the bowl.
     const ry = w * 0.6;
     const cy = top + k.os - ry;
-    k.arc(0, w, cy - ry, top + k.os, 0, 152, k.V, k.H);
+    // Serif ends the shoulder a little higher, with a spur, so the upper counter stays open in Bold.
+    const end = k.serif ? 142 : 152;
+    k.arc(0, w, cy - ry, top + k.os, 0, end, k.V, k.H);
+    k.spur(0, w, cy - ry, top + k.os, end, -1, k.xh * 0.14);
     k.stem(w - k.V, 0, cy + 1, { bottom: k.serif ? 'right' : 'none' });
     const bt = Math.round(k.xh * (k.bold ? 0.62 : 0.58));
     k.ring(0, w - k.V * 0.4, -k.os, bt + k.H * 0.5);
@@ -84,7 +88,7 @@ const L: Record<string, Draw> = {
   c: (k) => {
     const w = k.w(460, 420);
     k.arc(0, w, -k.os, k.xh + k.os, 42, 318);
-    k.spur(0, w, -k.os, k.xh + k.os, 42, -1, k.xh * 0.2);
+    k.spur(0, w, -k.os, k.xh + k.os, 42, -1, k.xh * 0.27);
     return { w, sides: ['r', 'o'] };
   },
   d: (k) => {
@@ -94,8 +98,11 @@ const L: Record<string, Draw> = {
     return { w, sides: ['r', 's'] };
   },
   e: (k) => {
-    const w = k.w(484, 432);
-    const cy = Math.round((k.xh + k.os - k.os) / 2) + 6;
+    const sansBold = k.bold && k.s.kind === 'sans';
+    // Bold Serif's heavy stems need a wider e to keep its eye open, as do Sans Bold's.
+    const w = k.w(sansBold ? 500 : k.serif && k.bold ? 512 : 484, 432);
+    // Sans Bold lifts the bar so the eye stays open above it.
+    const cy = Math.round((k.xh + k.os - k.os) / 2) + (sansBold ? 12 : 6);
     k.arc(0, w, -k.os, k.xh + k.os, 0, 330);
     k.add(rect(k.V * 0.5, cy - k.H / 2, w, cy + k.H / 2));
     return { w, sides: ['r', 'r'] };
@@ -213,11 +220,11 @@ const L: Record<string, Draw> = {
     k.stem(x, 0, k.xh, { top: 'left', bottom: k.serif ? 'both' : 'none' });
     const ry = k.xh * 0.6;
     k.arc(x, x + (w - x) * 1.7, k.xh + k.os - 2 * ry, k.xh + k.os, 70, 162, k.V, k.H);
-    k.spur(x, x + (w - x) * 1.7, k.xh + k.os - 2 * ry, k.xh + k.os, 70, -1, k.xh * 0.16);
+    k.spur(x, x + (w - x) * 1.7, k.xh + k.os - 2 * ry, k.xh + k.os, 70, -1, k.xh * 0.22);
     return { w, sides: [k.mono ? 'o' : 's', 'o'] };
   },
   s: (k) => {
-    const w = k.w(420, 400);
+    const w = k.w(k.serif && k.bold ? 448 : 420, 400);
     sCurve(k, w, k.xh);
     return { w, sides: ['r', 'r'] };
   },
@@ -302,14 +309,34 @@ const L: Record<string, Draw> = {
   },
 };
 
+/**
+ * The Bold a (Sans and Serif): a shallower shoulder and a lower, wider bowl than the Regular's, so that with heavy strokes
+ * both counters stay open, and the bowl meets the stem with a notch rather than clotting.
+ */
+function boldA(k: Kit): Drawn {
+  const w = k.w(k.serif ? 500 : 486, 420);
+  const bowlTop = Math.round(k.xh * 0.54);
+  // The shoulder: the top of a bowl whose bottom sits on the lower bowl's top.
+  const yb = bowlTop - k.H * 0.6;
+  const end = k.serif ? 140 : 150;
+  k.arc(0, w, yb, k.xh + k.os, 0, end, k.V, k.H);
+  k.spur(0, w, yb, k.xh + k.os, end, -1, k.xh * 0.13);
+  const cy = (yb + k.xh + k.os) / 2;
+  k.stem(w - k.V, 0, cy + 1, { bottom: k.serif ? 'right' : 'none' });
+  // The bowl stops short of the stem's right edge, so where its top curves away from the stem it leaves a
+  // notch open to the upper counter instead of a pinhole.
+  k.ring(0, w - k.V * 0.55, -k.os, bowlTop + k.H * 0.4, k.V * 0.96, k.H);
+  return { w, sides: ['r', 's'] };
+}
+
 /** The s-curve of s and S: two arcs that share the spine, with level terminals. */
 function sCurve(k: Kit, w: number, h: number): void {
   const mid = Math.round(h * 0.52);
   const inset = w * 0.04;
   k.arc(inset, w - inset, mid - k.H / 2, h + k.os, 28, 270, k.V * 0.92, k.H);
   k.arc(0, w, -k.os, mid + k.H / 2, 208, 450, k.V * 0.96, k.H);
-  k.spur(inset, w - inset, mid - k.H / 2, h + k.os, 28, -1, h * 0.17, k.V * 0.92);
-  k.spur(0, w, -k.os, mid + k.H / 2, 208, 1, h * 0.17, k.V * 0.96);
+  k.spur(inset, w - inset, mid - k.H / 2, h + k.os, 28, -1, h * 0.22, k.V * 0.92);
+  k.spur(0, w, -k.os, mid + k.H / 2, 208, 1, h * 0.22, k.V * 0.96);
 }
 
 // ---- capitals ----
@@ -601,13 +628,17 @@ const F: Record<string, Draw> = {
     const top = k.cap;
     const sx = w * 0.06;
     k.add(rect(sx, top - k.H, w * 0.92, top));
-    k.add([
-      { x: sx, y: top },
-      { x: sx + k.V, y: top },
-      { x: sx + k.V * 0.92, y: k.cap * 0.58 },
-      { x: sx - k.V * 0.08 + 6, y: k.cap * 0.55 },
-    ]);
     const bt = k.cap * 0.62;
+    if (k.bold && k.s.kind === 'sans') {
+      // Sans Bold: a plain upright stem, so its foot lines up with the bowl's bar without a step.
+      k.add(rect(sx + 6, bt - k.H, sx + 6 + k.V, top));
+    } else
+      k.add([
+        { x: sx, y: top },
+        { x: sx + k.V, y: top },
+        { x: sx + k.V * 0.92, y: k.cap * 0.58 },
+        { x: sx - k.V * 0.08 + 6, y: k.cap * 0.55 },
+      ]);
     k.arc(0, w, -k.os, bt, -150, 120, k.V, k.H);
     k.add(rect(sx + 6, bt - k.H, w * 0.56, bt));
     return { w, sides: ['r', 'r'], fixed: figAdv(k) };

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Validates the built fonts with third-party tools: fontTools reads every table of every file, OTS sanitises each,
 # FreeType renders every pixel-face glyph at the native size and at twice it to compare with the .DFN bitmaps, compares
-# the outline faces' OTF and TTF renderings, and optionally writes proof sheets.
+# the outline faces' OTF and TTF renderings, HarfBuzz shapes the outline faces' kerning, ligatures and features, and
+# optionally writes proof sheets.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -9,12 +10,16 @@
 # usage: python3 validate.py <generated-dir> [proof-dir]    (run inside the container that fonts/validate.sh starts)
 import glob
 import os
+import re
 import struct
 import subprocess
 import sys
 import zlib
 
+import io
+
 import freetype
+import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
 FACES = {"ui": ("desk-ui", 12), "title": ("desk-title", 12), "fixed": ("desk-fixed", 16), "small": ("desk-small", 8)}
@@ -224,7 +229,7 @@ def main(gen, proof_dir=None):
             print("ok   " + msg + (" (Round compared in monochrome)" if "-round" in path else ""))
 
     print("\n== FreeType: the outline faces, OTF against TTF, and proof sheets")
-    modern = ["desk-sans", "desk-sans-bold", "desk-mono", "desk-mono-bold", "desk-serif", "desk-serif-bold"]
+    modern = sorted(os.path.basename(p)[:-4] for p in glob.glob(os.path.join(gen, "desk-*.otf")) if re.match(r"desk-(sans|mono|serif)", os.path.basename(p)))
     for base in modern:
         faces = {ext: freetype.Face(os.path.join(gen, f"{base}.{ext}")) for ext in ("otf", "ttf")}
         chars = [chr(c) for c in range(0x20, 0x7F)] + [chr(c) for c in range(0xA1, 0x100) if c != 0xAD] + list("ŒœŸŠšŽž€‚ƒ„…†‡ˆ‰‹‘’“”•–—˜™›")
@@ -247,6 +252,7 @@ def main(gen, proof_dir=None):
             fail(line)
         else:
             print("ok   " + line)
+    layout(gen, modern)
     if proof_dir:
         for base in modern:
             proof(os.path.join(gen, f"{base}.ttf"), os.path.join(proof_dir, f"{base}.png"))
@@ -256,6 +262,103 @@ def main(gen, proof_dir=None):
     for w in warnings:
         print("warn", w)
     return 1 if failures else 0
+
+
+def shape(data, text, features=None):
+    """HarfBuzz's glyph names and advances for a text, with features switched on or off."""
+    font = hb.Font(hb.Face(data))
+    buf = hb.Buffer()
+    buf.add_str(text)
+    buf.guess_segment_properties()
+    hb.shape(font, buf, features or {})
+    return [font.glyph_to_string(i.codepoint) for i in buf.glyph_infos], [p.x_advance for p in buf.glyph_positions]
+
+
+def gap(data, pair, features):
+    """Where HarfBuzz puts the second glyph of a pair: the first's advance plus the second's offset."""
+    font = hb.Font(hb.Face(data))
+    buf = hb.Buffer()
+    buf.add_str(pair)
+    buf.guess_segment_properties()
+    hb.shape(font, buf, features)
+    pos = buf.glyph_positions
+    return pos[0].x_advance + pos[1].x_offset
+
+
+# Pairs that must tighten in Desk Sans and Desk Serif, and one that must not move.
+KERN_PAIRS = ["To", "Ta", "AV", "Ty", "Yo", "r.", "LT", "P.", "fo", "VA", "T."]
+LIGATURES = {"fi": "f_i", "fl": "f_l", "ff": "f_f", "ffi": "f_f_i", "ffl": "f_f_l"}
+CODE = ["<=>", "===", "!==", "...", "->", "=>", "<-", "<=", ">=", "!=", "==", "::", "..", "//", "/*", "*/", "&&", "||", "|>", "<|", ">>", "<<", "<>", "++", "--", "~=", "=~"]
+
+
+def layout(gen, modern):
+    print("\n== HarfBuzz: kerning, ligatures and features of the outline faces")
+    for base in modern:
+        for ext in ("otf", "ttf"):
+            name = f"{base}.{ext}"
+            data = open(os.path.join(gen, name), "rb").read()
+            problems, notes = [], []
+            plain = lambda t: shape(data, t, {"kern": False, "liga": False, "calt": False})[1]  # noqa: E731
+            if "mono" not in base:
+                kerns = {}
+                for pair in KERN_PAIRS:
+                    k = gap(data, pair, {"liga": False}) - plain(pair)[0]
+                    kerns[pair] = k
+                    if not -200 <= k < 0:
+                        problems.append(f"{pair} kerned by {k}")
+                if shape(data, "HH")[1] != plain("HH"):
+                    problems.append("HH is kerned")
+                notes.append("kerning " + " ".join(f"{p}{v}" for p, v in kerns.items()))
+                for seq, lig in LIGATURES.items():
+                    if shape(data, seq)[0] != [lig]:
+                        problems.append(f"{seq} gives {shape(data, seq)[0]}")
+                    if len(shape(data, seq, {"liga": False})[0]) != len(seq):
+                        problems.append(f"{seq} ligates with liga off")
+                checks = [("1/2", {"frac": True}, ["uni00BD"]), ("7/8", {"frac": True}, ["seveneighths"]), ("1", {"pnum": True}, ["one.pnum"])]
+                if "serif" in base:
+                    checks += [
+                        ("3", {"onum": True}, ["three.tosf"]),
+                        ("3", {"onum": True, "pnum": True}, ["three.osf"]),
+                        ("ct", {"dlig": True}, ["c_t"]),
+                        ("st", {"dlig": True}, ["s_t"]),
+                        ("aé", {"smcp": True}, ["a.sc", "uni00E9.sc"]),
+                        ("A", {"c2sc": True}, ["a.sc"]),
+                    ]
+                else:
+                    checks += [("a0l", {"ss01": True}, ["a.ss01", "zero.ss01", "l.ss01"])]
+                for text, feats, want in checks:
+                    got = shape(data, text, feats)[0]
+                    if got != want:
+                        problems.append(f"{text} with {sorted(feats)} gives {got}, not {want}")
+                # Without GPOS, HarfBuzz falls back to the old kern table, as a shaper that reads only that would.
+                if ext == "ttf":
+                    font = TTFont(io.BytesIO(data))
+                    del font["GPOS"]
+                    out = io.BytesIO()
+                    font.save(out)
+                    old = out.getvalue()
+                    k = gap(old, "To", {"liga": False}) - plain("To")[0]
+                    if k != kerns["To"]:
+                        problems.append(f"the kern table alone gives To {k}, GPOS {kerns['To']}")
+                    pairs = font["kern"].kernTables[0].kernTable
+                    notes.append(f"kern table: {len(pairs)} pairs, To {k} without GPOS")
+            else:
+                for seq in CODE:
+                    names, advs = shape(data, f"a{seq}b")
+                    if len(names) != len(seq) + 2 or not names[-2].endswith(".liga") or any(n != "lig.spacer" for n in names[1:-2]) or set(advs) != {600}:
+                        problems.append(f"{seq} gives {names} {advs}")
+                    if any(n.endswith(".liga") or n == "lig.spacer" for n in shape(data, seq, {"calt": False})[0]):
+                        problems.append(f"{seq} ligates with calt off")
+                for text in ["<!--", "-->", "====", "///", "/**", "a - > b"]:
+                    names = shape(data, text)[0]
+                    if any(n.endswith(".liga") or n == "lig.spacer" for n in names):
+                        problems.append(f"{text} should stay plain, gives {names}")
+                notes.append(f"{len(CODE)} code ligatures, every advance 600")
+            line = f"{name}: " + "; ".join(notes)
+            if problems:
+                fail(line + "; " + "; ".join(problems))
+            else:
+                print("ok   " + line)
 
 
 PROOF_LINES = [

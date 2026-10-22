@@ -1,6 +1,6 @@
 #!/bin/bash
 # Validates the built fonts and emoji files with third-party tools: fc-scan and otfinfo on the host if present, then
-# fontTools, OTS and FreeType in a throwaway Docker image. Optional and not part of tools/check.sh; nothing is
+# fontTools, OTS, FreeType and HarfBuzz in a throwaway Docker image. Optional and not part of tools/check.sh; nothing is
 # installed on the host. Set PROOF_DIR to a directory to also get FreeType proof sheets of the outline faces and the
 # colour emoji.
 #
@@ -22,13 +22,13 @@ if command -v otfinfo >/dev/null; then
 fi
 
 if ! docker info >/dev/null 2>&1; then
-  echo "docker is not available: skipping fontTools, OTS and FreeType" >&2
+  echo "docker is not available: skipping fontTools, OTS, FreeType and HarfBuzz" >&2
   exit 0
 fi
 # A small image with pinned tools, built once and cached; the Dockerfile is here so nothing else is needed.
 docker build -q -t "$IMAGE" - >/dev/null <<'EOF'
 FROM python:3.12-slim
-RUN pip install --no-cache-dir fonttools==4.55.3 opentype-sanitizer==9.2.0 freetype-py==2.5.1
+RUN pip install --no-cache-dir fonttools==4.55.3 opentype-sanitizer==9.2.0 freetype-py==2.5.1 uharfbuzz==0.53.3
 EOF
 echo
 # PROOF_DIR=<dir> also writes FreeType proof sheets of the outline faces and the colour emoji there.

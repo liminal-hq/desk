@@ -4,7 +4,7 @@ Desk draws all of its text with four bitmap faces of its own (the decision is in
 
 The faces are original drawings in the spirit of the type the design boards used (Inter for the UI, Space Grotesk for titles); no other font's bitmaps were traced or transcribed.
 
-Beside the pixel faces there is a modern family of outline faces, Desk Sans, Desk Mono and Desk Serif, each Regular and Bold, for larger sizes and modern systems (see [Modern outline faces](#modern-outline-faces)). The pixel faces are the Desk's own text at its native sizes on DOS; the outline faces are for Notes and Paint text, documents, the web, Windows and Linux, and a later TrueType reader in the Desk.
+Beside the pixel faces there is a modern family of outline faces, Desk Sans, Desk Mono and Desk Serif, each Regular, Bold, Italic and Bold Italic, for larger sizes and modern systems (see [Modern outline faces](#modern-outline-faces)). The pixel faces are the Desk's own text at its native sizes on DOS; the outline faces are for Notes and Paint text, documents, the web, Windows and Linux, and a later TrueType reader in the Desk.
 
 The OpenType files of the pixel faces also carry the Desk pixel emoji as monochrome glyphs, and those of Desk Sans, Mono and Serif the vector emoji; the TrueType files carry none. See [`EMOJI.md`](EMOJI.md).
 
@@ -133,11 +133,13 @@ The specimen page (`bun build.ts --specimen <file>`) renders each face with its 
 
 | Family | Styles | For | Files |
 |---|---|---|---|
-| Desk Sans | Regular, Bold | UI and body text in the spirit of Inter; Bold leans a little towards Space Grotesk for titles | `desk-sans.otf`, `desk-sans.ttf`, `desk-sans-bold.otf`, `desk-sans-bold.ttf` |
-| Desk Mono | Regular, Bold | Code and terminals in the spirit of JetBrains Mono: one advance, a dotted zero, a tailed l, a slab i, a serifed I and 1 | `desk-mono.otf`, `desk-mono.ttf`, `desk-mono-bold.otf`, `desk-mono-bold.ttf` |
-| Desk Serif | Regular, Bold | Long reading (Notes, documents) in the spirit of Charter and Source Serif: sturdy, moderate contrast, bracketed slab serifs, open apertures | `desk-serif.otf`, `desk-serif.ttf`, `desk-serif-bold.otf`, `desk-serif-bold.ttf` |
+| Desk Sans | Regular, Bold, Italic, Bold Italic | UI and body text in the spirit of Inter; Bold leans a little towards Space Grotesk for titles | `desk-sans.otf`, `desk-sans-bold.otf`, `desk-sans-italic.otf`, `desk-sans-bold-italic.otf`, and a `.ttf` of each |
+| Desk Mono | Regular, Bold, Italic, Bold Italic | Code and terminals in the spirit of JetBrains Mono: one advance, a dotted zero, a tailed l, a slab i, a serifed I and 1, code ligatures | `desk-mono.otf`, `desk-mono-bold.otf`, `desk-mono-italic.otf`, `desk-mono-bold-italic.otf`, and a `.ttf` of each |
+| Desk Serif | Regular, Bold, Italic, Bold Italic | Long reading (Notes, documents) in the spirit of Charter and Source Serif: sturdy, moderate contrast, bracketed slab serifs, open apertures, a true italic | `desk-serif.otf`, `desk-serif-bold.otf`, `desk-serif-italic.otf`, `desk-serif-bold-italic.otf`, and a `.ttf` of each |
 
-They are original drawings: every glyph is built by the code in `fonts/src/modern/` from skeletons and parameters, and no outline of Inter, Space Grotesk, JetBrains Mono, Charter, Source Serif, Literata or any other font was traced, converted or copied. There is no 8 px outline face: unhinted outlines cannot draw a legible 8 px letter, and Desk Small stays the face for that size. There is no italic or oblique yet; a slanted style is a later option.
+They are original drawings: every glyph is built by the code in `fonts/src/modern/` from skeletons and parameters, and no outline of Inter, Space Grotesk, JetBrains Mono, Charter, Source Serif, Literata or any other font was traced, converted or copied. There is no 8 px outline face: unhinted outlines cannot draw a legible 8 px letter, and Desk Small stays the face for that size.
+
+**Italics.** Each family has an Italic and a Bold Italic with the upright's weights, spaced upright and then slanted about the middle of the x-height so the ink stays centred on its advance: Desk Sans at 9.5°, a little narrower and rounder; Desk Mono at 9° with a cursive f that drops into the descender, every advance still 600; Desk Serif at 12°, 10 % narrower, with a true italic lowercase (`fonts/src/modern/italics.ts`): single-storey a and g, a cursive f through the descender, exit strokes in place of foot serifs, pen entries in place of head serifs and ball terminals. Arrows and geometric shapes stay upright. The italic and bold bits of `OS/2.fsSelection` and `head.macStyle`, `post.italicAngle` and the `hhea` caret slope are set, and the four styles share one family name, so a program's Italic and Bold buttons find them.
 
 ### How they are built
 
@@ -159,11 +161,33 @@ They are original drawings: every glyph is built by the code in `fonts/src/moder
 | Stem / horizontal, Bold | 158 / 132 | 140 / 120 | 156 / 68 |
 | Advance | proportional; figures tabular | 600 for every glyph | proportional; figures tabular |
 
-Every face uses the same line: ascender 950, descender −250 and no line gap, so a line is 1.2 em, in `hhea`, `sTypo*` and `usWin*`. Round letters overshoot the baseline, x-height and cap height by 11 units. Figures are tabular by default in every face (one advance, ink centred) so columns of numbers line up. There are no text (old-style) figures: they would need an OpenType feature or private-use code points, and the files keep to the plain cmap, so the figures are lining. There is no kerning yet. In the proofs, pairs such as To, Ta, AV, LT and an f before a round letter set a little loose; a small format 0 `kern` table (which Windows 3.1 reads, unlike the later layout tables) is the next step if that matters in use.
+Every face uses the same line: ascender 950, descender −250 and no line gap, so a line is 1.2 em, in `hhea`, `sTypo*` and `usWin*`. Round letters overshoot the baseline, x-height and cap height by 11 units. Figures are tabular by default in every face (one advance, ink centred) so columns of numbers line up. Proportional and (in Desk Serif) old-style figures are optional features; see [Kerning, ligatures and features](#kerning-ligatures-and-features).
 
 **Spacing.** Side bearings come from the kind of each side in the skeleton: a straight side (n, H) gets the face's full bearing, a round side (o, C) about three quarters of it, a diagonal (v, A) a quarter, and an open side (the arm of c, r, T) a half. A test checks that the straight and round sides of each class agree, and that round sides sit closer than straight ones. Mono centres each glyph in its 600-unit cell.
 
-**The TrueType files** follow the same Windows 3.1 rules as the pixel faces (the tables, cmaps (3, 1) and (1, 0) with every code page 1252 character, Windows and Macintosh name records, `OS/2` version 1, `post` 2.0) with three differences: `head` does not set integer ppem, `lowestRecPPEM` is 8, and a `gasp` table asks for smoothing at every size (Windows 3.1 ignores it). Desk Mono also claims code page 437 and `post.isFixedPitch`.
+**The TrueType files** follow the same Windows 3.1 rules as the pixel faces (the tables, cmaps (3, 1) and (1, 0) with every code page 1252 character, Windows and Macintosh name records, `OS/2` version 1, `post` 2.0) with four differences: `head` does not set integer ppem, `lowestRecPPEM` is 8, a `gasp` table asks for smoothing at every size (Windows 3.1 ignores it), and they carry layout tables: the old `kern` table, which Windows 3.1 reads, and `GSUB` and `GPOS`, which it ignores. Desk Mono also claims code page 437 and `post.isFixedPitch`.
+
+### Kerning, ligatures and features
+
+Every feature is optional: the cmap maps each character to the same glyph as before, the ligatures and alternates have no code points, and a program that reads no layout tables sees the plain glyphs with their own advances. Browsers turn on `kern`, `liga` and `calt` by default; the rest are asked for with `font-feature-settings` or the `font-variant-*` properties. The tables are written by `fonts/src/modern/layout.ts` from glyph names; the glyphs and the lists are in `features.ts`, `kerning.ts` and `code.ts`.
+
+| Feature | Faces | What it does | Glyph names |
+|---|---|---|---|
+| `kern` | Sans, Serif (all styles) | Pair kerning, in GPOS for modern shapers and in a format 0 `kern` table in the `.ttf` files for Windows 3.1 and other old systems | — |
+| `liga` | Sans, Serif (all styles) | ff, fi, fl, ffi, ffl: the hood of the last f reaches over a dotless i and stands for its dot, or arches into the l; the first f of ff is shortened to clear the second and the crossbars run together; in Desk Serif the crossbar meets the i's head serif, and in the italic it runs on into the i | `f_f`, `f_i`, `f_l`, `f_f_i`, `f_f_l` |
+| `pnum`, `tnum` | Sans, Serif | Proportional figures; `tnum` returns to the tabular default | `one.pnum` … |
+| `onum`, `lnum` | Serif | Old-style figures (0 1 2 at the x-height, 6 8 rising, 3 4 5 7 9 hanging), tabular, or proportional with `pnum`; `lnum` returns to lining | `one.tosf`, `one.osf` … |
+| `frac` | Sans, Serif | 1/2 1/4 3/4 to ½ ¼ ¾, and 1/3 2/3 1/8 3/8 5/8 7/8 to fractions with no code point of their own | `onethird` … `seveneighths` |
+| `smcp`, `c2sc` | Serif | Small capitals for A to Z and the accented capitals of Latin-1, a little taller than the x-height with the text's weights | `a.sc`, `uni00E9.sc` … |
+| `dlig` | Serif | The historical ct and st, joined by a hairline arch | `c_t`, `s_t` |
+| `ss01` | Sans | Single-storey a (and à á â ã ä å), a tailed l, a slashed zero | `a.ss01`, `l.ss01`, `zero.ss01` |
+| `calt` | Mono | Code ligatures: `->` `=>` `<-` `<=` `>=` `!=` `==` `===` `!==` `::` `..` `...` `//` `/*` `*/` `&&` `\|\|` `\|>` `<\|` `>>` `<<` `<>` `++` `--` `~=` `=~` `<=>` | `hyphen_greater.liga` …, `lig.spacer` |
+
+**Kerning.** About 435 pairs a face, from a small table of classes (T, V, W, Y, A, L, P, F, round capitals, r, f, v, w, y, round lowercase, quotes and the period and comma on the left; round and straight lowercase, s, v w y, A, round capitals, T, V, W, Y, the period, comma and ellipsis and the closing quotes on the right). Accented letters are on the right side only. Each class pair's value is measured from the outlines of its key glyphs: the open space between them, counted to a depth of 400 units over the height they share, against the space between two straight stems, of which 45 % is taken out, at most 160 units. Each member pair then takes that value unless it would bring the two glyphs closer than about half a straight side bearing anywhere, with 20 units of vertical reach, in which case it takes less (so T before ö keeps clear of the dieresis), or a positive value where a pair already collides (f before a quote in the Serif Italic). Values are rounded to 5 units and pairs under 10 are dropped. Typical values in Desk Sans Regular: To −105, AV −80, Ty −110, Yo −90, r. −120, LT −120, P. −125, f before o −100. In Desk Serif Bold Italic, T and y meet at the drooping end of the T's bar and stay almost unkerned. The `kern` table and GPOS hold the same pairs; Desk Mono has neither.
+
+**Code ligatures.** Each ligature keeps the cells of the characters it stands for. As in other monospaced code faces, a chaining contextual substitution turns every character but the last into an empty 600-unit spacer and the last into the drawing, which reaches back over the spacers, so every glyph in Desk Mono still has the 600-unit advance and the caret steps through the characters one at a time. A sequence next to another operator character (`<!--`, `-->`, `====`, `/**`, `<<=`) is left as plain characters. To switch them off, use `font-variant-ligatures: no-contextual` or `font-feature-settings: "calt" 0` in CSS, or the editor's ligature setting.
+
+**Old systems.** Windows 3.1, 95 and NT 3.5x, OS/2 and older Macintosh programs read no `GSUB` or `GPOS`; they get the plain glyphs, and kerning only where the program reads the `kern` table. The `.ttf` files keep the structure the Windows 3.1 rules ask for: the structure tests and OTS pass with the new tables, and fontTools reads them. That has not been tried on those systems.
 
 ### Sizes and rendering
 
@@ -171,7 +195,7 @@ There is no hinting. In FreeType's grey rendering (as on Linux and in browsers) 
 
 ### Weakest glyphs
 
-From the proof review, the glyphs most in need of another pass are: & and @ (drawn with a round pen rather than built from bowls, so their weight is even where the letters have contrast), ß and ð (assembled from parts, with joins that read heavier than the letters), ‰ ¶ § (busy at text sizes), the fractions and superscripts (scaled figures, so their strokes are thinner than the text), Serif's c, s and r terminals (the spur is subtle and reads as a plain cut below 24 px), Serif Bold's a and e (small counters), and Mono's m, M and W (crowded in the 600-unit cell, as in every monospace).
+From the proof review, the glyphs most in need of another pass are: & and @ (drawn with a round pen rather than built from bowls, so their weight is even where the letters have contrast), ß and ð (assembled from parts, with joins that read heavier than the letters), ‰ ¶ § (busy at text sizes), the fractions and superscripts (scaled figures, so their strokes are thinner than the text), Serif's c, s and r terminals (the spur is subtle and reads as a plain cut below 24 px), Serif Bold's a and e (small counters), and Mono's m, M and W (crowded in the 600-unit cell, as in every monospace). Among the feature glyphs: the denominators of the fractions (8 and 3 clot at text sizes), the shortened descender hook of the second f in Desk Serif Italic's ff, ffi and ffl (it reads as a stub), the code ligatures `~=` and `=~` (a thin wave beside a bar), and Desk Serif's arch between a stem and its shoulder in n, m, h and r, which leaves a small step inside the counter that shows above about 100 px.
 
 
 ```bash
@@ -187,6 +211,8 @@ The generated files are committed so the Desk build and anyone using the fonts n
 
 The tests also check the TrueType structure (the required tables, tag order, alignment, checksums, `maxp`, `loca`, `glyf` and `hmtx` agreeing, no composites, the cmap formats with every 1252 character mapped, and the name records) and that each `.ttf` glyph has the same advance and area as the `.otf` one. For Round, they check that contours alternate correctly and keep their winding, never leave the inked pixels (sampled along every curve and supersampled inside the cell), lose no pixel centre, and keep between 80 and 100 % of the square ink.
 
+For the layout tables, `test/layout.test.ts` reads the built files back with a small shaper of its own (`test/shaper.ts`, single, ligature and chaining substitutions, pair kerning and the `kern` table), so the checks run without Docker: the `kern` table's header and order, the same pairs in GPOS and `kern`, values between −160 and +120, the pairs that must tighten and the ones that must not move, every ligature and feature substitution in both formats, the code ligatures with every advance at 600 and plain when switched off or next to another operator, and that no unencoded glyph is reached through the cmap. `test/specimen.test.ts` checks that the specimen page declares each outline family's four styles apart.
+
 For the outline faces, the tests check coverage, clean contours (closed, wound correctly, no crossings, no slivers, points at extrema), that every glyph stays within the line, tabular figures and the Mono advance, the spacing classes, that each glyph's advance and area agree between the `.otf` and `.ttf` files, and that the build is reproducible.
 
 The tests check that each face covers its character sets, that every glyph fills exactly its cell, that fixed faces keep one advance and proportional faces add the gap, that box-drawing arms reach the cell edges, that capitals, digits and lowercase sit on the right rows, that every glyph's traced outline encloses exactly its ink (both from the tracer and read back through the opentype.js parser), that the `.DFN` files decode to the same pixels, that builds are reproducible, and that `fonts/generated/` is current.
@@ -196,24 +222,28 @@ The tests check that each face covers its character sets, that every glyph fills
 `fonts/validate.sh` runs third-party checkers. It is optional and not part of `tools/check.sh`, because its first run builds a small Docker image, which takes about a minute. Nothing is installed on the host. It runs fc-scan and `otfinfo -i` on the host if they are present, then:
 
 ```bash
-docker build -q -t desk-fonts-validate:local - <<'DOCKERFILE'
+# The image is tagged desk-fonts-validate:<hash of its Dockerfile>, so checkouts with other tool lists keep their own.
+docker build -q -t desk-fonts-validate:<hash> - <<'DOCKERFILE'
 FROM python:3.12-slim
-RUN pip install --no-cache-dir fonttools==4.55.3 opentype-sanitizer==9.2.0 freetype-py==2.5.1
+RUN pip install --no-cache-dir fonttools==4.55.3 opentype-sanitizer==9.2.0 freetype-py==2.5.1 uharfbuzz==0.53.3
 DOCKERFILE
 docker run --rm --network none -v "$PWD/fonts/generated:/fonts:ro" -v "$PWD/fonts/validate.py:/validate.py:ro" \
-  desk-fonts-validate:local python3 /validate.py /fonts
+  desk-fonts-validate:<hash> python3 /validate.py /fonts
 # PROOF_DIR=<dir> fonts/validate.sh also mounts <dir> at /proof and writes the outline faces' proof sheets there
 ```
 
 `validate.py` has fontTools decompile and recompile every table of all 20 font files and check the TrueType requirements above (for the DOS variant: the (0, 3), (3, 0) and (1, 0) cmaps and no (3, 1), all 256 bytes reached through each, and the symbol character set declared), runs OTS (`ots-sanitize`, the sanitiser Chrome and Firefox use) on each, and has FreeType render every glyph of every Unicode file at the native size and twice it, in monochrome without and with hinting and in grey, comparing the pixels with the `.DFN` bitmaps. For Desk Fixed DOS it checks that FreeType's default charmap reaches ☺ ♥ ░ ╔ ═ α, then selects the symbol charmap and renders the box drawing, blocks and eight of the pictures at 16 px through `0xF000 + byte`, comparing them with the Unicode glyphs in `fixed.dfn`. Results on 2026-10-22: fontTools read all 20 files; OTS passed all 20 with no warnings; every Square glyph rendered exactly in every mode at 1× and 2× (Desk UI at 12 and 24 ppem), every Round glyph exactly in monochrome, with partly covered pixels at the corners in grey as intended, and the DOS variant matched in all four files. fc-scan lists the ten families with the right styles and spacing, and otfinfo shows the names and "Installable" permission.
 
-For the outline faces, fontTools and OTS check all twelve files as above, and FreeType renders every code page 1252 character of each face from the `.otf` and the `.ttf` at 48 px and compares the grey images; they differ by at most about 3 % of a glyph's ink, at the grey edges of the smallest marks (° ¨ ©), which the two rasteriser paths in FreeType anti-alias slightly differently.
+For the outline faces, fontTools and OTS check all 24 files as above, and FreeType renders every code page 1252 character of each face from the `.otf` and the `.ttf` at 48 px and compares the grey images; they differ by at most about 3 % of a glyph's ink, at the grey edges of the smallest marks (° ¨ ©), which the two rasteriser paths in FreeType anti-alias slightly differently.
+
+HarfBuzz (uharfbuzz 0.53.3) then shapes the outline faces' layout in both formats: in Desk Sans and Desk Serif, that To, Ta, AV, VA, Ty, Yo, r., LT, P., T. and f before o tighten by between 1 and 200 units and HH does not move, that fi, fl, ff, ffi and ffl become their ligatures under `liga` and stay apart without it, and that `frac`, `pnum`, `onum`, `smcp`, `c2sc`, `dlig` and `ss01` give the expected glyphs; in the `.ttf` files it also removes GPOS with fontTools and checks that the `kern` table alone gives the same To. In Desk Mono it checks every code ligature (spacers, then the drawing, every advance 600), that each stays plain with `calt` off, and that `<!--`, `-->`, `====`, `///` and `/**` stay plain. Results on 2026-10-22: all 44 font files read by fontTools and passed by OTS with no warnings (the outline `.ttf` files with their `kern`, `GPOS` and `GSUB` tables), every layout check passed in all 24 outline files, and the outline OTF and TTF renderings differ by at most 3.3 % of a glyph's ink.
 
 ## Not yet verified
 
 - No DOS code reads the `.DFN` files yet; only the build's decoder and the FreeType comparison in `validate.py` have read them.
 - The TrueType files have not been installed on real Windows 3.1, 95, NT 3.5x or OS/2 Warp. Trying them in an emulator needs licensed installation media for those systems, which this repository does not have, so the era support rests on the structure checks and on FreeType, which is a different rasteriser from Windows'.
 - The outline faces have been looked at in headless Chromium and in FreeType proof sheets on Linux only; Windows (GDI, DirectWrite and ClearType), macOS and Windows 3.1 have not rendered them.
+- The kerning and features have been checked with HarfBuzz and in headless Chromium only. Whether Windows 3.1 and 95-era programs apply the `kern` table, and how DirectWrite, Core Text, Word, LibreOffice and code editors treat the features and the code ligatures' caret, has not been tried.
 - The faces have been looked at only in headless Chromium, at 1×, 2× and 3×. They have not been seen in the Desk, in DOSBox, or on a real VGA monitor, where the 640 × 480 pixel aspect and the CRT will change how the thin strokes read.
 
 ## Licence

@@ -9,6 +9,7 @@ import { type Contour, outline, type Shape, toQuadratic, union } from '../../mod
 import type { MGlyph } from '../../modern/assemble';
 import { LINE } from '../../modern/assemble';
 import { buildModernOtf } from '../../modern/files';
+import type { Layout } from '../../modern/layout';
 import type { Style } from '../../modern/kit';
 import { VERSION, type Names } from '../../names';
 import { glyphName } from '../../otf';
@@ -167,9 +168,10 @@ export function modernEmojiGlyphs(s: Style, have: MGlyph[], set: VectorEmoji[] =
  * An outline face's OpenType file with the vector emoji: `buildModernOtf` with the emoji glyphs after the
  * face's own, then the cmap replaced by one with format 4 for the BMP and format 12 for every code point.
  */
-export function modernOtfWithEmoji(s: Style, glyphs: MGlyph[], set?: VectorEmoji[]): Uint8Array {
+export function modernOtfWithEmoji(s: Style, glyphs: MGlyph[], set?: VectorEmoji[], layout?: Layout): Uint8Array {
   const all = [...glyphs, ...modernEmojiGlyphs(s, glyphs, set)];
-  const otf = buildModernOtf(s, all);
-  const map = new Map(all.map((g, i) => [g.cp, i + 1]));
+  const otf = buildModernOtf(s, all, layout);
+  // Alternate and ligature glyphs have no code point (cp < 0) and stay out of the cmap.
+  const map = new Map(all.flatMap((g, i): [number, number][] => (g.cp >= 0 ? [[g.cp, i + 1]] : [])));
   return replaceTables(otf, { cmap: unicodeCmap(map) });
 }

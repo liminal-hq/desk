@@ -20,6 +20,7 @@ import { FACES } from './src/faces';
 import { namesOf } from './src/names';
 import { buildOtf } from './src/otf';
 import { assembleModern } from './src/modern/assemble';
+import { layoutOf } from './src/modern/features';
 import { buildModernTtf } from './src/modern/files';
 import { STYLES } from './src/modern/kit';
 import { buildTtf } from './src/ttf';
@@ -35,10 +36,11 @@ export function buildAll(): { name: string; data: Uint8Array }[] {
 export function buildModern(): { name: string; data: Uint8Array }[] {
   return STYLES.flatMap((s) => {
     const glyphs = assembleModern(s);
+    const layout = layoutOf(s, glyphs);
     return [
       // The OpenType files also carry the monochrome vector emoji (src/emoji/vector/font.ts); the TrueType files do not.
-      { name: `${s.file}.otf`, data: modernOtfWithEmoji(s, glyphs) },
-      { name: `${s.file}.ttf`, data: buildModernTtf(s, glyphs) },
+      { name: `${s.file}.otf`, data: modernOtfWithEmoji(s, glyphs, undefined, layout) },
+      { name: `${s.file}.ttf`, data: buildModernTtf(s, glyphs, layout) },
     ];
   });
 }

@@ -8,14 +8,19 @@ import { boxCell, GENERATED, generated } from '../boxes';
 import { ACCENTS } from '../face';
 import { type Contour, outline, type P, type Shape, transform, union, rect } from './geom';
 import { Kit, type Style } from './kit';
+import { MONO_ITALIC, SERIF_ITALIC } from './italics';
 import { LETTERS, type Draw, type Side } from './letters';
 import { MARKS, SPACING_MARKS } from './marks';
+import { extraGlyphs } from './features';
 import { SYMBOLS } from './symbols';
 
 /** One glyph of an outline face, in font units. */
 export interface MGlyph {
   ch: string;
+  /** The code point, or -1 for a glyph reached only through a layout feature. */
   cp: number;
+  /** The glyph name of an unencoded glyph (a ligature or an alternate). */
+  name?: string;
   adv: number;
   contours: Contour[];
   /** Ink box after spacing, or null for a blank glyph. */
@@ -28,13 +33,13 @@ const MARK_TOP = 935;
 /** Line metrics shared by every outline face: the em is 1000 units and a line is 1200. */
 export const LINE = { ascender: 950, descender: -250 };
 
-const sideBearing = (s: Style, side: Side): number => {
+export const sideBearing = (s: Style, side: Side): number => {
   if (typeof side === 'number') return side;
   const k = { s: 1, r: 0.74, d: 0.24, o: 0.5 }[side];
   return Math.round(s.sb * k);
 };
 
-function shapeBox(sh: Shape): { x0: number; y0: number; x1: number; y1: number } | null {
+export function shapeBox(sh: Shape): { x0: number; y0: number; x1: number; y1: number } | null {
   const pts = sh.outer.flat();
   if (!pts.length) return null;
   return {
@@ -46,28 +51,34 @@ function shapeBox(sh: Shape): { x0: number; y0: number; x1: number; y1: number }
 }
 
 /** A drawn glyph before spacing: its shape and its side kinds. */
-interface Raw {
+export interface Raw {
   shape: Shape;
   sides: [Side, Side];
   /** The drawn body width, for marks that centre on it. */
   w: number;
   /** A fixed advance with the ink centred (tabular figures). */
   fixed?: number;
+  /** Already placed: the shape is in final position and this is its advance (ligatures). */
+  preset?: number;
 }
 
-function draw(s: Style, fn: Draw): Raw {
+export function draw(s: Style, fn: Draw): Raw {
   const k = new Kit(s);
   const d = fn(k);
   return { shape: k.shape(), sides: d.sides, w: d.w, fixed: d.fixed };
 }
 
 /** Places a raw glyph: side bearings from its side kinds, or centred in the Mono cell. */
-function place(s: Style, ch: string, raw: Raw): MGlyph {
+export function place(s: Style, ch: string, raw: Raw, name?: string): MGlyph {
   const box = shapeBox(raw.shape);
-  const cp = ch.codePointAt(0) as number;
+  const cp = name ? -1 : (ch.codePointAt(0) as number);
+  if (raw.preset !== undefined) {
+    const sh = s.italic && !UPRIGHT_IN_ITALIC.has(ch) ? slant(raw.shape, s) : raw.shape;
+    return { ch, cp, name, adv: raw.preset, contours: box ? outline(sh) : [], box: box ? shapeBox(sh) : null };
+  }
   if (!box) {
     const adv = s.advance ?? Math.round(sideBearing(s, raw.sides[0]) + raw.w + sideBearing(s, raw.sides[1]));
-    return { ch, cp, adv, contours: [], box: null };
+    return { ch, cp, name, adv, contours: [], box: null };
   }
   let dx: number;
   let adv: number;
@@ -79,11 +90,23 @@ function place(s: Style, ch: string, raw: Raw): MGlyph {
     adv = Math.round(box.x1 + dx + sideBearing(s, raw.sides[1]));
   }
   const moved = transform(raw.shape, (p: P) => ({ x: p.x + dx, y: p.y }));
-  return { ch, cp, adv, contours: outline(moved), box: { x0: box.x0 + dx, y0: box.y0, x1: box.x1 + dx, y1: box.y1 } };
+  // An italic slants after spacing, about the middle of the x-height, so the ink stays centred on its advance.
+  const final = s.italic && !UPRIGHT_IN_ITALIC.has(ch) ? slant(moved, s) : moved;
+  return { ch, cp, name, adv, contours: outline(final), box: shapeBox(final) };
+}
+
+/** Symbols that stay upright in an italic: arrows and geometric shapes. */
+const UPRIGHT_IN_ITALIC = new Set(Array.from('←↑→↓↔↕►◄▲▼●○■□'));
+
+/** Slants a shape by the style's angle about the middle of its x-height. */
+export function slant(sh: Shape, s: Style): Shape {
+  const t = Math.tan(((s.slant ?? 0) * Math.PI) / 180);
+  const y0 = s.xh / 2;
+  return transform(sh, (p) => ({ x: p.x + (p.y - y0) * t, y: p.y }));
 }
 
 /** Composes an accented letter: the base with a mark centred over it (or the cedilla under it). */
-function compose(s: Style, base: Raw, mark: string, upper: boolean, isI: boolean): Raw {
+export function compose(s: Style, base: Raw, mark: string, upper: boolean, isI: boolean): Raw {
   const box = shapeBox(base.shape) as NonNullable<ReturnType<typeof shapeBox>>;
   const k = new Kit(s);
   const m = MARKS[mark] as (k: Kit, upper: boolean) => Shape;
@@ -110,7 +133,8 @@ function compose(s: Style, base: Raw, mark: string, upper: boolean, isI: boolean
 /** Every glyph of an outline face, sorted by code point. */
 export function assembleModern(s: Style): MGlyph[] {
   const raws = new Map<string, Raw>();
-  for (const [ch, fn] of Object.entries({ ...LETTERS, ...SYMBOLS })) raws.set(ch, draw(s, fn));
+  const italicForms = !s.italic ? {} : s.kind === 'serif' ? SERIF_ITALIC : s.kind === 'mono' ? MONO_ITALIC : {};
+  for (const [ch, fn] of Object.entries({ ...LETTERS, ...SYMBOLS, ...italicForms })) raws.set(ch, draw(s, fn));
   // Accented letters, Š š Ž ž included, composed from a base and a mark.
   for (const [ch, base, mark] of ACCENTS) {
     const b = raws.get(base);
@@ -149,5 +173,7 @@ export function assembleModern(s: Style): MGlyph[] {
     }
   }
   glyphs.sort((a, b) => a.cp - b.cp);
+  // Glyphs reached only through layout features: ligatures and alternates, after the encoded ones.
+  for (const [name, x] of extraGlyphs(s, raws)) glyphs.push(place(s, x.ch, x.raw, name));
   return glyphs;
 }

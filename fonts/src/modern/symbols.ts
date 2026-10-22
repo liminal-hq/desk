@@ -96,7 +96,7 @@ function smallFigure(k: Kit, fig: string, x: number, y: number, scale = 0.56): v
   k.add(union(...sh.outer.map((p) => p.map((q) => ({ x: x + q.x * scale, y: y + q.y * scale }))), ...sh.holes.map((p) => p.map((q) => ({ x: x + q.x * scale, y: y + q.y * scale })))));
 }
 
-const fraction = (k: Kit, num: string, den: string): ReturnType<Draw> => {
+export const fraction = (k: Kit, num: string, den: string): ReturnType<Draw> => {
   const w = k.mono ? 520 : 760;
   const sc = 0.46;
   smallFigure(k, num, 0, k.cap * 0.5, sc);
@@ -319,8 +319,10 @@ const S: Record<string, Draw> = {
     const w = k.mono ? 280 : 260;
     const t = k.V * 0.86;
     const c = (k.asc + k.desc) / 2 + 40;
+    // The foot stays inside the line's descender however heavy the stroke.
+    const foot = Math.max(k.desc + 40, -250 + t / 2 + 6);
     k.path(smooth([{ x: w, y: k.asc + 40 }, { x: w * 0.5, y: k.asc }, { x: w * 0.45, y: c + 160 }, { x: w * 0.35, y: c + 30 }, { x: 0, y: c }]), t);
-    k.path(smooth([{ x: 0, y: c }, { x: w * 0.35, y: c - 30 }, { x: w * 0.45, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: w, y: k.desc + 40 }]), t);
+    k.path(smooth([{ x: 0, y: c }, { x: w * 0.35, y: c - 30 }, { x: w * 0.45, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: w, y: foot }]), t);
     return { w, sides: ['o', 'o'] };
   },
   '|': (k) => {
@@ -331,8 +333,10 @@ const S: Record<string, Draw> = {
     const w = k.mono ? 280 : 260;
     const t = k.V * 0.86;
     const c = (k.asc + k.desc) / 2 + 40;
+    // The foot stays inside the line's descender however heavy the stroke.
+    const foot = Math.max(k.desc + 40, -250 + t / 2 + 6);
     k.path(smooth([{ x: 0, y: k.asc + 40 }, { x: w * 0.5, y: k.asc }, { x: w * 0.55, y: c + 160 }, { x: w * 0.65, y: c + 30 }, { x: w, y: c }]), t);
-    k.path(smooth([{ x: w, y: c }, { x: w * 0.65, y: c - 30 }, { x: w * 0.55, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: 0, y: k.desc + 40 }]), t);
+    k.path(smooth([{ x: w, y: c }, { x: w * 0.65, y: c - 30 }, { x: w * 0.55, y: c - 160 }, { x: w * 0.5, y: k.desc + 80 }, { x: 0, y: foot }]), t);
     return { w, sides: ['o', 'o'] };
   },
   '~': (k) => {
@@ -547,6 +551,8 @@ const S: Record<string, Draw> = {
     return d;
   },
   ß: (k) => {
+    // Sans Bold and Serif take the open form; Sans and Mono Regular keep the first drawing.
+    if ((k.bold && k.s.kind === 'sans') || k.serif) return sansBoldSharpS(k);
     const w = k.w(520, 440);
     const t = k.V;
     const ry = 170;
@@ -729,6 +735,21 @@ const S: Record<string, Draw> = {
     return { w, sides: ['o', 'o'] };
   },
 };
+
+/** Sans Bold's ß: wider than the Regular's, with a round top and a lower bowl that hangs from the right side. */
+function sansBoldSharpS(k: Kit): ReturnType<Draw> {
+  const w = k.w(540, 440);
+  const t = k.V;
+  const top = k.asc + k.os;
+  const xr = Math.round(w * 0.8);
+  const ry = Math.round(xr / 2);
+  const mid = Math.round(k.asc * 0.6);
+  k.stem(0, 0, top - ry + 20, { top: 'none' });
+  k.arc(0, xr, top - 2 * ry, top, 0, 180, t, k.H);
+  k.add(rect(xr - t, mid - k.H, xr, top - ry + 20));
+  k.arc(w * 0.26, w, -k.os, mid + k.H * 0.5, -125, 90, t, k.H);
+  return { w, sides: ['s', 'r'] };
+}
 
 function smooth(pts: P[]): P[] {
   // Catmull-Rom through the points, for pen paths.

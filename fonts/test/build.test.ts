@@ -107,8 +107,8 @@ describe('generated/', () => {
         throw new Error(`generated/${f.name} is stale`);
       }
     }
-    // A whole build, the emoji included, takes several seconds.
-  }, 30_000);
+    // A whole build, the emoji included, takes several seconds, more on a slow runner.
+  }, 60_000);
 
   test('the licence sits beside the fonts', () => {
     const ofl = readFileSync(join(import.meta.dir, '..', 'generated', 'OFL.txt'), 'utf8');

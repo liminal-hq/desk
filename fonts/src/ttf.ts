@@ -66,12 +66,12 @@ export function checksum(data: Uint8Array, from = 0, length = data.length): numb
  * Assembles an sfnt: the table directory in tag order, each table 4-byte aligned with its checksum,
  * and `head.checkSumAdjustment` set over the whole file.
  */
-export function sfnt(tables: Record<string, Uint8Array>): Uint8Array {
+export function sfnt(tables: Record<string, Uint8Array>, version = 0x00010000): Uint8Array {
   const tags = Object.keys(tables).sort();
   const n = tags.length;
   let pow = 1;
   while (pow * 2 <= n) pow *= 2;
-  const dir = new Buf().u32(0x00010000).u16(n).u16(pow * 16).u16(Math.log2(pow)).u16(n * 16 - pow * 16);
+  const dir = new Buf().u32(version).u16(n).u16(pow * 16).u16(Math.log2(pow)).u16(n * 16 - pow * 16);
   let offset = 12 + 16 * n;
   const body = new Buf();
   for (const tag of tags) {
@@ -106,6 +106,8 @@ export interface TtfSpec {
   /** Integer ppem (head flags bit 3): set for pixel faces, whose outlines need whole pixels. */
   integerPpem: boolean;
   bold: boolean;
+  /** Italic angle in degrees, positive leaning right; 0 for an upright face. */
+  italicAngle?: number;
   fixed: boolean;
   /** The symbol cmap of Desk Fixed DOS. */
   symbol: boolean;
@@ -318,6 +320,8 @@ export function buildTtf(face: FaceDef, glyphs: Glyph[], style: Style = 'square'
 /** Writes a TrueType file from a spec. */
 export function writeTtf(spec: TtfSpec): Uint8Array {
   const { names, upm, ascender, descender, lineGap, bold, fixed } = spec;
+  const angle = spec.italicAngle ?? 0;
+  const italic = angle !== 0;
   const dos = spec.symbol;
   const list = spec.glyphs;
   const glyf = new Buf();
@@ -373,7 +377,7 @@ export function writeTtf(spec: TtfSpec): Uint8Array {
     .u32(0).u32(TIMESTAMP + FONT_EPOCH)
     .u32(0).u32(TIMESTAMP + FONT_EPOCH)
     .i16(xMin).i16(yMin).i16(xMax).i16(yMax)
-    .u16(bold ? 1 : 0)
+    .u16((bold ? 1 : 0) | (italic ? 2 : 0))
     .u16(spec.ppem)
     .i16(2)
     .i16(1) // long loca
@@ -384,7 +388,8 @@ export function writeTtf(spec: TtfSpec): Uint8Array {
     .i16(ascender).i16(descender).i16(lineGap)
     .u16(Math.max(...advances))
     .i16(minLsb).i16(minRsb).i16(maxExtent)
-    .i16(1).i16(0).i16(0)
+    // The caret leans with an italic: rise over run.
+    .i16(italic ? 1000 : 1).i16(italic ? Math.round(1000 * Math.tan((angle * Math.PI) / 180)) : 0).i16(0)
     .i16(0).i16(0).i16(0).i16(0)
     .i16(0)
     .u16(list.length)
@@ -412,7 +417,8 @@ export function writeTtf(spec: TtfSpec): Uint8Array {
     .raw([2, 11, bold ? 8 : 5, fixed ? 9 : 3, 0, 0, 0, 0, 0, 0])
     .u32(r1).u32(r2).u32(0).u32(0)
     .raw(Array.from('LMHQ', (c) => c.charCodeAt(0)))
-    .u16(bold ? 0x20 : 0x40)
+    // fsSelection: italic (bit 0), bold (bit 5), or regular (bit 6) when neither.
+    .u16((italic ? 0x01 : 0) | (bold ? 0x20 : 0) | (!italic && !bold ? 0x40 : 0))
     .u16(Math.min(...cps))
     .u16(Math.min(0xffff, Math.max(...cps)))
     .i16(ascender).i16(descender).i16(lineGap)
@@ -424,7 +430,7 @@ export function writeTtf(spec: TtfSpec): Uint8Array {
     .done();
   const post = new Buf()
     .u32(0x00020000)
-    .u32(0)
+    .u32(Math.round(-angle * 65536) >>> 0)
     .i16(spec.lines.underPos).i16(spec.lines.underSize)
     .u32(fixed ? 1 : 0)
     .u32(0).u32(0).u32(0).u32(0)

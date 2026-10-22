@@ -287,16 +287,20 @@
   }
 
   // ---- the type tester ----
-  const tt = { text: $('#tt-text'), face: $('#tt-face'), size: $('#tt-size'), out: $('#tt-out') };
+  const tt = { text: $('#tt-text'), face: $('#tt-face'), size: $('#tt-size'), italic: $('#tt-italic'), out: $('#tt-out') };
   if (tt.out) {
+    const feats = [...document.querySelectorAll('[data-feature]')];
     const show = () => {
       const [family, weight] = tt.face.value.split('|');
       tt.out.style.fontFamily = `'${family}'`;
       tt.out.style.fontWeight = weight;
+      tt.out.style.fontStyle = tt.italic && tt.italic.checked ? 'italic' : 'normal';
       tt.out.style.fontSize = `${tt.size.value}px`;
+      // Every switch is stated, so turning off kern, liga or calt overrides the browser's defaults.
+      tt.out.style.fontFeatureSettings = feats.map((el) => `"${el.dataset.feature}" ${el.checked ? 1 : 0}`).join(', ');
       tt.out.textContent = tt.text.value || ' ';
     };
-    for (const el of [tt.text, tt.face, tt.size]) el.addEventListener('input', show);
+    for (const el of [tt.text, tt.face, tt.size, tt.italic, ...feats]) if (el) el.addEventListener('input', show);
     show();
   }
 
