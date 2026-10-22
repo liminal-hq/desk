@@ -22,11 +22,11 @@
 
 ## Project Status
 
-Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is a graphical shell for MS-DOS: windows, files and small apps on a 486, with any DOS program run full-screen and the Desk resuming afterwards. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: there is no code yet, and the documents in `docs/` are targets, not measurements.
+Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is an operating system, written in Rust, for old hardware: a calm graphical system for 486-class PCs, with windows, files and small apps. It is built on two tracks in parallel (decided 2026-10-22; see `docs/DIRECTION.md`): a **hosted track**, Desk running on top of DOS (DJGPP, CWSDPMI, DOSBox), which is what the repository has built so far, and a **native track**, a bootable Rust kernel tested in QEMU, 86Box and Bochs. Both share an OS-independent core behind a small hardware abstraction layer (HAL). DOS programs on the native OS are planned to run by bundling FreeDOS. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: there is a toolchain skeleton and fonts and emoji work, nothing boots yet, no native code exists, and the documents in `docs/` are targets, not measurements.
 
 ## Source of Truth
 
-- `docs/SPEC.md` is the working design; `docs/SDK.md`, `docs/FORMATS.md`, `docs/HANDOFF.md`, `docs/PALETTE.md` and `docs/HIG.md` hold the detail, and `docs/OPEN-QUESTIONS.md` says what is decided and what is open.
+- `docs/DIRECTION.md` is the direction: the two tracks, the shared core, the native milestones and the open questions of the native track. `docs/SPEC.md` is the detailed spec of the hosted track and the OS-independent parts until a native spec exists; `docs/SDK.md`, `docs/FORMATS.md`, `docs/HANDOFF.md`, `docs/PALETTE.md` and `docs/HIG.md` hold the detail, and `docs/OPEN-QUESTIONS.md` says what is decided and what is open.
 - The documents came from a design brainstorm written without access to code, so they may be wrong. Once code exists, the code is the source of truth: if code and docs disagree, resolve it deliberately by changing the code to match, or by updating the document in the same branch with the reasoning.
 - A spike ends with a written result in `docs/` (what worked, what did not, what it changes) so the design follows what was learned.
 - `design/` is reference only: boards and prototypes that are not built, tested or licence-headered. Do not port or mirror its code.
@@ -125,7 +125,7 @@ Add labels to every PR when it is created and keep them accurate as scope change
 
 ## Local Tooling
 
-The stack will be **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs. None of that is installed or scripted yet: the toolchain scripts are written, for this project, with the first spike that needs them. Do not install system packages to get a build working without asking.
+The stack will be **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **QEMU** (`-cpu 486`), 86Box and Bochs. None of that is installed or scripted yet: the toolchain scripts are written, for this project, with the first spike that needs them. Do not install system packages to get a build working without asking.
 
 ```bash
 tools/check.sh                           # everything the CI runs
@@ -140,8 +140,9 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 
 - **Rust (`core/`, `sdk/`):** `no_std` with `alloc`; no floating-point maths from `std`; no `unsafe` without a one-line justification of what makes it sound. Only integers, pointers and lengths cross the Rust and C boundary, never structs passed by value.
 - **C (`c/`, `launcher/`):** C99 for DJGPP, one concern per file, `volatile` for anything an interrupt handler touches, no allocation in an interrupt handler.
-- **DOS limits:** file names are 8.3; every hooked interrupt vector (IRQ 0, IRQ 1, the mouse callback) is restored on exit and before a handoff; the screen goes back to text mode before a handoff.
+- **DOS limits (hosted track):** file names are 8.3; every hooked interrupt vector (IRQ 0, IRQ 1, the mouse callback) is restored on exit and before a handoff; the screen goes back to text mode before a handoff.
 - **Rendering:** the Desk owns the palette. Fades and dims go through the DAC, never through the frame buffer; per-pixel work stays free of floating point.
+- **The HAL:** the OS-independent core must not call DOS or DJGPP APIs directly. It reaches the machine only through the hardware abstraction layer, and each track implements that layer. DOS, BIOS and DJGPP calls belong to the hosted track's code (`c/`, `launcher/`).
 - No speculative scaffolding: a directory, crate or abstraction arrives with the code that needs it.
 
 ## Testing
@@ -159,11 +160,11 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 
 ## Repository Layout
 
-- `docs/` — the working design (spec, SDK, formats, handoff, palette, app guidelines, open questions, naming)
+- `docs/` — the working design (direction, spec, SDK, formats, handoff, palette, app guidelines, open questions, naming)
 - `design/` — boards and prototypes from the design brainstorm, reference only
-- `core/` — the shell in Rust (`no_std`)
-- `c/` — the hardware layer in C for DJGPP
-- `launcher/` — `DESK.COM`, the real-mode launcher
+- `core/` — the OS-independent shell in Rust (`no_std`)
+- `c/` — the hosted track's hardware layer in C for DJGPP
+- `launcher/` — `DESK.COM`, the hosted track's real-mode launcher
 - `sdk/` — the app interface: the C header and a Rust wrapper
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
@@ -171,7 +172,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
+Directories for the native track (kernel, boot, native HAL), apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
 
 ## Licence and Copyright
 
