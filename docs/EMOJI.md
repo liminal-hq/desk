@@ -1,6 +1,6 @@
 # Emoji
 
-Desk has its own emoji: 396 original pictures at their real Unicode code points, drawn as pixel art in the 16-colour Desk set ([`PALETTE.md`](PALETTE.md)). They come as monochrome glyphs in the OpenType files of the pixel faces, as a colour font, Desk Emoji Pixel, for modern systems, and as `.DEM` files ([`FORMATS.md`](FORMATS.md#dem-colour-emoji)) for the Desk on DOS. Everything is built from the same letter grids in `fonts/src/emoji/pixel/` by the font build ([`FONTS.md`](FONTS.md)), so the forms cannot drift apart.
+Desk has its own emoji in two styles. The **pixel** emoji are 396 original pictures at their real Unicode code points, drawn as pixel art in the 16-colour Desk set ([`PALETTE.md`](PALETTE.md)). They come as monochrome glyphs in the OpenType files of the pixel faces, as a colour font, Desk Emoji Pixel, for modern systems, and as `.DEM` files ([`FORMATS.md`](FORMATS.md#dem-colour-emoji)) for the Desk on DOS, all built from the same letter grids in `fonts/src/emoji/pixel/`. The **vector** emoji are 153 of the same set drawn as flat geometric shapes for use beside Desk Sans, Mono and Serif: a colour font, Desk Emoji, and monochrome glyphs in the outline faces' OpenType files (see [Vector emoji](#vector-emoji)). The font build ([`FONTS.md`](FONTS.md)) writes everything, so the forms cannot drift apart.
 
 ## The set
 
@@ -89,17 +89,46 @@ Each drawing also gives a monochrome glyph for the Desk faces, the colour font's
 | `fonts/generated/emoji/desk-emoji-pixel.ttf` and `.otf` | Desk Emoji Pixel: the 16 × 16 drawings in colour (COLR version 0 and CPAL), with the monochrome glyph as the base glyph | Colour emoji beside any font on modern systems |
 | `fonts/generated/emoji/emoji16.dem`, `emoji12.dem`, `emoji8.dem` | Every drawing of that size, colour layers and mono ([`FORMATS.md`](FORMATS.md#dem-colour-emoji)) | The Desk on DOS |
 | `fonts/generated/emoji/pixel-16.png`, `pixel-12.png`, `pixel-8.png` | Contact sheets: each emoji on dark, on light and in mono | Review |
+| `fonts/generated/desk-sans.otf`, `desk-mono.otf`, `desk-serif.otf` and their Bold forms | The outline faces with the 153 vector emoji as monochrome glyphs; Desk Mono's are two cells (1200 units) wide | Text in Desk Sans, Mono and Serif |
+| `fonts/generated/emoji/desk-emoji.ttf` and `.otf` | Desk Emoji: the vector emoji in colour (COLR version 0 and CPAL), with the monochrome glyph as the base glyph | Colour emoji beside the outline faces |
 
 In each face, the face's own drawing wins where it already has one: the folder and floppy disk in every face, and the code page 437 pictures (☺ ☻ ♥ ♦ ♣ ♠ ♪ ♫ ☼ and the arrows) in Desk Fixed, keep the glyphs drawn to sit in text.
 
 ### Which file to install
 
-- **Windows 3.1, 95, NT 3.5x and OS/2 Warp:** the `.ttf` faces, which carry no emoji. 322 emoji are beyond the Basic Multilingual Plane and need a format 12 cmap, which those systems do not read, and adding the rest would change files whose behaviour on those systems is described in [`FONTS.md`](FONTS.md); the era TrueType files are byte-for-byte what they were before the emoji. Those systems have no colour fonts either.
-- **Windows 10 and 11, Linux, macOS:** install the `.otf` faces for emoji in Desk text (monochrome, in the face's own size and weight), and Desk Emoji Pixel for colour. For colour, put Desk Emoji Pixel before the text face in a font list (`font-family: "Desk Emoji Pixel", "Desk UI"`), or let the system's fallback find it; the text faces' monochrome emoji win wherever the text face comes first.
+- **Windows 3.1, 95, NT 3.5x and OS/2 Warp:** the `.ttf` faces, pixel and outline, which carry no emoji. 322 emoji are beyond the Basic Multilingual Plane and need a format 12 cmap, which those systems do not read, and adding the rest would change files whose behaviour on those systems is described in [`FONTS.md`](FONTS.md); the era TrueType files are byte-for-byte what they were before the emoji. Those systems have no colour fonts either.
+- **Windows 10 and 11, Linux, macOS:** install the `.otf` faces for emoji in Desk text (monochrome, in the face's own size and weight), and Desk Emoji Pixel (beside the pixel faces) or Desk Emoji (beside Desk Sans, Mono and Serif) for colour. For colour, put Desk Emoji Pixel before the text face in a font list (`font-family: "Desk Emoji Pixel", "Desk UI"`), or let the system's fallback find it; the text faces' monochrome emoji win wherever the text face comes first.
 - **Browsers:** `@font-face` with `desk-emoji-pixel.ttf` (or `.otf`) and list it first for colour emoji; the pixel faces' `.otf` files give monochrome emoji.
 - **DOS:** the `.DEM` files; the Desk reads the size that matches the text (16 for Desk Fixed, 12 for Desk UI and Title, 8 for Desk Small).
 
 Desk Emoji Pixel is exact at 16 px and whole multiples (12, 24, 36 pt at 96 dpi), like the pixel faces. Its em is the 16-pixel grid (units per em 1600), the grid's top row starts 14 pixels above the baseline and its bottom row ends 2 below, and the line is 15 pixels up and 4 down (1.2 em) with no line gap. `CPAL` holds one palette, the 16 Desk colours slot for slot, so a layer's palette index is its slot. Each emoji's layers are traced from its grid, back to front: black first, then the other colours from the largest area to the smallest, each layer covering its own pixels and every pixel of the colours in front of it, so no two layer edges have to meet exactly and anti-aliasing shows no seams. The zero-width joiner and the variation selectors U+FE0E and U+FE0F map to an empty glyph, so text that carries them shows no missing-glyph box. The `name` table carries the SIL Open Font License 1.1, as the faces do.
+
+## Vector emoji
+
+The vector emoji are drawn in code (`fonts/src/emoji/vector/art.ts`) with a small kit of filled shapes (`kit.ts`): discs and ellipses, boxes with round corners, polygons, round-ended strokes and arcs, stars, hearts and drops, combined with the outline faces' geometry (`fonts/src/modern/geom.ts`, a union and difference by clipper-lib, then fitted to cubic curves). Each drawing is a list of layers, back to front, each one shape in one colour, in a 1000-unit box whose top is 850 units above the baseline, so an emoji spans from the descender to above the capitals as it does in most emoji fonts. Light comes from the top left as in the pixel set: a face, a heart or a disc has a darker crescent on its lower right, and white objects have a light grey edge so they show on a light page.
+
+The palette is defined once (`VCOLOURS` in `kit.ts`): the brand colours of the 16-colour set (amber, rose, purple, cyan, green, blue, brown), each with a lighter or darker tint, and the greys of the set; 22 colours in all, the CPAL table of Desk Emoji. Like the pixel set, it has no yellow distinct from amber.
+
+**Monochrome glyphs** follow the pixel rule, by layer: a layer in a dark or saturated colour is ink; a layer in a light colour (white, light grey, amber, cyan and their light tints) is paper with an ink edge, so a face becomes its outline, eyes and mouth and a page its outline and lines. A drawing can mark a layer as a clean hole (the keys of a keyboard, the check on ✅, the glyph on a media button) or leave a shading layer out. The edge is 64 units in Desk Emoji's base glyphs and in the Regular outline faces, and 120 in the Bold ones, so the emoji in Desk Sans Bold are heavier, like its letters.
+
+**What is drawn:** 153 of the 396 emoji, chosen for value and for what simple geometry can draw well. All of Lt. Fizz's 24 and every shell picture are in it, with the commonest faces and hearts and most of the symbols:
+
+| Category | Vector | Of |
+|---|---|---|
+| Symbols and signs | 53 | 61 |
+| Faces | 26 | 54 |
+| Computer and media | 25 | 38 |
+| Nature and weather | 18 | 33 |
+| Hearts and feelings | 14 | 20 |
+| Office and paper | 8 | 32 |
+| Activities and objects | 5 | 38 |
+| Food and drink | 2 | 34 |
+| Hands and body, Travel and places | 1 each | 22, 32 |
+| Animals | 0 | 32 |
+
+**What is left out, and why:** animals, food, hands, vehicles, buildings and most objects. Their identity is in organic silhouettes (a cat's head, a hand's fingers, a car's body) that circles and boxes turn into stiff, generic shapes; drawn this way they would read worse than the pixel versions, which already cover them. Where a vector emoji is missing, a font list that names Desk Emoji Pixel after Desk Emoji fills the gap with the pixel drawing. The faces that need hands or props (🤔 🤗 🤠 🥳) and the busy symbols (☯ ♻ ☮) are also out.
+
+**How good it is.** Geometric emoji are clean and consistent and read well from about 20 px up; at text sizes below 16 px the eyes and mouths of the faces close up, and in monochrome the thin details (📅's grid, ⌨'s keys) blur. They are flat and plain next to the hand-drawn emoji of the big platforms: a heart, a star, a check or a face is as good as anyone's, a thumbs up or a camera is recognisable but stiff.
 
 ## What has been checked
 
@@ -108,9 +137,10 @@ Desk Emoji Pixel is exact at 16 px and whole multiples (12, 24, 36 pt at 96 dpi)
 | `bun test` (`fonts/test/emoji-pixel.test.ts`, `emoji-files.test.ts`) | The manifest (unique code points, the `Emoji` property, no sequences, Fizz's and the shell's pictures, the tiers), the palette against `PALETTE.md`, grid sizes, margins and tiers, the mono rule, the derivation, the cmaps (format 4 and 12 on the right platforms, every emoji reached, the faces' own glyphs unchanged, no emoji in the `.ttf` files), COLR and CPAL read back from the bytes, the `.DEM` files read by a decoder written in the test, and reproducible builds |
 | fontTools 4.55.3 and OTS 9.2.0, in Docker (`fonts/validate.sh`) | Both colour files read, recompile and sanitise cleanly; COLR version 0, CPAL the Desk set, cmap (0, 3) and (3, 1) format 4 and (0, 4) and (3, 10) format 12 |
 | FreeType (freetype-py 2.5.1), in Docker | Every colour emoji renders through COLR pixel-exact against `emoji16.dem` at 16 and 32 px, from the `.ttf` and the `.otf`; every monochrome base glyph is exact at 16 px; every emoji in Desk Fixed, UI, Title and Small (Square) renders exactly as its `.DEM` mono bitmap at the native size |
-| Chromium (headless, Linux, `@font-face`) | Desk Emoji Pixel shows in colour from the `.ttf` and the `.otf`, on light and dark; the monochrome emoji show in Desk Fixed, UI and Small |
+| Chromium (headless, Linux, `@font-face`) | Desk Emoji Pixel and Desk Emoji show in colour from the `.ttf` and the `.otf`, on light and dark; the monochrome emoji show in Desk Fixed, UI and Small and in Desk Sans, Mono and Serif |
+| Vector, in Docker and `bun test` | Desk Emoji reads and sanitises cleanly (fontTools, OTS); FreeType renders all 153 through COLR in colour; Desk Sans, Mono and Serif (all six `.otf`) reach every vector emoji through format 12 and sanitise cleanly, and their `.ttf` files carry none; the faces' own glyphs are unchanged |
 
-Not checked: Windows (DirectWrite, GDI), macOS (Core Text), Safari and Firefox have not rendered the colour font; COLR version 0 is supported by all of them according to their documentation, but that is not a test. Nothing reads the `.DEM` files on DOS yet, and no emoji has been seen in the Desk, in DOSBox or on a VGA screen.
+Not checked: Windows (DirectWrite, GDI), macOS (Core Text), Safari and Firefox have not rendered either colour font; COLR version 0 is supported by all of them according to their documentation, but that is not a test. Nothing reads the `.DEM` files on DOS yet, and no emoji has been seen in the Desk, in DOSBox or on a VGA screen.
 
 ## Weak spots
 
@@ -119,4 +149,5 @@ From the proof sheets, the pictures that read least well:
 - **At 8 × 8:** ⏰ (the bells and legs are one or two pixels), 🎮 (the d-pad is a small dark plus) and 🔓 (the open shackle reaches the top row). They read, but only just.
 - **At 12 × 12:** 🆕 (a three-pixel W is close to an H), 😤 (the steam puffs crowd the face), 🐌, 🥳 and 🍳.
 - **At 16 × 16:** 🗝 is close to 🔑 at a glance; 📻 and ☎ have small details that turn to dots; 🍦 reads as a cone with a grey cap. The 16 colours have no yellow, so 🟡 and 🟠, and 💛 and 🧡, differ only by a band of brown.
+- **Vector:** 👍 is stiff (a box and a rounded thumb), 💯's digits are drawn shapes rather than type, 🍁 and 🍀 are simplified, and ♠ ♣ ⚫ ⬛ are black and nearly vanish on a dark background, as in the pixel set.
 - **In mono:** solid saturated shapes (🧩 🐢 🐙 🌳) become silhouettes without inner detail, as the rule intends; 🎶's two note heads touch; ⌨'s keys become a speckle.

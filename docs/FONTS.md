@@ -6,7 +6,7 @@ The faces are original drawings in the spirit of the type the design boards used
 
 Beside the pixel faces there is a modern family of outline faces, Desk Sans, Desk Mono and Desk Serif, each Regular and Bold, for larger sizes and modern systems (see [Modern outline faces](#modern-outline-faces)). The pixel faces are the Desk's own text at its native sizes on DOS; the outline faces are for Notes and Paint text, documents, the web, Windows and Linux, and a later TrueType reader in the Desk.
 
-The OpenType files of the pixel faces also carry the Desk emoji as monochrome glyphs; the TrueType files do not. See [`EMOJI.md`](EMOJI.md).
+The OpenType files of the pixel faces also carry the Desk pixel emoji as monochrome glyphs, and those of Desk Sans, Mono and Serif the vector emoji; the TrueType files carry none. See [`EMOJI.md`](EMOJI.md).
 
 ## Faces
 
