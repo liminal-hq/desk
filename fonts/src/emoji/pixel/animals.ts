@@ -588,6 +588,222 @@ export const ART: Art = {
     ......kk....kk..
     ................
   `,
+  '😺': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .koookooookoook.
+    .koookooookoook.
+    .kooooooooooonk.
+    .kooooorroooonk.
+    .kookkkkkkkkonk.
+    .kookwwwwwwkonk.
+    ..kookrrrrkonk..
+    ..koookkkkonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😸': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .koookooookoook.
+    .kookokookokook.
+    .kooooooooooonk.
+    .kooooorroooonk.
+    .kokkkkkkkkkknk.
+    .kokwwkwwkwwknk.
+    ..kokwkwwkwknk..
+    ..kookkkkkknnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😹': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .koookooookoook.
+    .kookokookokook.
+    .kcoooooooooock.
+    .ccoooorroooocc.
+    .ckokkkkkkkknkc.
+    .ckokwwwwwwknkc.
+    ..kokurrrruknk..
+    ..kookkkkkknnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😻': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .krrorroorrorrk.
+    .krrrrroorrrrrk.
+    .korrroooorrrok.
+    .koorooooooronk.
+    .kooooorroooonk.
+    .kookkkkkkkkonk.
+    .kookwwwwwwkonk.
+    ..kookrrrrkonk..
+    ..koookkkkonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😼': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .kookkkookkkook.
+    .kooookooookook.
+    .kooooooooooonk.
+    .kooooorroooonk.
+    .koooooooookonk.
+    .kooookkkkkkonk.
+    ..koooooooonnk..
+    ..koooooooonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😽': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .kookkkookkkook.
+    .kooooooooooook.
+    .krroooooooorrk.
+    .kooooorroooonk.
+    .koooookkoooonk.
+    .kooookookooonk.
+    ..koookkkooonk..
+    ..koooooooonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '🙀': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwokkooookkook.
+    .kokwwkookwwkok.
+    .kokwkkookkwkok.
+    .kookkooookkonk.
+    .kooooorroooonk.
+    .koooookkoooonk.
+    .kooookuukooonk.
+    ..koookuukoonk..
+    ..kooookkoonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😿': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kowwoooooooook.
+    .kwoooooooooook.
+    .koookooookoook.
+    .koookooookoook.
+    .koooooooocoonk.
+    .kooooorrccconk.
+    .koooooooccconk.
+    .kooookkkkooonk.
+    ..kookooookonk..
+    ..koooooooonnk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '😾': `
+    .kk..........kk.
+    .knk........knk.
+    .knokkkkkkkkonk.
+    .kokkooooookkok.
+    .kwookkookkoook.
+    .koookooookoook.
+    .koookooookoook.
+    .kooooooooooonk.
+    .kooooorroooonk.
+    .kooooooooooonk.
+    .kooookkkkooonk.
+    ..kookooookonk..
+    ..kokooooooknk..
+    ...kkooonnnkk...
+    .....kkkkkk.....
+    ................
+  `,
+  '🙈': `
+    ................
+    .....kkkkkk.....
+    ...kknnnnnnkk...
+    ..knwnnnnnnnuk..
+    ..knkoknnkokuk..
+    .kokokokkokokok.
+    kkokokokkokokokk
+    kkwooookkoooonkk
+    kkoooonkkooonnkk
+    .kkkkkkookkkkkk.
+    ..knoookkooouk..
+    ..knokooookouk..
+    ..knookkkkonuk..
+    ...koooooonnk...
+    ....kkkkkkkk....
+    ................
+  `,
+  '🙉': `
+    ................
+    .....kkkkkk.....
+    ...kknnnnnnkk...
+    ..knwnnnnnnnuk..
+    .kkknoonnoonkkk.
+    kokokooooookokok
+    kokokokookokokok
+    kwookokookokoook
+    koookooooookoonk
+    koonkooooookoonk
+    .kkkoookkoookkk.
+    ..knokooookouk..
+    ..knookkkkonuk..
+    ...koooooonnk...
+    ....kkkkkkkk....
+    ................
+  `,
+  '🙊': `
+    ................
+    .....kkkkkk.....
+    ...kknnnnnnkk...
+    ..knwnnnnnnnuk..
+    ..knnoonnoonuk..
+    .kknnoooooonukk.
+    koknnokookonukok
+    koknnokookonukok
+    koknnoooooonukok
+    .kknkokookokukk.
+    .kokokokkokokok.
+    .kokokokkokokok.
+    .kwooookkoooonk.
+    .koooonkkooonnk.
+    ..kkkkkkkkkkkk..
+    ................
+  `,
 };
 
 /** Hand fixes for derived 12 × 12 grids of extended emoji, each replacing the derived grid. */
@@ -662,6 +878,174 @@ export const FIX12: Art = {
       ..kkk...kkk.
       ............
   `,
+  '😺': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwookookoook
+      koookookoook
+      koooorrooonk
+      kokkkkkkkknk
+      kokwwwwwwknk
+      .kokrrrrknk.
+      .kookkkknnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😸': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwokooookook
+      kokokookokok
+      koooorrooonk
+      kokkkkkkkknk
+      kokwkwwkwknk
+      .kokkkkkknk.
+      .kookkkknnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😹': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwokooookook
+      kokokookokok
+      ccoorroooocc
+      ckkkkkkkkkkc
+      ckokwwwwkokc
+      .kokrrrrknk.
+      .kookkkknnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😻': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwroroororok
+      korrroorrrok
+      koorooooronk
+      kooooooooonk
+      kokkkkkkkknk
+      .kokwwwwknk.
+      .kookkkknnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😼': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwokkookkook
+      koookoookook
+      koooorrooonk
+      kooooooooknk
+      koookkkkkonk
+      .kooooooonk.
+      .koooooonnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😽': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwkkooookkok
+      kooooooooook
+      krrorrooornk
+      kooookoooonk
+      koookokooonk
+      .koookkoonk.
+      .koooooonnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '🙀': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwkkooookkok
+      kkwwkookwwkk
+      kkwkkookkwkk
+      kokkorrokknk
+      kooookkooonk
+      koookuukoonk
+      .koookkoonk.
+      .koooooonnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😿': `
+      .kk......kk.
+      .knkkkkkknk.
+      kwoooooooook
+      kwookookoook
+      koookookocok
+      koooorroccnk
+      koooooooccnk
+      koookkkkoonk
+      .kokooooknk.
+      .koooooonnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '😾': `
+      .kk......kk.
+      .knkkkkkknk.
+      kkkooooookkk
+      kwokkookkook
+      koookookoook
+      koooorrooonk
+      kooooooooonk
+      koookkkkoonk
+      .kokooooknk.
+      .koooooonnk.
+      ..kkoonnkk..
+      ....kkkk....
+  `,
+  '🙈': `
+      ...kkkkkk...
+      ..knnnnnuk..
+      .knwnnnnnuk.
+      .kkokookokk.
+      kkokokkokokk
+      kkwookkoookk
+      .koonkkoonk.
+      .kkkkkkkkkk.
+      .knkooookuk.
+      ..kokkkknk..
+      ...koonnk...
+      ....kkkk....
+  `,
+  '🙉': `
+      ...kkkkkk...
+      ..knnnnnuk..
+      .knwnnnnnuk.
+      .kkooooookk.
+      kwokkookkook
+      kookkookkook
+      kookooookook
+      konkokkokonk
+      .kkkooookkk.
+      ..kokkkknk..
+      ...koonnk...
+      ....kkkk....
+  `,
+  '🙊': `
+      ...kkkkkk...
+      ..knnnnnuk..
+      .knwnnnnnuk.
+      .knoooooouk.
+      konokookouok
+      konokookouok
+      .knoooooouk.
+      .kkokkkkokk.
+      .kokokkokok.
+      .kwookkoook.
+      .koonkkoonk.
+      ..kkkkkkkk..
+  `,
 };
 
 /** Per-emoji changes to the monochrome rule (mono.ts); slots by number. */
@@ -671,6 +1055,12 @@ export const MONO_RULES: Record<string, MonoRule> = {
   '🐸': { drop: [14] },
   '🐞': { drop: [11] },
   '🦋': { drop: [15, 12] },
+  // The blush would print as two blots beside the closed eyes.
+  '😽': { drop: [11] },
+  // The brown head prints solid, so the pale face mask and the hands stand out as on the colour drawing.
+  '🙈': { keep: [9] },
+  '🙉': { keep: [9] },
+  '🙊': { keep: [9] },
 };
 
 /** Hand-drawn monochrome grids (`#` and `.`) where no rule gives a readable glyph, by size. */
