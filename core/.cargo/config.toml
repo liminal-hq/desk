@@ -1,0 +1,8 @@
+# Rust has no precompiled core or alloc for a DOS target, so build them from rust-src. Both options are unstable; tools/build.sh
+# sets RUSTC_BOOTSTRAP=1 so the pinned stable toolchain accepts them.
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+json-target-spec = true
+
+[build]
+target = "dos.json"
