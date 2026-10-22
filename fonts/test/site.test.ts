@@ -44,7 +44,7 @@ describe('the specimen site', () => {
     for (const f of pages.filter((p) => /\.(html|css)$/.test(p.path))) {
       const refs = [...text(f.path).matchAll(/(?:href|src)="([^"#]*)[^"]*"|url\(([^)]+)\)/g)].map((m) => m[1] ?? m[2]);
       for (const ref of refs) {
-        if (!ref || ref === './' || /^(https?:|data:)/.test(ref) || ref.startsWith('${')) continue;
+        if (!ref || /^(https?:|data:)/.test(ref) || ref.startsWith('${')) continue;
         expect([f.path, ref, byPath.has(ref)]).toEqual([f.path, ref, true]);
       }
     }

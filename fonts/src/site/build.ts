@@ -26,7 +26,7 @@ export interface SiteFile {
 }
 
 const PAGES = [
-  { path: 'index.html', href: './', label: 'Overview', title: 'Desk Type Specimens' },
+  { path: 'index.html', href: 'index.html', label: 'Overview', title: 'Desk Type Specimens' },
   { path: 'pixel.html', href: 'pixel.html', label: 'Pixel faces', title: 'Desk Pixel Faces' },
   { path: 'outline.html', href: 'outline.html', label: 'Outline faces', title: 'Desk Outline Faces' },
   { path: 'emoji.html', href: 'emoji.html', label: 'Emoji', title: 'Desk Emoji' },
