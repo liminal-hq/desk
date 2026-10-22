@@ -148,6 +148,15 @@ export const VECTOR: Record<string, () => Layer[]> = {
     S('cyan', drop(120, 250, 55, 440)),
     S('cyan', drop(880, 250, 55, 440)),
   ],
+  '🫪': () => [
+    // Two big eyes of different sizes and heights, pupils looking different ways, and a small low mouth.
+    ...face(),
+    // The whites are holes in the monochrome glyph, so the eyes stay rings with pupils rather than filling in.
+    L('ink', union(disc(325, 390, 135, 145), disc(665, 430, 115, 120))),
+    L('white', grow(union(disc(325, 390, 135, 145), disc(665, 430, 115, 120)), -30), 'hole'),
+    L('ink', union(disc(280, 335, 42), disc(710, 490, 40))),
+    L('ink', box(440, 700, 575, 740, 20)),
+  ],
   '🥶': () => [
     ...face('blue', 'blueDark'),
     L('white', intersection(FACE, union(box(0, 0, 1000, 230), poly([290, 220], [370, 220], [330, 330]), poly([460, 220], [540, 220], [500, 360]), poly([630, 220], [710, 220], [670, 320])))),

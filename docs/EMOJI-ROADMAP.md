@@ -113,7 +113,7 @@ Still to draw: 54 new base pictures, 7 ZWJ pictures, and 240 tone variants (48 f
 | ☺️ | `263A FE0F` | smiling face | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
 | 😝 | `1F61D` | squinting face with tongue | single | done | 16, 12 | — | — | — |
 | 😜 | `1F61C` | winking face with tongue | single | done | 16, 12 | yes | — | — |
-| 🫪 | `1FAEA` | distorted face | single | done | 16, 12 | — | — | — |
+| 🫪 | `1FAEA` | distorted face | single | done | 16, 12 | yes | — | — |
 | 😔 | `1F614` | pensive face | single | done | 16, 12 | — | — | — |
 | 🥺 | `1F97A` | pleading face | single | done | 16, 12 | — | — | — |
 | 😬 | `1F62C` | grimacing face | single | done | 16, 12 | — | — | — |

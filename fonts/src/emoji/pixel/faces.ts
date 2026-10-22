@@ -912,20 +912,20 @@ export const ART: Art = {
   `,
   '🫪': `
       ................
-      ......kkkk......
-      ....kkooookk....
-      ...kwwooooook...
-      .c.kwoooooook.r.
-      c.koookookoook.r
-      c.koookookoook.r
-      .c.kooooooooook.
-      .c.kooooooooonk.
-      .c.kookooookonk.
-      c.koookkkkoonk.r
-      .c.kooooooonk.r.
-      ...koooooonnk...
-      ....kkoonnkk....
-      ......kkkk......
+      .....kkkkkk.....
+      ...kkwwooookk...
+      ..kwoooooooook..
+      ..kokkkoooooook.
+      .kokkwwkookkook.
+      .kokwwwkokwwkok.
+      .kokwwwkokwkkok.
+      .kookkkoookkonk.
+      .kooooooooooonk.
+      .kooooooooooonk.
+      ..kooookkkoonk..
+      ..koooooooonnk..
+      ...kkooonnnkk...
+      .....kkkkkk.....
       ................
   `,
   '🤯': `
@@ -2322,16 +2322,16 @@ export const FIX12: Art = {
   `,
   '🫪': `
       ....kkkk....
-      ...kooook...
-      ..kwoooook..
-      ckwokookookr
-      ckookookookr
-      .kooooooook.
-      .ckooooooook
-      .ckokooooknk
-      .kookkkkonk.
-      ..kooooonk..
-      ...koonnk...
+      ..kkooookk..
+      .kwoooooook.
+      .kokkoooook.
+      kokkwkokkook
+      kokwwkkwwkok
+      kookkokwkkok
+      kooooookkonk
+      .kooooooonk.
+      .koookkonnk.
+      ..kkoonnkk..
       ....kkkk....
   `,
   '😤': `
