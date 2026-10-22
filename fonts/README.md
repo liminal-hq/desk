@@ -12,7 +12,7 @@ The four Desk bitmap faces as pixel grids, the modern outline faces (Desk Sans, 
 | `src/specimen.ts`, `src/specimen-client.js` | The specimen page with glyph charts and the pixel editor |
 | `build.ts` | The command line |
 | `src/modern/` | The outline faces: the geometry (union, fit, quadratics), the drawing kit and styles, the letters, symbols and marks, the italics, the assembler, the kerning, ligatures and other OpenType features, and the file and layout-table writers |
-| `src/emoji/` | The emoji: the manifest, the palette, the art grids by category (`pixel/`), the 12 × 12 derivation and the monochrome rule, and the writers of the colour font, the faces' emoji glyphs, the `.DEM` files and the contact sheets; `bun src/emoji/proof.ts` writes a proof sheet |
+| `src/emoji/` | The emoji: the manifest, the requested list and its roadmap (`gboard-list.txt`, `requests.ts`), the palette, the art grids by category (`pixel/`), the 12 × 12 derivation and the monochrome rule, and the writers of the colour font, the faces' emoji glyphs, the `.DEM` files and the contact sheets; `bun src/emoji/proof.ts` writes a proof sheet |
 | `test/` | `bun test` |
 | `validate.sh`, `validate.py`, `validate_emoji.py` | Optional third-party validation (fontTools, OTS, FreeType, HarfBuzz) in Docker |
 | `generated/` | The built files, committed, with `OFL.txt`; the emoji files are in `generated/emoji/` |

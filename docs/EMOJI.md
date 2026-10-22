@@ -4,7 +4,7 @@ Desk has its own emoji in two styles. The **pixel** emoji are 399 original pictu
 
 ## The set
 
-Every emoji is a single code point with the `Emoji` property in Unicode 17.0, named by its CLDR short name (`fonts/src/emoji/manifest.ts`). There are no ZWJ sequences, skin-tone modifiers, keycaps, flags or tag sequences: each would need either OpenType layout (which the era files cannot carry and the Desk's text drawing does not do) or many more drawings. Lt. Fizz's 24 pictures are all in it (✓ and ✗ as their emoji forms ✔ U+2714 and ❌ U+274C), and so are the shell's own pictures: disks, folders, pages, clocks, locks, sound, devices, warnings, arrows, media buttons, coloured circles and weather.
+Every emoji is a single code point with the `Emoji` property in Unicode 17.0, named by its CLDR short name (`fonts/src/emoji/manifest.ts`). There are no ZWJ sequences, skin-tone modifiers, keycaps, flags or tag sequences: each would need either OpenType layout (which the era files cannot carry and the Desk's text drawing does not do) or many more drawings. That rule holds for what is built today; the requested sequences, skin tones and ZWJ forms, and the plan for them, are in [`EMOJI-ROADMAP.md`](EMOJI-ROADMAP.md). Lt. Fizz's 24 pictures are all in it (✓ and ✗ as their emoji forms ✔ U+2714 and ❌ U+274C), and so are the shell's own pictures: disks, folders, pages, clocks, locks, sound, devices, warnings, arrows, media buttons, coloured circles and weather.
 
 | Category | Emoji | Examples |
 |---|---|---|
