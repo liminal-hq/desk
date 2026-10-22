@@ -1,5 +1,5 @@
-// Builds the Desk bitmap faces from their pixel grids into OpenType (CFF), TrueType and .DFN files in fonts/generated/,
-// in the Square and Round styles.
+// Builds the Desk fonts into fonts/generated/: the pixel faces from their grids as OpenType (CFF), TrueType and .DFN
+// files in the Square and Round styles, and the outline faces (Desk Sans, Mono and Serif) from their skeletons.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -16,12 +16,31 @@ import { assemble } from './src/face';
 import { FACES } from './src/faces';
 import { namesOf } from './src/names';
 import { buildOtf } from './src/otf';
+import { assembleModern } from './src/modern/assemble';
+import { buildModernOtf, buildModernTtf } from './src/modern/files';
+import { STYLES } from './src/modern/kit';
 import { buildTtf } from './src/ttf';
 
 const OUT = join(import.meta.dir, 'generated');
 
 /** Every generated file: its name in `generated/` and its bytes. */
 export function buildAll(): { name: string; data: Uint8Array }[] {
+  return [...buildPixel(), ...buildModern()];
+}
+
+/** The outline faces: Desk Sans, Desk Mono and Desk Serif, each Regular and Bold, as OTF and TTF. */
+export function buildModern(): { name: string; data: Uint8Array }[] {
+  return STYLES.flatMap((s) => {
+    const glyphs = assembleModern(s);
+    return [
+      { name: `${s.file}.otf`, data: buildModernOtf(s, glyphs) },
+      { name: `${s.file}.ttf`, data: buildModernTtf(s, glyphs) },
+    ];
+  });
+}
+
+/** The pixel faces, in Square and Round, with the .DFN files and Desk Fixed DOS. */
+export function buildPixel(): { name: string; data: Uint8Array }[] {
   return FACES.flatMap((face) => {
     const glyphs = assemble(face);
     return [
