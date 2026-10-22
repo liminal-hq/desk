@@ -41,7 +41,7 @@ const base = { cap: 700, xh: 528, asc: 742, desc: -208, os: 11 };
 
 export const STYLES: Style[] = [
   { ...base, kind: 'sans', bold: false, family: 'Desk Sans', file: 'desk-sans', V: 86, H: 76, n: 2.35, wide: 1, sb: 62, serifLen: 0, serifH: 0, bracket: 0 },
-  { ...base, kind: 'sans', bold: true, family: 'Desk Sans', file: 'desk-sans-bold', V: 158, H: 132, n: 2.15, wide: 1.07, sb: 52, serifLen: 0, serifH: 0, bracket: 0 },
+  { ...base, kind: 'sans', bold: true, family: 'Desk Sans', file: 'desk-sans-bold', V: 144, H: 104, n: 2.2, wide: 1.1, sb: 52, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, xh: 536, kind: 'mono', bold: false, family: 'Desk Mono', file: 'desk-mono', V: 82, H: 74, n: 2.4, wide: 0.86, sb: 60, advance: 600, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, xh: 536, kind: 'mono', bold: true, family: 'Desk Mono', file: 'desk-mono-bold', V: 140, H: 120, n: 2.3, wide: 0.86, sb: 50, advance: 600, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, cap: 690, xh: 498, asc: 735, desc: -222, kind: 'serif', bold: false, family: 'Desk Serif', file: 'desk-serif', V: 98, H: 50, n: 2.05, wide: 1.02, sb: 34, serifLen: 52, serifH: 38, bracket: 26 },

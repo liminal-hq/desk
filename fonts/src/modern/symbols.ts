@@ -547,6 +547,7 @@ const S: Record<string, Draw> = {
     return d;
   },
   ß: (k) => {
+    if (k.bold && k.s.kind === 'sans') return sansBoldSharpS(k);
     const w = k.w(520, 440);
     const t = k.V;
     const ry = 170;
@@ -729,6 +730,21 @@ const S: Record<string, Draw> = {
     return { w, sides: ['o', 'o'] };
   },
 };
+
+/** Sans Bold's ß: wider than the Regular's, with a round top and a lower bowl that hangs from the right side. */
+function sansBoldSharpS(k: Kit): ReturnType<Draw> {
+  const w = k.w(540, 440);
+  const t = k.V;
+  const top = k.asc + k.os;
+  const xr = Math.round(w * 0.8);
+  const ry = Math.round(xr / 2);
+  const mid = Math.round(k.asc * 0.6);
+  k.stem(0, 0, top - ry + 20, { top: 'none' });
+  k.arc(0, xr, top - 2 * ry, top, 0, 180, t, k.H);
+  k.add(rect(xr - t, mid - k.H, xr, top - ry + 20));
+  k.arc(w * 0.26, w, -k.os, mid + k.H * 0.5, -125, 90, t, k.H);
+  return { w, sides: ['s', 'r'] };
+}
 
 function smooth(pts: P[]): P[] {
   // Catmull-Rom through the points, for pen paths.
