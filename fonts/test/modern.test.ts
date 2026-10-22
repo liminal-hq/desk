@@ -55,7 +55,7 @@ function insidePoint(c: Contour): P {
 }
 
 for (const s of STYLES) {
-  const name = `${s.family}${s.bold ? ' Bold' : ''}`;
+  const name = `${s.family}${s.bold ? ' Bold' : ''}${s.italic ? ' Italic' : ''}`;
   describe(name, () => {
     const glyphs = assembleModern(s);
     const by = new Map(glyphs.map((g) => [g.ch, g]));
@@ -82,7 +82,7 @@ for (const s of STYLES) {
 
     test('outer contours run counter-clockwise and holes clockwise, nested as they should be', () => {
       for (const g of glyphs) {
-        const polys = g.contours.map((c) => sampleContour(c, 8));
+        const polys = g.contours.map((c) => sampleContour(c, 64));
         g.contours.forEach((c, i) => {
           const p = insidePoint(c);
           // The ink side of every edge is filled exactly once.
@@ -153,7 +153,8 @@ for (const s of STYLES) {
       if (s.advance) expect(glyphs.filter((g) => g.adv !== s.advance).map((g) => g.ch)).toEqual([]);
     });
 
-    if (!s.advance) {
+    // Italics are measured upright before they slant, so their slanted boxes do not show the classes.
+    if (!s.advance && !s.italic) {
       test('side bearings are consistent within each class of side', () => {
         const lsb = (g: MGlyph): number => (g.box as NonNullable<MGlyph['box']>).x0;
         const straight = Array.from('bhklmnpr').map((c) => lsb(by.get(c) as MGlyph));
@@ -194,3 +195,26 @@ for (const s of STYLES) {
     });
   });
 }
+
+describe('italic names and flags', () => {
+  for (const s of STYLES) {
+    test(`${s.file}: family, style, fsSelection, macStyle, italic angle and caret agree in OTF and TTF`, () => {
+      const glyphs = assembleModern(s);
+      for (const bytes of [buildModernOtf(s, glyphs), buildModernTtf(s, glyphs)]) {
+        const f = ot.parse(bytes.slice().buffer);
+        const t = f.tables as Record<string, Record<string, number>>;
+        const names = (f.names as Record<string, Record<string, { en: string }>>).windows as Record<string, { en: string }>;
+        const style = s.italic ? (s.bold ? 'Bold Italic' : 'Italic') : s.bold ? 'Bold' : 'Regular';
+        expect(names.fontFamily?.en).toBe(s.family);
+        expect(names.fontSubfamily?.en).toBe(style);
+        expect(names.fullName?.en).toBe(style === 'Regular' ? s.family : `${s.family} ${style}`);
+        const fs = t.os2?.fsSelection as number;
+        expect([!!(fs & 1), !!(fs & 0x20), !!(fs & 0x40)]).toEqual([!!s.italic, s.bold, !s.italic && !s.bold]);
+        expect(t.os2?.usWeightClass).toBe(s.bold ? 700 : 400);
+        expect(((t.head?.macStyle as number) & 3) >>> 0).toBe((s.bold ? 1 : 0) | (s.italic ? 2 : 0));
+        expect(t.post?.italicAngle).toBeCloseTo(-(s.slant ?? 0), 2);
+        expect(t.hhea?.caretSlopeRun).toBe(s.italic ? Math.round(1000 * Math.tan(((s.slant ?? 0) * Math.PI) / 180)) : 0);
+      }
+    });
+  }
+});

@@ -8,6 +8,7 @@ import { boxCell, GENERATED, generated } from '../boxes';
 import { ACCENTS } from '../face';
 import { type Contour, outline, type P, type Shape, transform, union, rect } from './geom';
 import { Kit, type Style } from './kit';
+import { MONO_ITALIC, SERIF_ITALIC } from './italics';
 import { LETTERS, type Draw, type Side } from './letters';
 import { MARKS, SPACING_MARKS } from './marks';
 import { SYMBOLS } from './symbols';
@@ -79,7 +80,19 @@ function place(s: Style, ch: string, raw: Raw): MGlyph {
     adv = Math.round(box.x1 + dx + sideBearing(s, raw.sides[1]));
   }
   const moved = transform(raw.shape, (p: P) => ({ x: p.x + dx, y: p.y }));
-  return { ch, cp, adv, contours: outline(moved), box: { x0: box.x0 + dx, y0: box.y0, x1: box.x1 + dx, y1: box.y1 } };
+  // An italic slants after spacing, about the middle of the x-height, so the ink stays centred on its advance.
+  const final = s.italic && !UPRIGHT_IN_ITALIC.has(ch) ? slant(moved, s) : moved;
+  return { ch, cp, adv, contours: outline(final), box: shapeBox(final) };
+}
+
+/** Symbols that stay upright in an italic: arrows and geometric shapes. */
+const UPRIGHT_IN_ITALIC = new Set(Array.from('←↑→↓↔↕►◄▲▼●○■□'));
+
+/** Slants a shape by the style's angle about the middle of its x-height. */
+export function slant(sh: Shape, s: Style): Shape {
+  const t = Math.tan(((s.slant ?? 0) * Math.PI) / 180);
+  const y0 = s.xh / 2;
+  return transform(sh, (p) => ({ x: p.x + (p.y - y0) * t, y: p.y }));
 }
 
 /** Composes an accented letter: the base with a mark centred over it (or the cedilla under it). */
@@ -110,7 +123,8 @@ function compose(s: Style, base: Raw, mark: string, upper: boolean, isI: boolean
 /** Every glyph of an outline face, sorted by code point. */
 export function assembleModern(s: Style): MGlyph[] {
   const raws = new Map<string, Raw>();
-  for (const [ch, fn] of Object.entries({ ...LETTERS, ...SYMBOLS })) raws.set(ch, draw(s, fn));
+  const italicForms = !s.italic ? {} : s.kind === 'serif' ? SERIF_ITALIC : s.kind === 'mono' ? MONO_ITALIC : {};
+  for (const [ch, fn] of Object.entries({ ...LETTERS, ...SYMBOLS, ...italicForms })) raws.set(ch, draw(s, fn));
   // Accented letters, Š š Ž ž included, composed from a base and a mark.
   for (const [ch, base, mark] of ACCENTS) {
     const b = raws.get(base);

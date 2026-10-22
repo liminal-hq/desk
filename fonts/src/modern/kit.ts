@@ -11,6 +11,9 @@ export interface Style {
   /** `sans`, `mono` or `serif`. */
   kind: 'sans' | 'mono' | 'serif';
   bold: boolean;
+  /** Italic: the drawing is slanted by `slant` degrees after it is spaced, with per-glyph italic forms. */
+  italic?: boolean;
+  slant?: number;
   family: string;
   file: string;
   /** Capital, x-height, ascender and descender, in units of a 1000-unit em. */
@@ -69,7 +72,27 @@ function serif(bold: boolean): Style {
   };
 }
 
-export const STYLES: Style[] = [
+/** Slant of each family's italic, in degrees. */
+export const SLANT = { sans: 9.5, mono: 9, serif: 12 };
+
+/**
+ * The italic of an upright style: the same weights, slanted by its family's angle; Serif's is narrower,
+ * as a true italic is.
+ */
+function italic(s: Style): Style {
+  return {
+    ...s,
+    italic: true,
+    slant: SLANT[s.kind],
+    file: `${s.file}-italic`,
+    wide: s.kind === 'serif' ? s.wide * 0.9 : s.kind === 'sans' ? s.wide * 0.97 : s.wide,
+    // Sans bowls a little rounder, so slanting does not make them look boxy.
+    n: s.kind === 'sans' ? s.n - 0.1 : s.n,
+    sb: s.kind === 'serif' ? Math.round(s.sb * 1.1) : s.sb,
+  };
+}
+
+const UPRIGHT: Style[] = [
   { ...base, kind: 'sans', bold: false, family: 'Desk Sans', file: 'desk-sans', V: 86, H: 76, n: 2.35, wide: 1, sb: 62, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, kind: 'sans', bold: true, family: 'Desk Sans', file: 'desk-sans-bold', V: 144, H: 104, n: 2.2, wide: 1.1, sb: 52, serifLen: 0, serifH: 0, bracket: 0 },
   { ...base, xh: 536, kind: 'mono', bold: false, family: 'Desk Mono', file: 'desk-mono', V: 82, H: 74, n: 2.4, wide: 0.86, sb: 60, advance: 600, serifLen: 0, serifH: 0, bracket: 0 },
@@ -77,6 +100,9 @@ export const STYLES: Style[] = [
   serif(false),
   serif(true),
 ];
+
+/** Every outline face: the uprights, then their italics. */
+export const STYLES: Style[] = [...UPRIGHT, ...UPRIGHT.map(italic)];
 
 /** Where a stem gets serifs, in the Serif face: none, both sides, or one side. */
 export type SerifAt = 'none' | 'both' | 'left' | 'right';
@@ -123,6 +149,9 @@ export class Kit {
   }
   get mono(): boolean {
     return this.s.kind === 'mono';
+  }
+  get italic(): boolean {
+    return !!this.s.italic;
   }
   get bold(): boolean {
     return this.s.bold;

@@ -6,7 +6,7 @@
 import * as ot from 'opentype.js';
 import { COPYRIGHT, LICENCE, LICENCE_URL, type Names, TIMESTAMP, VERSION } from '../names';
 import { finish, glyphName } from '../otf';
-import { type TGlyph, writeTtf } from '../ttf';
+import { checksum, type TGlyph, writeTtf } from '../ttf';
 import { LINE, type MGlyph } from './assemble';
 import { type Contour, outline, rect, toQuadratic, union, difference } from './geom';
 import type { Style } from './kit';
@@ -16,13 +16,14 @@ export const UPM = 1000;
 const PPEM = 8;
 
 export function modernNames(s: Style): Names {
-  const style = s.bold ? 'Bold' : 'Regular';
-  const full = s.bold ? `${s.family} Bold` : s.family;
+  // The four-style model: one family, with Regular, Bold, Italic and Bold Italic as its styles.
+  const style = s.italic ? (s.bold ? 'Bold Italic' : 'Italic') : s.bold ? 'Bold' : 'Regular';
+  const full = style === 'Regular' ? s.family : `${s.family} ${style}`;
   return {
     family: s.family,
     style,
     full,
-    postScript: `${s.family.replace(/ /g, '')}-${style}`,
+    postScript: `${s.family.replace(/ /g, '')}-${style.replace(/ /g, '')}`,
     unique: `Liminal HQ: ${full}: ${VERSION}`,
     version: `Version ${VERSION}`,
     file: s.file,
@@ -83,7 +84,8 @@ export function buildModernOtf(s: Style, glyphs: MGlyph[]): Uint8Array {
     descender: LINE.descender,
     weightClass: s.bold ? 700 : 400,
     widthClass: 5,
-    fsSelection: (1 << 7) | (s.bold ? 1 << 5 : 1 << 6),
+    fsSelection: (1 << 7) | (s.italic ? 1 : 0) | (s.bold ? 1 << 5 : 0) | (!s.italic && !s.bold ? 1 << 6 : 0),
+    italicAngle: -(s.slant ?? 0),
     panose: [2, s.kind === 'serif' ? 2 : 11, s.bold ? 8 : 5, s.kind === 'mono' ? 9 : 3, 0, 0, 0, 0, 0, 0],
     createdTimestamp: TIMESTAMP,
     tables: {
@@ -97,7 +99,32 @@ export function buildModernOtf(s: Style, glyphs: MGlyph[]): Uint8Array {
     const map = table[platform];
     if (map) map['uniqueID'] = { en: names.unique };
   }
-  return finish(new Uint8Array(font.toArrayBuffer()), PPEM);
+  return caretSlope(finish(new Uint8Array(font.toArrayBuffer()), PPEM), s);
+}
+
+/**
+ * Sets the caret slope in `hhea` for an italic (opentype.js writes an upright caret) and fixes the
+ * checksums that cover it.
+ */
+function caretSlope(file: Uint8Array, s: Style): Uint8Array {
+  if (!s.italic) return file;
+  const out = Uint8Array.from(file);
+  const dv = new DataView(out.buffer);
+  const tables = dv.getUint16(4);
+  let head = -1;
+  for (let i = 0; i < tables; i++) {
+    const rec = 12 + 16 * i;
+    const tag = String.fromCharCode(...out.subarray(rec, rec + 4));
+    if (tag === 'head') head = dv.getUint32(rec + 8);
+    if (tag !== 'hhea') continue;
+    const at = dv.getUint32(rec + 8);
+    dv.setInt16(at + 18, 1000);
+    dv.setInt16(at + 20, Math.round(1000 * Math.tan(((s.slant ?? 0) * Math.PI) / 180)));
+    dv.setUint32(rec + 4, checksum(out, at, dv.getUint32(rec + 12)));
+  }
+  dv.setUint32(head + 8, 0);
+  dv.setUint32(head + 8, (0xb1b0afba - checksum(out)) >>> 0);
+  return out;
 }
 
 /** A `gasp` table asking for smoothing at every size: the outline faces carry no hinting. */
@@ -125,6 +152,7 @@ export function buildModernTtf(s: Style, glyphs: MGlyph[]): Uint8Array {
     ppem: PPEM,
     integerPpem: false,
     bold: s.bold,
+    italicAngle: s.slant ?? 0,
     fixed: s.kind === 'mono',
     symbol: false,
     cp437: s.kind === 'mono',

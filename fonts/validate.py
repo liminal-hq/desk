@@ -9,6 +9,7 @@
 # usage: python3 validate.py <generated-dir> [proof-dir]    (run inside the container that fonts/validate.sh starts)
 import glob
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -224,7 +225,7 @@ def main(gen, proof_dir=None):
             print("ok   " + msg + (" (Round compared in monochrome)" if "-round" in path else ""))
 
     print("\n== FreeType: the outline faces, OTF against TTF, and proof sheets")
-    modern = ["desk-sans", "desk-sans-bold", "desk-mono", "desk-mono-bold", "desk-serif", "desk-serif-bold"]
+    modern = sorted(os.path.basename(p)[:-4] for p in glob.glob(os.path.join(gen, "desk-*.otf")) if re.match(r"desk-(sans|mono|serif)", os.path.basename(p)))
     for base in modern:
         faces = {ext: freetype.Face(os.path.join(gen, f"{base}.{ext}")) for ext in ("otf", "ttf")}
         chars = [chr(c) for c in range(0x20, 0x7F)] + [chr(c) for c in range(0xA1, 0x100) if c != 0xAD] + list("ŒœŸŠšŽž€‚ƒ„…†‡ˆ‰‹‘’“”•–—˜™›")
