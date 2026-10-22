@@ -22,7 +22,7 @@ Every emoji is a single code point with the `Emoji` property in Unicode 17.0, na
 
 Of the 480, 403 are outside the Basic Multilingual Plane, which matters for the TrueType files (see [Which file to install](#which-file-to-install)).
 
-🫪 U+1FAEA distorted face (proposal L2/24-250) is one of the newest emoji, added in Unicode 17.0, so many systems do not have it in their own fonts yet; that is why it matters that the Desk emoji fonts carry it. 🥵 hot face and 🥶 cold face are in the set too, each with a hand-drawn 12 × 12 and a hand-drawn monochrome glyph, because the monochrome rule fills a rose or blue face solid.
+🫪 U+1FAEA distorted face (proposal L2/24-250) is one of the newest emoji, added in Unicode 17.0, so many systems do not have it in their own fonts yet; that is why it matters that the Desk emoji fonts carry it. It is drawn as a clean face whose band through the eyes has slipped a pixel sideways, with cyan and rose ghosts of its outline to each side, like a glitching screen; it has no 8 × 8, since the slip and the ghosts do not survive at that size. 🥵 hot face and 🥶 cold face are in the set too, each with a hand-drawn 12 × 12 and a hand-drawn monochrome glyph, because the monochrome rule fills a rose or blue face solid.
 
 ## Sizes and tiers
 
@@ -128,7 +128,7 @@ The palette is defined once (`VCOLOURS` in `kit.ts`): the brand colours of the 1
 | Hands and body, Travel and places | 1 each | 22, 32 |
 | Animals | 0 | 44 |
 
-**What is left out, and why:** animals, food, hands, vehicles, buildings and most objects. Their identity is in organic silhouettes (a cat's head, a hand's fingers, a car's body) that circles and boxes turn into stiff, generic shapes; drawn this way they would read worse than the pixel versions, which already cover them. Where a vector emoji is missing, a font list that names Desk Emoji Pixel after Desk Emoji fills the gap with the pixel drawing. The faces that need hands or props (🤔 🤗 🤠 🥳) and the busy symbols (☯ ♻ ☮) are also out, and so is 🫪: a wobbling outline with mismatched eyes needs freehand curves that circles and boxes cannot draw, so the pixel drawing stands in for it.
+**What is left out, and why:** animals, food, hands, vehicles, buildings and most objects. Their identity is in organic silhouettes (a cat's head, a hand's fingers, a car's body) that circles and boxes turn into stiff, generic shapes; drawn this way they would read worse than the pixel versions, which already cover them. Where a vector emoji is missing, a font list that names Desk Emoji Pixel after Desk Emoji fills the gap with the pixel drawing. The faces that need hands or props (🤔 🤗 🤠 🥳) and the busy symbols (☯ ♻ ☮) are also out, and so is 🫪: its colour ghosts and slipped band work in colour, but its monochrome glyph is a plain smiley, so the pixel drawing stands in for it.
 
 **How good it is.** Geometric emoji are clean and consistent and read well from about 20 px up; at text sizes below 16 px the eyes and mouths of the faces close up, and in monochrome the thin details (📅's grid, ⌨'s keys) blur. They are flat and plain next to the hand-drawn emoji of the big platforms: a heart, a star, a check or a face is as good as anyone's, a thumbs up or a camera is recognisable but stiff.
 
