@@ -132,6 +132,10 @@ The palette is defined once (`VCOLOURS` in `kit.ts`): the brand colours of the 1
 
 **How good it is.** Geometric emoji are clean and consistent and read well from about 20 px up; at text sizes below 16 px the eyes and mouths of the faces close up, and in monochrome the thin details (📅's grid, ⌨'s keys) blur. They are flat and plain next to the hand-drawn emoji of the big platforms: a heart, a star, a check or a face is as good as anyone's, a thumbs up or a camera is recognisable but stiff.
 
+## The specimen site
+
+The Emoji page of the specimen site (`bun build.ts --site <dir>`, see [`FONTS.md`](FONTS.md#the-specimen-site)) shows the whole set from the build's own data: contact sheets by category at 16, 12 and 8 pixels and in vector, in colour or mono, on dark or light, at three zooms; a search over names, code points, categories and tiers; a detail panel with every size of one emoji; a tester in the emoji fonts and the faces that carry them; the emoji files; and the number still planned in [`EMOJI-ROADMAP.md`](EMOJI-ROADMAP.md). Its sources are `fonts/src/site/emoji.html`, `emoji.js` and `emoji.ts`.
+
 ## What has been checked
 
 | Check | Result |
