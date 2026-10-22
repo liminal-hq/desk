@@ -96,7 +96,7 @@ function smallFigure(k: Kit, fig: string, x: number, y: number, scale = 0.56): v
   k.add(union(...sh.outer.map((p) => p.map((q) => ({ x: x + q.x * scale, y: y + q.y * scale }))), ...sh.holes.map((p) => p.map((q) => ({ x: x + q.x * scale, y: y + q.y * scale })))));
 }
 
-const fraction = (k: Kit, num: string, den: string): ReturnType<Draw> => {
+export const fraction = (k: Kit, num: string, den: string): ReturnType<Draw> => {
   const w = k.mono ? 520 : 760;
   const sc = 0.46;
   smallFigure(k, num, 0, k.cap * 0.5, sc);

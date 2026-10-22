@@ -13,7 +13,7 @@ import { LETTERS } from './letters';
 const TAIL = 78;
 
 /** A stem from y0 up to y1 that turns out to the right at its foot, as a pen leaving the letter. */
-function tailStem(k: Kit, x: number, y0: number, y1: number): void {
+export function tailStem(k: Kit, x: number, y0: number, y1: number): void {
   const r = TAIL;
   // The stem reaches down to the middle of the turn (which sits `os` below the line), so the two overlap.
   k.add(rect(x, y0 + r - k.os - 1, x + k.V, y1));
