@@ -78,6 +78,7 @@ def main(expected_path, actual_path):
     return 1
 
 
-if len(sys.argv) != 3:
-    sys.exit(__doc__)
-sys.exit(main(sys.argv[1], sys.argv[2]))
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        sys.exit(__doc__)
+    sys.exit(main(sys.argv[1], sys.argv[2]))
