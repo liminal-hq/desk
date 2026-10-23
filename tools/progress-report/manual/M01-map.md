@@ -70,6 +70,8 @@ One part of this table differs from `docs/HAL.md`, which names `core/` as the ho
 
 The dependency rules are not only prose. Every crate is a Cargo path dependency, so the direction of each edge can be read from the manifests; the "Try it yourself" section shows one check. For instance, `desk-present` is not a dependency of any core crate except as a test-only one: `desk-shell` lists it under `[dev-dependencies]`, and the kernel and `SHELL.EXE` list it as a real one.
 
+<!-- explainer m-crates -->
+
 ### What is built
 
 The anatomy page of the native track (`tools/progress-report/anatomy-desk.json`) draws the whole system as 22 boxes in eight layers. This chapter does not redraw it; the figures below are the same drawings the log uses. The architecture diagram is the plan, the anatomy pages are the inventory.
@@ -338,6 +340,15 @@ at: figure anatomy-desk
 id: m1-anatomy-dos
 reuse: anatomy-dos
 at: figure anatomy-dos
+
+id: m1-crates
+kind: explainer
+track: shared
+title: The crates and their dependencies, layer by layer
+alt: A step-through of the crates of the HAL, the drivers, the shared core, the presenter and the platforms as a dependency graph, with dashed lines for the dependencies only tests use, read from the Cargo manifests.
+caption: Every crate of hal/ and shell/ and the three programs that use them, by kind, from their Cargo.toml files.
+at: explainer m-crates
+thumb: svg
 ```
 
 ## Revisions

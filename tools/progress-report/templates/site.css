@@ -480,3 +480,11 @@ tr.m-part th{background:var(--raised);text-align:left;font-family:var(--f-displa
 .m-framesfig .is-off,.m-irqfig .is-off{display:none}
 .m-irqfig .ir-box{fill:var(--raised);stroke:var(--line-strong)} .m-irqfig .ir-t{fill:var(--text)} .m-irqfig .ir-arrow{stroke:var(--muted);stroke-width:1.6}
 .m-irqfig .ir-cur{stroke:var(--accent)}
+/* manual explainers: the crate graph, a glyph out of a .DFN, three targets */
+.m-cratefig .cg-hal,.sw.cg-hal{fill:var(--s-research);background:var(--s-research)} .m-cratefig .cg-driver,.sw.cg-driver{fill:var(--c3);background:var(--c3)} .m-cratefig .cg-core,.sw.cg-core{fill:var(--c1);background:var(--c1)}
+.m-cratefig .cg-presenter,.sw.cg-presenter{fill:var(--c5);background:var(--c5)} .m-cratefig .cg-platform,.sw.cg-platform{fill:var(--accent);background:var(--accent)}
+.m-cratefig .cg-t{fill:#050507;font-weight:700} .m-cratefig .cg-edge{stroke:var(--muted);stroke-width:1.2} .m-cratefig .cg-dev{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 3}
+.m-cratefig a{cursor:pointer} .m-cratefig .is-off,.m-dfnfig .is-off{display:none}
+.m-dfnfig .df-on{fill:var(--text)} .m-dfnfig .df-off{fill:var(--raised)} .m-dfnfig .df-hex{fill:var(--text-2);font-family:var(--f-mono)} .m-dfnfig .df-cur{stroke:var(--accent)} .m-dfnfig .df-base{stroke:var(--s-decision);stroke-dasharray:4 3}
+.tg td,.tg th{vertical-align:top;font-size:13.5px} .tg tr.tg-diff th{border-left:3px solid var(--accent)} .tg tr.tg-same th{border-left:3px solid transparent}
+.m-cratefig .cg-from-platform{stroke-opacity:.3}
