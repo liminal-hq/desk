@@ -23,6 +23,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-int33"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-hal-mock",
+ "desk-i8042",
+ "desk-kbd",
+]
+
+[[package]]
 name = "desk-kbd"
 version = "0.0.0"
 dependencies = [

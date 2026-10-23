@@ -10,7 +10,8 @@ The shared hardware abstraction layer and the drivers written once against it: o
 | `desk-pic` | `drivers/pic/` | The two 8259s: native initialisation, masking, end-of-interrupt, spurious checks |
 | `desk-kbd` | `drivers/kbd/` | The scancode set 1 `Decoder` (the `E0` prefix, Pause, modifiers and lock keys) and the US key map |
 | `desk-i8042` | `drivers/i8042/` | The 8042 controller, the keyboard and mouse set-up, the IRQ 1 and IRQ 12 services that fill the rings, and `Ps2Input` for the core side (`docs/C-INPUT.md`) |
-| `desk-hal-mock` | `platform/mock/` | The host platform for tests: `MockPortBus` (records, replays scripts, attaches device models), models of the 16550, the 8254 and the 8042 with a keyboard and a mouse, `MockIrq`, `MockClock`, `MockDelay` |
+| `desk-int33` | `drivers/int33/` | The DOS mouse driver interface (INT 33h) over the `Bios` trait, `MouseInput` (mickeys to `MouseEvent`) and `DosInput`, the hosted platform's `InputSource` (`docs/B-DOS-INPUT.md`) |
+| `desk-hal-mock` | `platform/mock/` | The host platform for tests: `MockPortBus` (records, replays scripts, attaches device models), models of the 16550, the 8254 and the 8042 with a keyboard and a mouse, an INT 33h mouse driver (`Int33Model`), `MockIrq`, `MockClock`, `MockDelay` |
 
 ```bash
 cargo test                       # host tests against the mock

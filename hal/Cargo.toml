@@ -5,7 +5,7 @@
 # (`spikes/d0-rust-dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line (see
 # `tools/check.sh`), so the default target stays the host's. Nothing outside this workspace depends on it yet; see `docs/HAL.md`.
 [workspace]
-members = ["hal", "drivers/serial", "drivers/pit", "drivers/pic", "drivers/vga", "drivers/kbd", "drivers/i8042", "platform/mock"]
+members = ["hal", "drivers/serial", "drivers/pit", "drivers/pic", "drivers/vga", "drivers/kbd", "drivers/i8042", "drivers/int33", "platform/mock"]
 resolver = "2"
 
 [workspace.package]

@@ -1,0 +1,21 @@
+[package]
+name = "desk-int33"
+description = "The DOS mouse driver interface (INT 33h) and the DOS input source, written once against the HAL's Bios trait"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+desk-kbd.workspace = true
+
+[features]
+# Only for host builds; see `desk-hal`.
+std = ["desk-hal/std", "desk-kbd/std"]
+
+[dev-dependencies]
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { workspace = true, features = ["std"] }
+desk-i8042 = { path = "../i8042", features = ["std"] }
+desk-kbd = { workspace = true, features = ["std"] }
