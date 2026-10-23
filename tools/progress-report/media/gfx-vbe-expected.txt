@@ -1,0 +1,75 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: font: 8x16 copied from the BIOS
+stage2: vbe {N:2..3}.{N:0..2}: mode {HEX} 640x480x8, pitch 640, frame buffer at {HEX}
+stage2: vbe: mode set with the linear frame buffer
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+heap: 4096 KiB at {HEX}
+video: boot info version 1
+video: 8x16 font, 4096 bytes at 0x2000
+video: the loader set VBE {N:2..3}.{N:0..2} mode {HEX}: 640x480x8, pitch 640, memory model 4, {N:1024..1048576} KiB on the card
+video: mode {HEX} frame buffer {HEX}-{HEX} overlaps no RAM, heap or kernel; reserved
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+gfx: VBE mode {HEX}, 640x480, pitch 640, frame buffer at {HEX}
+gfx: vbe picture: frame buffer checksum 0x5bc65936, picture in memory 0x5bc65936
+gfx: vbe picture: spike A's DOSBox checksum 0x5bc65936, equal: true
+gfx: ready vbe-picture
+gfx: ready vbe-fade-half
+gfx: vbe: paced fade out, 16 steps of 2 ticks, took {N:32..400} ticks (including any screenshot pause), ends black: true
+gfx: vbe: paced fade in, 16 steps, took {N:32..400} ticks, palette restored: true
+gfx: vbe: the driver's retrace-synchronised fade took {N:0..400} ticks for 16 + 16 frames ({N:0..16} + {N:0..16} synchronised)
+gfx: perf: vbe: {N:1..99999999} full-screen fills in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe: {N:1..99999999} cursor moves in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe: {N:1..99999999} full-screen fills, one `pixel` call per pixel, in {N:100..800} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe memset fill: {N:1..99999999} full-screen fills in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: cursor 320,240
+...
+gfx: cursor 420,300 buttons 0
+...
+gfx: echo "d"
+...
+gfx: echo "de"
+...
+gfx: echo "des"
+...
+gfx: echo "desk"
+...
+gfx: echo "deskx"
+...
+gfx: echo "desk"
+...
+gfx: window closed
+gfx: leaving VBE: Bochs VBE registers (id {HEX}) switched off
+gfx: mode 13h by registers, no BIOS: registers read back equal the table: true
+gfx: 13h: frame buffer checksum 0x5c0f1f16, picture in memory 0x5c0f1f16
+gfx: 13h: spike A's DOSBox checksum 0x5c0f1f16, equal: true
+gfx: ready mode-13h
+gfx: 13h: paced fade out, 16 steps of 2 ticks, took {N:32..400} ticks (including any screenshot pause), ends black: true
+gfx: 13h: paced fade in, 16 steps, took {N:32..400} ticks, palette restored: true
+gfx: 13h: the driver's retrace-synchronised fade took {N:0..400} ticks for 16 + 16 frames ({N:0..16} + {N:0..16} synchronised)
+gfx: text mode restored: registers, palette and the 8x16 font reloaded
+gfx: ready text
+gfx: tour complete
+boot complete

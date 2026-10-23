@@ -1,0 +1,224 @@
+[
+ {
+  "file": "hal-pit.rs.txt",
+  "branch": "feat/hal-design",
+  "path": "hal/drivers/pit/src/lib.rs",
+  "commit": "ab23751"
+ },
+ {
+  "file": "input-expected.txt",
+  "branch": "spike/c-kernel-input",
+  "path": "tests/native/expected-input.txt",
+  "commit": "33b37c9"
+ },
+ {
+  "file": "input-inject.txt",
+  "branch": "spike/c-kernel-input",
+  "path": "tests/native/input.inject",
+  "commit": "33b37c9"
+ },
+ {
+  "file": "kbd-lib.rs.txt",
+  "branch": "spike/c-kernel-input",
+  "path": "hal/drivers/kbd/src/lib.rs",
+  "commit": "33b37c9"
+ },
+ {
+  "file": "vga-regs.rs.txt",
+  "branch": "spike/d-native-vga",
+  "path": "hal/drivers/vga/src/regs.rs",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "vga-scene.rs.txt",
+  "branch": "spike/d-native-vga",
+  "path": "spikes/a-vga-vbe/prog/src/scene.rs",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "vga-video.rs.txt",
+  "branch": "spike/d-native-vga",
+  "path": "hal/hal/src/video.rs",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "gfx-vbe-expected.txt",
+  "branch": "spike/d-native-vga",
+  "path": "tests/native/expected-gfx-vbe.txt",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "boot-info-block.md",
+  "branch": "spike/d-native-vga",
+  "path": "docs/D-NATIVE-VGA.md",
+  "extract": {
+   "after": "## The boot information block",
+   "table": 1
+  },
+  "commit": "563f6c4"
+ },
+ {
+  "file": "boot-video-block.md",
+  "branch": "spike/d-native-vga",
+  "path": "docs/D-NATIVE-VGA.md",
+  "extract": {
+   "after": "The video block at `0x820` is 32 bytes",
+   "table": 1
+  },
+  "commit": "563f6c4"
+ },
+ {
+  "file": "std-os-results.md",
+  "branch": "spike/e-std-stubs",
+  "path": "docs/E-STD-STUBS.md",
+  "extract": {
+   "after": "## 1. Does std build for an invented OS?",
+   "table": 1
+  },
+  "commit": "7c88426"
+ },
+ {
+  "file": "std-missing.md",
+  "branch": "spike/e-std-stubs",
+  "path": "docs/E-STD-STUBS.md",
+  "extract": {
+   "after": "The 21 errors reduce to four missing pieces",
+   "table": 1
+  },
+  "commit": "7c88426"
+ },
+ {
+  "file": "std-api.md",
+  "branch": "spike/e-std-stubs",
+  "path": "docs/E-STD-STUBS.md",
+  "extract": {
+   "after": "## 2. What the stubs give you",
+   "table": 1
+  },
+  "commit": "7c88426"
+ },
+ {
+  "file": "std-sizes.md",
+  "branch": "spike/e-std-stubs",
+  "path": "docs/E-STD-STUBS.md",
+  "extract": {
+   "after": "## 4. Sizes and times",
+   "table": 1
+  },
+  "commit": "7c88426"
+ },
+ {
+  "file": "jsdos-results.md",
+  "branch": "spike/s5-jsdos",
+  "path": "docs/S5-JSDOS.md",
+  "extract": {
+   "after": "## Results",
+   "table": 1
+  },
+  "commit": "869785a"
+ },
+ {
+  "file": "dos-keys.txt",
+  "branch": "spike/b-dos-input",
+  "path": "spikes/b-dos-input/expected/keys.txt",
+  "commit": "ba6456f"
+ },
+ {
+  "file": "dos-mouse.txt",
+  "branch": "spike/b-dos-input",
+  "path": "docs/B-DOS-INPUT.md",
+  "extract": {
+   "after": "## Results",
+   "fence": 2
+  },
+  "commit": "ba6456f"
+ },
+ {
+  "file": "dos-input-table.md",
+  "branch": "spike/b-dos-input",
+  "path": "docs/B-DOS-INPUT.md",
+  "extract": {
+   "after": "## The event contract shared with the native kernel",
+   "table": 1
+  },
+  "commit": "ba6456f"
+ },
+ {
+  "file": "img-a-mode13h.png",
+  "branch": "spike/a-vga-vbe-rust",
+  "path": "docs/images/a-vga-vbe/mode13h.png",
+  "commit": "4ab237b"
+ },
+ {
+  "file": "img-d-vbe-picture.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/vbe-640x480x8-picture.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-vbe-window.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/vbe-window-cursor-typing.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-mode12h-window.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/mode-12h-window-cursor-typing.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-mode12h.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/mode-12h-picture.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-text-restored.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/text-mode-restored.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-cirrus.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/cirrus-leave-vbe-text-garbled.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-s5-vbe.png",
+  "branch": "spike/s5-jsdos",
+  "path": "spikes/s5-jsdos/evidence/vbe.png",
+  "commit": "869785a"
+ },
+ {
+  "file": "img-b-screen.png",
+  "branch": "spike/b-dos-input",
+  "path": "docs/images/b-dos-input/screen.png",
+  "commit": "ba6456f"
+ },
+ {
+  "file": "jsdos-vbe.txt",
+  "branch": "spike/s5-jsdos",
+  "path": "spikes/s5-jsdos/evidence/vbe-jsdos.txt",
+  "commit": "869785a"
+ },
+ {
+  "file": "jsdos-vbe-nolfb.txt",
+  "branch": "spike/s5-jsdos",
+  "path": "spikes/s5-jsdos/evidence/vbe-nolfb-jsdos.txt",
+  "commit": "869785a"
+ },
+ {
+  "file": "img-d-vbe-fade.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/vbe-fade-half-way.png",
+  "commit": "563f6c4"
+ },
+ {
+  "file": "img-d-mode13h.png",
+  "branch": "spike/d-native-vga",
+  "path": "docs/images/d-native-vga/mode-13h-picture.png",
+  "commit": "563f6c4"
+ }
+]
