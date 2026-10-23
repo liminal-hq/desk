@@ -22,8 +22,12 @@ pub const COM4: u16 = 0x2E8;
 /// The UART's clock divided by 16: the rate with a divisor of 1.
 pub const MAX_BAUD: u32 = 115_200;
 
-/// How many times `write_byte` reads the line status before writing anyway (the kernel's bound).
+/// How many times `write_byte` reads the line status before writing anyway (the kernel's bound); `probe` uses the same bound to
+/// wait for its byte to come back.
 pub const WRITE_POLLS: u32 = 100_000;
+
+/// The receive FIFO's depth, and so the most stale bytes `probe` drains before it starts.
+const RX_FIFO: u32 = 16;
 
 // Register offsets from the base port.
 const DATA: u16 = 0; // receive and transmit buffer; divisor low with DLAB
@@ -42,10 +46,11 @@ const LSR_DATA_READY: u8 = 0x01;
 const LSR_THR_EMPTY: u8 = 0x20;
 const PROBE_BYTE: u8 = 0xAE;
 
-/// The divisor latch value for `baud`: `InvalidArgument` unless `baud` divides 115,200 exactly (so 0, rates above 115,200 and
-/// odd rates such as 100,000 are refused rather than rounded to a rate the other end does not expect).
+/// The divisor latch value for `baud`: `InvalidArgument` unless `baud` divides 115,200 exactly and the divisor fits the 16-bit
+/// latch (so 0, 1, rates above 115,200 and odd rates such as 100,000 are refused rather than rounded to a rate the other end does
+/// not expect).
 pub const fn divisor_for(baud: u32) -> Result<u16, HalError> {
-    if baud == 0 || baud > MAX_BAUD || !MAX_BAUD.is_multiple_of(baud) {
+    if baud == 0 || baud > MAX_BAUD || !MAX_BAUD.is_multiple_of(baud) || MAX_BAUD / baud > u16::MAX as u32 {
         return Err(HalError::InvalidArgument);
     }
     Ok((MAX_BAUD / baud) as u16)
@@ -83,18 +88,30 @@ impl<P: PortIo> Serial16550<P> {
         Ok(())
     }
 
-    /// Checks that a UART answers: in loopback mode a byte sent must come back. Leaves the modem control as `init` sets it. Call
-    /// after `init`. `NoDevice` if nothing answers (a floating bus reads all ones).
+    /// Checks that a UART answers: in loopback mode a byte sent must come back. Stale received bytes are drained first, and the
+    /// echo is awaited on the line status (it takes one character time, about 87 µs at 115,200 baud), with the same bound as
+    /// `write_byte`. Leaves the modem control as `init` sets it. Call after `init`. `NoDevice` if nothing answers (a floating bus
+    /// reads all ones, so it looks ready but echoes 0xFF).
     pub fn probe(&self) -> Result<(), HalError> {
         let p = &self.ports;
         p.outb(self.base + MCR, MCR_LOOPBACK);
+        for _ in 0..RX_FIFO {
+            if self.read_byte().is_none() {
+                break;
+            }
+        }
         p.outb(self.base + DATA, PROBE_BYTE);
-        let echoed = p.inb(self.base + DATA);
+        let mut echoed = None;
+        for _ in 0..WRITE_POLLS {
+            echoed = self.read_byte();
+            if echoed.is_some() {
+                break;
+            }
+        }
         p.outb(self.base + MCR, MCR_DTR_RTS_OUT2);
-        if echoed == PROBE_BYTE {
-            Ok(())
-        } else {
-            Err(HalError::NoDevice)
+        match echoed {
+            Some(PROBE_BYTE) => Ok(()),
+            _ => Err(HalError::NoDevice),
         }
     }
 
@@ -167,7 +184,7 @@ mod tests {
         assert_eq!(divisor_for(115_200), Ok(1));
         assert_eq!(divisor_for(9_600), Ok(12));
         assert_eq!(divisor_for(2), Ok(57_600));
-        for bad in [0, 100_000, 230_400, 7] {
+        for bad in [0, 1, 100_000, 230_400, 7] {
             assert_eq!(divisor_for(bad), Err(HalError::InvalidArgument), "{bad} baud");
         }
         let bus = MockPortBus::new();
@@ -227,6 +244,34 @@ mod tests {
         assert_eq!(uart.borrow().mcr, 0x0B, "the probe puts the modem control back");
         assert!(uart.borrow().sent.is_empty(), "the probe byte stays inside the chip");
         assert_eq!(Serial16550::new(&bus, COM3).probe(), Err(HalError::NoDevice));
+    }
+
+    #[test]
+    fn probe_drains_stale_bytes_and_waits_for_the_echo() {
+        let bus = MockPortBus::new();
+        let uart = bus.attach(COM1, COM1 + 7, Uart16550::new(COM1));
+        let s = Serial16550::new(&bus, COM1);
+        s.init(115_200).unwrap();
+        uart.borrow_mut().incoming.extend(b"old");
+        assert_eq!(
+            s.probe(),
+            Ok(()),
+            "bytes received before the probe are not mistaken for the echo"
+        );
+
+        // The echo arrives one character time later: the line status says "no data" twice first.
+        let bus = MockPortBus::scripted([
+            Access::outb(COM1 + 4, 0x1E),
+            Access::inb(COM1 + 5, 0x60), // nothing stale
+            Access::outb(COM1, 0xAE),
+            Access::inb(COM1 + 5, 0x60),
+            Access::inb(COM1 + 5, 0x60),
+            Access::inb(COM1 + 5, 0x61),
+            Access::inb(COM1, 0xAE),
+            Access::outb(COM1 + 4, 0x0B),
+        ]);
+        assert_eq!(Serial16550::new(&bus, COM1).probe(), Ok(()));
+        assert!(bus.script_done());
     }
 
     #[test]
