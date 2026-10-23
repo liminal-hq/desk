@@ -40,8 +40,9 @@ gfx: ready vbe-fade-half
 gfx: vbe: paced fade out, 16 steps of 2 ticks, took {N:32..400} ticks (including any screenshot pause), ends black: true
 gfx: vbe: paced fade in, 16 steps, took {N:32..400} ticks, palette restored: true
 gfx: vbe: the driver's retrace-synchronised fade took {N:0..400} ticks for 16 + 16 frames ({N:0..16} + {N:0..16} synchronised)
-gfx: perf: vbe, one volatile store per pixel: {N:1..99999999} full-screen fills in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
-gfx: perf: vbe, one volatile store per pixel: {N:1..99999999} cursor moves in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe: {N:1..99999999} full-screen fills in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe: {N:1..99999999} cursor moves in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
+gfx: perf: vbe: {N:1..99999999} full-screen fills, one `pixel` call per pixel, in {N:100..800} ticks, {ANY} per second (emulated speed, not real hardware)
 gfx: perf: vbe memset fill: {N:1..99999999} full-screen fills in {N:100..400} ticks, {ANY} per second (emulated speed, not real hardware)
 gfx: cursor 320,240
 ...

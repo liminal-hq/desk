@@ -202,6 +202,20 @@ fn perf<C: Canvas>(c: &mut C, label: &str, cursor_colours: (u8, u8)) {
     println!("gfx: perf: {}: {} cursor moves in {} ticks, {}.{} per second (emulated speed, not real hardware)", label, n, t, a, b);
 }
 
+/// The full-screen fill as one `pixel` call per pixel, the slowest way to use the driver and what a fill cost before `fill8`.
+fn perf_pixels<C: Canvas>(c: &mut C, label: &str) {
+    let (w, h) = (c.width() as i32, c.height() as i32);
+    let (n, t) = for_a_second(|i| {
+        for y in 0..h {
+            for x in 0..w {
+                c.pixel(x, y, (i % 15 + 1) as u8);
+            }
+        }
+    });
+    let (a, b) = rate(n, t);
+    println!("gfx: perf: {}: {} full-screen fills, one `pixel` call per pixel, in {} ticks, {}.{} per second (emulated speed, not real hardware)", label, n, t, a, b);
+}
+
 /// The same full-screen fill with `write_bytes`, which the compiler turns into the library's memset: the obvious next step beyond
 /// one volatile store per pixel. Only for the speed comparison; it writes the frame buffer's memory without the region's checks.
 fn perf_raw_fill(l: &Lfb) {
@@ -510,7 +524,8 @@ fn tour_vbe(l: &Lfb, ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
     show_picture(&mut c, Depth::Colours256, "vbe picture", hosted.then_some(HOSTED_VBE_640X480));
     rendezvous(ps2, "vbe-picture");
     fade_demo(ps2, "vbe", &palette, Some("vbe-fade-half"));
-    perf(&mut c, "vbe, one volatile store per pixel", Looks::COLOURS_256.cursor);
+    perf(&mut c, "vbe", Looks::COLOURS_256.cursor);
+    perf_pixels(&mut c, "vbe");
     perf_raw_fill(l);
     window_session(&mut c, ps2, &Looks::COLOURS_256, font);
 }
