@@ -18,6 +18,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
+| [`E-STD-STUBS.md`](E-STD-STUBS.md) | Spike result: `std` for an invented OS name — what the stubs give and cost, a patched platform layer over the runtime that makes `println!`, `HashMap`, `Instant` and `exit` work in DOSBox, sizes, and the cost of tracking Rust releases |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |

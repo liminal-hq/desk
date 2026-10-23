@@ -58,8 +58,8 @@ The native kernel specification (`kernel/i486-desk-none.json`, PR #6) differs: E
 
 `std` is not just a bigger `core`: it needs a platform layer, the `sys` module, to implement console, files, time, environment, arguments, threads, locks and the random seed for `HashMap`. Our targets have no such layer. Options, in rough order of cost:
 
-1. **An experiment with the "unsupported" stubs.** For an unknown OS name, `std` is expected to build with stubs that make I/O and threads return errors. To be confirmed by an experiment; measure what builds and the size cost.
-2. **Our own `std` platform layer** over our runtime or the Desk SDK, for a Desk app target, patched into a custom sysroot with a pinned toolchain. Feasibility is to be confirmed by a spike, not assumed.
+1. **The "unsupported" stubs.** Tried in spike E (`docs/E-STD-STUBS.md`): with Rust 1.98.0 an invented OS name does **not** build, because four pieces have no fallback (the system allocator, the I/O error mapping, the thread-local keys and the random function). With those supplied, the rest is stubs: `println!` is silent, clocks, `sleep` and `process::exit` abort. Not a usable `std` on their own.
+2. **Our own `std` platform layer** over our runtime or the Desk SDK, for a Desk app target, patched into a copy of the sources that cargo reads through `__CARGO_TESTS_ONLY_SRC_ROOT`. **Works** (spike E): 55 added lines in 12 existing files, about 340 lines of new files, and 14 `desk_*` C functions; `println!`, `HashMap`, `Instant`, `sleep`, arguments, environment and `exit` run in DOSBox; a hello is 19.5 KB against 9.7 KB for `no_std` (10.2 against 8.2 KB with `-Cpanic=immediate-abort`); the patch needed hand edits on four of five older releases.
 3. **A thin std-like crate of our own** on `core` and `alloc` (`println!`, `File`, `Instant`). The cheap path.
 4. **Reusing the unix platform layer over DJGPP's libc.** Probably not viable, because of missing pthreads and other system calls. Unverified.
 5. **An upstream Tier 3 target.** A long-term idea only.
@@ -70,7 +70,7 @@ Costs to weigh:
 - Binary size on a floppy. `panic=abort` and `panic_immediate_abort` are the size levers.
 - The licence of any `std` fork.
 
-**Recommended split (a target, not a decision):** the kernel and the low-level runtime stay `no_std` plus `alloc`; apps are where a real `std` pays off.
+**Recommended split (backed by spike E):** the kernel and the low-level runtime stay `no_std` plus `alloc`; apps are where a real `std` pays off, through the patched platform layer with the `desk_*` functions as the contract. A thin std-like crate stays the answer for size-critical programs.
 
 ## Cross-cutting ideas to track
 
@@ -88,15 +88,15 @@ Costs to weigh:
 | s1-dxe3 | Hosted | Scott Morris | PR #4 (on PR #3) | done: Rust modules as DXE3 files, yes with limits (`docs/S1-DXE3.md`) |
 | native walking skeleton | Native | Scott Morris | PR #6 | done: NASM boot sector and a Rust kernel in QEMU with a 486 CPU (`docs/NATIVE-BOOT.md`) |
 | d0-rust-dos | Hosted | Scott Morris | PR #7 (on PR #3) | done: yes, a pure Rust DOS program with no gcc, libc or crt0 (a `rust-lld` link, a 139-line packer and a roughly 1,600-line runtime, `docs/D0-RUST-DOS.md`); next: a freestanding ELF target, `rt` as a top-level crate, Rust drivers |
-| s-std-stubs | Any | Not assigned | None | planned: build `std` for an unknown OS name and measure |
+| e-std-stubs | Any | Scott Morris | PR (spike/e-std-stubs) | done: the stubs alone do not build; a patched platform layer over `rt` does and runs in DOSBox (`docs/E-STD-STUBS.md`); next: `fn main` through `lang_start`, a DOS-backed `std::fs`, a CI job that applies the patch to the next toolchain |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |
 | native-app-target | Desk apps | Not assigned | None | planned |
 
 ### Open questions
 
-- Does `std` build for an unknown OS name with the stubs, and how large is the result?
+- Answered by spike E: no, not in 1.98.0 (four pieces lack a fallback); with a small patch it does, and a hello is 19.5 KB (10.2 KB with `immediate-abort`).
 - Which crate type and loader suit a Desk app on the native OS?
-- Can a custom `std` platform layer be kept alive across Rust upgrades at a cost we accept?
+- Can a custom `std` platform layer be kept alive across Rust upgrades at a cost we accept? Spike E: the patch applies to 1.97 and 1.98 and needs hand edits for 1.93 to 1.96; a CI job that applies it to the next release would make that a scheduled task.
 - Does one DOS target serve both the hosted Desk and Lt. Fizz Episode 2, or do they diverge?
 - Which linker per target, and what does a pure-Rust DOS link look like (d0)?

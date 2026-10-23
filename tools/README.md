@@ -4,11 +4,12 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 
 | Script | What it does |
 |---|---|
-| `check.sh` | Runs every check the CI runs: headers, docs, the font build check in `fonts/` when Bun is set up, Rust format and lints, the DOS build, headless runs of `DESK.EXE`, the s1-dxe3 module scenarios, the d0-rust-dos checks, and the native boot test |
+| `check.sh` | Runs every check the CI runs: headers, docs, the font build check in `fonts/` when Bun is set up, Rust format and lints, the DOS build, headless runs of `DESK.EXE`, the s1-dxe3 module scenarios, the d0-rust-dos and e-std-stubs checks, and the native boot test |
 | `setup.sh` | Checks host tools, installs the pinned Rust pieces, and links `vendor/` to `DOS_TOOLCHAIN` or downloads the tools |
 | `fetch-tools.sh` | Downloads DJGPP, DOSBox Staging and CWSDPMI into `vendor/` with SHA-256 checks, using the versions of the CI image |
 | `build.sh` | Cargo for `core/dos.json`, `coff2go32.py`, DJGPP's gcc for `c/`, then `dist/DESK.EXE` beside `CWSDPMI.EXE` |
 | `coff2go32.py` | Converts rustc's COFF objects so DJGPP's linker lays them out and relocates them correctly |
+| `elf2go32.py` | Packs a linked 32-bit ELF into a DJGPP go32 `.EXE` (used by the d0-rust-dos and e-std-stubs spikes, whose `build.sh` scripts and checks run through `dosrun.sh`) |
 | `dosrun.sh` | Runs a DOS command in headless DOSBox Staging; prints its output and returns its exit status |
 | `check-headers.sh` | Checks the licence header on source and script files |
 | `check-docs.py` | Checks the markdown house style and that relative links resolve |

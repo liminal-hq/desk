@@ -4,6 +4,7 @@ Small experiments that decide the architecture. Spikes s1 to s5 below belong to 
 
 - **s1-dxe3**: can Rust code run as a DXE3 module that calls back into the core? **Done: yes, with limits** (`docs/S1-DXE3.md`; runs from `tools/check.sh`).
 - **d0-rust-dos** (done, hosted track; `docs/D0-RUST-DOS.md`: yes, a pure Rust DOS program with no gcc, no libc and no crt0 runs under CWSDPMI): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld` and packed with CWSDPMI's stub, run headless in DOSBox; if it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
+- **e-std-stubs** (done, any track; `docs/E-STD-STUBS.md`: the stubs alone do not build, a small patched platform layer does): `std` for target specifications with an invented `os`, a probe of every stubbed API run in DOSBox on the stub, borrowed-Trusty and patched Desk platform layers, and the size and upkeep cost; runs from `tools/check.sh`.
 - **s2-vbe**: VBE 2.0 linear frame buffer and VGA mode 12h from Rust.
 - **s3-mouse**: INT 33h from Rust.
 - **s4-handoff**: `DESK.COM` hands the machine to a real-mode program and takes it back.
