@@ -69,11 +69,17 @@ pub trait InterruptController {
     /// Acknowledges the interrupt being serviced on the line. A platform calls this after the handler returns; drivers never do,
     /// because under DOS a chained BIOS handler sends it instead, and a second one would acknowledge a different interrupt.
     fn eoi(&self, irq: Irq);
-    /// True if an interrupt on IRQ 7 or 15 is spurious (the controller's in-service bit is clear), in which case it must get no
-    /// end-of-interrupt on that controller. Controllers without spurious interrupts return false.
+    /// True if an interrupt on IRQ 7 or 15 is spurious (the controller's in-service bit is clear), in which case the platform
+    /// calls `eoi_spurious` instead of `eoi` and runs no handler. Controllers without spurious interrupts return false.
     fn is_spurious(&self, irq: Irq) -> bool {
         let _ = irq;
         false
+    }
+    /// The acknowledgement a spurious interrupt needs: none for one raised by the controller that saw it directly, but for a
+    /// spurious line behind a cascade (IRQ 15 on the 8259s) the master did see its cascade input and needs its end-of-interrupt,
+    /// or the lines below it stay blocked.
+    fn eoi_spurious(&self, irq: Irq) {
+        let _ = irq;
     }
 }
 
@@ -90,10 +96,12 @@ pub trait SharedIrqService: Sync {
     fn on_irq(&self);
 }
 
-/// A registered handler: what a platform's interrupt stub calls. Two words, so the stub can keep it in a locked table.
+/// A registered handler: what a platform's interrupt stub calls. Two words, so the stub can keep it in a locked table. The function
+/// uses the C calling convention (cdecl on x86: the argument on the stack, `EAX`, `ECX` and `EDX` clobbered), so an assembly stub
+/// may call it directly with `push ctx; call func; add esp, 4`, as well as a Rust dispatch through `call`.
 #[derive(Clone, Copy, Debug)]
 pub struct IrqHandler {
-    func: unsafe fn(*mut ()),
+    func: unsafe extern "C" fn(*mut ()),
     ctx: *mut (),
 }
 
@@ -106,13 +114,13 @@ unsafe impl Send for IrqHandler {}
 // one-caller-at-a-time contract.
 unsafe impl Sync for IrqHandler {}
 
-unsafe fn trampoline<T: IrqService>(ctx: *mut ()) {
+unsafe extern "C" fn trampoline<T: IrqService>(ctx: *mut ()) {
     // SAFETY: `ctx` came from the `&'static mut T` given to `from_static`, and `call`'s contract rules out a second caller.
     let svc = unsafe { &mut *(ctx as *mut T) };
     svc.on_irq();
 }
 
-unsafe fn shared_trampoline<T: SharedIrqService>(ctx: *mut ()) {
+unsafe extern "C" fn shared_trampoline<T: SharedIrqService>(ctx: *mut ()) {
     // SAFETY: `ctx` came from the `&'static T` given to `from_shared` and is only used as a shared reference; `T: Sync`.
     let svc = unsafe { &*(ctx as *const T) };
     svc.on_irq();
@@ -144,7 +152,7 @@ impl IrqHandler {
     ///
     /// `func(ctx)` must be sound to call from interrupt context at any time until the handler is unregistered, `ctx` must stay
     /// valid (and locked under DPMI) for that long, and nothing else may use what `ctx` points to without synchronisation.
-    pub const unsafe fn from_raw(func: unsafe fn(*mut ()), ctx: *mut ()) -> IrqHandler {
+    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()), ctx: *mut ()) -> IrqHandler {
         IrqHandler { func, ctx }
     }
 

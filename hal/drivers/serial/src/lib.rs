@@ -44,6 +44,7 @@ const MCR_DTR_RTS_OUT2: u8 = 0x0B; // OUT2 gates the UART's interrupt onto the b
 const MCR_LOOPBACK: u8 = 0x1E; // loopback, with OUT1, OUT2 and RTS
 const LSR_DATA_READY: u8 = 0x01;
 const LSR_THR_EMPTY: u8 = 0x20;
+const LSR_TX_IDLE: u8 = 0x40; // transmitter empty: holding and shift registers both done
 const PROBE_BYTE: u8 = 0xAE;
 
 /// The divisor latch value for `baud`: `InvalidArgument` unless `baud` divides 115,200 exactly and the divisor fits the 16-bit
@@ -65,7 +66,11 @@ pub struct Serial16550<P> {
 
 impl<P: PortIo> Serial16550<P> {
     /// Names the UART; touches no hardware.
+    ///
+    /// The UART spans `base..=base + 7`, so a base above `0xFFF8` is a programming error and panics (at compile time in a `const`
+    /// or `static`); ISA ports are below `0x400` anyway.
     pub const fn new(ports: P, base: u16) -> Self {
+        assert!(base <= u16::MAX - 7, "a 16550 needs eight ports from its base");
         Serial16550 { ports, base }
     }
 
@@ -88,12 +93,18 @@ impl<P: PortIo> Serial16550<P> {
         Ok(())
     }
 
-    /// Checks that a UART answers: in loopback mode a byte sent must come back. Stale received bytes are drained first, and the
-    /// echo is awaited on the line status (it takes one character time, about 87 µs at 115,200 baud), with the same bound as
-    /// `write_byte`. Leaves the modem control as `init` sets it. Call after `init`. `NoDevice` if nothing answers (a floating bus
-    /// reads all ones, so it looks ready but echoes 0xFF).
+    /// Checks that a UART answers: in loopback mode a byte sent must come back. First it waits, boundedly, for the transmitter to
+    /// finish what it is sending (otherwise that byte would be looped back and lost from the line), then drains stale received
+    /// bytes, sends the probe byte and polls for it with the same bound as `write_byte` (the echo takes one character time, about
+    /// 87 µs at 115,200 baud), skipping up to a FIFO's worth of other bytes. Leaves the modem control as `init` sets it. Call after
+    /// `init`. `NoDevice` if nothing answers (a floating bus reads all ones, so it looks ready but echoes 0xFF).
     pub fn probe(&self) -> Result<(), HalError> {
         let p = &self.ports;
+        for _ in 0..WRITE_POLLS {
+            if p.inb(self.base + LSR) & LSR_TX_IDLE != 0 {
+                break;
+            }
+        }
         p.outb(self.base + MCR, MCR_LOOPBACK);
         for _ in 0..RX_FIFO {
             if self.read_byte().is_none() {
@@ -101,17 +112,24 @@ impl<P: PortIo> Serial16550<P> {
             }
         }
         p.outb(self.base + DATA, PROBE_BYTE);
-        let mut echoed = None;
+        let mut found = false;
+        let mut others = 0;
         for _ in 0..WRITE_POLLS {
-            echoed = self.read_byte();
-            if echoed.is_some() {
-                break;
+            match self.read_byte() {
+                Some(PROBE_BYTE) => {
+                    found = true;
+                    break;
+                }
+                Some(_) if others == RX_FIFO => break,
+                Some(_) => others += 1,
+                None => {}
             }
         }
         p.outb(self.base + MCR, MCR_DTR_RTS_OUT2);
-        match echoed {
-            Some(PROBE_BYTE) => Ok(()),
-            _ => Err(HalError::NoDevice),
+        if found {
+            Ok(())
+        } else {
+            Err(HalError::NoDevice)
         }
     }
 
@@ -259,13 +277,18 @@ mod tests {
             "bytes received before the probe are not mistaken for the echo"
         );
 
-        // The echo arrives one character time later: the line status says "no data" twice first.
+        // A byte is still leaving the shift register, and the echo arrives one character time later, behind a byte that was in
+        // flight: the probe waits for the transmitter, then skips the stray byte.
         let bus = MockPortBus::scripted([
+            Access::inb(COM1 + 5, 0x20), // holding register empty, shift register busy
+            Access::inb(COM1 + 5, 0x60), // transmitter idle
             Access::outb(COM1 + 4, 0x1E),
             Access::inb(COM1 + 5, 0x60), // nothing stale
             Access::outb(COM1, 0xAE),
             Access::inb(COM1 + 5, 0x60),
             Access::inb(COM1 + 5, 0x60),
+            Access::inb(COM1 + 5, 0x61),
+            Access::inb(COM1, b'x'),
             Access::inb(COM1 + 5, 0x61),
             Access::inb(COM1, 0xAE),
             Access::outb(COM1 + 4, 0x0B),
