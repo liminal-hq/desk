@@ -24,7 +24,7 @@ for scn in tests/shell/*.scn; do
   mkdir -p "$out"
   # A scenario's frames are the lines of its .sums: NAME DEPTH WIDTHxHEIGHT INDEX COLOUR.
   while read -r frame depth size _; do
-    python3 -I tools/frames.py png "$dumps/$frame-$depth.RAW" "$dumps/$frame-$depth.PAL" "${size%x*}" "${size#*x}" "$out/$frame-$depth.png"
+    python3 -I tools/frames.py png "$dumps/$name/$frame-$depth.RAW" "$dumps/$name/$frame-$depth.PAL" "${size%x*}" "${size#*x}" "$out/$frame-$depth.png"
   done < "tests/shell/$name.sums"
   python3 -I tools/frames.py goldens "tests/shell/$name.sums" "$out"
 done

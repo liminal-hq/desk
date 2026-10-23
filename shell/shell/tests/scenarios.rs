@@ -36,8 +36,9 @@ fn rel(p: &Path) -> String {
     p.strip_prefix(root()).unwrap_or(p).display().to_string()
 }
 
-fn frames_dir() -> PathBuf {
-    root().join("shell/target/frames")
+/// Where a scenario's dumps go: a directory of its own, so two scenarios may share a frame name.
+fn frames_dir(scenario: &Path) -> PathBuf {
+    root().join("shell/target/frames").join(scenario.file_stem().unwrap())
 }
 
 /// One frame of a scenario: its name, the depth, the indices on screen and their digests.
@@ -214,21 +215,17 @@ fn frames_of(sc: &Scenario) -> Vec<Frame> {
     all
 }
 
-fn write_dumps(frames: &[Frame]) {
-    let dir = frames_dir();
+fn write_dumps(scenario: &Path, frames: &[Frame]) {
+    let dir = frames_dir(scenario);
     std::fs::create_dir_all(&dir).unwrap();
     for f in frames {
-        let mut pal = Vec::with_capacity(768);
-        for c in pal_of(f.depth) {
-            pal.extend_from_slice(&[c.r, c.g, c.b]);
+        let mut dac = Vec::with_capacity(768);
+        for c in pal(f.depth) {
+            dac.extend_from_slice(&[c.r, c.g, c.b]);
         }
         std::fs::write(dir.join(format!("{}.RAW", f.file_stem())), &f.pixels).unwrap();
-        std::fs::write(dir.join(format!("{}.PAL", f.file_stem())), pal).unwrap();
+        std::fs::write(dir.join(format!("{}.PAL", f.file_stem())), dac).unwrap();
     }
-}
-
-fn pal_of(depth: Depth) -> [desk_hal::Rgb6; 256] {
-    pal(depth)
 }
 
 #[test]
@@ -250,15 +247,25 @@ fn every_scenario_matches_its_sums_through_every_presenter() {
         let sums = path.with_extension("sums");
         let now: String = frames.iter().map(|f| f.sums_line() + "\n").collect();
         if record {
-            write_dumps(&frames);
+            write_dumps(&path, &frames);
             std::fs::write(&sums, &now).unwrap();
             continue;
         }
-        let committed = std::fs::read_to_string(&sums).unwrap_or_default();
+        let Ok(committed) = std::fs::read_to_string(&sums) else {
+            writeln!(
+                failures,
+                "{} has no {}; record it with tools/shell-goldens.sh",
+                rel(&path),
+                rel(&sums)
+            )
+            .unwrap();
+            write_dumps(&path, &frames);
+            continue;
+        };
         if committed == now {
             continue;
         }
-        write_dumps(&frames);
+        write_dumps(&path, &frames);
         let want: Vec<&str> = committed.lines().collect();
         writeln!(failures, "{} does not match {}:", rel(&path), rel(&sums)).unwrap();
         for (i, f) in frames.iter().enumerate() {
@@ -273,7 +280,7 @@ fn every_scenario_matches_its_sums_through_every_presenter() {
                 )
                 .unwrap();
                 let stem = f.file_stem();
-                let out = frames_dir();
+                let out = frames_dir(&path);
                 let golden = dir.join("golden").join(path.file_stem().unwrap()).join(format!("{stem}.png"));
                 writeln!(
                     failures,

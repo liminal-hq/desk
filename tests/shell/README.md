@@ -12,7 +12,7 @@ The first window's scripted run and what it is expected to draw (`docs/FIRST-WIN
 
 `shell/shell/tests/scenarios.rs` runs every `.scn` here at every depth it lists, through `MemoryPresent` at both depths, `LinearPresent` over a `Vec`-backed region at depth 8 and `PlanarPresent` over a four-plane model at depth 4. All the presenters must give the same pixels, and their digests must equal the `.sums`.
 
-When a frame differs, the test fails, writes the frames as `shell/target/frames/FRAME-DEPTH.RAW` and `.PAL`, and prints the `tools/frames.py png` and `tools/frames.py diff` commands that turn them into a picture of the differing pixels over the golden.
+When a frame differs, the test fails, writes the frames as `shell/target/frames/NAME/FRAME-DEPTH.RAW` and `.PAL`, and prints the `tools/frames.py png` and `tools/frames.py diff` commands that turn them into a picture of the differing pixels over the golden.
 
 ## Re-recording
 
