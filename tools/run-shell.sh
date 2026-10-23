@@ -68,17 +68,12 @@ run_native() {
   tools/native-build.sh > /dev/null
   local image="dist/native-shell-live-$depth.img"
   tools/native-image.sh --test-mode shell-live --video "$video" --out "$image" > /dev/null
-  if [ "$display" = gtk ]; then
-    cat <<'HOTKEYS'
-QEMU (GTK): click in the window to give it the pointer and the keyboard. Press Ctrl+Alt+G to give them back.
+  local toolkit=GTK
+  [ "$display" = gtk ] || toolkit=SDL
+  cat <<HOTKEYS
+QEMU ($toolkit): click in the window to give it the pointer and the keyboard. Press Ctrl+Alt+G to give them back.
             Alt+Tab, Alt+F4 and Tab reach the first window while the keyboard is grabbed.
 HOTKEYS
-  else
-    cat <<'HOTKEYS'
-QEMU (SDL): click in the window to give it the pointer and the keyboard. Press Ctrl+Alt+G to give them back.
-            Alt+Tab, Alt+F4 and Tab reach the first window while the keyboard is grabbed.
-HOTKEYS
-  fi
   echo "Escape ends the session. Closing the window quits QEMU. The kernel's transcript scrolls below."
   local args=(--window "$display" --timeout 0 --vga "$card")
   if [ -n "$demo" ]; then
@@ -91,10 +86,8 @@ HOTKEYS
 
 run_dos() {
   ls vendor/dosbox/*/dosbox > /dev/null 2>&1 || stop "no DOSBox Staging in vendor/; run tools/setup.sh"
-  if [ ! -f dist/shell/SHELL.EXE ]; then
-    echo "run-shell: building SHELL.EXE"
-    shell/dos/build.sh > /dev/null
-  fi
+  echo "run-shell: building SHELL.EXE"
+  shell/dos/build.sh > /dev/null
   cat <<'HOTKEYS'
 DOSBox Staging: click in the window to give it the pointer (Ctrl+F10 or the middle button gives it back).
                 Alt+Tab and Alt+F4 go to your desktop unless your DOSBox captures system shortcuts; click a window with the mouse instead.

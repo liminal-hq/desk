@@ -25,7 +25,7 @@
 #
 # DOS_WINDOW=1 opens DOSBox's window on the desktop instead (tools/run-shell.sh uses it): DISPLAY and WAYLAND_DISPLAY are kept, SDL picks its
 # own video driver, the window is not full screen, and a click captures the pointer (`mouse_capture = onclick`, with raw input so the
-# desktop's pointer acceleration stays out of the counts). DOS_TIMEOUT=0 waits for ever. Without DOS_WINDOW nothing here changes.
+# desktop's pointer acceleration stays out of the counts). Closing the window ends the run with a note and status 0. DOS_TIMEOUT=0 waits for ever. Without DOS_WINDOW nothing here changes.
 #
 # DOSBox needs no display: SDL_VIDEODRIVER=dummy gives it a video driver that draws nowhere, and SDL_AUDIODRIVER=dummy the same
 # for audio. The environment's DISPLAY and WAYLAND_DISPLAY are removed so a developer's desktop is never used by accident.
@@ -112,6 +112,12 @@ if [ "$status" = 124 ]; then
   echo "dosrun: timed out after ${DOS_TIMEOUT:-60}s: $*" >&2
   [ -f "$WORK/STDOUT.TXT" ] && tr -d '\r' < "$WORK/STDOUT.TXT"
   exit 124
+fi
+if [ -n "${DOS_WINDOW:-}" ] && [ ! -f "$WORK/EXITCODE.TXT" ]; then
+  # The window was closed (or DOSBox quit) before the program ended: nothing left to report but what the program had written.
+  [ ! -f "$WORK/STDOUT.TXT" ] || tr -d '\r' < "$WORK/STDOUT.TXT"
+  echo "dosrun: DOSBox's window was closed before the program ended" >&2
+  exit 0
 fi
 if [ "$status" != 0 ] || [ ! -f "$WORK/EXITCODE.TXT" ]; then
   echo "dosrun: DOSBox failed (status $status); its log follows" >&2

@@ -103,6 +103,9 @@ tailer=""
 if [ -n "$window" ]; then
   tail -n +1 -F "$serial" 2> /dev/null &
   tailer=$!
+  # A background job ignores Ctrl+C in a script, so stop the tail on any way out (the earlier trap's clean-up is repeated here).
+  trap 'kill "$tailer" 2> /dev/null; rm -rf "$sockdir"; rm -f "${trap_serial:-}"' EXIT
+  trap 'exit 130' INT TERM
 fi
 
 if [ "$backend" = host ]; then
@@ -127,7 +130,7 @@ fi
 [ -n "$injector" ] && { kill "$injector" 2> /dev/null; wait "$injector" 2> /dev/null; }
 if [ -n "$tailer" ]; then
   # Let the tail show the last lines before it stops.
-  sleep 0.3
+  sleep 0.5
   kill "$tailer" 2> /dev/null
   wait "$tailer" 2> /dev/null
 else
@@ -138,7 +141,7 @@ case "$status" in
   35) echo "native-run: guest reported failure" >&2; exit 1 ;;
   124) echo "native-run: timed out after ${timeout_s}s" >&2; exit 124 ;;
   *)
-    if [ -n "$window" ]; then
+    if [ -n "$window" ] && { [ "$status" = 0 ] || [ "$status" = 2 ]; }; then
       echo "native-run: QEMU ended without a guest exit code (status $status): the window was closed, or the guest reset or triple-faulted; the transcript above says which" >&2
       exit 0
     fi
