@@ -154,6 +154,8 @@ For depth: `docs/NATIVE-BOOT.md` ([boot flow](doc:docs/NATIVE-BOOT.md#boot-flow)
 
 The second address is one megabyte plus `0x500`: it needs bit 20, and it is the same as the first with bit 20 added. With A20 held at zero the bit is lost, `0x100500` becomes `0x00500`, and the two pairs are one byte. The write of `0xFF` came second, so the read of the first location returns `0xFF` and the gate is **closed**. With the gate open the two are different bytes, the first still holds `0x00`, and the gate is **open**. The comparison `cmp byte [ds:si], 0xFF` sets the zero flag exactly in the closed case, and the routine returns zero-set for "closed" and zero-clear for "open". The original bytes are put back whichever way it goes, because the test borrows memory it does not own: `0x500` is the address stage 2 uses for the boot information block, which it writes just after. The "Try it yourself" section prints the two physical addresses.
 
+<!-- explainer m-address -->
+
 **The loader's three descriptors.** The table in `boot/stage2.asm` is `dq 0`, then `0x00CF9A000000FFFF` for code and `0x00CF92000000FFFF` for data. In memory a descriptor is little-endian, so the code descriptor is the bytes `FF FF 00 00 00 9A CF 00`:
 
 | Byte | Value | Field |
@@ -165,6 +167,8 @@ The second address is one megabyte plus `0x500`: it needs bit 20, and it is the 
 | 7 | `00` | Base, bits 24 to 31: 0 |
 
 The full limit is `0xFFFFF` units of 4 KiB: `(0xFFFFF + 1) × 4096 = 4 GiB`, so the last valid offset is `0xFFFFFFFF`. The data descriptor differs in byte 5 only: `0x92` = `1001 0010`, which is present, ring 0, data, executable clear, direction clear (grows up), writable (1), accessed clear. The null descriptor is eight zero bytes. The three are numbered by their offsets in the table: index 0 at offset 0 (selector `0x00`), index 1 at offset 8 (selector `0x08`, the code segment `jmp 0x08:pm_entry` uses) and index 2 at offset 16 (selector `0x10`, the data segment). The table is 24 bytes, so the pointer's limit is 23.
+
+<!-- explainer m-gdt -->
 
 **A selector the table does not have.** The `gp` test mode loads the selector `0x28` into a segment register. `0x28` is index 5 (`0x28 ÷ 8`), global table, ring 0. The table has indices 0 to 2, so index 5 is past its limit and the processor raises a general protection fault with the selector as the error code. The transcript the expected file `tests/native/expected-gp.txt` checks says `EXCEPTION 0x0d: general protection fault` and `error code 0x00000028`, and the dump's `CS` is `0x0008`, the kernel's own code selector with privilege 0. [M5](chapter:m-boot) has the whole transcript.
 
@@ -335,6 +339,26 @@ def: Control register 0, a 32-bit register of processor-wide switches. Bit 0 (PE
 
 term: Ring
 def: One of four privilege levels, 0 to 3, held in descriptors and selectors. Ring 0 is the most privileged. The Desk's kernel runs everything at ring 0.
+```
+
+```figures
+id: m2-address
+kind: explainer
+track: native
+title: From segment and offset to a linear address
+alt: A step-through of how a real-mode segment and offset become a physical address, with the loader's two A20 test addresses landing on one byte when the gate is closed and on two when it is open, then the same address through a protected-mode selector.
+caption: The loader's A20 test addresses, with the gate closed and open, and the flat selectors.
+at: explainer m-address
+thumb: steps
+
+id: m2-gdt
+kind: explainer
+track: native
+title: The loader's GDT, decoded bit by bit
+alt: A step-through of the loader's three-entry descriptor table: the null entry, a flat 4 GiB ring 0 code segment and a flat data segment, with the limit, base, access byte and flags of the code descriptor highlighted in its 64 bits.
+caption: Base, limit, access and flags of the loader's code and data descriptors, read from stage 2 and the kernel.
+at: explainer m-gdt
+thumb: svg
 ```
 
 ## Revisions
