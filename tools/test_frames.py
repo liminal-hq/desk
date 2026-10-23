@@ -259,6 +259,10 @@ class Png(Pictures):
         write(self.path("m.png"), mixed)
         self.assertEqual(frames.read_png(self.path("m.png")).indices, indices, "all filters in one image, two IDAT chunks")
 
+    def test_a_palette_of_more_than_256_entries_is_refused(self):
+        write(self.path("big.png"), self.encode(2, 2, 3, bytes(4), [0], bytes(3 * 257)))
+        self.assertEqual(run("digest", self.path("big.png"))[0], 1)
+
     def test_the_reader_refuses_what_it_does_not_read(self):
         good = self.encode(2, 2, 3, bytes(4), [0], bytes(6))
         write(self.path("good.png"), good)
@@ -380,6 +384,19 @@ class Checks(Pictures):
         write(self.path("bad.sums"), b"open 8 640x480 xyz\n")
         os.makedirs(self.path("d"))
         self.assertEqual(run("check", self.path("bad.sums"), 8, self.path("d"))[0], 1)
+
+
+class Refusals(Pictures):
+    def test_a_duplicate_sums_line_and_two_names_differing_in_case_are_refused(self):
+        self.make_set()
+        sums = self.path("tests", "set.sums")
+        text = slurp(sums)
+        write(sums, (text + text.splitlines()[0].replace("open", "OPEN") + "\n").encode())
+        status, out = run("check", sums, 8, self.path("dumps"))
+        self.assertEqual(status, 1)
+        write(sums, text.encode())
+        write(self.path("dumps", "OPEN.ppm"), slurp(self.path("dumps", "open.ppm"), "rb"))
+        self.assertEqual(run("check", sums, 8, self.path("dumps"))[0], 1)
 
 
 class Transcripts(Pictures):

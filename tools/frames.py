@@ -218,6 +218,8 @@ def read_png(path):
         return Capture(width, height, rgb6=pixels.translate(SIX_BIT))
     if plte is None or len(plte) % 3:
         raise FramesError(f"{path}: an indexed PNG without a usable palette")
+    if len(plte) > 768:
+        raise FramesError(f"{path}: a palette of more than 256 entries")
     pal6 = [tuple(v >> 2 for v in plte[i : i + 3]) for i in range(0, len(plte), 3)]
     return Capture(width, height, indices=pixels, pal6=pal6)
 
@@ -274,9 +276,15 @@ def parse_size(text):
 def lookup(directory):
     """The files of `directory` by lower-cased name, so NAME.RAW and name.raw are the same file."""
     try:
-        return {f.lower(): os.path.join(directory, f) for f in os.listdir(directory)}
+        names = os.listdir(directory)
     except OSError as err:
         raise FramesError(f"{directory}: {err.strerror}") from None
+    found = {}
+    for f in names:
+        if f.lower() in found:
+            raise FramesError(f"{directory}: {f} and {os.path.basename(found[f.lower()])} differ only in case")
+        found[f.lower()] = os.path.join(directory, f)
+    return found
 
 
 def load(path):
@@ -332,6 +340,8 @@ def read_sums(path):
         if not m:
             raise FramesError(f"{path}:{number}: not a SUMS line (NAME DEPTH WIDTHxHEIGHT INDEX COLOUR): {line}")
         name, depth, w, h, index, colour = m.groups()
+        if any(s.name.lower() == name.lower() and s.depth == int(depth) for s in sums):
+            raise FramesError(f"{path}:{number}: {name} at depth {depth} is listed twice")
         sums.append(Sum(name, int(depth), int(w), int(h), int(index, 16), int(colour, 16)))
     return sums
 
@@ -438,13 +448,14 @@ def cmd_check(args):
             print(f"  no golden PNG at {golden_path} to diff against")
             continue
         try:
-            count, box = differences(load(gold), cap)
+            gold_cap = load(gold)
+            count, box = differences(gold_cap, cap)
         except FramesError as err:
             print(f"  cannot diff: {err}")
             continue
         if count:
             out = os.path.join(args.dir, f"{want.name}.diff.png")
-            write_png(out, diff_picture(load(gold), cap))
+            write_png(out, diff_picture(gold_cap, cap))
             print(f"  {describe(count, box)}; wrote {out}")
         else:
             print("  the colours equal the golden's; only the index digest differs")

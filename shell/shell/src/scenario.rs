@@ -450,7 +450,8 @@ struct Parser {
     windows: Vec<String>,
     frames: Vec<FrameName>,
     buttons: u8,
-    modifiers: Modifiers,
+    /// The modifier keys now held, so releasing one Shift while the other is down leaves Shift set.
+    held: Vec<KeyCode>,
 }
 
 impl Parser {
@@ -599,16 +600,18 @@ impl Parser {
                     "up" => false,
                     _ => return Err(Kind::BadKeyState(state)),
                 };
-                let bit = modifier_of(code);
-                self.modifiers = if pressed {
-                    self.modifiers.union(bit)
+                if pressed {
+                    if !self.held.contains(&code) {
+                        self.held.push(code);
+                    }
                 } else {
-                    self.modifiers.without(bit)
-                };
+                    self.held.retain(|&k| k != code);
+                }
+                let modifiers = self.held.iter().fold(Modifiers::NONE, |m, &k| m.union(modifier_of(k)));
                 Step::Event(Event::Key(KeyEvent {
                     code,
                     pressed,
-                    modifiers: self.modifiers,
+                    modifiers,
                 }))
             }
             "type" => {
@@ -658,7 +661,7 @@ pub fn parse(text: &str) -> Result<Scenario, ParseError> {
         windows: Vec::new(),
         frames: Vec::new(),
         buttons: 0,
-        modifiers: Modifiers::NONE,
+        held: Vec::new(),
     };
     let mut header = false;
     let mut last = 1;

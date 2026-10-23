@@ -223,6 +223,24 @@ fn key_steps_name_key_codes_and_track_modifiers() {
 }
 
 #[test]
+fn a_modifier_stays_held_while_either_of_its_keys_is_down() {
+    let sc = parse(&with(
+        "key LeftShift down\nkey RightShift down\nkey RightShift up\nkey A down\nkey LeftShift up\nkey A up",
+    ))
+    .unwrap();
+    let mods: Vec<Modifiers> = sc
+        .steps
+        .iter()
+        .map(|s| match s {
+            Step::Event(Event::Key(k)) => k.modifiers,
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    let s = Modifiers::SHIFT;
+    assert_eq!(mods, [s, s, s, s, Modifiers::NONE, Modifiers::NONE]);
+}
+
+#[test]
 fn closed_windows_can_be_opened_again() {
     let text = with("open w 0 0 50 50 \"A\"\nclose w\nopen w 0 0 50 50 \"B\"\nfocus w");
     assert_eq!(parse(&text).unwrap().steps.len(), 4);
