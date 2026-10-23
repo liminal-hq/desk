@@ -5,7 +5,7 @@
 # The cross builds take `--target` and `-Zbuild-std` on the command line (see `tools/check.sh`), so the default target stays the host's.
 # `dos/` is the hosted program and has its own workspace. See `docs/FIRST-WINDOW.md`.
 [workspace]
-members = ["gfx", "font", "present"]
+members = ["gfx", "font", "present", "ui"]
 exclude = ["dos"]
 resolver = "2"
 
