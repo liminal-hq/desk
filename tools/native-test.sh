@@ -153,6 +153,14 @@ must_fail "a graphics screenshot as a text-mode screen" python3 -I tools/native-
 must_fail "the VBE transcript as the failed-VBE transcript" python3 -I tools/native-check.py tests/native/expected-gfx-vbefail.txt "$work/gfx-vbe.txt"
 finish_gfx gfx-vbe
 
+# VBE on Cirrus: the card has no Bochs registers, so the tour leaves VBE through the BIOS (INT 10h AX=0003h by the real-mode
+# trampoline) and every later screenshot, the text screen included, must be the same as on the std card. Spike D left a garbled screen here.
+sed 's|^gfx: leaving VBE: Bochs VBE registers (id {HEX}) switched off$|gfx: leaving VBE: no Bochs VBE registers (read {HEX}), asking the BIOS: INT 10h AX=0003h\ngfx: leaving VBE: the BIOS set text mode 3|' tests/native/expected-gfx-vbe.txt > "$work/expected-gfx-vbe-cirrus.txt"
+cmp -s tests/native/expected-gfx-vbe.txt "$work/expected-gfx-vbe-cirrus.txt" && fail "the Cirrus transcript was not adjusted"
+run_gfx gfx-vbe-cirrus dist/native-gfx-vbe.img cirrus tests/native/gfx-vbe.inject "$work/expected-gfx-vbe-cirrus.txt" tests/native/gfx-vbe.sums
+must_fail "the std transcript for a Cirrus run" python3 -I tools/native-check.py tests/native/expected-gfx-vbe.txt "$work/gfx-vbe-cirrus.txt"
+finish_gfx gfx-vbe-cirrus
+
 # VBE not requested: modes 13h and 12h by registers (no BIOS), on a second card (Cirrus) to show the register path is not std-specific.
 run_gfx gfx-text dist/native-gfx-text.img cirrus tests/native/gfx-fallback.inject tests/native/expected-gfx-fallback.txt tests/native/gfx-fallback.sums
 shot moved dist/gfx-gfx-text/window-a.ppm dist/gfx-gfx-text/window-b.ppm 320 240 432 319 > /dev/null || fail "the cursor did not move in mode 12h"

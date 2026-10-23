@@ -9,6 +9,7 @@
 // when the loader image carries the `gfx` test mode: it prints a `gfx: ready NAME` line at each stable picture and waits for a
 // key, so the QEMU run script can take a screenshot there (`tools/native-test.sh`).
 
+use crate::bios;
 use crate::hal::PORTS;
 use crate::scene::{self, Depth};
 use crate::video::{Lfb, Video, FONT_BYTES};
@@ -72,8 +73,8 @@ fn show_picture<C: Canvas>(c: &mut C, depth: Depth, label: &str, hosted: Option<
 // ---- Modes
 
 /// Bochs/QEMU's VBE_DISPI registers: an index port and a data port. Writing 0 to the enable register (index 4) turns the VBE mode
-/// off so the ordinary VGA registers take effect again. Real VBE cards have their own extended registers for the same job, and
-/// without a BIOS there is no generic way: this is the one piece of the leave-graphics path that is specific to the emulated card.
+/// off so the ordinary VGA registers take effect again. Real VBE cards have their own extended registers for the same job; a card
+/// without these is left through the BIOS (`bios.rs`), which knows its own chip.
 const DISPI_INDEX: u16 = 0x1CE;
 const DISPI_DATA: u16 = 0x1CF;
 
@@ -84,8 +85,15 @@ fn leave_vbe() {
         PORTS.outw(DISPI_INDEX, 4);
         PORTS.outw(DISPI_DATA, 0);
         println!("gfx: leaving VBE: Bochs VBE registers (id {:#06x}) switched off", id);
-    } else {
-        println!("gfx: leaving VBE: no Bochs VBE registers (read {:#06x}); a VBE mode cannot be left without the BIOS", id);
+        return;
+    }
+    // Not a Bochs card (QEMU's Cirrus, a real S3, Trident or ET4000): the register programming of the text and graphics modes does
+    // not undo its extended registers, so the BIOS does it, by setting text mode 3 through the real-mode trampoline.
+    println!("gfx: leaving VBE: no Bochs VBE registers (read {:#06x}), asking the BIOS: INT 10h AX=0003h", id);
+    let mut regs = bios::RealModeRegs::with_eax(0x0003);
+    match bios::call(0x10, &mut regs) {
+        Ok(()) => println!("gfx: leaving VBE: the BIOS set text mode 3"),
+        Err(e) => println!("gfx: leaving VBE: the BIOS call failed: {}", e),
     }
 }
 
