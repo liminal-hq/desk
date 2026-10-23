@@ -1,0 +1,11 @@
+# A virtual X server and xdotool, to drive DOSBox's SDL window with a pointer (spikes/b-dos-input/check-xvfb.sh builds this once as
+# desk-dos-xvfb:1 and runs the check in it). DOSBox Staging's release is built with SDL linked in; at run time it loads the X11
+# client libraries, which this image provides along with the X server and the tool that moves and clicks the pointer.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+FROM ubuntu:24.04
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       xvfb xdotool x11-utils libx11-6 libxext6 libxi6 libxcursor1 libxrandr2 libxfixes3 libxss1 libxkbcommon0 libgl1 \
+    && rm -rf /var/lib/apt/lists/*

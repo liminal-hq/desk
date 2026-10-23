@@ -88,6 +88,13 @@ spikes/a-vga-vbe/check.sh
 step "Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE"
 spikes/b-dos-input/check.sh
 
+# The mouse needs a pointer. DOSBox has no scripted injection, so this drives the SDL window under a virtual X server with xdotool, in a
+# container built from tools/docker/Dockerfile.dos-xvfb. Off by default: the CI image has no X server or Docker, and the run takes a minute.
+if [ -n "${INPUT_EXTRA:-}" ]; then
+  step "Spike b-dos-input (opt-in, INPUT_EXTRA=1): the mouse moved and clicked by xdotool under Xvfb"
+  spikes/b-dos-input/check-xvfb.sh
+fi
+
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
 

@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
-// usage: INPUT.EXE [text] [13] [chain] [nomouse] [timeout=N] [stall=N] [panic] [leave]
+// usage: INPUT.EXE [text] [13] [chain] [nomouse] [timeout=N] [stall=N] [dump] [panic] [leave]
 //
 // The program takes IRQ 1 from the BIOS, finds the mouse driver, sets VBE 640 x 480 x 8 (mode 13h when VBE is not offered, or with
 // `13`; no graphics at all with `text`), prints every decoded event as one line, draws a software cursor that follows the mouse
@@ -16,6 +16,7 @@
 // - `nomouse`   do not look for a mouse driver
 // - `timeout=N` give up after N seconds without Escape (default 30)
 // - `stall=N`  do not read any input for N seconds, so the keys typed meanwhile can overflow the ring
+// - `dump`     at the end write the screen as SCREEN.RAW and its palette as SCREEN.PAL, for tools/raw2png.py
 // - `panic`     install everything, then panic: the clean-up list must put it all back first
 // - `leave`     install everything, then exit at once
 //
@@ -41,7 +42,7 @@ use desk_vga::{Canvas, Linear8, SoftCursor};
 use rt::bios_kbd;
 use rt::hal::{DosBios, DosDisplay, MODE_13H};
 use rt::irq::{DosIrq, Slot};
-use rt::{cleanup, println, timer, vga};
+use rt::{cleanup, dos, println, timer, vga};
 
 rt::entry!(main);
 
@@ -171,6 +172,28 @@ fn pick_mode(display: &DosDisplay, force_13h: bool) -> (u16, u32, u32) {
         }
     }
     (MODE_13H, 320, 200)
+}
+
+/// Writes the screen as it is (the cursor drawn) and the DAC as SCREEN.RAW and SCREEN.PAL.
+fn dump(display: &DosDisplay, canvas: &mut Linear8) {
+    let (w, h) = (canvas.width() as usize, canvas.height());
+    let mut pixels = alloc::vec![0u8; w * h as usize];
+    for y in 0..h {
+        let row = &mut pixels[y as usize * w..(y as usize + 1) * w];
+        let _ = canvas.read_row(y, row);
+    }
+    let mut colours = [Rgb6::BLACK; 256];
+    let _ = display.palette(0, &mut colours);
+    let mut pal = alloc::vec::Vec::new();
+    for c in &colours {
+        pal.extend_from_slice(&[c.r, c.g, c.b]);
+    }
+    for (name, bytes) in [("SCREEN.PAL", &pal[..]), ("SCREEN.RAW", &pixels[..])] {
+        match dos::File::open(name, dos::Mode::Create).and_then(|mut f| f.write_all(bytes)) {
+            Ok(()) => println!("input: wrote {name} ({} bytes)", bytes.len()),
+            Err(e) => println!("input: could not write {name}: {e:?}"),
+        }
+    }
 }
 
 fn main() -> i32 {
@@ -374,6 +397,11 @@ fn main() -> i32 {
         input.recoveries(),
         bios_kbd::buffered()
     );
+    if has("dump") {
+        if let Some(s) = scene.as_mut() {
+            dump(&display, &mut s.canvas);
+        }
+    }
     if let Some(m) = input.mouse() {
         if let Ok(p) = m.position() {
             println!("input: mouse: the driver's own position is ({}, {})", p.x, p.y);
