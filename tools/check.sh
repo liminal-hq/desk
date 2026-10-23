@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
 # and lints, the HAL's host tests and cross builds, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
-# checks, the a-vga-vbe checks, then the native boot test under QEMU.
+# checks, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -84,6 +84,9 @@ spikes/d0-rust-dos/check.sh
 
 step "Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime"
 spikes/a-vga-vbe/check.sh
+
+step "Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE"
+spikes/b-dos-input/check.sh
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
