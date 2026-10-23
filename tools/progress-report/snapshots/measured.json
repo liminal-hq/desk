@@ -1,8 +1,8 @@
 {
  "note": "Numbers measured by running a build, which the generator cannot repeat from the tree. Update by hand when the build changes, and say how.",
- "nativeKernelBytes": 36384,
+ "nativeKernelBytes": 174032,
  "nativeStage1Bytes": 512,
  "nativeStage2Bytes": 8704,
- "how": "tools/native-build.sh then tools/native-image.sh on the tree of main at 6c563f0 (2026-10-22); the image tool prints 'kernel 36384 bytes in 72 sectors'. The image's SHA-256 was 8e5e6e19fe2735d7dcc1d56d8b26b12cfec16d7fc635664851753b6f55450627, and a run of tools/native-run.sh on it printed the transcript in media/native-serial.txt. Stage 2 is padded to 17 sectors (docs/NATIVE-BOOT.md).",
+ "how": "tools/native-build.sh then tools/native-image.sh on the tree of main at 24cc044 (2026-10-23); the image tool prints 'kernel 174032 bytes in 340 sectors'. The image's SHA-256 was 9ef60b4f04366bb5e3d4667dc4ecdf0d515d215649853e50cad22f4b81932a23, and tools/native-run.sh --serial FILE on it, run on the host's QEMU, printed the transcript in media/native-serial.txt (the carriage returns the loader's BIOS output adds are removed; nothing else is edited). Stage 1 is 512 bytes and stage 2 is 8704 bytes (padded to 17 sectors, docs/NATIVE-BOOT.md).",
  "qemu": "QEMU emulator version 11.1.2, qemu-system-i386 -cpu 486 -m 16"
 }

@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: The hosted track gets a keyboard and a mouse of its own, built so that the core receives exactly the events the native kernel produces, from the same decoder, even though the hardware underneath is reached in a completely different way.
 prs: [15]
 ---
-Chapter 11 gave the native kernel a keyboard and a mouse. Spike B (pull request #15, branch `spike/b-dos-input`, stacked on the VGA spike and containing the keyboard spike's branch) does the same on the DOS runtime, with one constraint that shapes everything: the Desk core must see the same `KeyEvent` and `MouseEvent` types on both tracks, produced by the same decoder, so it cannot tell which world it is in.
+Chapter 11 gave the native kernel a keyboard and a mouse. Spike B (pull request #15, {{pr15.state}}, branch `spike/b-dos-input`, written on top of the VGA spike and containing the keyboard spike's branch) does the same on the DOS runtime, with one constraint that shapes everything: the Desk core must see the same `KeyEvent` and `MouseEvent` types on both tracks, produced by the same decoder, so it cannot tell which world it is in.
 
 For the keyboard that is nearly free. Under DOS the BIOS has already set up the 8042 and turned its translation on, so the CPU reads scancode set 1 just as it does natively, and the handler, the 64-byte ring and the decoder are the *same code*. What differs is the platform around them. The DOS runtime hooks IRQ 1 through DPMI with a small assembly stub that saves registers, switches to an 8 KiB interrupt stack inside the program image (because Rust code assumes a local's address can be dereferenced through the data segment and the host's stack may not satisfy that), clears the direction flag and calls Rust. Before it changes the first vector it locks the whole image in memory with DPMI function 0600h, because a page fault inside an interrupt handler under CWSDPMI is fatal. The previous vector is saved, and put back at exit and in the panic handler before the report is printed.
 
@@ -32,10 +32,10 @@ Polling has a price, and the spike found it at once. Under a virtual X server in
 ## The shelves
 
 ### Catalogued
-- `INPUT.EXE` in headless DOSBox Staging 0.83 with keys typed by `AUTOTYPE` prints a key transcript that equals the one a host mock produces and that `spikes/b-dos-input/expected/keys.txt` records, in VBE 640 by 480, mode 13h and text mode, with the BIOS handler replaced and chained. The IRQ 1 vector is changed while the handler is installed and restored after exit, panic and `leave`. CI is green on `{{pr15.head}}` of the open pull request. Not merged yet.
+- `INPUT.EXE` in headless DOSBox Staging 0.83 with keys typed by `AUTOTYPE` prints a key transcript that equals the one a host mock produces and that `spikes/b-dos-input/expected/keys.txt` records, in VBE 640 by 480, mode 13h and text mode, with the BIOS handler replaced and chained. The IRQ 1 vector is changed while the handler is installed and restored after exit, panic and `leave`. CI passed on the merge commit `{{pr15.head}}` of pull request #15, which is {{pr15.state}}.
 - Negative runs behave: a missing key makes the comparison fail (19 events against 21), a wrong expected file is rejected, no Escape ends with status 4 and everything put back, a panic gives status 3 and reports the restored vector first.
 - Under Xvfb in Docker (opt-in), the mouse motion, three buttons and the wheel come out as scripted over five runs in a row.
-- The `desk-int33` crate passes 16 host tests, and {{pr15.hostTests}} tests pass in `hal/` at the tip of this pull request.
+- The `desk-int33` crate passes 16 host tests, and {{pr15.hostTests}} tests pass in `hal/` at the merge commit of this pull request.
 
 ### Uncatalogued
 - Real hardware, a real BIOS keyboard handler, and any mouse driver but DOSBox's built-in one: the unit of a mickey, its scaling and the sign of the wheel on real drivers are unchecked.

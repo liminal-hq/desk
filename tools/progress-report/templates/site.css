@@ -398,3 +398,14 @@ figcaption{overflow-wrap:anywhere}
 .bt.is-off{display:none}
 details.conf{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--panel)} details.conf summary{cursor:pointer;color:var(--accent-ink)}
 @media (max-width:560px){.mc-row,.rm-row{grid-template-columns:1fr}}
+
+/* the first window explainer and the anatomy diagrams */
+.fw-frame.is-off{display:none}
+.fw-pics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px}
+.fw-shot .screen{max-width:440px}
+.sw.a-sw-built{background:var(--s-done-tint);border:1.5px solid var(--s-done)} .sw.a-sw-review{background:var(--s-review-tint);border:1.5px solid var(--s-review)}
+.sw.a-sw-plan{background:none;border:1.5px dashed var(--s-planned)} .sw.a-sw-ext{background:var(--raised);border:1.5px solid var(--line-strong)}
+.an-st{font-size:12.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);white-space:nowrap}
+.an-st.an-verified{border-color:var(--s-done)} .an-st.an-unverified{border-color:var(--s-review)} .an-st.an-planned{border-style:dashed;border-color:var(--s-planned)}
+.an-text{margin-top:10px} .an-text summary{cursor:pointer}
+.rev{border-left:4px solid var(--line-strong);padding:2px 12px;margin:10px 0}

@@ -78,8 +78,7 @@ def cap_note(D, names):
 # ---- the layers of the HAL ------------------------------------------------------------------------------------------------------
 
 def hal_layers(D, ctx):
-    """The four kinds of code and the one crate with two edges, as a diagram: drawn solid blue where it is built and in an open pull
-    request, dashed where only designed."""
+    """The four kinds of code and the one crate with two edges, as a diagram: drawn solid blue where it is built and merged, dashed where only designed."""
     W, H = 900, 470
     o = ['<svg viewBox="0 0 %d %d" role="img" class="diagram" aria-label="Layers of the HAL: the Desk core calls the upper edge of one crate, desk-hal; drivers are generic over its lower edge and contain no unsafe; three platforms implement the lower edge, and each holds the one audited unsafe step that makes a port bus, a memory region or an interrupt handler.">' % (W, H),
          '<defs><marker id="hl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrow"/></marker></defs>']

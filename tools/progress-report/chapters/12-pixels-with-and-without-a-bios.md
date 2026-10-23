@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: One VGA and VBE driver written against the HAL, proved first on the DOS runtime and then reused by the native kernel, which has no BIOS to lean on, and the card on which leaving a graphics mode went wrong.
 prs: [11, 14]
 ---
-Two spikes belong in one chapter, because the second is the first reused. Spike A (pull request #11, branch `spike/a-vga-vbe-rust`) writes `desk-vga`, a driver that programs VGA modes 13h and 12h straight through the ports, loads and fades the palette, draws, and speaks VBE 2.0 through a small `Bios` trait, and proves it on the DOS runtime. Spike D (pull request #14, branch `spike/d-native-vga`, stacked on the keyboard spike and containing spike A's branch) runs the same driver from the bare-metal kernel, with a cursor and a first window, where nothing is left to call the BIOS with.
+Two spikes belong in one chapter, because the second is the first reused. Spike A (pull request #11, {{pr11.state}}, branch `spike/a-vga-vbe-rust`) writes `desk-vga`, a driver that programs VGA modes 13h and 12h straight through the ports, loads and fades the palette, draws, and speaks VBE 2.0 through a small `Bios` trait, and proves it on the DOS runtime. Spike D (pull request #14, {{pr14.state}}, branch `spike/d-native-vga`, written on top of the keyboard spike and containing spike A's branch) runs the same driver from the bare-metal kernel, with a cursor and a first window, where nothing is left to call the BIOS with.
 
 **Programming a VGA by hand.** A mode is a few dozen register values written in the right order, and the order is half the knowledge. The driver turns video off, holds the sequencer in reset while the clock register changes, unlocks the CRTC (register `11h` has a protect bit that makes registers 0 to 7 ignore writes), writes the CRTC, the graphics controller and the attribute controller, and turns video on. The step-through below runs that sequence for mode 13h, 320 by 200 in 256 colours, from the real table in `regs.rs`: exactly 128 port writes, then one colour loaded into the DAC and one pixel stored.
 
@@ -44,8 +44,8 @@ Two last facts, both from the spike's own measurements and both about an emulato
 ## The shelves
 
 ### Catalogued
-- On the DOS runtime in headless DOSBox Staging 0.83 (`svga_s3`, `cputype = 486`), each stage reads its picture back with the checksum of the same picture in memory: mode 13h by registers and by `INT 10h`, mode 12h both ways, and VBE 640 by 480 by 8 with the linear frame buffer; a flipped pixel makes the check fail, and `vgaonly` has no VBE and is reported as such. CI is green on `{{pr11.head}}` of the open pull request #11. Not merged yet.
-- On the native kernel in QEMU 11.1.2 (`-vga std`), the three pictures read back with spike A's checksums, a fade and a text-mode restore run, and every screenshot taken through the monitor matches its reference checksum; seven negative checks behave as described. CI is green on `{{pr14.head}}`, and the screenshot checksums matched on CI's own QEMU. Not merged yet.
+- On the DOS runtime in headless DOSBox Staging 0.83 (`svga_s3`, `cputype = 486`), each stage reads its picture back with the checksum of the same picture in memory: mode 13h by registers and by `INT 10h`, mode 12h both ways, and VBE 640 by 480 by 8 with the linear frame buffer; a flipped pixel makes the check fail, and `vgaonly` has no VBE and is reported as such. CI passed on the merge commit `{{pr11.head}}` of pull request #11, which is {{pr11.state}}.
+- On the native kernel in QEMU 11.1.2 (`-vga std`), the three pictures read back with spike A's checksums, a fade and a text-mode restore run, and every screenshot taken through the monitor matches its reference checksum; seven negative checks behave as described. CI passed on the merge commit `{{pr14.head}}` of pull request #14, which is {{pr14.state}}, and the screenshot checksums matched on CI's own QEMU.
 - `cargo test` in `hal/` has {{pr11.hostTests}} tests at the tip of pull request #11 and {{pr14.hostTests}} at the tip of #14, which adds the text-mode restore and the faster fill; all pass in CI.
 
 ### Uncatalogued
@@ -56,7 +56,7 @@ Two last facts, both from the spike's own measurements and both about an emulato
 - BIOSes other than SeaBIOS's VGA BIOS, and the offsets of the VBE mode block, which were checked against what QEMU returns and not against the specification text.
 
 ### Wish list
-- A native BIOS path, which spike n3 builds in an open pull request (chapter 17), or a card-specific leave.
+- A native BIOS path, which spike n3 built, and which is merged (chapter 17), or a card-specific leave.
 - A banked 8-bit mode for cards with no linear frame buffer.
 - A fade that takes its pacing from a clock instead of assuming retrace works.
 - A shared palette crate and one VBE mode parser fed the raw block by the loader.

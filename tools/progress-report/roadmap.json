@@ -1,9 +1,9 @@
 {
- "note": "Status of each step, checked against docs/DIRECTION.md, docs/RUST-TARGETS.md, docs/SPEC.md, docs/EMOJI-ROADMAP.md, the merged pull requests and the open ones. gather.py drops a 'done' or 'done-emu' node to 'review' while its pull requests are open and to 'progress' if one cannot be found, and sets each node's tag (merged, in review, in progress or planned) from gh. 'done-emu' means checked in an emulator only; nothing here has run on real hardware. A node marked 'review' is built and checked in an emulator or on the host, in an open pull request that is not merged. Edges (deps) mean 'this unlocks that'.",
+ "note": "Status of each step, checked against docs/DIRECTION.md, docs/RUST-TARGETS.md, docs/SPEC.md, docs/EMOJI-ROADMAP.md and the merged pull requests. gather.py drops a 'done' or 'done-emu' node to 'review' while its pull requests are open and to 'progress' if one cannot be found, and sets each node's tag (merged, in review, in progress or planned) from gh. 'done-emu' means checked in an emulator or on the host only; nothing here has run on real hardware. A node marked 'review' is built and checked in an emulator or on the host, in a pull request that is not merged. Edges (deps) mean 'this unlocks that'.",
  "milestone": {
   "id": "first-window",
   "name": "First Window",
-  "what": "A window drawn by the shared Desk core, moved with a mouse, on DOS (hosted) and on the bare-metal kernel (native)."
+  "what": "A window drawn by the shared Desk core, moved with a mouse, on DOS (hosted) and on the bare-metal kernel (native). Reached in emulators with scripted input; not with a real mouse or real hardware."
  },
  "branches": [
   {
@@ -15,26 +15,26 @@
   {
    "id": "hosted",
    "label": "Hosted track (Desk on DOS)",
-   "next": "Decide to retire the C layer and coff2go32.py, then promote d0's rt (which now also carries the DOS platform of the shared drivers) to a top-level crate on a freestanding ELF target.",
-   "blocker": "Owner decision on retiring the C layer, and the shared core, which a hosted window needs."
+   "next": "Live input into SHELL.EXE, then the launcher bar and menus; decide whether to retire the C layer and promote rt to a top-level crate.",
+   "blocker": "Owner decision on retiring the C layer; the mouse path of the shell is unverified."
   },
   {
    "id": "convergence",
    "label": "Convergence (shared)",
-   "next": "Review and merge the open pull requests, the HAL (#8) first because the others stack on it; then start the shared core and compositor, which nothing has begun.",
-   "blocker": "The merge order, and the compositor design: the windows drawn so far are proofs, one per track."
+   "next": "Live input into the shell on both tracks, then widgets and menus on the first window's core.",
+   "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (the anatomy page of the Desk)."
   },
   {
    "id": "native",
    "label": "Native track (own kernel)",
-   "next": "Review and merge #14 and #17; then the shared core on the native HAL, and a V86 monitor if FreeDOS or calls that must not stop the kernel need it.",
-   "blocker": "Leaving VBE is solved in emulators by the BIOS trampoline, not on a real card; scheduling and paging are still open decisions."
+   "next": "Live input on the native shell mode; then the executable-format spike (planned after live input); a V86 monitor if FreeDOS needs it.",
+   "blocker": "Scheduling, paging and system calls are open decisions; no user mode exists in the kernel."
   },
   {
    "id": "games",
    "label": "Games and apps",
-   "next": "Nothing to start until the shared core exists; Fizz Episode 2 is the first customer of the shared drivers, which are now built in open pull requests.",
-   "blocker": "The shared core, and the review of the drivers."
+   "next": "Nothing to start until the shared core exists; Fizz Episode 2 is the first customer of the shared drivers, which are now built and merged.",
+   "blocker": "The shared core."
   }
  ],
  "nodes": [
@@ -242,14 +242,14 @@
    "id": "hvbe",
    "label": "VBE and mode 12h",
    "branch": "hosted",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "rt"
    ],
    "critical": true,
    "what": "VGA modes 13h and 12h, the DAC and VBE 2.0 with a linear frame buffer (DPMI 0800h), from Rust, proved in DOSBox Staging by read-back checksums.",
    "why": "Pixels for the compositor.",
-   "evidence": "docs/A-VGA-VBE.md; PR #11 (open, CI green). No real VGA chip.",
+   "evidence": "docs/A-VGA-VBE.md; PR #11, merged, CI passing on the merge commit. Checked in DOSBox Staging only; no real VGA chip.",
    "prs": [
     11
    ]
@@ -258,14 +258,14 @@
    "id": "hmouse",
    "label": "Keyboard and mouse",
    "branch": "hosted",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "rt"
    ],
    "critical": true,
    "what": "The keyboard on IRQ 1 under DPMI and the mouse through INT 33h by polling, producing the same event types as the native kernel. The real-mode callback was not built.",
    "why": "Input for windows and the cursor.",
-   "evidence": "docs/B-DOS-INPUT.md; PR #15 (open, CI green). DOSBox's own mouse driver only.",
+   "evidence": "docs/B-DOS-INPUT.md; PR #15, merged, CI passing on the merge commit. DOSBox's own mouse driver only.",
    "prs": [
     15
    ]
@@ -286,16 +286,20 @@
    "id": "shell",
    "label": "Hosted shell",
    "branch": "hosted",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "hvbe",
     "hmouse",
     "core"
    ],
    "critical": true,
-   "what": "Compositor, windows, launcher bar, cursor and keyboard focus on DOS.",
+   "what": "Compositor, windows, launcher bar, cursor and keyboard focus on DOS. Built so far: two windows with the stepped halo, text, a software cursor and focus, as SHELL.EXE on the pure-Rust runtime.",
    "why": "The first thing anyone would call the Desk.",
-   "evidence": "SPEC.md milestone 2; DIRECTION.md hosted milestone 5; the DOS programs so far draw test pictures, not a shell"
+   "evidence": "docs/FIRST-WINDOW.md Result; PRs #19 and #30 merged. SHELL.EXE runs in DOSBox against the goldens; the launcher bar, menus and apps are not built, the mouse is not verified, nothing ran on real hardware.",
+   "prs": [
+    19,
+    30
+   ]
   },
   {
    "id": "handoff",
@@ -325,13 +329,13 @@
    "id": "jsdos",
    "label": "js-dos browser build",
    "branch": "hosted",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "hvbe"
    ],
    "what": "DOS programs in the browser. The spike programs run unchanged in js-dos 8, and the VBE linear frame buffer works there. The Desk itself is not in the browser, because the hosted Desk does not exist yet.",
    "why": "A demo anyone can open.",
-   "evidence": "docs/S5-JSDOS.md; PR #13 (open, CI green): headless Chromium only.",
+   "evidence": "docs/S5-JSDOS.md; PR #13, merged, CI passing on the merge commit (CI does not run the browser check): headless Chromium only.",
    "prs": [
     13
    ]
@@ -352,15 +356,15 @@
    "id": "hal",
    "label": "Hardware layer (HAL)",
    "branch": "convergence",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "skel",
     "kernel"
    ],
    "critical": true,
-   "what": "One crate with two edges: the traits and shared types, a mock platform, and three drivers (serial, PIT, PIC) tested on the host. The input and video surfaces were added by the pull requests stacked on it.",
+   "what": "One crate with two edges: the traits and shared types, a mock platform, and three drivers (serial, PIT, PIC) tested on the host. The input and video surfaces were added by the pull requests that followed it.",
    "why": "One Desk core on both tracks; without it they drift apart.",
-   "evidence": "docs/HAL.md; PR #8, open, CI green. The kernel and the DOS runtime use it in later open pull requests; nothing runs on real hardware.",
+   "evidence": "docs/HAL.md; PR #8, merged, CI passing on the merge commit. Host tests; the kernel and the DOS runtime use it through the later merged pull requests, in emulators only; nothing runs on real hardware.",
    "prs": [
     8
    ]
@@ -374,9 +378,9 @@
     "d0",
     "kernel"
    ],
-   "what": "Built, in open pull requests: serial, PIT, PIC, the 8042 controller, the scancode decoder, VGA modes 13h, 12h and 03h with the DAC, VBE, and the INT 33h mouse. Not started: OPL, Sound Blaster, DMA, IDE and floppy.",
+   "what": "Built and merged: serial, PIT, PIC, the 8042 controller, the scancode decoder, VGA modes 13h, 12h and 03h with the DAC, VBE, and the INT 33h mouse. Not started: OPL, Sound Blaster, DMA, IDE and floppy.",
    "why": "Shared by the hosted Desk, the native kernel and Fizz Episode 2.",
-   "evidence": "docs/HAL.md; PRs #8, #10, #11, #15 (open, CI green)",
+   "evidence": "docs/HAL.md; PRs #8, #10, #11, #15, merged, CI passing on each merge commit; host tests and emulators only",
    "prs": [
     8,
     10,
@@ -388,27 +392,30 @@
    "id": "core",
    "label": "Desk core",
    "branch": "convergence",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "hal",
     "fonts"
    ],
    "critical": true,
-   "what": "Compositor, window manager, widgets, palette, fonts, event loop, app host.",
+   "what": "Compositor, window manager, widgets, palette, fonts, event loop, app host. Built so far: desk-gfx, desk-font, desk-present, desk-ui, desk-wm and desk-shell.",
    "why": "The product, independent of the machine below.",
-   "evidence": "SPEC.md; nothing built: the native demo's window is a proof, not a compositor (docs/D-NATIVE-VGA.md)"
+   "evidence": "docs/FIRST-WINDOW.md; PR #19 merged (stacked PRs #20 to #28 landed through it). Host-tested with golden frames. Not built: widgets beyond a label and a text field, menus, an app host.",
+   "prs": [
+    19
+   ]
   },
   {
    "id": "std",
    "label": "std platform layer",
    "branch": "convergence",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "direction"
    ],
    "what": "A patched std platform layer over the d0 runtime (55 added lines in 12 files and about 340 lines of new files) that makes println!, HashMap, Instant and process::exit work in DOSBox.",
    "why": "Apps are where std pays off.",
-   "evidence": "docs/E-STD-STUBS.md; PR #12 (open, CI green). An invented OS name alone does not build.",
+   "evidence": "docs/E-STD-STUBS.md; PR #12, merged, CI passing on the merge commit. Checked in DOSBox Staging; an invented OS name alone does not build.",
    "prs": [
     12
    ]
@@ -469,14 +476,14 @@
    "id": "nkbd",
    "label": "PS/2 keyboard and mouse",
    "branch": "native",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "kernel"
    ],
    "critical": true,
    "what": "The 8042, the scancode set 1 decoder and the IntelliMouse packets as shared drivers, with the kernel's IRQ 1 and IRQ 12 handlers and a lock-free ring.",
    "why": "Input; native milestone 4.",
-   "evidence": "docs/C-INPUT.md; PR #10 (open, CI green): a QEMU run with injected input matches its expected transcript. No real keyboard or mouse.",
+   "evidence": "docs/C-INPUT.md; PR #10, merged, CI passing on the merge commit: a QEMU run with injected input matches its expected transcript. No real keyboard or mouse.",
    "prs": [
     10
    ]
@@ -485,14 +492,14 @@
    "id": "ngfx",
    "label": "VGA, VBE, window and cursor",
    "branch": "native",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "kernel"
    ],
    "critical": true,
    "what": "VBE asked in the loader before the switch to protected mode, VGA modes 13h and 12h by registers, a software cursor and a first window, all in QEMU. Leaving a VBE mode without the BIOS works on QEMU's standard card and fails on its Cirrus card.",
    "why": "A frame drawn by the shared compositor; native milestone 3.",
-   "evidence": "docs/D-NATIVE-VGA.md; PR #14 (open, CI green): real QEMU screendumps checked against reference checksums.",
+   "evidence": "docs/D-NATIVE-VGA.md; PR #14, merged, CI passing on the merge commit: real QEMU screendumps checked against reference checksums.",
    "prs": [
     14
    ]
@@ -501,13 +508,13 @@
    "id": "nbios",
    "label": "Native BIOS path (n3)",
    "branch": "native",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "kernel"
    ],
    "what": "A real-mode trampoline gives the protected-mode kernel the BIOS back one call at a time: VBE set and left on three QEMU cards, floppy and LBA reads, the memory map and the clock. V86 mode and paging are design only.",
    "why": "Spike D found that leaving VBE without the BIOS fails on QEMU's Cirrus card.",
-   "evidence": "docs/N3-BIOS-PATH.md; PR #17 (open, based on #14). Emulators only.",
+   "evidence": "docs/N3-BIOS-PATH.md; PR #17, merged (it was based on #14), CI passing on the merge commit. Emulators only.",
    "prs": [
     17
    ]
@@ -567,11 +574,12 @@
    "state": "planned",
    "deps": [
     "fs",
-    "dxe3"
+    "dxe3",
+    "liveinput"
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "DIRECTION.md; lessons from S1-DXE3.md"
+   "evidence": "DIRECTION.md; lessons from S1-DXE3.md. The executable-format spike is planned after live input; nothing is built."
   },
   {
    "id": "abi",
@@ -602,28 +610,32 @@
    "id": "ndesk",
    "label": "Desk core on native",
    "branch": "native",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "core",
     "ngfx",
     "nkbd"
    ],
    "critical": true,
-   "what": "The shared core on the native HAL: a window and a cursor on bare metal.",
+   "what": "The shared core on the native HAL: a window and a cursor on bare metal. Built so far: the kernel's `shell` test mode runs the first-window scenario.",
    "why": "The native half of the first milestone; native milestone 7 begins here.",
-   "evidence": "DIRECTION.md native milestones 3 and 7; the native window of PR #14 is not drawn by a shared core"
+   "evidence": "docs/FIRST-WINDOW.md Result; PR #29 merged: QEMU's screendumps equal the goldens at depth 8 and depth 4. A test mode, not a desktop: no live input, no apps.",
+   "prs": [
+    19,
+    29
+   ]
   },
   {
    "id": "emus",
    "label": "Bochs and 86Box (spike G)",
    "branch": "native",
-   "state": "review",
+   "state": "done-emu",
    "deps": [
     "kernel"
    ],
    "what": "The native image boots unchanged in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on a 1993 AMIBIOS board, after a loader fix for a BIOS with neither E820 nor E801. v86, the browser emulator, is a later step.",
    "why": "QEMU alone is one opinion.",
-   "evidence": "docs/NATIVE-EMULATORS.md; PR #16 (open). Not part of CI, which has no Docker. No hardware.",
+   "evidence": "docs/NATIVE-EMULATORS.md; PR #16, merged, CI passing on the merge commit. The emulator runs are not part of CI, which has no Docker. The merged image has not been run on 86Box. No hardware.",
    "prs": [
     16
    ]
@@ -691,10 +703,23 @@
    "evidence": "PR #1 docs: a later spike"
   },
   {
+   "id": "liveinput",
+   "label": "Live input into the shell",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "shell",
+    "ndesk"
+   ],
+   "what": "Keys and the mouse reaching the shell through each platform's own input path (QEMU sendkey and mouse_move; DOSBox AUTOTYPE and a real INT 33h mouse).",
+   "why": "The first window is moved by scripted events today; this tests the input path, not the pixels.",
+   "evidence": "docs/FIRST-WINDOW-PLAN.md T12 (optional); not started"
+  },
+  {
    "id": "first-window",
    "label": "First Window",
    "branch": "milestone",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "shell",
     "ndesk"
@@ -702,7 +727,13 @@
    "critical": true,
    "what": "A window drawn by the shared core and moved with a mouse, hosted on DOS and native.",
    "why": "The first thing a person would see and call the Desk.",
-   "evidence": "Not reached: the native demo (PR #14) draws its window with its own code, there is no hosted equivalent, and the shared core does not exist."
+   "evidence": "PR #31 merged: both tracks' frames equal each other and the host goldens, six frames at two depths, with the negative runs failing. Not moved by a real mouse, not run on real hardware, one emulator per track.",
+   "prs": [
+    19,
+    29,
+    30,
+    31
+   ]
   }
  ]
 }

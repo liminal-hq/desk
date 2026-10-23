@@ -8,7 +8,7 @@ summary: Everything still to do, as a tree that grows from the Desk to its first
 prs: []
 section: reference
 ---
-A shelf of finished things is only half an archive; the other half is the list of what is missing. This is the path, drawn from `tools/progress-report/roadmap.json`. Its target is one milestone, **First Window**: a window drawn by the shared Desk core and moved with a mouse, on DOS and on the bare-metal kernel. Nothing like it exists yet. The native kernel draws a window with a cursor in an emulator (chapter 12), but with its own code, in a pull request that is still open; there is no hosted equivalent and no shared core, so the milestone box is still dashed.
+A shelf of finished things is only half an archive; the other half is the list of what is missing. This is the path, drawn from `tools/progress-report/roadmap.json`. Its target is one milestone, **First Window**: a window drawn by the shared Desk core and moved with a mouse, on DOS and on the bare-metal kernel. Chapter 18 tells how far it got: the shared core's first piece draws two windows, text and a cursor on both tracks, with the same pixels in two emulators, driven by a scripted drag and not a real mouse. So the milestone box is drawn as work in progress, and nothing on the tree is promoted past what was checked.
 
 The architecture comes first, because the tree is easier to read once you know which layers exist.
 
@@ -29,17 +29,18 @@ And the next move of each branch, with what is in its way.
 ## The shelves
 
 ### Catalogued
-- The steps marked done have merged pull requests and a passing CI run on each merge commit: the generator drops a step to "built, in review" while its pull requests are open, and to "partly done" if one cannot be found.
+- The steps marked done have merged pull requests and a passing CI run on each merge commit: the generator would drop a step to "built, in review" while its pull requests are open, and to "partly done" if one cannot be found.
 - Every step carries a tag from `gh` (merged, in review, in progress or planned), so a reader can tell a merged step from one that is built and waiting.
 - "Catalogued in an emulator" is as far as any native or DOS step goes: the checks run in QEMU or headless DOSBox Staging.
 
 ### Uncatalogued
-- Every step marked "catalogued in an emulator" or "built, in review" is uncatalogued on real hardware. No step has a real machine behind it, and the "built, in review" steps are not merged.
-- The steps for spikes G and n3 (Bochs and 86Box, and a real BIOS path for the native kernel) are built in emulators and in open pull requests: neither ran on a real machine, and the n3 kernel does not start on 86Box until the loader fixes meet.
+- Every step marked "catalogued in an emulator" is uncatalogued on real hardware. No step has a real machine behind it.
+- The steps for spikes G and n3 (Bochs and 86Box, and a real BIOS path for the native kernel) are merged and were run in emulators only; neither ran on a real machine, and whether the merged image runs the trampoline on 86Box was not tried.
+- The first-window steps (the shared core, the hosted shell, the core on native and the milestone) are marked in progress, not done: the mouse, the launcher bar, menus and apps are not built or not verified (chapter 18).
 - The roadmap's dependency edges and the critical path are my reading of `docs/DIRECTION.md`, `docs/SPEC.md` and `docs/RUST-TARGETS.md`; the generator checks the statuses, not the edges.
 
 ### Wish list
-- Every dashed or dotted box in the tree: the shared core, the shell, the handoff, the core apps, the native desktop, the filesystem, the module loader, the scheduling model, FreeDOS under the native OS, Fizz Episode 2, the real-hardware runs and the milestone itself.
+- Every dashed or dotted box in the tree: the rest of the shared core (widgets, menus, an app host), live input into the shell, the handoff, the core apps, the native desktop, the filesystem, the module loader, the scheduling model, FreeDOS under the native OS, Fizz Episode 2, the real-hardware runs and the milestone itself.
 
 ```figures
 id: architecture

@@ -117,7 +117,7 @@ def track_progress(D):
             cx += w
         o.append('<text x="%.1f" y="%d" font-size="12" class="num d-text2">%d steps</text>' % (cx + 8, y + 16, sum(counts[b].values())))
     o.append("</svg>")
-    cap = "Every step of <code>roadmap.json</code>, by track and by state. A step is only catalogued if its pull requests are merged with CI green; steps in open pull requests count as built and in review. Nothing here has run on real hardware."
+    cap = "Every step of <code>roadmap.json</code>, by track and by state. A step is only catalogued if its pull requests are merged with CI green; steps whose pull requests are open would count as built and in review. Nothing here has run on real hardware."
     return _fig("".join(o), cap)
 
 

@@ -25,6 +25,7 @@ sys.path.insert(0, HERE)
 import arch  # noqa: E402
 import explainers as ex  # noqa: E402
 import charts  # noqa: E402
+import explainers_fw as fw  # noqa: E402
 import explainers_hw as hw  # noqa: E402
 import figures  # noqa: E402
 import gather  # noqa: E402
@@ -108,6 +109,7 @@ def values_of(data):
     for p in data["prs"]:
         n = p["number"]
         vals.update({"pr%d.added" % n: p["added"], "pr%d.commits" % n: p["commitCount"], "pr%d.merge" % n: p["mergeCommit"], "pr%d.time" % n: ex.hhmm(p["mergedAt"])})
+        vals.update({"pr%d.state" % n: "merged", "pr%d.head" % n: p["mergeCommit"], "pr%d.ci" % n: p["ci"], "pr%d.ahead" % n: 0, "pr%d.hostTests" % n: p.get("hostTests", 0)})
     for f in data["fonts"]:
         stem = f["file"].rsplit(".", 1)[0].replace("-", "_")
         if f["file"].endswith(".ttf"):
@@ -306,6 +308,9 @@ class Site:
                     return ex.pipeline(d, ctx)
                 if xid == "mergeday":
                     return ex.mergeday(d, ctx, [int(a) for a in args[1:]])
+                fwx = {"firstwindow": fw.frames}
+                if xid in fwx:
+                    return fwx[xid](d, ctx)
                 hwx = {"pit": hw.pit_test, "input": hw.input_replay, "vga13": hw.vga13, "vbeattrs": hw.vbe_attrs, "pipelines": hw.pipelines, "memchain": hw.memchain, "biscall": hw.bios_roundtrip}
                 if xid in hwx:
                     return hwx[xid](d, ctx)
@@ -318,6 +323,12 @@ class Site:
                 return hw.shots(d, args[1:])
             if name == "figure" and args[0] in ("font-matrix", "emoji-coverage", "track-progress", "pr-stack"):
                 return {"font-matrix": charts.font_matrix, "emoji-coverage": charts.emoji_coverage, "track-progress": charts.track_progress, "pr-stack": charts.pr_stack}[args[0]](d)
+            if name == "figure" and args[0] == "fw-digests":
+                return fw.digest_table(d, ctx)
+            if name == "figure" and args[0] in ("anatomy-dos", "anatomy-desk"):
+                lead = {"anatomy-dos": "Layers of SHELL.EXE from its Rust source to the hardware it touches, each box marked built and verified, built and not verified, planned or not ours.",
+                        "anatomy-desk": "Layers of what exists under a Rust Desk application today, from the core to the machine, with the app model, system calls and loader drawn dashed as planned."}[args[0]]
+                return fw.anatomy(args[0][8:], ctx, lead)
             if name == "figure" and args[0] == "open-conflicts":
                 return charts.open_conflicts(d)
             if name == "figure" and args[0] == "bios-cost":
@@ -498,8 +509,8 @@ class Site:
             (" (not yet green: %s)" % ", ".join("#%d is %s" % (o["number"], o["ci"]) for o in pend)) if pend else "")) if subject else "none"
         later = d["mergeDay"]["since"]
         since = ("Since merge day only %s has merged (the generator of this report); the other pull requests wait." % ", ".join("#%d" % n for n in later)) if later else ("Nothing has been merged since merge day." if subject else "")
-        panel = ('<dl class="status"><div><dt>Is there an operating system?</dt><dd><b>No.</b> What exists is a boot-to-kernel skeleton and a hosted skeleton on DOS, both merged and run in emulators. In open pull requests there are shared drivers, and a first window with a cursor drawn by the native kernel in QEMU. There is no shared Desk core yet.</dd></div>'
-                 '<div><dt>The First Window milestone</dt><dd><b>Not reached.</b> It is a window drawn by the <em>shared</em> core and moved by a mouse, on both tracks. So far each track has its own demo, and neither uses a shared core.</dd></div>'
+        panel = ('<dl class="status"><div><dt>Is there an operating system?</dt><dd><b>No.</b> What exists is a boot-to-kernel skeleton, a hosted skeleton on DOS, shared drivers, and the first piece of the shared core, which draws two windows, text and a cursor on both tracks. All of it was merged and run in emulators only. There are no apps, no system calls and no loader (chapter 18 and the anatomy pages).</dd></div>'
+                 '<div><dt>The First Window milestone</dt><dd><b>Reached in emulators, in part.</b> A window drawn by the <em>shared</em> core and moved by a scripted drag now appears on both tracks with the same pixels (chapter 18). Moved by a real mouse, and on real hardware: not verified.</dd></div>'
                  '<div><dt>Open pull requests</dt><dd>%s</dd></div>'
                  '<div><dt>Last merge into main</dt><dd>%s<div class="sub">%s</div></dd></div><div><dt>CI on the merge commits</dt><dd>%s</dd></div>'
                  '<div><dt>On real hardware</dt><dd><b>Not tried.</b> Every run so far was in QEMU, headless DOSBox Staging or a browser (the list under Not verified says what that leaves open).</dd></div>'
@@ -562,9 +573,9 @@ class Site:
                 '<section aria-labelledby="h-shelves"><h2 id="h-shelves">The three shelves</h2><p class="sub col">Everything in the archive sits on one of three shelves, and nothing is moved up a shelf until it has earned it. These are counts of entries on the chapter pages, not a measure of the work.</p><div class="shelves">%s</div></section>'
                 '<section aria-labelledby="h-toc"><h2 id="h-toc">The chapters</h2><div class="tbl"><table class="toc"><caption class="sr">Chapters, with date and pull requests</caption><thead><tr><th scope="col" class="n">No.</th><th scope="col">Chapter</th><th scope="col">Date</th><th scope="col">State</th><th scope="col">Pull requests</th></tr></thead><tbody>%s</tbody></table></div></section>'
                 '<section aria-labelledby="h-cols"><h2 id="h-cols">Status by track</h2><div class="glance">%s</div>%s</section>'
-                '<section aria-labelledby="h-nums"><h2 id="h-nums">Headline numbers</h2><p class="sub col">Each number is computed by the generator from the repository or <code>gh</code>. The test figures are counts of test declarations and expected transcripts, not an official total.</p><h3>Merged into main</h3>%s<h3>In open pull requests, not merged</h3><p class="sub col">Read from the open branches, so they change when a branch does. None of this is on main.</p>%s</section>'
+                '<section aria-labelledby="h-nums"><h2 id="h-nums">Headline numbers</h2><p class="sub col">Each number is computed by the generator from the repository or <code>gh</code>. The test figures are counts of test declarations and expected transcripts, not an official total.</p><h3>Merged into main</h3>%s%s</section>'
                 '<section aria-labelledby="h-nv"><h2 id="h-nv">Not verified</h2><p class="sub col">What nobody has checked yet. Anything in the archive that depends on one of these stays on the uncatalogued shelf.</p><ul class="notver">%s</ul></section>'
-                '</main>') % (site_header("index", self.ids + self.extra_ids()), hero, esc(d["generated"][:10]), intro, panel, strip, "".join(sh), "".join(toc), "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), facts_strip(d, HEADLINE_OPEN), notver)
+                '</main>') % (site_header("index", self.ids + self.extra_ids()), hero, esc(d["generated"][:10]), intro, panel, strip, "".join(sh), "".join(toc), "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), (('<h3>In open pull requests, not merged</h3><p class="sub col">Read from the open branches, so they change when a branch does. None of this is on main.</p>' + facts_strip(d, HEADLINE_OPEN)) if subject else ''), notver)
         return body
 
     def write(self):
