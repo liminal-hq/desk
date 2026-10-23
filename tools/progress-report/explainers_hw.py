@@ -166,14 +166,8 @@ def pit_test(D, ctx):
             marks[i] = (1, 3)
         elif "script_done" in l:
             marks[i] = (7, 7)
-    # the line with the script is also the one steps 4 to 6 point at
-    for i, l in enumerate(body):
-        if "scripted" in l:
-            marks[i] = (0, 0)
     src_html = code_block(["#[test]", "fn programming_100_hz_writes_what_the_kernel_writes() {"] + body + ["}"], {k + 2: v for k, v in marks.items()},
                           "The test code, as it is in hal/drivers/pit/src/lib.rs")
-    # the highlighted line of the script is revisited by steps 4 to 6
-    src_html = src_html.replace('data-from="0" data-to="0"', 'data-from="0" data-to="0"', 1)
 
     names = ["command register, 0x%02X" % consts["COMMAND"], "channel 0, low byte", "channel 0, high byte"]
     meaning = ["channel 0, lo then hi byte, mode 2 (rate generator), binary", "low byte of the reload value", "high byte of the reload value"]
@@ -294,7 +288,7 @@ def input_replay(D, ctx):
 
     steps, rows = [], []  # rows: per command dict
     ki = mi = 0
-    head = tail_ = 0
+    head = 0
     mhead = mtail = 0
     mbtn = 0
     for c in cmds:
@@ -308,9 +302,8 @@ def input_replay(D, ctx):
             if lines != real_keys[ki:ki + len(lines)]:
                 raise ValueError("the decoded keys for %r (%r) differ from the recorded transcript (%r): the replica no longer matches" % (c, lines, real_keys[ki:ki + len(lines)]))
             ki += len(lines)
-            row.update(kind="key", stream=stream, lines=lines, head0=head, head1=head + len(stream), tail0=head, tail1=head + len(stream))
+            row.update(kind="key", stream=stream, lines=lines, head0=head, head1=head + len(stream))
             head += len(stream)
-            tail_ = head
         else:
             if c[0] == "mouse_move":
                 dx, dy = int(c[1]), int(c[2])
@@ -546,7 +539,7 @@ def bootinfo(D, ctx):
 
 def std_sizes(D, ctx):
     rows = [r for r in media("std-sizes.md").strip().splitlines() if r.startswith("|")]
-    head = [c.strip().strip("`") for c in rows[0].strip("|").split("|")]
+    head = [c.strip().replace("`", "") for c in rows[0].strip("|").split("|")]
     data = []
     for r in rows[2:]:
         c = [x.strip() for x in r.strip("|").split("|")]

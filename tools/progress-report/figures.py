@@ -123,8 +123,12 @@ def prefix_ids(svg, prefix):
         svg = svg.replace('id="%s"' % i, 'id="%s%s"' % (prefix, i)).replace("url(#%s)" % i, "url(#%s%s)" % (prefix, i)).replace('href="#%s"' % i, 'href="#%s%s"' % (prefix, i))
     svg = re.sub(r'\s(tabindex|role|aria-label|data-id)="[^"]*"', "", svg)
     svg = re.sub(r"<title>.*?</title>", "", svg, flags=re.S)
-    svg = re.sub(r"<svg\b", '<svg aria-hidden="true" focusable="false"', svg, count=1)
-    svg = re.sub(r'\s(width|height)="\d+"', "", svg, count=2)
+    # only the root element's own size is dropped (the tile scales the drawing); the width and height of the shapes inside must stay
+    root = re.match(r"<svg\b[^>]*>", svg)
+    if root:
+        tag = re.sub(r'\s(width|height)="[^"]*"', "", root.group(0))
+        tag = tag.replace("<svg", '<svg aria-hidden="true" focusable="false"', 1)
+        svg = tag + svg[root.end():]
     return svg
 
 

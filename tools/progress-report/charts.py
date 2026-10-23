@@ -70,7 +70,7 @@ def emoji_coverage(D):
     tot = e["requested"]
     d_w, p_w = e["requestedDone"] / tot * R, e["requestedPlanned"] / tot * R
     o.append('<text x="%d" y="%d" text-anchor="end" font-size="13" class="a-t1">Gboard request</text>' % (L - 10, y + 14))
-    o.append('<rect x="%d" y="%d" width="%.1f" height="18" rx="2" class="a-built"/><rect x="%.1f" y="%d" width="%.1f" height="18" rx="2" class="a-plan" stroke-dasharray="4 3"/>' % (L, y, d_w, L + d_w + 2, y, p_w - 2))
+    o.append('<rect x="%d" y="%d" width="%.1f" height="18" rx="2" class="a-built"/><rect x="%.1f" y="%d" width="%.1f" height="18" rx="2" class="a-plan" stroke-dasharray="4 3"/>' % (L, y, d_w, L + d_w + 2, y, max(p_w - 2, 0)))
     o.append('<text x="%.1f" y="%d" text-anchor="middle" font-size="12" class="num a-t1">%d done</text><text x="%.1f" y="%d" text-anchor="middle" font-size="12" class="num a-t2">%d planned</text>' % (
         L + d_w / 2, y + 14, e["requestedDone"], L + d_w + p_w / 2, y + 14, e["requestedPlanned"]))
     o.append('<text x="%d" y="%d" font-size="12" class="d-muted">%d distinct sequences requested; the vector set holds %d of the same emoji.</text></svg>' % (L, y + 44, tot, e["vector"]))
@@ -125,6 +125,8 @@ def track_progress(D):
 
 def pr_stack(D):
     prs = sorted(D["open"]["prs"], key=lambda p: p["number"])
+    if not prs:
+        return '<figure class="chartfig"><p class="how">No pull request is open: every branch the generator knows has been merged, or no pull request data was available.</p></figure>'
     by_branch = {p["branch"]: p for p in prs}
     depth = {}
 

@@ -123,6 +123,15 @@ def ci_of(checks):
     return "pending"
 
 
+def snapshot_open_work():
+    """The open-work record committed with the gh snapshot, or None."""
+    path = os.path.join(HERE, "snapshots", "gh.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return (json.load(f).get("data") or {}).get("openWork")
+
+
 def gh_available():
     try:
         return subprocess.run(["gh", "auth", "status"], capture_output=True, timeout=30).returncode == 0
@@ -665,7 +674,8 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
     work = open_work(root, gh["prs"]) if gh["prs"] else None
     work_source = "git"
     if work is None:
-        work, work_source = gh.get("openWork"), "snapshot"
+        # a branch is not fetched here: the open work recorded with the snapshot stands in, even when gh itself answered live
+        work, work_source = gh.get("openWork") or snapshot_open_work(), "snapshot"
     if work is None:
         work, work_source = {"prs": [], "tips": [], "commitsOnBranches": 0, "widest": None, "warnings": []}, "none"
     captures = check_captures(root)

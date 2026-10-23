@@ -272,7 +272,7 @@ class Site:
                 ch = [c for c in chapters if c["id"] == r["chapter"]][0]
                 if r["at"] not in [figures.directive_key(b["name"], b["args"]) for b in ch["blocks"] if b["type"] == "directive"]:
                     raise mdlite.MdError("%s: figure %s names the directive %r, which the chapter does not contain" % (r["chapter"], r["id"], r["at"]))
-        self.fig_at = {(r["chapter"], r["at"]): r for r in self.registry if r.get("at") and "explicit" not in r and not r.get("anchor_given")}
+        self.fig_at = {(r["chapter"], r["at"]): r for r in self.registry if r.get("at") and not r.get("anchor_given")}
         self.fig_html = {}
         self.thumbs = {}
 
@@ -483,7 +483,6 @@ class Site:
         open_html = ("<b>%d open, none merged.</b> %s. CI is green on the head commit of %d of %d%s." % (
             len(subject), ", ".join("#%d" % o["number"] for o in subject), len(green), len(subject),
             (" (not yet green: %s)" % ", ".join("#%d is %s" % (o["number"], o["ci"]) for o in pend)) if pend else "")) if subject else "none"
-        newest = max([o["createdAt"] for o in subject if o.get("createdAt")] or [""])
         later = d["mergeDay"]["since"]
         since = ("Since merge day only %s has merged (the generator of this report); the other pull requests wait." % ", ".join("#%d" % n for n in later)) if later else ("Nothing has been merged since merge day." if subject else "")
         panel = ('<dl class="status"><div><dt>Is there an operating system?</dt><dd><b>No.</b> What exists is a boot-to-kernel skeleton and a hosted skeleton on DOS, both merged and run in emulators. In open pull requests there are shared drivers, and a first window with a cursor drawn by the native kernel in QEMU. There is no shared Desk core yet.</dd></div>'
