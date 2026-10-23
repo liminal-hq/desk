@@ -102,8 +102,11 @@ impl Rect {
         x >= self.x0 && x < self.x1 && y >= self.y0 && y < self.y1
     }
 
-    /// Grows every side by `by` (shrinks when negative), saturating.
+    /// Grows every side by `by` (shrinks when negative), saturating. An empty rectangle stays empty.
     pub fn inflate(&self, by: i32) -> Rect {
+        if self.is_empty() {
+            return Rect::default();
+        }
         Rect {
             x0: self.x0.saturating_sub(by),
             y0: self.y0.saturating_sub(by),
@@ -203,6 +206,8 @@ mod tests {
         let r = Rect::new(10, 10, 4, 4);
         assert_eq!(r.inflate(2), Rect::new(8, 8, 8, 8));
         assert!(r.inflate(-2).is_empty());
+        assert!(Rect::default().inflate(3).is_empty());
+        assert!(Rect::new(5, 5, 0, 4).inflate(2).is_empty());
         assert_eq!(r.offset(-10, 5), Rect::new(0, 15, 4, 4));
         let edge = Rect::new(i32::MAX - 2, 0, 2, 2).offset(100, 0);
         assert_eq!(edge.x1, i32::MAX);

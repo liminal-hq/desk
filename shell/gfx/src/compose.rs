@@ -175,8 +175,17 @@ impl Compositor {
     }
 
     fn present<P: Present>(&self, out: &mut P, damage: &Damage) -> Result<(), HalError> {
-        let mut buf = [0u8; MAX_WIDTH as usize];
         out.begin()?;
+        if let Err(e) = self.spans(out, damage) {
+            // `begin` may have set up hardware state (the planar presenter's graphics controller) that only `end` undoes.
+            let _ = out.end();
+            return Err(e);
+        }
+        out.end()
+    }
+
+    fn spans<P: Present>(&self, out: &mut P, damage: &Damage) -> Result<(), HalError> {
+        let mut buf = [0u8; MAX_WIDTH as usize];
         for r in damage.rects() {
             let (x0, x1) = (r.x0 as usize, r.x1 as usize);
             let n = x1 - x0;
@@ -186,7 +195,7 @@ impl Compositor {
                 out.span(r.x0 as u32, y as u32, &buf[..n])?;
             }
         }
-        out.end()
+        Ok(())
     }
 
     /// The back buffer: the scene without the cursor.
@@ -537,6 +546,7 @@ mod tests {
         let (mut c, mut out, mut w) = setup(1);
         out.fail_after = Some(5);
         assert_eq!(c.frame(&mut out, |s, r| w.paint(s, r)), Err(HalError::Timeout));
+        assert_eq!((out.begins, out.ends), (1, 1), "a failed frame is still closed with `end`");
         out.fail_after = None;
         let s = frame(&mut c, &mut out, &mut w);
         assert_eq!(s.presented, W * H);

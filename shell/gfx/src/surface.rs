@@ -24,7 +24,10 @@ impl Surface {
             pixels: Vec::new(),
             clip: Rect::default(),
         };
-        s.pixels = vec![fill; width as usize * height as usize];
+        let len = (width as usize)
+            .checked_mul(height as usize)
+            .expect("surface size overflows usize");
+        s.pixels = vec![fill; len];
         s.clip = s.bounds();
         s
     }
@@ -117,8 +120,10 @@ impl Surface {
         let sx = (r.x0 as i64 - x as i64) as usize;
         for dy in r.y0..r.y1 {
             let sy = (dy as i64 - y as i64) as usize;
-            let from = sy * src_pitch + sx;
-            let Some(row) = src.get(from..from + n) else { return };
+            let from = sy.saturating_mul(src_pitch).saturating_add(sx);
+            let Some(row) = src.get(from..from.saturating_add(n)) else {
+                return;
+            };
             let start = dy as usize * self.width as usize + r.x0 as usize;
             self.pixels[start..start + n].copy_from_slice(row);
         }

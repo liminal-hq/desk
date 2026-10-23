@@ -75,7 +75,7 @@ impl Present for MemoryPresent {
     }
 
     fn begin(&mut self) -> Result<(), HalError> {
-        self.stats.frames += 1;
+        self.stats.frames = self.stats.frames.wrapping_add(1);
         Ok(())
     }
 
@@ -91,8 +91,8 @@ impl Present for MemoryPresent {
         }
         let start = y as usize * self.width as usize + x as usize;
         self.pixels[start..start + pixels.len()].copy_from_slice(pixels);
-        self.stats.spans += 1;
-        self.stats.pixels += pixels.len() as u32;
+        self.stats.spans = self.stats.spans.wrapping_add(1);
+        self.stats.pixels = self.stats.pixels.wrapping_add(pixels.len() as u32);
         Ok(())
     }
 }
