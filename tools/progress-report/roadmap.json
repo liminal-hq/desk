@@ -1,0 +1,663 @@
+{
+ "note": "Status of each step, checked against docs/DIRECTION.md, docs/RUST-TARGETS.md, docs/SPEC.md, docs/EMOJI-ROADMAP.md and the merged pull requests. gather.py drops any 'done' or 'done-emu' node whose pull request is not merged with CI passing on its merge commit. 'done-emu' means checked in an emulator only; nothing here has run on real hardware. Edges (deps) mean 'this unlocks that'.",
+ "milestone": {
+  "id": "first-window",
+  "name": "First Window",
+  "what": "A window drawn by the shared Desk core, moved with a mouse, on DOS (hosted) and on the bare-metal kernel (native)."
+ },
+ "branches": [
+  {
+   "id": "foundations",
+   "label": "Foundations",
+   "next": "The emoji hands and the skin-tone mechanism, proved on the eight hands already drawn.",
+   "blocker": "None recorded."
+  },
+  {
+   "id": "hosted",
+   "label": "Hosted track (Desk on DOS)",
+   "next": "Decide to retire the C layer and coff2go32.py, then promote d0's rt to a top-level crate on a freestanding ELF target.",
+   "blocker": "Owner decision on retiring the C layer."
+  },
+  {
+   "id": "convergence",
+   "label": "Convergence (shared)",
+   "next": "Sketch the HAL against the two real consumers: the hosted skeleton and the native kernel.",
+   "blocker": "The first drivers on each side: both skeletons are merged."
+  },
+  {
+   "id": "native",
+   "label": "Native track (own kernel)",
+   "next": "A PS/2 keyboard driver on IRQ 1 in the kernel; it needs no decision. Graphics waits on the driver-strategy decision.",
+   "blocker": "Graphics strategy (BIOS before the switch, V86, or native drivers)."
+  },
+  {
+   "id": "games",
+   "label": "Games and apps",
+   "next": "Nothing to start until the shared drivers crate exists; Fizz Episode 2 is its first customer.",
+   "blocker": "The shared drivers crate (convergence)."
+  }
+ ],
+ "nodes": [
+  {
+   "id": "desk",
+   "label": "Desk",
+   "branch": "root",
+   "state": "progress",
+   "deps": [],
+   "what": "A calm graphical operating system in Rust for 486-class PCs (working name).",
+   "why": "The point of all of it.",
+   "evidence": "docs/DIRECTION.md (PR #5)"
+  },
+  {
+   "id": "design",
+   "label": "Design system",
+   "branch": "foundations",
+   "state": "done",
+   "deps": [
+    "desk"
+   ],
+   "what": "Palette, HIG, file formats, SDK ABI shape and the Afterglow prototype.",
+   "why": "Everything visual and every format follows from it, on both tracks.",
+   "evidence": "docs/PALETTE.md, HIG.md, FORMATS.md, SDK.md and design/ on main (Initial Commit)"
+  },
+  {
+   "id": "repo",
+   "label": "Repo, CI, doc checks",
+   "branch": "foundations",
+   "state": "done",
+   "deps": [
+    "desk"
+   ],
+   "what": "liminal-hq/desk with tools/check.sh, the ci-dos image and doc and header checks.",
+   "why": "Every later claim is checked here.",
+   "evidence": "main a4b0d86; CI green on the merge commit of every pull request (#1 to #7)"
+  },
+  {
+   "id": "fonts",
+   "label": "Desk fonts",
+   "branch": "foundations",
+   "state": "done",
+   "pr": 1,
+   "deps": [
+    "design"
+   ],
+   "what": "Four pixel faces (Square and Round), Desk Fixed DOS, and Desk Sans, Mono and Serif in four styles; .DFN bitmaps.",
+   "why": "The Desk's text on DOS and on the native screen; the outline faces for modern systems.",
+   "evidence": "PR #1, merged: bun build.ts --check reproducible; OTS, fontTools, FreeType, HarfBuzz in Docker"
+  },
+  {
+   "id": "emoji",
+   "label": "Emoji, first set",
+   "branch": "foundations",
+   "state": "done",
+   "pr": 2,
+   "deps": [
+    "fonts"
+   ],
+   "what": "480 pixel emoji at 16 and 12 px (40 at 8 px), 156 vector, two colour fonts and .DEM files.",
+   "why": "The shell's own pictures and Fizz's icons, in the Desk palette.",
+   "evidence": "PR #2, merged: bun test, fontTools, OTS, FreeType pixel-exact against .DEM"
+  },
+  {
+   "id": "gboard",
+   "label": "Gboard request 164 / 244",
+   "branch": "foundations",
+   "state": "progress",
+   "pr": 2,
+   "deps": [
+    "emoji"
+   ],
+   "what": "Every emoji in Gboard's Smileys and emotions panel; 164 of 244 sequences done.",
+   "why": "The owner's request; the faces are complete.",
+   "evidence": "docs/EMOJI-ROADMAP.md, generated and checked by bun test; merged in PR #2"
+  },
+  {
+   "id": "tones",
+   "label": "Skin tones",
+   "branch": "foundations",
+   "state": "planned",
+   "deps": [
+    "gboard"
+   ],
+   "what": "Five tones per hand by palette substitution, GSUB in the colour fonts, a role byte in .DEM.",
+   "why": "48 of the 80 planned requests are tone families.",
+   "evidence": "Design in docs/EMOJI-ROADMAP.md; nothing built"
+  },
+  {
+   "id": "zwj",
+   "label": "ZWJ sequences",
+   "branch": "foundations",
+   "state": "planned",
+   "deps": [
+    "gboard"
+   ],
+   "what": "Seven sequences such as 😮‍💨 and ❤️‍🔥, each its own drawing and ligature.",
+   "why": "Completes the request.",
+   "evidence": "docs/EMOJI-ROADMAP.md; nothing built"
+  },
+  {
+   "id": "vecx",
+   "label": "More vector emoji",
+   "branch": "foundations",
+   "state": "planned",
+   "deps": [
+    "emoji"
+   ],
+   "what": "Vector drawings where the geometric kit can draw well.",
+   "why": "Beside Desk Sans, Mono and Serif at large sizes.",
+   "evidence": "Step 6 of the emoji roadmap"
+  },
+  {
+   "id": "name",
+   "label": "Product name",
+   "branch": "foundations",
+   "state": "decision",
+   "deps": [
+    "design"
+   ],
+   "what": "Desk is a working name; candidates in docs/NAMING.md.",
+   "why": "Names the boot image, disk label and repository. Blocks nothing.",
+   "evidence": "docs/NAMING.md"
+  },
+  {
+   "id": "direction",
+   "label": "Direction and Rust targets",
+   "branch": "foundations",
+   "state": "done",
+   "pr": 5,
+   "deps": [
+    "repo"
+   ],
+   "what": "Two tracks behind a HAL; how Rust is built per application space; the std question.",
+   "why": "Records the pivot so the repo and the work agree.",
+   "evidence": "PR #5, merged: DIRECTION.md and RUST-TARGETS.md. Documents, not measurements."
+  },
+  {
+   "id": "skel",
+   "label": "Toolchain skeleton",
+   "branch": "hosted",
+   "state": "done-emu",
+   "pr": 3,
+   "deps": [
+    "repo"
+   ],
+   "critical": true,
+   "what": "Rust no_std core plus a DJGPP C layer as one DESK.EXE, run headless in DOSBox.",
+   "why": "Proved Rust on DOS end to end in CI.",
+   "evidence": "PR #3, merged: tools/check.sh in ci-dos; DOSBox Staging only"
+  },
+  {
+   "id": "dxe3",
+   "label": "DXE3 modules",
+   "branch": "hosted",
+   "state": "done-emu",
+   "pr": 4,
+   "deps": [
+    "skel"
+   ],
+   "what": "Rust apps as .DXE files loaded with dlopen, calling back into the core.",
+   "why": "Apps as modules: yes, with limits (LTO required, stack overflow not recoverable).",
+   "evidence": "PR #4, merged: 13 scenarios, 200-cycle leak test, docs/S1-DXE3.md"
+  },
+  {
+   "id": "d0",
+   "label": "Pure Rust DOS program",
+   "branch": "hosted",
+   "state": "done-emu",
+   "pr": 7,
+   "deps": [
+    "skel"
+   ],
+   "critical": true,
+   "what": "No gcc, libc or crt0: rust-lld, a 139-line packer and the rt runtime.",
+   "why": "Rust for DOS without the C layer; shared with Fizz Episode 2.",
+   "evidence": "PR #7, merged: transcripts, IRQ 0 hook and mode 13h headless, docs/D0-RUST-DOS.md"
+  },
+  {
+   "id": "retire",
+   "label": "Retire the C layer",
+   "branch": "hosted",
+   "state": "decision",
+   "deps": [
+    "d0"
+   ],
+   "what": "Drop c/, coff2go32.py and DJGPP's libc once the hardware code has moved to Rust.",
+   "why": "One toolchain; d0 recommends it.",
+   "evidence": "docs/D0-RUST-DOS.md, recommendation"
+  },
+  {
+   "id": "rt",
+   "label": "ELF target and rt crate",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "d0"
+   ],
+   "critical": true,
+   "what": "dos-elf.json as the DOS target; rt promoted to a top-level crate with an exception handler.",
+   "why": "The base every DOS program and the hosted Desk build on.",
+   "evidence": "docs/D0-RUST-DOS.md, next spikes"
+  },
+  {
+   "id": "hvbe",
+   "label": "VBE and mode 12h",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt"
+   ],
+   "critical": true,
+   "what": "The VBE 2.0 linear frame buffer (DPMI 0800h) and the 16-colour fallback from Rust.",
+   "why": "Pixels for the compositor.",
+   "evidence": "DIRECTION.md hosted milestone 4; spikes/README.md"
+  },
+  {
+   "id": "hmouse",
+   "label": "Keyboard and mouse",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt"
+   ],
+   "critical": true,
+   "what": "IRQ 1 keyboard and INT 33h mouse with a real-mode callback.",
+   "why": "Input for windows and the cursor.",
+   "evidence": "DIRECTION.md hosted milestone 4"
+  },
+  {
+   "id": "hsound",
+   "label": "OPL and Sound Blaster",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt"
+   ],
+   "what": "OPL music and Sound Blaster DMA from Rust.",
+   "why": "Audio Player, Fizz, system sounds.",
+   "evidence": "docs/D0-RUST-DOS.md, next spikes"
+  },
+  {
+   "id": "shell",
+   "label": "Hosted shell",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "hvbe",
+    "hmouse",
+    "core"
+   ],
+   "critical": true,
+   "what": "Compositor, windows, launcher bar, cursor and keyboard focus on DOS.",
+   "why": "The first thing anyone would call the Desk.",
+   "evidence": "SPEC.md milestone 2; DIRECTION.md hosted milestone 5"
+  },
+  {
+   "id": "handoff",
+   "label": "DOS handoff",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "DESK.COM, DESK.RUN and /RESUME: run a DOS program and come back.",
+   "why": "Any DOS program a double-click away.",
+   "evidence": "docs/HANDOFF.md; SPEC.md milestone 3"
+  },
+  {
+   "id": "coreapps",
+   "label": "Files, Programs, Settings",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "The three core apps.",
+   "why": "A usable desktop.",
+   "evidence": "SPEC.md milestone 4"
+  },
+  {
+   "id": "jsdos",
+   "label": "js-dos browser build",
+   "branch": "hosted",
+   "state": "decision",
+   "deps": [
+    "hvbe"
+   ],
+   "what": "The hosted Desk in the browser.",
+   "why": "A demo anyone can open.",
+   "evidence": "OPEN-QUESTIONS.md: waits on the linear frame buffer in js-dos"
+  },
+  {
+   "id": "hreal",
+   "label": "Real hardware (DOS)",
+   "branch": "hosted",
+   "state": "decision",
+   "deps": [
+    "shell"
+   ],
+   "what": "A real 486, EMM386, QEMM and a Windows 9x DOS box.",
+   "why": "Emulators pass things real machines reject.",
+   "evidence": "No real hardware is in the loop yet"
+  },
+  {
+   "id": "hal",
+   "label": "Hardware layer (HAL)",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "skel",
+    "kernel"
+   ],
+   "critical": true,
+   "what": "Display, input, timer, sound, storage, memory, module loading: one small surface per track.",
+   "why": "One Desk core on both tracks; without it they drift apart.",
+   "evidence": "DIRECTION.md: not designed yet"
+  },
+  {
+   "id": "drivers",
+   "label": "Shared drivers crate",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "d0",
+    "kernel"
+   ],
+   "what": "VGA/VBE, keyboard, PIT, OPL and SB written once over port I/O and IRQs.",
+   "why": "Shared by the hosted Desk, the native kernel and Fizz Episode 2.",
+   "evidence": "DIRECTION.md, Rust for DOS item 4"
+  },
+  {
+   "id": "core",
+   "label": "Desk core",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "hal",
+    "fonts"
+   ],
+   "critical": true,
+   "what": "Compositor, window manager, widgets, palette, fonts, event loop, app host.",
+   "why": "The product, independent of the machine below.",
+   "evidence": "SPEC.md; nothing built beyond the skeleton"
+  },
+  {
+   "id": "std",
+   "label": "std platform layer",
+   "branch": "convergence",
+   "state": "research",
+   "deps": [
+    "direction"
+   ],
+   "what": "A Desk app target with std over the SDK; first the 'unsupported' stubs experiment.",
+   "why": "Apps are where std pays off.",
+   "evidence": "RUST-TARGETS.md: s-std-stubs, s-desk-pal, prebuilt sysroot"
+  },
+  {
+   "id": "freedos",
+   "label": "Bundle FreeDOS",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "fs"
+   ],
+   "what": "Run DOS programs on the native OS by booting FreeDOS or a V86 task.",
+   "why": "No need to reimplement DOS.",
+   "evidence": "DIRECTION.md: a later milestone; licences to check"
+  },
+  {
+   "id": "extender",
+   "label": "Own stub and extender",
+   "branch": "convergence",
+   "state": "research",
+   "deps": [
+    "d0"
+   ],
+   "what": "Replace the DJGPP stub and perhaps CWSDPMI.",
+   "why": "The last pieces of the DOS route that are not ours.",
+   "evidence": "D0-RUST-DOS.md: research, not planned"
+  },
+  {
+   "id": "boot",
+   "label": "Boot sector and loader",
+   "branch": "native",
+   "state": "done-emu",
+   "pr": 6,
+   "deps": [
+    "repo"
+   ],
+   "critical": true,
+   "what": "512-byte NASM boot sector; loader with INT 13h, A20, E820, GDT, protected mode.",
+   "why": "Our own way onto the machine.",
+   "evidence": "PR #6, merged: three loader variants boot in QEMU -cpu 486"
+  },
+  {
+   "id": "kernel",
+   "label": "Rust kernel skeleton",
+   "branch": "native",
+   "state": "done-emu",
+   "pr": 6,
+   "deps": [
+    "boot"
+   ],
+   "critical": true,
+   "what": "GDT, IDT and exceptions, PIC, PIT at 100 Hz, frames, heap with alloc, x87, serial and VGA text.",
+   "why": "Native milestones 1 and 2.",
+   "evidence": "PR #6, merged: transcript match, five fault modes, a hang watchdog"
+  },
+  {
+   "id": "nkbd",
+   "label": "PS/2 keyboard and mouse",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "kernel"
+   ],
+   "critical": true,
+   "what": "Own drivers on IRQ 1 and IRQ 12.",
+   "why": "Input; native milestone 4.",
+   "evidence": "DIRECTION.md native milestone 4"
+  },
+  {
+   "id": "ngfx",
+   "label": "VGA/VBE graphics",
+   "branch": "native",
+   "state": "decision",
+   "deps": [
+    "kernel"
+   ],
+   "critical": true,
+   "what": "VBE through the BIOS before the switch, V86 calls, or native drivers.",
+   "why": "A frame drawn by the shared compositor; native milestone 3.",
+   "evidence": "DIRECTION.md open question: graphics driver strategy"
+  },
+  {
+   "id": "paging",
+   "label": "Paging and protection",
+   "branch": "native",
+   "state": "decision",
+   "deps": [
+    "kernel"
+   ],
+   "what": "Flat and shared, or per-app address spaces on the 486 MMU.",
+   "why": "Decides what a crashed app can damage.",
+   "evidence": "DIRECTION.md open question: memory protection"
+  },
+  {
+   "id": "sched",
+   "label": "Scheduling model",
+   "branch": "native",
+   "state": "decision",
+   "deps": [
+    "kernel"
+   ],
+   "what": "Cooperative in one address space, or preemptive processes.",
+   "why": "Shapes the app ABI and the core's event loop.",
+   "evidence": "DIRECTION.md open question: scheduling"
+  },
+  {
+   "id": "disk",
+   "label": "Floppy and IDE",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "kernel"
+   ],
+   "what": "BIOS INT 13h in the loader today; own drivers in the kernel later (a decision).",
+   "why": "Reading anything after boot.",
+   "evidence": "DIRECTION.md native milestone 5"
+  },
+  {
+   "id": "fs",
+   "label": "FAT12/16 filesystem",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "disk"
+   ],
+   "what": "Read the floppy; perhaps a filesystem of our own for the system volume.",
+   "why": "Load apps and files; share disks with FreeDOS.",
+   "evidence": "DIRECTION.md native milestone 5"
+  },
+  {
+   "id": "loader",
+   "label": "Module format and loader",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "dxe3"
+   ],
+   "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
+   "why": "Apps loaded from disk; native milestone 6.",
+   "evidence": "DIRECTION.md; lessons from S1-DXE3.md"
+  },
+  {
+   "id": "abi",
+   "label": "App ABI and syscalls",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "loader",
+    "sched"
+   ],
+   "what": "How an app calls the Desk on the native OS.",
+   "why": "Native apps and the std platform layer sit on it.",
+   "evidence": "RUST-TARGETS.md space (d)"
+  },
+  {
+   "id": "nsound",
+   "label": "OPL and Sound Blaster",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "drivers"
+   ],
+   "what": "Sound with detection but without DOS or BLASTER.",
+   "why": "Native milestone 8.",
+   "evidence": "DIRECTION.md native milestone 8"
+  },
+  {
+   "id": "ndesk",
+   "label": "Desk core on native",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "core",
+    "ngfx",
+    "nkbd"
+   ],
+   "critical": true,
+   "what": "The shared core on the native HAL: a window and a cursor on bare metal.",
+   "why": "The native half of the first milestone; native milestone 7 begins here.",
+   "evidence": "DIRECTION.md native milestones 3 and 7"
+  },
+  {
+   "id": "emus",
+   "label": "86Box, Bochs, v86",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "kernel"
+   ],
+   "what": "The same image in more emulators and in the browser.",
+   "why": "QEMU alone is one opinion.",
+   "evidence": "DIRECTION.md native milestone 9; only QEMU has run it"
+  },
+  {
+   "id": "nreal",
+   "label": "A real 486",
+   "branch": "native",
+   "state": "decision",
+   "deps": [
+    "emus"
+   ],
+   "what": "Boot the floppy on period hardware.",
+   "why": "The actual target.",
+   "evidence": "No real hardware available yet"
+  },
+  {
+   "id": "fizz2",
+   "label": "Lt. Fizz Episode 2",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "drivers",
+    "rt"
+   ],
+   "what": "A new DOS game as a plain Rust program on the shared runtime and drivers.",
+   "why": "The first outside customer of Rust for DOS.",
+   "evidence": "RUST-TARGETS.md space (f)"
+  },
+  {
+   "id": "fizz1",
+   "label": "Migrate Episode 1",
+   "branch": "games",
+   "state": "research",
+   "deps": [
+    "rt"
+   ],
+   "what": "Move lieutenant-fizz-dos off its C layer onto the shared machinery.",
+   "why": "The origin of the approach.",
+   "evidence": "RUST-TARGETS.md space (e): a candidate, an idea"
+  },
+  {
+   "id": "optapps",
+   "label": "Optional apps",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "coreapps"
+   ],
+   "what": "Audio Player and Notes first, then Paint, Clock, Calc, Mines, Terminal, Inspector.",
+   "why": "The prototype's apps, for real.",
+   "evidence": "SPEC.md milestone 5; design/*.dc.html"
+  },
+  {
+   "id": "ttf",
+   "label": "TrueType in the Desk",
+   "branch": "games",
+   "state": "research",
+   "deps": [
+    "fonts",
+    "core"
+   ],
+   "what": "Reading TrueType fonts in the Desk (spike s6).",
+   "why": "Outline text on the Desk itself.",
+   "evidence": "PR #1 docs: a later spike"
+  },
+  {
+   "id": "first-window",
+   "label": "First Window",
+   "branch": "milestone",
+   "state": "planned",
+   "deps": [
+    "shell",
+    "ndesk"
+   ],
+   "critical": true,
+   "what": "A window drawn by the shared core and moved with a mouse, hosted on DOS and native.",
+   "why": "The first thing a person would see and call the Desk.",
+   "evidence": "Not started"
+  }
+ ]
+}

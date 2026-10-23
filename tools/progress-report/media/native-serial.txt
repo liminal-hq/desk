@@ -1,0 +1,32 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: 6
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 (6 entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+  map 0x00000000-0x0009fc00 usable
+  map 0x0009fc00-0x000a0000 reserved
+  map 0x000f0000-0x00100000 reserved
+  map 0x00100000-0x00fe0000 usable
+  map 0x00fe0000-0x01000000 reserved
+  map 0xfffc0000-0x100000000 reserved
+memory: usable RAM 15871 KiB
+memory: kernel image 0x100000-0x11a000
+memory: 3782 frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+heap: 4096 KiB at 0x11a000
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+boot complete
