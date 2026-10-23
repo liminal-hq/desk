@@ -25,6 +25,7 @@ The design for driving the first window ([`FIRST-WINDOW.md`](FIRST-WINDOW.md)) w
 - [Risks](#risks)
 - [Out of scope](#out-of-scope)
 - [What changes in other documents](#what-changes-in-other-documents)
+- [Result](#result)
 
 ## What live input is
 
@@ -378,4 +379,85 @@ Made by the tasks that change the behaviour, in the same branch:
 - [`HAL.md`](HAL.md): `desk-int33`'s counters in the driver list.
 - `tools/README.md`: the launcher, `--window`, `DOS_WINDOW` and the new `frames.py` commands.
 - [`DIRECTION.md`](DIRECTION.md): the first window's milestone notes that it runs live on both tracks, once the result is in.
-- This document: a "Result" section with what was built, measured and not verified.
+- This document: a [Result](#result) section with what was built, measured and not verified (written).
+
+## Result
+
+Measured on 2026-10-23 on the tip of the live-input stack, in the `ci-dos` image (DOSBox Staging 0.83, Rust 1.98) and on the host (QEMU 11.1.2 as a 486, Docker for the Xvfb container and its `xdotool`). Not verified comes first.
+
+### Not verified
+
+- **A person at a real desktop.** The author's machine runs a Wayland session and no window was opened on it. The windows were run on a virtual X server (Xvfb, no window manager) with `xdotool` sending real X pointer and key events, which exercises QEMU's GTK grab and DOSBox's capture but not a compositor: a Wayland compositor that refuses the keyboard grab, a desktop that takes Alt+Tab or Alt+F4 before the emulator, a real pointer's acceleration, SDL's title bar and its release hotkey, DOSBox's release keys (Ctrl+F10, the middle button), and `keyboard_capture` were not tried.
+- **Real hardware.** Nothing ran on a real 8042, a real mouse driver, a real VGA card or a 486. Pacing (one PIT tick natively, the poll under DOS) was designed, not timed; emulated speed says nothing about it.
+- **Other emulators and drivers.** QEMU is the only native emulator that played the live scenarios (Bochs and 86Box did not), and DOSBox's built-in INT 33h driver is the only one tried: other drivers' answers to functions 0005h and 0006h (a missing button, saturating counts) are unknown.
+- **`INPUT_EXTRA=1 tools/check.sh` as one command.** The CI image has no Docker, so the two Xvfb steps (spike B's and `shell/dos/check-xvfb.sh`) were run directly, five times each in a row, and the rest of `tools/check.sh` in the image.
+- **The right and middle buttons and the wheel** reach the shell and do nothing; under DOS only the left button's clicks shorter than a poll are seen.
+
+### What was built
+
+- **The core:** `Compositor` keeps `shown` and a burst of cursor moves between two frames presents at most two sprite rectangles (the test failed before the change, 2440 pixels against 456); `Shell::is_dirty`; `desk_shell::live` (`route`, `Tally`, `mark_line`, `summary_line`); Alt+Tab, Shift+Alt+Tab, Alt+F4, Tab and Shift+Tab in `desk-wm`, with the caret drawn only in the focused window's focused field (`tests/shell/keys.scn`, 10 frames at each depth).
+- **The tools:** `tests/shell/live.scn` (8 frames) and `live-keys.scn` (4 frames), `frames.py live` for QEMU, `AUTOTYPE` and `xdotool`, `frames.py marks`, `tools/xvfb-dos.sh`.
+- **The native track:** the kernel's `shell-live` mode (code 15) on the PS/2 drivers, paced by the PIT, halting when idle, F12 marks and Escape to end.
+- **The hosted track:** `SHELL.EXE`'s live loop with `marks`, and the INT 33h press and release counters for the left button.
+- **The launchers:** `tools/run-shell.sh native|dos`, `native-run.sh --window` and `DOS_WINDOW=1 tools/dosrun.sh`.
+
+### What matched
+
+Every mark of every live run equals its golden: the colour digest and, where the capture has indices, the index digest. Marks are numbered from the scenario's first frame (mark 00).
+
+| Frame of `live.scn` | Depth 8 colour digest | Depth 4 colour digest |
+|---|---|---|
+| start | `c310363f` | `216c6cb6` |
+| focus | `8fa785c2` | `4239a1ae` |
+| dragged | `a8143a01` | `2c6aaaf5` |
+| switched | `a61b635f` | `83440590` |
+| typed | `c97d165b` | `ec227094` |
+| closed | `64907bdb` | `c31f4c12` |
+| clicked | `dea3fc34` | `dea3fc34` |
+| move | `5817064b` | `5817064b` |
+
+(`start` is the first window's `open` frame, so its digests are the scripted run's; `clicked` and `move` are the same at both depths because each is the empty desktop with the arrow.)
+
+| Run | Marks and dumps against the host's goldens | Counts of the run (keys, pointer reports, frames presented, pixels presented) |
+|---|---|---|
+| Native, `live.scn`, depth 8 (QEMU std card, PS/2 mouse and keyboard) | 8 of 8 marks, 8 of 8 screendumps | 31, 14, 17, 896,096 |
+| Native, `live.scn`, depth 4 (QEMU Cirrus card) | 8 of 8, 8 of 8 | 31, 14, 17, 906,424 |
+| Native, `live-keys.scn`, depth 8 | 4 of 4, 4 of 4 | 23, 0, 9, 309,230 |
+| DOS, `live-keys.scn` by `AUTOTYPE` through IRQ 1, depth 8 | 4 of 4 marks, 4 of 4 read-backs | 23, 0, 9, 309,230 |
+| DOS, the same, depth 4 | 4 of 4, 4 of 4 | 23, 0, 9, 310,224 |
+| DOS, the same, no mouse driver | 4 of 4, 4 of 4 (equal to the run with a driver) | 23, 0, 9, 309,230 |
+| DOS, `live.scn` by `xdotool` through DOSBox's window and INT 33h, depth 8 | 8 of 8, 8 of 8 | 31, 11, 14, 894,728 |
+| DOS, the same with 5 ms clicks (`--quick`) | 8 of 8, 8 of 8 | 31, 11, 14, 894,728 |
+
+- Three runs in a row of the native depth 8 run gave the same mark lines (one checksum); five runs in a row of the DOS Xvfb run gave the same marks.
+- **The two tracks agree.** `frames.py same` of the native depth 8 screendumps (PS/2 mouse, QEMU) and the DOS dumps (INT 33h, DOSBox) of `live.scn` reports the 8 frames equal: the arrow, the drag, Alt+Tab, the typed word and the close box come out as the same picture through two different input paths.
+- **The counts vary and are only ranges** in the expected transcripts (`tests/native/expected-shell-live-*.txt`). The native pointer reports follow how the injector splits a move into monitor commands of at most 100 counts and sends the buttons; the DOS ones are fewer because a poll sums the motion since the last.
+- **The negative runs failed as they should:** native — the script with its `mouse_move` lines removed, with one `sendkey` removed from typing "live", with the `alt-tab` line removed, the depth 8 dumps against the depth 4 sums, sums with one digest changed, a transcript with one mark line removed, and the live transcript as the scripted one; DOS — `AUTOTYPE` without one key of "desk", a live dump with one pixel changed, a transcript with one mark line removed, the depth 8 marks against the depth 4 sums, and the Xvfb run with its pointer motion removed; tools — a scenario whose set-up differs from the first window's, a lone `key LeftAlt down` and a mouse step for `AUTOTYPE` (each refused with its line number); the INT 33h counters — `INPUT.EXE slowpoll` against six 5 ms clicks saw none of them without the counters and all six with them.
+- **The scripted checks did not change by a byte:** `first-window.scn`, its sums and goldens, `expected-dos-8.txt`, `expected-dos-4.txt` and `expected-shell-8.txt` and `-4.txt` are the files `main` has, and every scripted run passed.
+- Sizes: `SHELL.EXE` 108,544 bytes, the native `kernel.bin` 179,984 bytes.
+
+### What differs from the design
+
+- `live::Route` has a fourth variant, `Swallow`, for the releases of Escape and F12.
+- **The counters' premise was wrong, and the evidence is changed.** Spike B concluded that `xdotool click` was lost because the press and release fell inside one poll. A press and release with no gap never reach DOSBox's driver at all (X delivers both with one timestamp, and SDL or DOSBox drops the pair), so no counter holds them. A click 1 to 5 ms long does arrive, and a program that polls every few milliseconds sees it by state, so the counters matter when a poll is slower than the click: spike B's check now runs `INPUT.EXE slowpoll` against six 5 ms clicks, and `--quick` makes 5 ms clicks, not `click 1`. Reading the counters before the state keeps a click that lands between the two reads from being split.
+- DOSBox's built-in driver holds back a one-pixel move until the next move, so a live scenario's pointer steps must not end in a one-pixel move; `live.scn`'s last click is `pointer 383 100`.
+- Alt+F4 under Xvfb reaches `SHELL.EXE` and DOSBox does not act on it, so there is no DOS variant of `live.scn`.
+- Held Alt+F4 closes one window, not one per typematic repeat, and Alt+Tab released during a drag ends the drag (both found in review; `docs/LIVE-INPUT.md`'s key table says so).
+- QEMU's `sendkey` names and `mouse_move`/`mouse_button` and DOSBox's `AUTOTYPE` names (checked against `autotype -list`) needed no correction; `Ctrl+Alt+Q` in QEMU's GTK window quits QEMU (it is not a power-down). `tools/native-run.sh --window` tails the serial file and reports a closed window as a note.
+
+### What was seen
+
+Real captures of the first window under live input, taken from the runs' own dumps, not from a desktop: [`images/live-input/`](images/live-input/).
+
+| Native, depth 8, `typed` (QEMU screendump) | DOS, depth 8, `dragged` (xdotool and INT 33h) |
+|---|---|
+| ![The kernel's shell-live at depth 8 after Alt+Tab and typing "live"](images/live-input/native-8-typed.png) | ![SHELL.EXE at depth 8 after a drag](images/live-input/dos-8-dragged.png) |
+
+| Native, depth 4, `dragged` | DOS, depth 4, `again` (keys by AUTOTYPE) |
+|---|---|
+| ![The kernel's shell-live at depth 4 after a drag](images/live-input/native-4-dragged.png) | ![SHELL.EXE at depth 4 with "deok" in the field](images/live-input/dos-4-again.png) |
+
+- `native-8-typed.png`: the near-black desktop, "Notes" dimmed behind (it was dragged to (100, 90) and Alt+Tab put Welcome back in front), "Welcome to Desk" in front with the orange halo and "live" in its field with the caret, the arrow where the drag left it.
+- `dos-8-dragged.png`: "Notes" in front with the halo, moved to (100, 90) by a drag with the mouse, Welcome dimmed behind it, the arrow on Notes' title bar; the same picture the QEMU run gives, as `frames.py same` says.
+- `native-4-dragged.png` is the same scene at depth 4 and `dos-4-again.png` shows "deok" (typed "desk", two Backspaces, then "ok") in Welcome's field with the caret and the arrow at the centre.
+- The windows themselves were looked at on the virtual X server: QEMU's GTK window with its menu bar and the guest's 640 × 480 picture, its title bar reading "Press Ctrl+Alt+G to release grab" after a click, and DOSBox's window with the picture scaled to fit; `xdotool`'s relative motion of (-200, -170) moved the arrow from the centre to (120, 70) exactly, and Alt+Tab, Alt+F4, typing and Escape worked in both. Those screenshots are not kept: they are of a virtual desktop.
