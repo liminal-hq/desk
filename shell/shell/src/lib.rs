@@ -1,4 +1,5 @@
-// The shell itself: input events and the scenario format that scripts them, so the same steps run on the host and on both tracks.
+// The shell itself: input events, the cursor, the window manager and frames, and the scenario format and runner that script them, so
+// the same steps run on the host and on both tracks.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -8,7 +9,11 @@
 
 extern crate alloc;
 
+mod run;
 pub mod scenario;
+mod shell;
+
+pub use shell::Shell;
 
 use desk_hal::{KeyEvent, MouseEvent};
 

@@ -19,6 +19,8 @@ use desk_ui::Depth;
 
 use crate::Event;
 
+pub use crate::run::{apply, run, RunError};
+
 /// A parsed scenario file.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Scenario {

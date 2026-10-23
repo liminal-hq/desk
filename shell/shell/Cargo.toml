@@ -1,6 +1,6 @@
 [package]
 name = "desk-shell"
-description = "The shell itself: input events and the scenario format that scripts them, so the same steps run on the host and on both tracks"
+description = "The shell itself: input events, the cursor, the window manager and frames, and the scenario format and runner that script them, so the same steps run on the host and on both tracks"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,8 +9,10 @@ publish.workspace = true
 [dependencies]
 desk-hal.workspace = true
 desk-gfx = { path = "../gfx" }
+desk-font = { path = "../font" }
 desk-ui = { path = "../ui" }
+desk-wm = { path = "../wm" }
 desk-kbd = { path = "../../hal/drivers/kbd" }
 
 [features]
-std = ["desk-hal/std", "desk-gfx/std", "desk-ui/std", "desk-kbd/std"]
+std = ["desk-hal/std", "desk-gfx/std", "desk-ui/std", "desk-wm/std", "desk-kbd/std"]

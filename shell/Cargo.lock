@@ -46,10 +46,12 @@ dependencies = [
 name = "desk-shell"
 version = "0.0.0"
 dependencies = [
+ "desk-font",
  "desk-gfx",
  "desk-hal",
  "desk-kbd",
  "desk-ui",
+ "desk-wm",
 ]
 
 [[package]]
