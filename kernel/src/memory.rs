@@ -102,6 +102,26 @@ pub fn init(info: &BootInfo) {
     }
 }
 
+/// True when `base..base + len` overlaps usable RAM in the map, the first megabyte or the kernel image: memory that something else
+/// owns. A frame buffer must not.
+pub fn overlaps_ram(info: &BootInfo, base: u32, len: u32) -> bool {
+    let (b, e) = (u64::from(base), u64::from(base) + u64::from(len));
+    let hit = |lo: u64, hi: u64| b < hi && lo < e;
+    let (ks, ke) = kernel_range();
+    hit(0, 0x10_0000) || hit(u64::from(ks), u64::from(ke)) || regions(info).iter().any(|r| r.kind == KIND_USABLE && hit(r.base, r.base + r.len))
+}
+
+/// Marks the frames of `base..base + len` as in use, so the allocator never hands out device memory. Frames beyond what the bitmap
+/// covers need no marking: they are never allocated.
+pub fn reserve(base: u32, len: u32) {
+    let fs = u64::from(FRAME_SIZE);
+    let first = u64::from(base) / fs;
+    let last = (u64::from(base) + u64::from(len)).div_ceil(fs);
+    for f in first..last.min(MAX_FRAMES as u64) {
+        set_used(f as usize);
+    }
+}
+
 /// The physical range the kernel image and its .bss and stack occupy.
 pub fn kernel_range() -> (u32, u32) {
     (core::ptr::addr_of!(__kernel_start) as u32, core::ptr::addr_of!(__kernel_end) as u32)

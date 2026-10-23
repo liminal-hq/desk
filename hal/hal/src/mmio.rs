@@ -82,6 +82,36 @@ impl MmioRegion {
         }
         Ok(())
     }
+
+    /// Sets `len` bytes from `offset` to `value`, with one bounds check for the whole run. The bytes before the first 4-byte-aligned
+    /// address and after the last whole word are written one at a time and the aligned middle a word at a time, so a fill costs a
+    /// quarter of the bus writes of `len` single-byte stores (the same traffic as `rep stosd`). Every store is still volatile.
+    pub fn fill8(&mut self, offset: usize, len: usize, value: u8) -> Result<(), HalError> {
+        match offset.checked_add(len) {
+            Some(end) if end <= self.len => {}
+            _ => return Err(HalError::InvalidArgument),
+        }
+        let end = offset + len;
+        let mut i = offset;
+        let word = u32::from_ne_bytes([value; 4]);
+        while i < end && !(self.base as usize).wrapping_add(i).is_multiple_of(4) {
+            // SAFETY: `i` is inside the region (checked above).
+            unsafe { self.base.add(i).write_volatile(value) };
+            i += 1;
+        }
+        while end - i >= 4 {
+            // SAFETY: inside the region (checked above) and at an address that is a multiple of 4 (the loop above stopped on one,
+            // and each step is 4).
+            unsafe { (self.base.add(i) as *mut u32).write_volatile(word) };
+            i += 4;
+        }
+        while i < end {
+            // SAFETY: as the first loop.
+            unsafe { self.base.add(i).write_volatile(value) };
+            i += 1;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -105,5 +135,30 @@ mod tests {
             assert_eq!(r.read8(usize::MAX), Err(HalError::InvalidArgument));
         }
         assert_eq!(backing[0] & 0xFF, 0x13);
+    }
+
+    #[test]
+    fn fill_covers_unaligned_heads_and_tails_and_stays_inside() {
+        let mut backing = [0u32; 8];
+        for offset in 0..9 {
+            for len in 0..20 {
+                backing.fill(0x1111_1111);
+                {
+                    // SAFETY: the array outlives the region and is not otherwise used while it exists.
+                    let mut r = unsafe { MmioRegion::new(backing.as_mut_ptr() as *mut u8, 32) };
+                    r.fill8(offset, len, 0xAB).unwrap();
+                }
+                let bytes: Vec<u8> = backing.iter().flat_map(|w| w.to_ne_bytes()).collect();
+                for (i, b) in bytes.iter().enumerate() {
+                    let want = if (offset..offset + len).contains(&i) { 0xAB } else { 0x11 };
+                    assert_eq!(*b, want, "offset {offset}, len {len}, byte {i}");
+                }
+            }
+        }
+        // SAFETY: as above.
+        let mut r = unsafe { MmioRegion::new(backing.as_mut_ptr() as *mut u8, 32) };
+        assert_eq!(r.fill8(30, 3, 0), Err(HalError::InvalidArgument));
+        assert_eq!(r.fill8(usize::MAX, 2, 0), Err(HalError::InvalidArgument));
+        assert_eq!(r.fill8(32, 0, 0), Ok(()));
     }
 }

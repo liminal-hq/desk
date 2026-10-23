@@ -4,7 +4,7 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 
 | Script | What it does |
 |---|---|
-| `check.sh` | Runs every check the CI runs: headers, docs, the font build check in `fonts/` when Bun is set up, Rust format and lints, the HAL's host tests and `no_std` builds for the kernel and DOS targets (`hal/`), the DOS build, headless runs of `DESK.EXE`, the s1-dxe3 module scenarios, the d0-rust-dos checks, the a-vga-vbe checks, the b-dos-input checks (and with `INPUT_EXTRA=1` the Xvfb mouse run), and the native boot test |
+| `check.sh` | Runs every check the CI runs: headers, docs, the progress report generator's tests, the font build check in `fonts/` when Bun is set up, Rust format and lints, the HAL's host tests and `no_std` builds for the kernel and DOS targets (`hal/`), the DOS build, headless runs of `DESK.EXE`, the s1-dxe3 module scenarios, the d0-rust-dos checks, the a-vga-vbe checks, the b-dos-input checks (and with `INPUT_EXTRA=1` the Xvfb mouse run), and the native boot test (with its keyboard, mouse and graphics sections) |
 | `setup.sh` | Checks host tools, installs the pinned Rust pieces, and links `vendor/` to `DOS_TOOLCHAIN` or downloads the tools |
 | `fetch-tools.sh` | Downloads DJGPP, DOSBox Staging and CWSDPMI into `vendor/` with SHA-256 checks, using the versions of the CI image |
 | `build.sh` | Cargo for `core/dos.json`, `coff2go32.py`, DJGPP's gcc for `c/`, then `dist/DESK.EXE` beside `CWSDPMI.EXE` |
@@ -15,4 +15,5 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 | `check-headers.sh` | Checks the licence header on source and script files |
 | `check-docs.py` | Checks the markdown house style and that relative links resolve |
 | `build-hero.py` | Builds `assets/hero.svg`, the README banner |
-| `native-build.sh`, `native-image.sh`, `native-run.sh`, `native-test.sh` | The native track: build the boot stages and the Rust kernel, assemble the floppy image, boot it headless in QEMU as a 486, and check the transcript and the negative cases (see [`../docs/NATIVE-BOOT.md`](../docs/NATIVE-BOOT.md)); `native-run.sh --inject SCRIPT` plays keys and mouse motion into QEMU's monitor with `native-inject.py`; `native-check.py` and `elf2bin.py` are their helpers |
+| `native-build.sh`, `native-image.sh`, `native-run.sh`, `native-test.sh` | The native track: build the boot stages and the Rust kernel, assemble the floppy image, boot it headless in QEMU as a 486, and check the transcript and the negative cases (see [`../docs/NATIVE-BOOT.md`](../docs/NATIVE-BOOT.md)); `native-run.sh --inject SCRIPT` plays keys and mouse motion into QEMU's monitor with `native-inject.py` (and takes screenshots with `screendump {out}/NAME.ppm`, with `--vga CARD` and `--shots DIR`); `native-image.sh --test-mode gfx --video vbe` builds the graphics tour; `native-shot.py` converts, checksums and compares the screenshots; `native-check.py` and `elf2bin.py` are helpers |
+| `progress-report/` | The generator for the Desk Progress Report, a multi-page archive built from the history of `main` and `gh`; see [`progress-report/README.md`](progress-report/README.md) |

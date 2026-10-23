@@ -31,6 +31,7 @@ dependencies = [
  "desk-pic",
  "desk-pit",
  "desk-serial",
+ "desk-vga",
 ]
 
 [[package]]
@@ -49,6 +50,13 @@ dependencies = [
 
 [[package]]
 name = "desk-serial"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
+name = "desk-vga"
 version = "0.0.0"
 dependencies = [
  "desk-hal",

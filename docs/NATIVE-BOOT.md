@@ -29,10 +29,11 @@ The native track's walking skeleton: a floppy image whose boot sector loads a pr
 3. **Stage 2: output.** `boot/stage2.asm` starts COM1 and prints each step to both the screen and the serial port, so a headless run records the loader too.
 4. **A20.** The 8086 wrapped addresses at 1 MiB and the PC keeps that until the A20 gate is opened. Stage 2 tests the gate (a byte written at `0000:0500` shows up at `FFFF:0510` when it is closed), then tries the fast gate (port `0x92`), then the keyboard controller (commands `0xD0` and `0xD1` on port `0x64`), re-testing after each, and stops with a message if none worked.
 5. **Memory map.** Only the BIOS knows what RAM exists, and only in real mode. Stage 2 walks INT 15h AX=E820 (up to 32 entries of 24 bytes, ignoring empty entries and ACPI 3.0 entries marked "ignore"). If E820 is missing it falls back to INT 15h AX=E801 and rewrites the answer in the same entry format (conventional memory from INT 12h, 1 to 16 MiB, and above 16 MiB), so the kernel parses one format.
-6. **Boot information block.** Stage 2 writes a block at physical `0x500`: magic `DESK`, boot drive, test mode, map source (1 E820, 2 E801), entry count, then the entries from offset 32. The kernel receives its address in EAX.
-7. **Protected mode.** Stage 2 loads a three-entry GDT (null, flat 4 GiB code at `0x08`, flat 4 GiB data at `0x10`), sets CR0.PE and far-jumps to a 32-bit code segment, which also flushes the prefetch queue. Interrupts stay off throughout.
-8. **Kernel copy and jump.** In protected mode the kernel is copied from `0x10000` to `0x100000` (1 MiB), the stack is set and stage 2 jumps to the kernel's first byte.
-9. **Kernel start-up.** `_start` (a `global_asm!` stub in `kernel/src/main.rs`) points ESP at a 64 KiB stack in `.bss`, clears `.bss` (the flat image does not contain it) and calls `kmain(boot_info)`. `kmain` then brings up the serial port, the VGA text screen, the GDT, the IDT, the PIC and the PIT, in that order, and the demonstrations follow.
+6. **Boot information block.** Stage 2 writes a block at physical `0x500`: magic `DESK`, boot drive, test mode, map source (1 E820, 2 E801), entry count, a version (1), the address of the video block and the address of the BIOS font, then the entries from offset 32. The kernel receives its address in EAX. The layouts, and how the version lets the block grow, are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#the-boot-information-block).
+7. **Video (real mode, last chance).** The kernel cannot call the BIOS, so stage 2 copies the BIOS 8×16 font to `0x2000` (INT 10h AX=1130h) and, when the image asks for it (`tools/native-image.sh --video vbe`, a byte at stage 2 offset 4), asks VBE 2.0 for a 640×480×8 linear frame buffer mode (4F00h, 4F01h over the mode list, 4F02h with the linear bit), falls back to "nothing set" with a printed reason when VBE is missing, older than 2.0, has no such mode or refuses, and records the answer in a 32-byte video block at `0x820`. Details in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#the-loader-vbe-before-protected-mode).
+8. **Protected mode.** Stage 2 loads a three-entry GDT (null, flat 4 GiB code at `0x08`, flat 4 GiB data at `0x10`), sets CR0.PE and far-jumps to a 32-bit code segment, which also flushes the prefetch queue. Interrupts stay off throughout.
+9. **Kernel copy and jump.** In protected mode the kernel is copied from `0x10000` to `0x100000` (1 MiB), the stack is set and stage 2 jumps to the kernel's first byte.
+10. **Kernel start-up.** `_start` (a `global_asm!` stub in `kernel/src/main.rs`) points ESP at a 64 KiB stack in `.bss`, clears `.bss` (the flat image does not contain it) and calls `kmain(boot_info)`. `kmain` then brings up the serial port, the VGA text screen, the GDT, the IDT, the PIC and the PIT, in that order, and the demonstrations follow.
 
 ## Image layout
 
@@ -45,9 +46,9 @@ A 1,474,560-byte image (2,880 sectors of 512 bytes), assembled by `tools/native-
 | 18– | The flat kernel image, starting on the second track so that every read is a whole track |
 | rest | Zeros |
 
-Two bytes are patched in after the build, so the loader never needs rebuilding when the kernel grows: the kernel length in sectors at stage 1 offset 3 (16 bits), and the test mode at stage 2 offset 3 (see [The checks](#the-checks)). The kernel must fit between `0x10000` and the BIOS data area (the image tool refuses more than 1,000 sectors).
+Three values are patched in after the build, so the loader never needs rebuilding when the kernel grows: the kernel length in sectors at stage 1 offset 3 (16 bits), the test mode at stage 2 offset 3 (see [The checks](#the-checks)) and the video request at stage 2 offset 4 (0 keeps the BIOS text screen, 1 tries a VBE linear mode). The kernel must fit between `0x10000` and the BIOS data area (the image tool refuses more than 1,000 sectors).
 
-Physical memory used while booting: `0x500` boot information and memory map (to about `0x820`), `0x7C00` stage 1, `0x7E00` stage 2 (to about `0xA000`), `0x10000` the kernel's staging copy, `0x100000` the kernel.
+Physical memory used while booting: `0x500` boot information and memory map (to `0x820`), `0x820` the video block (32 bytes), `0x2000` the BIOS font (4 KiB), `0x3000` and `0x3200` the VBE information and mode blocks while stage 2 runs, `0x7C00` stage 1, `0x7E00` stage 2 (to about `0xA000`), `0x10000` the kernel's staging copy, `0x100000` the kernel.
 
 ## The kernel target
 
@@ -81,6 +82,10 @@ The kernel loads its own GDT (the loader's lives in memory the kernel may overwr
 
 The kernel's serial, PIC and PIT code runs on the shared drivers in `hal/`, and `kernel/src/hal.rs` is the native platform: the port bus, the statics for those drivers, and an interrupt registry for IRQ 0 to 15 (one IDT stub per line, the end-of-interrupt sent by the kernel after the handler, spurious IRQ 7 and 15 handled). After the checks above, `kernel/src/input.rs` sets up the 8042, the keyboard and the PS/2 mouse, registers the IRQ 1 and IRQ 12 handlers (which only fill lock-free rings), unmasks the lines and prints four `input:` lines. The test modes `input`, `input-masked` and `input-idle` then drain the rings in a `hlt` loop and print each decoded event until Escape is released; `tools/native-run.sh --inject` sends the keys and mouse motion through the QEMU monitor. The design, the tables and the limits are in [`C-INPUT.md`](C-INPUT.md).
 
+## Graphics
+
+Spike D (n2) adds the loader's VBE step above and, in the kernel, `kernel/src/video.rs` (the video block, and checks that the linear frame buffer overlaps no RAM, the heap or the kernel) and `kernel/src/gfx.rs` (the graphics tour the `gfx` test mode runs: modes 13h and 12h by registers, the VBE frame buffer, a palette fade, a software cursor driven by the mouse, a window, and the way back to text mode), all through the shared `desk-vga` driver. A normal boot keeps the BIOS text screen; only the `gfx` images ask for VBE. The design, the tables, the screenshots and what QEMU hides are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md).
+
 ## The FPU
 
 The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping them), CR0.MP and CR0.NE set (errors report as exception 16 rather than the legacy IRQ 13 wiring) and CR0.TS clear, then `fninit`. The kernel checks the control word is `0x037F`, computes `sqrt(2)` with `fsqrt` and the harmonic sum H(10) in ordinary Rust `f64` (which the compiler turns into x87 code), prints both and asserts them. (Some 486SX machines have no FPU; this kernel assumes one.)
@@ -98,6 +103,7 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 - **A wrong expectation fails.** `tests/native/wrong-expected.txt` differs in one number and must be rejected.
 - **Deliberate faults.** Test modes patched into the image make the kernel divide by zero (`div0`), load a bad segment selector (`gp`), execute `ud2` (`ud`), panic (`panic`) or mask the timer (`notick`). Each must end with exit code 1 and the expected exception dump or panic message.
 - **Keyboard and mouse.** In `input` mode keys and mouse motion injected through the QEMU monitor must appear decoded in the transcript; with an event missing from the injected input the comparison must fail; with IRQ 1 masked (`input-masked`) no key arrives and the kernel must report it (exit 1); with nothing injected (`input-idle`) the watchdog must end the run.
+- **Graphics.** The `gfx` test mode boots with a VBE linear frame buffer (`-vga std`), with the register modes only (`-vga cirrus`) and with a loader whose VBE mode set is made to fail (`-DVBE_FAIL=1`); screenshots taken through the QEMU monitor must match reference checksums, the cursor must have moved between two of them, and seven wrong inputs must be rejected (`D-NATIVE-VGA.md`, "How it is tested").
 - **A hang.** In `hang` mode the kernel stops with interrupts off; the run must end by the five-second watchdog (exit 124).
 
 ## Debugging
@@ -111,7 +117,7 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 
 Verified: the whole chain above, including each negative check and the three loader variants, on the development machine with QEMU 11.1 and NASM 3.02, and again inside the shared CI image `ghcr.io/liminal-hq/ci-dos` (pinned by digest in the workflow) with `qemu-system-x86` and `nasm` added by `apt-get` (Ubuntu 24.04's QEMU). The Docker backend of `tools/native-run.sh` was exercised with an Ubuntu 24.04 image carrying the same two packages; the exact `tools/docker/Dockerfile.native-qemu` image was not built.
 
-The keyboard and mouse checks (spike C) were verified on the host's QEMU only; the CI image's QEMU runs them as part of `tools/native-test.sh`.
+The keyboard and mouse checks (spike C) were verified on the host's QEMU only; the CI image's QEMU runs them as part of `tools/native-test.sh`. The same goes for the graphics checks (spike D): the screenshot checksums were recorded on QEMU 11.1.2 and CI's QEMU decides whether they hold there.
 
 Not verified:
 

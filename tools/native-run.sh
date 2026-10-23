@@ -4,10 +4,11 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [IMAGE]
+# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [--vga CARD] [--shots DIR] [IMAGE]
 #
 # IMAGE defaults to dist/desk-native.img. With --inject the QEMU monitor listens on a Unix socket and tools/native-inject.py plays
-# SCRIPT into it (keys, mouse motion, waits) while the guest runs. The guest ends the run by writing to the isa-debug-exit device, which makes QEMU exit
+# SCRIPT into it (keys, mouse motion, waits, screenshots) while the guest runs. --vga picks QEMU's display card (std, cirrus, vmware...;
+# QEMU's default is std); --shots DIR is where `screendump {out}/NAME.ppm` lines in the script write (created if missing). The guest ends the run by writing to the isa-debug-exit device, which makes QEMU exit
 # with status (value << 1) | 1: 33 for success and 35 for failure. This script turns that into its own exit status:
 #   0    the guest reported success
 #   1    the guest reported failure (panic, exception dump, failed assertion)
@@ -24,12 +25,16 @@ image=dist/desk-native.img
 serial=""
 debug_log=""
 inject=""
+vga=""
+shots=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --timeout) timeout_s="$2"; shift 2 ;;
     --serial) serial="$2"; shift 2 ;;
     --debug-log) debug_log="$2"; shift 2 ;;
     --inject) inject="$2"; shift 2 ;;
+    --vga) vga="$2"; shift 2 ;;
+    --shots) shots="$2"; shift 2 ;;
     *) image="$1"; shift ;;
   esac
 done
@@ -55,12 +60,14 @@ if [ -n "$inject" ]; then
 fi
 qemu_args=(-cpu 486 -m 16 -drive "if=floppy,format=raw,file=$image" -display none -serial "file:$serial"
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot "${monitor[@]}")
+[ -n "$vga" ] && qemu_args+=(-vga "$vga")
+[ -n "$shots" ] && mkdir -p "$shots"
 [ -n "$debug_log" ] && qemu_args+=(-d int,cpu_reset -D "$debug_log")
 
 injector=""
 start_injector() {
   [ -n "$inject" ] || return 0
-  python3 -I tools/native-inject.py "$sockdir/monitor" "$serial" "$inject" >&2 &
+  DESK_SHOTS="$shots" python3 -I tools/native-inject.py "$sockdir/monitor" "$serial" "$inject" >&2 &
   injector=$!
 }
 

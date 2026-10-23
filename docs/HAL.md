@@ -225,7 +225,7 @@ pub trait DebugOut { fn write_bytes(&self, bytes: &[u8]); }   // never fails, ne
 
 ### Video (sketch; spike A built it)
 
-Spike A built these types, the `desk-vga` driver and the DOS `Display`; what changed from this sketch (a `Bios` trait, fallible palette calls) is in [`A-VGA-VBE.md`](A-VGA-VBE.md#hal-feedback).
+Spike A built these types, the `desk-vga` driver and the DOS `Display`; what changed from this sketch (a `Bios` trait, fallible palette calls) is in [`A-VGA-VBE.md`](A-VGA-VBE.md#hal-feedback). Spike D ran the same driver in the native kernel; its additions (the text restore, `MmioRegion::fill8`) and its recommendations (fades that do not trust the retrace bit, a native `Bios`, one VBE parser) are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#hal-feedback).
 
 ```rust
 pub struct Rgb6 { pub r: u8, pub g: u8, pub b: u8 }           // 0..=63, the VGA DAC's range
