@@ -17,7 +17,7 @@ SHA256=711f7741486daef927c7f2b6ac6c1037b830dffc75ebf7d7106173f18fbe8756
 URL="https://registry.npmjs.org/js-dos/-/js-dos-$VERSION.tgz"
 OUT=vendor/js-dos
 
-if [ -f "$OUT/PROVENANCE.txt" ] && grep -q "sha256 $SHA256" "$OUT/PROVENANCE.txt"; then
+if [ -f "$OUT/js-dos.js" ] && [ -f "$OUT/emulators/wdosbox.wasm" ] && [ -f "$OUT/PROVENANCE.txt" ] && grep -q "sha256 $SHA256" "$OUT/PROVENANCE.txt"; then
   echo "js-dos $VERSION: already in $OUT"
   exit 0
 fi

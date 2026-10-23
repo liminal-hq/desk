@@ -8,7 +8,7 @@
 #
 #   tools/build.sh                           --> dist/DESK.EXE, dist/CWSDPMI.EXE        (C layer plus Rust core)
 #   spikes/d0-rust-dos/build.sh              --> dist/d0/HELLO.EXE, HW.EXE, solo/HELLO.EXE (pure Rust)
-#   spikes/s5-jsdos/probes (cargo, rust-lld) --> dist/s5/VGA13.EXE, VBE.EXE             (packed by tools/elf2go32.py)
+#   spikes/s5-jsdos/probes (cargo, rust-lld) --> dist/s5/VGA13.EXE, VBE.EXE, TONE.EXE  (packed by tools/elf2go32.py)
 #   spikes/s5-jsdos/bundle.py                --> dist/s5/site/bundles/*.jsdos
 #   page/ + vendor/js-dos                    --> dist/s5/site/                          (what a Pages site would serve)
 #
@@ -73,8 +73,8 @@ bundle tone-default 'TONE.EXE' --set sblaster.oplemu=default $OUT/TONE.EXE $CWS
 bundle vbe-banked 'VBE.EXE banked' $OUT/VBE.EXE $CWS
 # The same probes with the settings of a native run (tools/dosrun.sh): the interpreter and a 486 that faults on newer instructions.
 bundle hello-486 'HELLO.EXE' --set cpu.core=normal --set cpu.cputype=486 dist/d0/HELLO.EXE $CWS
-bundle vbe-nolfb 'VBE.EXE' --set dosbox.machine=vesa_nolfb dist/s5/VBE.EXE $CWS
-bundle vbe-oldvbe 'VBE.EXE' --set dosbox.machine=vesa_oldvbe dist/s5/VBE.EXE $CWS
+bundle vbe-nolfb 'VBE.EXE' --set dosbox.machine=vesa_nolfb $OUT/VBE.EXE $CWS
+bundle vbe-oldvbe 'VBE.EXE' --set dosbox.machine=vesa_oldvbe $OUT/VBE.EXE $CWS
 # What the emulator says about itself: the DOS version, memory and the settings that matter for comparing with a native run.
 bundle info 'ver
 mem
@@ -87,7 +87,7 @@ config -get oplemu
 config -get oplmode
 config -get sbtype
 config -get vmemsize
-config -get vesa' dist/s5/VBE.EXE
+config -get vesa' $OUT/VBE.EXE
 # The s1 module demo: HOST.EXE loads the DXE3 modules from the current directory.
 S1FILES=$(ls dist/s1/*.DXE)
 bundle s1-life 'HOST.EXE life' dist/s1/HOST.EXE $CWS $S1FILES
