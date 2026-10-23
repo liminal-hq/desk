@@ -397,12 +397,15 @@ impl Widget {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)] pub struct WindowId(pub u16);
 pub struct WindowSpec<'s> { pub name: &'s str, pub outer: Rect, pub title: &'s str }
 pub struct Window { pub id: WindowId, pub name: String, pub outer: Rect, pub title: String, pub widgets: Vec<Widget>, pub focus_widget: Option<usize> }
+impl Window { pub fn layout(&self) -> ChromeLayout; pub fn extent(&self) -> Rect; }
 pub enum Hit { Title, Control(Control), Content, Ring }
 
-pub struct Wm { /* windows: Vec<Window> bottom to top, focused: Option<WindowId>, drag: Option<Drag>, screen: Rect, buttons: u8 */ }
+pub struct Wm { /* windows: Vec<Window> bottom to top (the last is the focused one), drag: Option<Drag>, armed: Option<WindowId>, screen: Rect, buttons: u8, next_id: u16 */ }
 impl Wm {
     pub fn new(screen: Rect) -> Wm;
-    pub fn open(&mut self, spec: WindowSpec, damage: &mut Damage) -> WindowId;   // on top, focused
+    pub fn windows(&self) -> &[Window];                                          // bottom to top
+    pub fn focused(&self) -> Option<WindowId>;                                   // always the top window
+    pub fn open(&mut self, spec: WindowSpec, damage: &mut Damage) -> WindowId;   // on top, focused; a box under the minimum size is widened
     pub fn close(&mut self, id: WindowId, damage: &mut Damage);
     pub fn focus(&mut self, id: WindowId, damage: &mut Damage);                  // focus and raise
     pub fn by_name(&self, name: &str) -> Option<WindowId>;
@@ -421,18 +424,18 @@ Behaviour and the damage each change reports (the rows are the damage-accounting
 
 | Change | Damage |
 |---|---|
-| Open | the new window's `extent` |
-| Close | the closed window's `extent` |
+| Open | the new window's `extent`, and the extent of the window that loses focus (its rings and title bar change; none when it is the first window) |
+| Close | the closed window's `extent`, and, when it was the focused one, the extent of the window that becomes the top (its focus appearance changes; none when it was the last window) |
 | Focus of the window already on top | none: focus always raises, so the top window is already the focused one |
-| Focus that raises | the raised window's `extent`, and the previously focused window's title bar and rings |
+| Focus that raises | the raised window's `extent`, and the previously focused window's title bar and rings (the title bar and the four rings are added as the previous window's whole `extent`, which `Damage` would merge them into) |
 | Drag by (dx, dy) | old `extent` ∪ new `extent`, merged by `Damage` |
-| A key into a text field | the field's bounds, offset to the screen |
+| A key into a text field | the rectangle `Widget::key` returns (the old and new text and caret, inside the field), offset to the screen and cut to the content area |
 | Pointer motion with no drag | none (the cursor is overlay damage, added by the shell) |
 
+- **Hit testing** goes through the windows from the top: a control box first, then the rest of the title bar (`Title`), then the rule and the content (`Content`), then the ring. The ring is the three pixels around a focused window and only the one-pixel hairline around an unfocused one, since that is all an unfocused window paints; the rest belongs to what lies beneath.
 - **Press** (left button goes down) on a window: focus and raise; on `Title`, start a drag; on `Control(Close)`, arm the close box. **Release**: end the drag; close the window if the close box was armed and the pointer is still over it. Minimise and maximise are inert.
-- **Dragging** moves the window by the pointer's motion, clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
-- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window.
-- **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed.
+- **Dragging** keeps the point of the title bar that was pressed under the pointer (so a window held at a clamp follows the pointer back), clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
+- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`) and adds the damage for the widget.- **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed. `paint` clips to `clip` itself and puts the surface's clip back, paints each window's widgets inside its content area only, and changes no pixel outside `clip`.
 
 ## desk-shell: events, frames and scenarios
 
