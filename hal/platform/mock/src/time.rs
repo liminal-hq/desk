@@ -10,12 +10,15 @@ use desk_hal::time::{Clock, Delay, Ticks};
 #[derive(Debug)]
 pub struct MockClock {
     pub ticks: Cell<u32>,
-    pub hz: u32,
+    pub millihertz: u32,
 }
 
 impl MockClock {
-    pub fn new(hz: u32) -> MockClock {
-        MockClock { ticks: Cell::new(0), hz }
+    pub fn new(millihertz: u32) -> MockClock {
+        MockClock {
+            ticks: Cell::new(0),
+            millihertz,
+        }
     }
 
     pub fn advance(&self, ticks: u32) {
@@ -27,8 +30,8 @@ impl Clock for MockClock {
     fn now(&self) -> Ticks {
         Ticks(self.ticks.get())
     }
-    fn hz(&self) -> u32 {
-        self.hz
+    fn millihertz(&self) -> u32 {
+        self.millihertz
     }
 }
 

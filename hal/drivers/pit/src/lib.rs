@@ -103,20 +103,21 @@ impl<P: PortIo> Pit<P> {
 #[derive(Debug, Default)]
 pub struct PitClock {
     counter: TickCounter,
-    hz: AtomicU32,
+    millihertz: AtomicU32,
 }
 
 impl PitClock {
     pub const fn new() -> PitClock {
         PitClock {
             counter: TickCounter::new(),
-            hz: AtomicU32::new(0),
+            millihertz: AtomicU32::new(0),
         }
     }
 
-    /// Records the rate `program_periodic` was asked for. Call before registering the handler.
-    pub fn set_hz(&self, hz: u32) {
-        self.hz.store(hz, Ordering::Relaxed);
+    /// Records the divisor channel 0 was programmed with (the BIOS rate is `MAX_DIVISOR`), so the clock reports the real rate.
+    /// Call before registering the handler.
+    pub fn set_divisor(&self, divisor: u32) {
+        self.millihertz.store(actual_millihertz(divisor), Ordering::Relaxed);
     }
 }
 
@@ -124,8 +125,8 @@ impl Clock for PitClock {
     fn now(&self) -> Ticks {
         self.counter.now()
     }
-    fn hz(&self) -> u32 {
-        self.hz.load(Ordering::Relaxed)
+    fn millihertz(&self) -> u32 {
+        self.millihertz.load(Ordering::Relaxed)
     }
 }
 
@@ -222,9 +223,9 @@ mod tests {
         static CLOCK: PitClock = PitClock::new();
         let bus = MockPortBus::new();
         let irq = MockIrq::new();
-        let hz = 100;
-        Pit::new(&bus).program_periodic(hz).unwrap();
-        CLOCK.set_hz(hz);
+        let divisor = Pit::new(&bus).program_periodic(100).unwrap();
+        CLOCK.set_divisor(divisor);
+        assert_eq!(CLOCK.millihertz(), 99_998);
         let state: &'static mut &'static PitClock = Box::leak(Box::new(&CLOCK));
         irq.register(Irq::TIMER, IrqHandler::from_static(state), Chain::None).unwrap();
         let start = CLOCK.now();

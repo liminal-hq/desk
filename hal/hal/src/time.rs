@@ -27,15 +27,16 @@ impl Ticks {
 /// A monotonic clock that advances by whole ticks at a known rate.
 pub trait Clock {
     fn now(&self) -> Ticks;
-    /// Ticks per second, as programmed (the PIT's real rate differs slightly; see `desk_pit::actual_millihertz`).
-    fn hz(&self) -> u32;
+    /// The tick rate in millihertz, so the BIOS's 18.2 Hz (18,207 mHz) and the PIT's real rates (99,998 mHz when 100 Hz is asked
+    /// for) are exact enough. Zero if the clock is not running.
+    fn millihertz(&self) -> u32;
 
-    /// Milliseconds since `earlier`, rounded down. 64-bit arithmetic is fine on the 486 (it is plain code); only 64-bit atomics are
-    /// missing.
+    /// Milliseconds since `earlier`, rounded down, saturating at `u32::MAX`. 64-bit arithmetic is fine on the 486 (it is plain
+    /// code); only 64-bit atomics are missing.
     fn millis_since(&self, earlier: Ticks) -> u32 {
-        match self.hz() {
+        match self.millihertz() {
             0 => 0,
-            hz => (u64::from(self.now().since(earlier)) * 1000 / u64::from(hz)) as u32,
+            mhz => (u64::from(self.now().since(earlier)) * 1_000_000 / u64::from(mhz)).min(u64::from(u32::MAX)) as u32,
         }
     }
 }
@@ -102,7 +103,7 @@ mod tests {
         fn now(&self) -> Ticks {
             Ticks(self.0)
         }
-        fn hz(&self) -> u32 {
+        fn millihertz(&self) -> u32 {
             self.1
         }
     }
@@ -110,8 +111,10 @@ mod tests {
     #[test]
     fn intervals_survive_the_wrap() {
         assert_eq!(Ticks(5).since(Ticks(u32::MAX - 4)), 10);
-        assert_eq!(Fixed(5, 100).millis_since(Ticks(u32::MAX - 4)), 100);
-        assert_eq!(Fixed(1193, 1000).millis_since(Ticks(0)), 1193);
+        assert_eq!(Fixed(5, 100_000).millis_since(Ticks(u32::MAX - 4)), 100);
+        assert_eq!(Fixed(1193, 1_000_000).millis_since(Ticks(0)), 1193);
+        assert_eq!(Fixed(182, 18_207).millis_since(Ticks(0)), 9_996, "ten seconds of BIOS ticks");
+        assert_eq!(Fixed(u32::MAX, 18_207).millis_since(Ticks(0)), u32::MAX, "saturates");
         assert_eq!(Fixed(7, 0).millis_since(Ticks(0)), 0);
     }
 
