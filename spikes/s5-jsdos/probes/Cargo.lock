@@ -3,6 +3,24 @@
 version = 4
 
 [[package]]
+name = "desk-hal"
+version = "0.0.0"
+
+[[package]]
+name = "desk-pic"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
+name = "desk-vga"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
 name = "probes"
 version = "0.0.0"
 dependencies = [
@@ -12,3 +30,8 @@ dependencies = [
 [[package]]
 name = "rt"
 version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-pic",
+ "desk-vga",
+]
