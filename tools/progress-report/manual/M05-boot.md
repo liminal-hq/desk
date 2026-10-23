@@ -27,11 +27,11 @@ The BIOS runs its self-test, finds the floppy and loads the boot sector, which p
 | Transcript line | Written by | What it shows |
 |---|---|---|
 | `stage2: loader running` | `boot/stage2.asm`, start of `entry` | Stage 1 read stage 2 and jumped to it, and the serial port works |
-| `stage2: a20 already enabled` | the A20 step | The gate was open before the loader touched it, as QEMU leaves it (the other two lines say `by the fast gate` and `by the keyboard controller`) |
+| `stage2: a20 already enabled` | the [A20](term:a20) step | The gate was open before the loader touched it, as QEMU leaves it (the other two lines say `by the fast gate` and `by the keyboard controller`) |
 | `stage2: memory map from E820, entries: 6` | the memory map step | The first BIOS call worked, and returned six entries |
 | `stage2: font: 8x16 copied from the BIOS` | `load_font` | The kernel will be able to restore text mode |
 | `stage2: vbe: not requested, the screen stays in text mode` | `video_setup` | The image's video byte is 0; a graphics image prints the mode it chose here instead |
-| `stage2: entering protected mode` | just before `lgdt` | The last real-mode line; interrupts are about to go off |
+| `stage2: entering protected mode` | just before `lgdt` | The last [real-mode](term:real-mode) line; interrupts are about to go off, and the switch to [protected mode](term:protected-mode) follows |
 
 ### From `_start` to `kmain`
 
@@ -109,7 +109,7 @@ The byte patched into the image at stage 2 offset 3 travels in the boot informat
 |---|---|---|---|---|---|
 | 0 | `none` | `Normal` | Nothing extra | `expected.txt`, and the four loader variants | `0` |
 | 1 | `div0` | `DivideError` | Divides by zero | `expected-div0.txt` | `1` |
-| 2 | `gp` | `GeneralProtection` | Loads selector `0x28`, beyond the GDT | `expected-gp.txt` | `1` |
+| 2 | `gp` | `GeneralProtection` | Loads [selector](term:selector) `0x28`, beyond the [GDT](term:gdt) | `expected-gp.txt` | `1` |
 | 3 | `ud` | `InvalidOpcode` | Executes `ud2` | `expected-ud.txt` | `1` |
 | 4 | `panic` | `Panic` | Calls `panic!` | `expected-panic.txt` | `1` |
 | 5 | `hang` | `Hang` | Stops with interrupts off | the watchdog; no expected file | `124` |
@@ -192,7 +192,7 @@ CR0 0x00000033  CR2 0x00000000  CR3 0x00000000
 halting with a failure status
 ```
 
-Each register line tells a story. `EAX` is 1 and `ECX` 0, which are the dividend's low half and the divisor the test loaded. `CS` is `0x0008`, the kernel's code selector. `EIP` is inside the kernel, above `0x100000`. `EBX` is `0x00000500`, the boot information block's address still held from `_start`. `CR0` is `0x33`: protection enable (bit 0), monitor coprocessor (bit 1), extension type (bit 4, always set on a 486) and numeric error (bit 5), with the cache-disable bits clear. The expected file, `tests/native/expected-div0.txt`, does not pin the values that depend on the build: it matches `EIP {HEX}`, `EAX {HEX}`, and says `ECX 0x00000000  EDX 0x00000000` exactly, because those are the ones the test itself arranged; and it accepts the cache bits of CR0 either way with `{BITS:0x9fffffff=0x00000033}`, because a BIOS decides them.
+Each register line tells a story. `EAX` is 1 and `ECX` 0, which are the dividend's low half and the divisor the test loaded. `CS` is `0x0008`, the kernel's code selector. `EIP` is inside the kernel, above `0x100000`. `EBX` is `0x00000500`, the boot information block's address still held from `_start`. [`CR0`](term:cr0) is `0x33`: protection enable (bit 0), monitor coprocessor (bit 1), extension type (bit 4, always set on a 486) and numeric error (bit 5), with the cache-disable bits clear. The expected file, `tests/native/expected-div0.txt`, does not pin the values that depend on the build: it matches `EIP {HEX}`, `EAX {HEX}`, and says `ECX 0x00000000  EDX 0x00000000` exactly, because those are the ones the test itself arranged; and it accepts the cache bits of CR0 either way with `{BITS:0x9fffffff=0x00000033}`, because a BIOS decides them.
 
 The kernel then writes `0x11` to port `0xF4`. QEMU exits with 35, `native-run.sh` returns 1, and `native-test.sh` wants exactly that: exit 1 and a transcript that matches. Both conditions must hold.
 
@@ -366,3 +366,4 @@ thumb: steps
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The transcript walk covers every line of `media/native-serial.txt`, the mode table covers every `TestMode`, and the commands above were run on the host. Found while writing: `tests/native/wrong-expected.txt` does not differ "in one number" as `docs/NATIVE-BOOT.md` says (see "Why it is this way"), and no script runs the `bios-solo` mode.
+- 2026-10-23: linked the processor terms that M2 now defines (A20, real and protected mode, selector, GDT, CR0) at their first natural use. No claim changed.

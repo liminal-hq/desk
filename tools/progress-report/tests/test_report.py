@@ -1077,5 +1077,101 @@ def load_chapter_tests():
 load_chapter_tests()
 
 
+class MapAndProcessorChaptersTests(unittest.TestCase):
+    """The map (M1) against the anatomy file, and the processor chapter (M2) against the loader's and the kernel's own values."""
+
+    RANK = {"planned": 0, "unverified": 1, "built-unverified": 1, "verified": 2, "built-verified": 2}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.chapters = {c["id"]: c for c in manual.load_chapters(manual.load_plan())}
+        cls.boxes = json.loads(rd(os.path.join(TOOL, "anatomy-desk.json")))["boxes"]
+
+    @classmethod
+    def coverage(cls, records, boxes):
+        """What is wrong between the map's status records and the anatomy boxes: a missing record, or one claiming more than its box."""
+        by_id = {r["id"]: r for r in records}
+        problems = []
+        for b in boxes:
+            r = by_id.get("map." + b["id"])
+            if r is None:
+                problems.append("no status record for the box %s" % b["id"])
+            elif cls.RANK[r["state"]] > cls.RANK[b["status"]]:
+                problems.append("the record for %s claims %s, above the box's %s" % (b["id"], r["state"], b["status"]))
+            elif (b["status"] == "planned") != (r["state"] == "planned"):
+                problems.append("the record for %s and its box disagree about being planned" % b["id"])
+        return problems
+
+    def test_m1_has_a_record_for_every_box_no_higher_than_the_box(self):
+        records = self.chapters["m-map"]["status"]
+        self.assertEqual(self.coverage(records, self.boxes), [])
+        self.assertEqual(len(self.boxes), len([r for r in records if r["id"].startswith("map.")]))
+
+    def test_m1_coverage_check_refuses_a_missing_box_and_an_inflated_state(self):
+        recs = self.chapters["m-map"]["status"]
+        self.assertTrue(any("no status record for the box wm" in p for p in self.coverage([r for r in recs if r["id"] != "map.wm"], self.boxes)))
+        inflated = [dict(r, state="built-verified") if r["id"] == "map.live" else r for r in recs]
+        self.assertTrue(any("claims built-verified, above the box's unverified" in p for p in self.coverage(inflated, self.boxes)))
+
+    def test_m1_declares_the_three_reused_figures(self):
+        text = self.chapters["m-map"]["raw"]
+        for fid, at in (("architecture", "figure arch"), ("anatomy-desk", "figure anatomy-desk"), ("anatomy-dos", "figure anatomy-dos")):
+            self.assertIn("reuse: %s\nat: %s" % (fid, at), text)
+
+    def test_m1_counts_of_workspace_members_are_the_manifests(self):
+        hal = rd(os.path.join(gather.ROOT, "hal", "Cargo.toml"))
+        shell = rd(os.path.join(gather.ROOT, "shell", "Cargo.toml"))
+        self.assertEqual(len(re.findall(r'"[^"]+"', re.search(r"members = \[(.*?)\]", hal).group(1))), 9)
+        self.assertEqual(len(re.findall(r'"[^"]+"', re.search(r"members = \[(.*?)\]", shell).group(1))), 6)
+
+    def test_m2_defines_the_terms_it_promises(self):
+        terms = {t["id"] for t in self.chapters["m-cpu"]["glossary"]}
+        for t in ("segment", "offset", "linear-address", "a20", "descriptor", "selector", "gdt", "cr0", "protected-mode", "real-mode", "ring"):
+            self.assertIn(t, terms)
+
+    def test_m2_worked_example_uses_the_loaders_own_a20_addresses(self):
+        asm = rd(os.path.join(gather.ROOT, "boot", "stage2.asm"))
+        self.assertIn("mov si, 0x0500", asm)
+        self.assertIn("mov di, 0x0510", asm)
+        self.assertIn("not ax", asm)
+        self.assertEqual((0x0000 * 16 + 0x0500, 0xFFFF * 16 + 0x0510), (0x00500, 0x100500))
+        self.assertEqual(0x100500 & ~0x100000, 0x00500)
+        text = self.chapters["m-cpu"]["raw"]
+        for needle in ("`0000:0500`", "`FFFF:0510`", "`0x00500`", "`0x100500`"):
+            self.assertIn(needle, text)
+
+    def test_m2_decodes_the_descriptors_the_loader_and_the_kernel_hold(self):
+        asm = rd(os.path.join(gather.ROOT, "boot", "stage2.asm"))
+        gdt_rs = rd(os.path.join(gather.ROOT, "kernel", "src", "gdt.rs"))
+        text = self.chapters["m-cpu"]["raw"]
+        for d in ("00CF9A000000FFFF", "00CF92000000FFFF"):
+            self.assertIn("0x" + d, asm)
+            self.assertIn("0x" + "_".join(d[i:i + 4] for i in range(0, 16, 4)), gdt_rs)
+            self.assertIn("0x" + d, text)
+        code = int("00CF9A000000FFFF", 16).to_bytes(8, "little")
+        self.assertEqual(code.hex(" ").upper(), "FF FF 00 00 00 9A CF 00")
+        self.assertIn("`FF FF 00 00 00 9A CF 00`", text)
+        self.assertEqual((0xFFFFF + 1) * 4096, 4 << 30)
+        self.assertEqual(3 * 8 - 1, 0x17)
+
+    def test_m2_cr0_value_is_the_sum_of_the_bits_it_names(self):
+        self.assertEqual(1 + 2 + 16 + 32, 0x33)
+        for name in ("expected-div0.txt", "expected-gp.txt"):
+            self.assertIn("0x00000033", rd(os.path.join(gather.ROOT, "tests", "native", name)))
+        fpu = rd(os.path.join(gather.ROOT, "kernel", "src", "fpu.rs"))
+        self.assertIn("(1u32 << 1) | (1 << 5)", fpu)
+        self.assertIn("!((1u32 << 2) | (1 << 3))", fpu)
+
+    def test_m2_idt_error_code_mask_lists_the_vectors_it_names(self):
+        mask = 0x60227D00
+        self.assertEqual([v for v in range(32) if mask >> v & 1], [8, 10, 11, 12, 13, 14, 17, 21, 29, 30])
+        self.assertIn("0x60227D00", rd(os.path.join(gather.ROOT, "kernel", "src", "idt.rs")))
+        self.assertIn("0x60227D00", self.chapters["m-cpu"]["raw"])
+
+    def test_the_boot_chapters_link_the_processor_terms(self):
+        self.assertIn("](term:gdt)", self.chapters["m-loader"]["raw"])
+        self.assertIn("](term:a20)", self.chapters["m-boot"]["raw"])
+
+
 if __name__ == "__main__":
     unittest.main()
