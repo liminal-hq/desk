@@ -156,9 +156,9 @@ Keys reach `Shell::handle` as `KeyEvent`s with the modifiers after the event ([`
 |---|---|---|
 | Tab pressed with Alt, no Shift | Starts or continues a cycle: the target moves one window further down the stacking order, wrapping, skipping nothing. Nothing is drawn while Alt is held | None |
 | Tab pressed with Alt and Shift | The same, one window back up | None |
-| Alt released while cycling | Focuses and raises the target, as a click would; the cycle ends | As a focus that raises |
+| Alt released while cycling | Focuses and raises the target, as a click would (a drag in progress ends and an armed close box is disarmed); the cycle ends | As a focus that raises |
 | Escape pressed while cycling | (Never seen in a live session: the platform keeps Escape.) Cancels the cycle | None |
-| F4 pressed with Alt, not cycling | Closes the focused window, as the close box does | As close |
+| F4 pressed with Alt, not cycling | Closes the focused window, as the close box does; the typematic repeats of the same press close nothing more (the next press, after F4 comes up, does) | As close |
 | Tab pressed with no Alt, Ctrl or Windows key | The focused window's next field (Shift: the previous), wrapping; labels are skipped | The two fields' carets |
 | Anything else | The focused window's focused widget, as today | As today |
 

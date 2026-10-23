@@ -53,6 +53,7 @@ step "Shell: host tests and no_std builds"
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
+python3 -I tools/frames.py goldens tests/shell/keys.sums tests/shell/golden/keys
 
 step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
 python3 -I tools/test_frames.py

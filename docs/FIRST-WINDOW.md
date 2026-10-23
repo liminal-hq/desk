@@ -391,7 +391,7 @@ impl Widget {
 }
 ```
 
-`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and a 1 × 12 caret in `Accent` after the text, drawn only while it is the focused widget of the focused window (`Widget::paint`'s `focused` says so). Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
 
 ## desk-wm: windows, focus and damage
 
@@ -415,7 +415,9 @@ impl Wm {
     pub fn hit(&self, x: i32, y: i32) -> Option<(WindowId, Hit)>;               // topmost first
     /// The pointer is now at (x, y) with `buttons`; changes of button state drive focus, drags and the close box.
     pub fn pointer(&mut self, x: i32, y: i32, buttons: u8, damage: &mut Damage);
+    /// Alt+Tab, Shift+Alt+Tab, Alt+F4 and Tab are the window manager's (the table in `LIVE-INPUT.md`); every other key is the focused widget's.
     pub fn key(&mut self, e: KeyEvent, fonts: &Fonts, damage: &mut Damage);
+    pub fn cycling(&self) -> Option<WindowId>;                                   // the window releasing Alt would focus, during an Alt+Tab
     /// Paints the desktop and every window that meets `clip`, bottom to top, onto a surface already clipped to it.
     pub fn paint(&self, s: &mut Surface, clip: Rect, t: &Theme, fonts: &Fonts);
 }
@@ -433,11 +435,15 @@ Behaviour and the damage each change reports (the rows are the damage-accounting
 | Drag by (dx, dy) | old `extent` ∪ new `extent`, merged by `Damage` |
 | A key into a text field | the rectangle `Widget::key` returns (the old and new text and caret, inside the field), offset to the screen and cut to the content area |
 | Pointer motion with no drag | none (the cursor is overlay damage, added by the shell) |
+| A step of an Alt+Tab cycle | none: nothing is drawn while Alt is held |
+| Alt released after a cycle | as a focus that raises, for the window the cycle reached (none when that is the top window) |
+| Alt+F4 | as a close of the focused window |
+| Tab or Shift+Tab to another field | the two fields' carets |
 
 - **Hit testing** goes through the windows from the top: a control box first, then the rest of the title bar (`Title`), then the rule and the content (`Content`), then the ring. The ring is the three pixels around a focused window and only the one-pixel hairline around an unfocused one, since that is all an unfocused window paints; the rest belongs to what lies beneath.
 - **Press** (left button goes down) on a window: focus and raise; on `Title`, start a drag; on `Control(Close)`, arm the close box. **Release**: end the drag; close the window if the close box was armed and the pointer is still over it. Minimise and maximise are inert.
 - **Dragging** keeps the point of the title bar that was pressed under the pointer (so a window held at a clamp follows the pointer back), clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
-- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`) and adds the damage for the widget.
+- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`, and Tab moves it between the fields) and adds the damage for the widget. Alt+Tab keeps `cycle`, how far down the stacking order the target is, and Alt's release focuses it; anything that opens, closes or focuses a window, and any press of the left button, ends the cycle so no stale index survives.
 - **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed. `paint` clips to `clip` itself and puts the surface's clip back, paints each window's widgets inside its content area only, and changes no pixel outside `clip`.
 
 ## desk-shell: events, frames and scenarios

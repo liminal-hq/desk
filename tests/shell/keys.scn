@@ -1,0 +1,68 @@
+# Keyboard window management: Alt+Tab (release picks), Shift+Alt+Tab, Alt+F4, and Tab and Shift+Tab between the fields of a window.
+desk-scenario 1
+screen 640 480
+depths 8 4
+open notes 60 60 300 180 "Notes"
+label notes 12 12 "The first window."
+open welcome 220 150 340 200 "Welcome to Desk"
+label welcome 12 12 "Type something:"
+field welcome 12 36 300
+pointer 320 240
+frame open
+# Alt+Tab: nothing is drawn while Alt is held, and releasing it focuses Notes, the next window down, and raises it.
+key LeftAlt down
+key Tab down
+key Tab up
+key LeftAlt up
+frame notes
+# Alt+Tab again goes back to Welcome, whose field has kept its caret.
+key LeftAlt down
+key Tab down
+key Tab up
+key LeftAlt up
+frame welcome
+# A third window, with a field of its own, opens on top; Shift+Alt+Tab goes the other way round, to the bottom window (Notes).
+open memo 380 40 220 120 "Memo"
+label memo 12 12 "A third window."
+field memo 12 36 150
+frame memo
+key LeftShift down
+key LeftAlt down
+key Tab down
+key Tab up
+key LeftAlt up
+key LeftShift up
+frame shifted
+# Two steps of one cycle: Alt+Tab twice lands two windows down, on Welcome (the stacking order is Welcome, Memo, Notes).
+key LeftAlt down
+key Tab down
+key Tab up
+key Tab down
+key Tab up
+key LeftAlt up
+frame twosteps
+# Alt+F4 closes the focused window (Welcome) and the one below it (Memo) is focused.
+key LeftAlt down
+key F4 down
+key F4 up
+key LeftAlt up
+frame closed
+# A window with two fields. The field added last has the focus, so the first word goes to City; Shift+Tab moves the caret to Name
+# (the label between them is skipped) and the next word goes there; Tab wraps back to City, which takes one more letter.
+open form 40 280 300 160 "Form"
+label form 12 12 "Name"
+field form 12 30 200
+label form 12 64 "City"
+field form 12 82 200
+type "paris"
+frame city
+key LeftShift down
+key Tab down
+key Tab up
+key LeftShift up
+type "ada"
+frame name
+key Tab down
+key Tab up
+type "!"
+frame wrapped
