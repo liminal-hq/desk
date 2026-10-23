@@ -15,7 +15,10 @@
 # waiting for input that never comes) must fail. Graphics: the kernel's tour (VBE linear frame buffer, register-programmed modes 13h
 # and 12h, a window with a software cursor, text mode restored) is booted with real pixels, and screenshots taken through the QEMU
 # monitor are checked against reference checksums; a wrong reference, a cursor that did not move, a movement outside the cursor's
-# rectangle and a loader that succeeded where it was told to fail must each be rejected. Skips (exit 0, with a message) only
+# rectangle and a loader that succeeded where it was told to fail must each be rejected. Shell: the first window's scripted scenario
+# (tests/shell/first-window.scn) is run by the kernel at depth 8 (VBE) and depth 4 (mode 12h), and QEMU's screendumps at every frame must
+# equal the goldens' six-bit colours (tools/frames.py check); a screen with one wrong pixel, altered sums and the other depth's sums must be
+# rejected. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 #
 # DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
@@ -190,6 +193,68 @@ must_fail "the failed-VBE transcript as the normal one" python3 -I tools/native-
 finish_gfx gfx-vbefail
 rm -f dist/native-gfx-vbe.img dist/native-gfx-text.img dist/native-gfx-fail.img
 tools/native-build.sh > /dev/null
+
+echo "== Shell: first window (docs/FIRST-WINDOW.md)"
+# The kernel's `shell` test mode runs tests/shell/first-window.scn: at each `frame` step it prints the frame's digests and
+# `shell: ready NAME`, and waits for a key. The monitor script (tools/frames.py inject) takes a screendump at each marker and sends
+# the key, so the screendumps are QEMU's own picture of the display, held to the same goldens as the host and DOS runs. Depth 8 runs
+# on the std card over the loader's VBE linear frame buffer, depth 4 on the Cirrus card in mode 12h by registers. Each run checks its
+# transcript (against the expected file, and against the .sums with `frames.py transcript`) and its screendumps (`frames.py check`,
+# which compares six-bit colours, so QEMU's expansion to eight bits does not matter). The dumps of a run stay in
+# dist/shell-native-DEPTH/ as PNGs.
+shell_sums=tests/shell/first-window.sums
+python3 -I tools/frames.py inject tests/shell/first-window.scn > "$work/shell.inject"
+frames() { python3 -I tools/frames.py "$@"; }
+# run_shell NAME IMAGE CARD DEPTH DIR: the run must succeed and its transcript must be the expected one; the dumps are in DIR.
+run_shell() {
+  local name=$1 image=$2 card=$3 depth=$4 dir=$5 got=0
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 60 --vga "$card" --inject "$work/shell.inject" --shots "$dir" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+  # The corrupting runs add one line saying which pixel they changed; everything else is the normal transcript.
+  grep -v '^shell: corrupted pixel ' "$work/$name.txt" > "$work/$name.plain" || true
+  python3 -I tools/native-check.py "tests/native/expected-shell-$depth.txt" "$work/$name.plain" > /dev/null || fail "$name: transcript differs"
+  frames transcript "$shell_sums" "$depth" "$work/$name.plain" > /dev/null || fail "$name: the transcript's digests are not the sums'"
+}
+# Converts a run's PPM screendumps to PNG (a few kilobytes each) and removes the PPMs and the diff pictures of the negative checks.
+# The PNGs renumber the palette, so they are for looking at and for the colour comparison of `frames.py same`, not for the index digests.
+finish_shell() {
+  local f
+  rm -f "$1"/*.diff.png
+  for f in "$1"/*.ppm; do shot png "$f" "${f%.ppm}.png" && rm -f "$f"; done
+}
+tools/native-image.sh --test-mode shell --video vbe --out dist/native-shell-8.img > /dev/null
+tools/native-image.sh --test-mode shell --video text --out dist/native-shell-4.img > /dev/null
+tools/native-image.sh --test-mode shell-corrupt --video vbe --out dist/native-shell-corrupt-8.img > /dev/null
+tools/native-image.sh --test-mode shell-corrupt --video text --out dist/native-shell-corrupt-4.img > /dev/null
+run_shell shell-8 dist/native-shell-8.img std 8 dist/shell-native-8
+frames check "$shell_sums" 8 dist/shell-native-8 > "$work/shell-8.check" || { cat "$work/shell-8.check" >&2; fail "shell-8: a screendump differs from the goldens"; }
+echo "native: ok — shell-8 (std card, VBE linear frame buffer): $(cat "$work/shell-8.check")"
+run_shell shell-4 dist/native-shell-4.img cirrus 4 dist/shell-native-4
+frames check "$shell_sums" 4 dist/shell-native-4 > "$work/shell-4.check" || { cat "$work/shell-4.check" >&2; fail "shell-4: a screendump differs from the goldens"; }
+echo "native: ok — shell-4 (Cirrus card, mode 12h by registers): $(cat "$work/shell-4.check")"
+# Negative: each of these must fail. The corrupted runs print the true digests (the shell's own picture is fine) and change one pixel
+# of the screen, so only the screendump check can notice; and the depth 8 dumps are not the depth 4 sums, nor the reverse.
+for depth in 8 4; do
+  card=$([ "$depth" = 8 ] && echo std || echo cirrus)
+  run_shell "shell-corrupt-$depth" "dist/native-shell-corrupt-$depth.img" "$card" "$depth" "dist/shell-native-corrupt-$depth"
+  grep -q '^shell: corrupted pixel ' "$work/shell-corrupt-$depth.txt" || fail "the depth $depth corrupt run did not corrupt a pixel"
+  if frames check "$shell_sums" "$depth" "dist/shell-native-corrupt-$depth" > "$work/corrupt-$depth.check" 2>&1; then fail "a screen with one wrong pixel was accepted at depth $depth"; fi
+  grep -q 'moved' "$work/corrupt-$depth.check" || fail "the depth $depth corrupt run was not rejected at the moved frame"
+  echo "native: ok — a screen with one wrong pixel is rejected at depth $depth: $(grep moved "$work/corrupt-$depth.check" | head -n 1)"
+  finish_shell "dist/shell-native-corrupt-$depth"
+  rm -rf "dist/shell-native-corrupt-$depth"
+done
+sed 's/^moved 8 640x480 10201b69 03faf8b3/moved 8 640x480 10201b69 03faf8b2/' "$shell_sums" > "$work/wrong-shell.sums"
+cmp -s "$shell_sums" "$work/wrong-shell.sums" && fail "the altered sums were not altered"
+must_fail "screendumps checked against sums with one digest changed" frames check "$work/wrong-shell.sums" 8 dist/shell-native-8
+must_fail "the depth 8 screendumps checked against the depth 4 sums" frames check "$shell_sums" 4 dist/shell-native-8
+must_fail "the depth 4 screendumps checked against the depth 8 sums" frames check "$shell_sums" 8 dist/shell-native-4
+must_fail "the depth 4 transcript checked against the depth 8 sums" frames transcript "$shell_sums" 8 "$work/shell-4.txt"
+must_fail "the depth 8 transcript as the depth 4 one" python3 -I tools/native-check.py tests/native/expected-shell-4.txt "$work/shell-8.txt"
+finish_shell dist/shell-native-8
+finish_shell dist/shell-native-4
+rm -f dist/native-shell-8.img dist/native-shell-4.img dist/native-shell-corrupt-8.img dist/native-shell-corrupt-4.img
 
 echo "== BIOS calls from the kernel (docs/N3-BIOS-PATH.md)"
 # The kernel returns to real mode for each call (kernel/bios16.asm): memory, clock, disk, errors, a key sent during a call, 1,000
