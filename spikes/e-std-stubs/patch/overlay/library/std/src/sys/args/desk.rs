@@ -5,7 +5,7 @@
 
 use crate::ffi::{OsStr, OsString};
 use crate::sys::pal::abi;
-use crate::{fmt, ptr, slice};
+use crate::{fmt, slice};
 
 pub fn args() -> Args {
     Args { i: 0, n: unsafe { abi::desk_arg_count() } }
@@ -65,9 +65,4 @@ impl DoubleEndedIterator for Args {
         let bytes = unsafe { slice::from_raw_parts(p, len) };
         Some(unsafe { OsStr::from_encoded_bytes_unchecked(bytes) }.to_os_string())
     }
-}
-
-#[allow(dead_code)]
-fn _unused() {
-    let _ = ptr::null::<u8>();
 }
