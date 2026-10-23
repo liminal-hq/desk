@@ -9,6 +9,7 @@
 
 extern crate alloc;
 
+pub mod live;
 mod run;
 pub mod scenario;
 mod shell;

@@ -195,13 +195,14 @@ pub struct PresentStats { pub frames: u32, pub spans: u32, pub pixels: u32 }
 
 pub struct CursorLayer { pub x: i32, pub y: i32, pub visible: bool, pub sprite: &'static Sprite, pub inks: [u8; 2] }
 
-pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer */ }
+pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer, shown: Option<Rect> */ }
 impl Compositor {
     pub fn new(width: u32, height: u32, background: u8) -> Result<Compositor, HalError>;   // refuses zero or a width above MAX_WIDTH (1280); the first frame damages the whole screen
     pub fn damage(&mut self, r: Rect);                                   // scene damage
-    pub fn move_cursor(&mut self, x: i32, y: i32);                       // overlay damage: old and new sprite rects
+    pub fn move_cursor(&mut self, x: i32, y: i32);                       // records the position; the next frame damages `shown` and the new sprite rect, however many moves came between
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]);
-    pub fn set_cursor_visible(&mut self, visible: bool);                 // overlay damage: the sprite rectangle
+    pub fn set_cursor_visible(&mut self, visible: bool);                 // the next frame damages where the sprite was drawn (hiding) or is now (showing)
+    pub fn is_dirty(&self) -> bool;                                      // scene or overlay damage pending, or the cursor is not where it was last presented
     pub fn cursor(&self) -> &CursorLayer;
     /// Repaints every scene-damage rect through `paint` (with the surface clipped to it), then presents the union of the
     /// scene and overlay damage, aligned to the presenter, compositing the cursor into each row on the way.
@@ -213,7 +214,7 @@ impl Compositor {
 pub struct FrameStats { pub repainted: u32, pub presented: u32, pub rects: u8 }
 ```
 
-`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
+`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage, and the cursor where it was last presented) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
 
 ### Digests
 

@@ -64,7 +64,7 @@ Alternatives considered and rejected:
 - **Native.** The kernel's `shell` mode (`kernel/src/shell.rs`) runs `first-window.scn` with scripted input and uses the keyboard only for the screendump rendezvous (`gfx::rendezvous`: print `shell: ready NAME`, wait for any key press, drop mouse events). The PS/2 path itself is proven by the `input` mode (`kernel/src/input.rs`, `tests/native/input.inject`), and `gfx`'s tour has a live window (`gfx::window_session`) that follows the mouse and echoes keys through `desk_vga`'s `Canvas`, not through the shell. The input loop idles with `sti; hlt` with the rings checked with interrupts off (`input::idle`). The PIT runs at 100 Hz (`pit::ticks`).
 - **Hosted.** `SHELL.EXE` without `scenario` is already a live mode ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#hosted-shellexe-in-dosbox)): IRQ 1 through `DosIrq` and `KbdIrq`, INT 33h through `DosInput`, the scenario's set-up steps, a loop that drains keys and the mouse, presents every iteration and ends on an Escape press or after `timeout=N` (exit status 4); `dump` writes the last screen. `shell/dos/check.sh` types `d e s k esc` with `AUTOTYPE` and compares the last screen with a digest written into the script (`dc85a936 436a5df4`). The mouse path has never run under `SHELL.EXE`; spike B's Xvfb harness ran it under `INPUT.EXE`.
 - **Tools.** `tools/native-run.sh` runs QEMU with `-display none`, an optional monitor socket and `tools/native-inject.py` (`wait TEXT`, `sleep S`, monitor commands); `tools/frames.py inject` writes the scripted mode's monitor script from a scenario's frames. `tools/dosrun.sh` runs DOSBox headless (`SDL_VIDEODRIVER=dummy`, `DISPLAY` removed, a 60 second timeout) with `DOS_AUTOTYPE`, `DOS_CONF` and `DOS_X11`. Spike B's `check-xvfb.sh` and `xvfb-inner.sh` drive DOSBox's window under Xvfb with `xdotool` in the `desk-dos-xvfb:1` image.
-- **The core.** `Shell::handle` takes `Event::Pointer(MouseEvent)` (deltas and the button state now), `Event::PointerTo` and `Event::Key`. `Wm::pointer` acts on changes of the left button; `Wm::key` sends every key to the focused window's focused widget, so there is no keyboard window management yet. `Compositor::move_cursor` damages the old and the new sprite rectangle on every move.
+- **The core.** `Shell::handle` takes `Event::Pointer(MouseEvent)` (deltas and the button state now), `Event::PointerTo` and `Event::Key`. `Wm::pointer` acts on changes of the left button; `Wm::key` sends every key to the focused window's focused widget, so there is no keyboard window management yet. Until the live-input stack, `Compositor::move_cursor` damaged the old and the new sprite rectangle on every move; it now only records the position (see [the cursor at present time](#the-cursor-at-present-time)).
 
 ## Where it sits
 
@@ -89,6 +89,7 @@ loop:
                                          Shell  -> Shell::handle(Event::Key(k))
                                          Mark   -> remember that a mark is due
                                          End    -> remember that the session ends
+                                         Swallow -> nothing (the release of Escape or F12)
   if a mark is due: drain the mouse source again (motion that arrived meanwhile belongs before the mark)
   if the shell is dirty and the pacing allows, or a mark is due: present (Shell::frame)
   if a mark is due: print it (and, on DOS with `marks`, read the screen back to files)
@@ -104,8 +105,8 @@ loop:
 pub mod live {
     /// What the platform's loop does with a key.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum Route { Shell, Mark, End }
-    /// Escape pressed ends the session, F12 pressed asks for a mark; their releases are swallowed too; every other key is the shell's.
+    pub enum Route { Shell, Mark, End, Swallow }
+    /// Escape pressed ends the session, F12 pressed asks for a mark; their releases are `Swallow` (kept by the platform, nothing done); every other key is the shell's.
     pub fn route(e: &KeyEvent) -> Route;
     /// Counts for the summary line.
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -118,7 +119,7 @@ pub mod live {
 }
 ```
 
-The mark numbers are always two digits, so no mark's line starts with another's (`native-inject.py` waits by substring, and strips trailing spaces from its `wait` lines); a session refuses a hundredth mark with a line that says so, and goes on. Mark 00 is printed after the set-up's first frame, before any input is read: it is the live scenario's first frame.
+The mark numbers are always two digits, so no mark's line starts with another's (`native-inject.py` waits by substring, and strips trailing spaces from its `wait` lines); a session refuses a 101st mark with a line that says so, and goes on. Mark 00 is printed after the set-up's first frame, before any input is read: it is the live scenario's first frame.
 
 **Transcript lines**, the same on both tracks apart from the platform's own preamble:
 

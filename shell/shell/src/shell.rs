@@ -166,6 +166,12 @@ impl<'f> Shell<'f> {
         self.compositor.frame(out, |s: &mut Surface, r| wm.paint(s, r, theme, fonts))
     }
 
+    /// True when `frame` would draw something: damage is pending or the cursor is not where it was last presented. A live loop
+    /// asks this instead of presenting to find out.
+    pub fn is_dirty(&self) -> bool {
+        self.compositor.is_dirty()
+    }
+
     /// The digests of what is on the screen once the last frame has been presented.
     pub fn digest(&self) -> FrameDigest {
         self.compositor.digest(&palette(self.theme.depth()))

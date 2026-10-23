@@ -275,3 +275,31 @@ fn damage_holds_its_invariants_over_random_adds() {
         }
     }
 }
+
+#[test]
+fn is_dirty_says_what_a_frame_would_draw_without_drawing() {
+    for depth in DEPTHS {
+        let mut s = shell(depth);
+        let mut p = present(depth);
+        assert!(s.is_dirty(), "the first frame is pending");
+        s.frame(&mut p).unwrap();
+        assert!(!s.is_dirty());
+        s.handle(mouse(0, 0, 0));
+        assert!(!s.is_dirty(), "a report with no motion changes nothing");
+        // Fifty moves and one frame: dirty until the frame, and the frame presents two sprite rectangles at most.
+        for _ in 0..50 {
+            s.handle(mouse(1, 1, 0));
+        }
+        assert!(s.is_dirty());
+        let stats = s.frame(&mut p).unwrap();
+        assert!(stats.presented > 0 && !s.is_dirty());
+        // Moving away and back before a frame leaves nothing to present.
+        let (x, y) = s.pointer();
+        s.handle(to(x + 30, y + 20));
+        s.handle(to(x, y));
+        assert!(!s.is_dirty());
+        assert_eq!(s.frame(&mut p).unwrap(), Default::default());
+        s.open("w", Rect::new(10, 10, 100, 60), "W");
+        assert!(s.is_dirty());
+    }
+}

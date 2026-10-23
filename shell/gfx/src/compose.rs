@@ -70,6 +70,9 @@ pub struct Compositor {
     scene: Damage,
     overlay: Damage,
     cursor: CursorLayer,
+    /// The sprite rectangle the last present drew: where the cursor is on the screen, which after a move is not where it is now.
+    /// `None` before the first present and while the cursor is hidden.
+    shown: Option<Rect>,
 }
 
 impl Compositor {
@@ -94,6 +97,7 @@ impl Compositor {
                 sprite: &ARROW,
                 inks: [0, 1],
             },
+            shown: None,
         })
     }
 
@@ -106,19 +110,11 @@ impl Compositor {
         &self.cursor
     }
 
-    /// Moves the cursor's hot spot. Only the overlay is damaged (the old and new sprite rectangles): nothing is repainted.
+    /// Moves the cursor's hot spot. Only the position is recorded: the next frame damages the rectangle the cursor was last
+    /// presented at and the one it is at now, however many moves came between, so a burst of reports costs two sprite rectangles.
     pub fn move_cursor(&mut self, x: i32, y: i32) {
-        if (x, y) == (self.cursor.x, self.cursor.y) {
-            return;
-        }
-        if self.cursor.visible {
-            self.overlay.add(self.cursor.rect());
-        }
         self.cursor.x = x;
         self.cursor.y = y;
-        if self.cursor.visible {
-            self.overlay.add(self.cursor.rect());
-        }
     }
 
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]) {
@@ -130,21 +126,30 @@ impl Compositor {
         }
     }
 
+    /// Shows or hides the cursor. Hiding damages where the sprite was last presented at the next frame, not where the cursor now is.
     pub fn set_cursor_visible(&mut self, visible: bool) {
-        if visible != self.cursor.visible {
-            self.overlay.add(self.cursor.rect());
-            self.cursor.visible = visible;
-        }
+        self.cursor.visible = visible;
+    }
+
+    /// Where the sprite should be on the screen once the next frame is presented.
+    fn wanted(&self) -> Option<Rect> {
+        self.cursor.visible.then(|| self.cursor.rect())
+    }
+
+    /// True when the next frame would draw something: scene or overlay damage is pending, or the cursor is not where it was last
+    /// presented (moved, hidden or shown). A frame with nothing dirty presents nothing and calls nothing.
+    pub fn is_dirty(&self) -> bool {
+        !self.scene.is_empty() || !self.overlay.is_empty() || self.shown != self.wanted()
     }
 
     /// Repaints every scene-damage rectangle through `paint` (with the surface clipped to it), then presents the union of the scene
-    /// and overlay damage, aligned to the presenter, compositing the cursor into each row on the way. An idle frame (no damage)
+    /// and overlay damage, aligned to the presenter, compositing the cursor into each row on the way. An idle frame (no damage, and the cursor where it was last presented)
     /// calls nothing and returns zeros.
     ///
     /// Refused with `InvalidArgument`, before anything is painted, when the presenter's size differs from the compositor's or its
     /// alignment does not divide the width. If the presenter fails, the damage that was being presented is kept for the next frame.
     pub fn frame<P: Present>(&mut self, out: &mut P, mut paint: impl FnMut(&mut Surface, Rect)) -> Result<FrameStats, HalError> {
-        if self.scene.is_empty() && self.overlay.is_empty() {
+        if !self.is_dirty() {
             return Ok(FrameStats::default());
         }
         let align = out.align().max(1);
@@ -160,8 +165,14 @@ impl Compositor {
             paint(&mut self.back, *r);
         }
         self.back.set_clip(self.back.bounds());
+        let wanted = self.wanted();
         let mut present = self.scene;
         present.add_all(&self.overlay);
+        if self.shown != wanted {
+            for r in self.shown.iter().chain(wanted.iter()) {
+                present.add(*r);
+            }
+        }
         present.align_x(align);
         self.scene.clear();
         self.overlay.clear();
@@ -169,6 +180,7 @@ impl Compositor {
             self.scene.add_all(&present);
             return Err(e);
         }
+        self.shown = wanted;
         stats.presented = present.area();
         stats.rects = present.rects().len() as u8;
         Ok(stats)
@@ -551,6 +563,102 @@ mod tests {
         let s = frame(&mut c, &mut out, &mut w);
         assert_eq!(s.presented, W * H);
         assert_eq!(out.inner.pixels, w.screen(&c));
+    }
+
+    #[test]
+    fn fifty_moves_between_two_frames_present_at_most_two_sprite_rectangles() {
+        let (mut c, mut out, mut w) = setup(1);
+        frame(&mut c, &mut out, &mut w);
+        let before = out.inner.stats.pixels;
+        for i in 0..50 {
+            c.move_cursor(i, i / 2);
+        }
+        c.move_cursor(49, 24);
+        assert!(c.is_dirty());
+        let s = frame(&mut c, &mut out, &mut w);
+        assert_eq!(s.repainted, 0);
+        assert!(s.presented <= 2 * 12 * 19, "presented {}", s.presented);
+        assert_eq!(out.inner.stats.pixels - before, s.presented);
+        assert_eq!(out.inner.pixels, w.screen(&c));
+        assert!(!c.is_dirty());
+        // The same burst far from the edges: exactly the area of the old and the new rectangle.
+        c.move_cursor(5, 5);
+        frame(&mut c, &mut out, &mut w);
+        for i in 0..50 {
+            c.move_cursor(5 + (i % 7) * 4, 5 + (i % 5) * 3);
+        }
+        c.move_cursor(45, 20);
+        let s = frame(&mut c, &mut out, &mut w);
+        assert_eq!((s.presented, s.rects), (2 * 12 * 19, 2));
+    }
+
+    #[test]
+    fn a_move_and_back_presents_nothing_beyond_the_old_rectangle() {
+        let (mut c, mut out, mut w) = setup(1);
+        frame(&mut c, &mut out, &mut w);
+        c.move_cursor(30, 10);
+        c.move_cursor(0, 0);
+        assert!(!c.is_dirty(), "back where it was presented: nothing to draw");
+        assert_eq!(frame(&mut c, &mut out, &mut w), FrameStats::default());
+        c.move_cursor(30, 10);
+        frame(&mut c, &mut out, &mut w);
+        c.move_cursor(2, 2);
+        c.move_cursor(30, 10);
+        assert!(!c.is_dirty());
+        assert_eq!(out.inner.pixels, w.screen(&c));
+    }
+
+    #[test]
+    fn hiding_after_a_move_damages_where_the_sprite_was_drawn() {
+        let (mut c, mut out, mut w) = setup(1);
+        frame(&mut c, &mut out, &mut w);
+        c.move_cursor(10, 10);
+        frame(&mut c, &mut out, &mut w);
+        c.move_cursor(40, 20);
+        c.set_cursor_visible(false);
+        assert!(c.is_dirty());
+        let s = frame(&mut c, &mut out, &mut w);
+        assert_eq!(s.presented, 12 * 19, "only the drawn sprite is restored");
+        assert_eq!(out.inner.pixels, w.pixels);
+        assert!(!c.is_dirty());
+        c.set_cursor_visible(true);
+        assert!(c.is_dirty());
+        let s = frame(&mut c, &mut out, &mut w);
+        assert_eq!(s.presented, 12 * 19);
+        assert_eq!(out.inner.pixels, w.screen(&c));
+    }
+
+    #[test]
+    fn a_failed_present_keeps_where_the_cursor_was_shown() {
+        let (mut c, mut out, mut w) = setup(1);
+        frame(&mut c, &mut out, &mut w);
+        c.move_cursor(40, 20);
+        out.fail_after = Some(out.spans + 3);
+        assert_eq!(c.frame(&mut out, |s, r| w.paint(s, r)), Err(HalError::Timeout));
+        assert!(c.is_dirty());
+        out.fail_after = None;
+        frame(&mut c, &mut out, &mut w);
+        assert_eq!(
+            out.inner.pixels,
+            w.screen(&c),
+            "the old sprite is gone and the new one is whole"
+        );
+        assert!(!c.is_dirty());
+    }
+
+    #[test]
+    fn is_dirty_follows_the_damage() {
+        let (mut c, mut out, mut w) = setup(1);
+        assert!(c.is_dirty(), "the first frame is pending");
+        frame(&mut c, &mut out, &mut w);
+        assert!(!c.is_dirty());
+        c.damage(Rect::new(1, 1, 3, 3));
+        assert!(c.is_dirty());
+        frame(&mut c, &mut out, &mut w);
+        c.set_cursor_inks([1, 2]);
+        assert!(c.is_dirty());
+        frame(&mut c, &mut out, &mut w);
+        assert!(!c.is_dirty());
     }
 
     #[test]
