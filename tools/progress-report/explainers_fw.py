@@ -22,7 +22,7 @@ FRAMES = ["open", "moved", "focus", "dragged", "typed", "closed"]
 # What each frame is, from the scenario's own steps and comments in tests/shell/first-window.scn.
 TEXT = {
     "open": ("Two windows open", "The scenario opens Notes (60, 60, 300 x 180) and Welcome to Desk (220, 150, 340 x 200), puts the pointer at (320, 240) and takes the first frame. Everything is new, so the whole screen is repainted."),
-    "moved": ("The pointer moves, nothing else does", "The pointer goes to (100, 60). No window changed, so nothing is repainted: only the two 12 x 19 cursor rectangles are presented (widened to 8-pixel columns at depth 4)."),
+    "moved": ("The pointer moves, nothing else does", "The pointer moves by (100, 60), from (320, 240) to (420, 300). No window changed, so nothing is repainted: only the two 12 x 19 cursor rectangles are presented (widened to 8-pixel columns at depth 4)."),
     "focus": ("A click focuses the back window", "A click on Notes' title bar focuses and raises it. The halo moves to Notes and Welcome dims."),
     "dragged": ("A drag moves it by (40, 30)", "The title bar is pressed, the pointer moves by (40, 30) and the button is released. Only the area the window left and entered is repainted."),
     "typed": ("Typing reaches the field", "A click in Welcome's content focuses it again, and the four keys of \"desk\" go to its text field."),
@@ -85,7 +85,16 @@ def checked():
     if scn != FRAMES:
         raise ValueError("the scenario's frames are %s, not the six this explainer describes" % scn)
     media = os.path.join(HERE, "media")
-    sha = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()
+
+    def sha(p):
+        with open(p, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()
+
+    kept = [("img-fw-%s-8.png" % f, os.path.join("tests", "shell", "golden", "first-window", "%s-8.png" % f)) for f in FRAMES]
+    kept += [("img-fw-native-8-%s.png" % f, os.path.join("docs", "images", "first-window", "native-8-%s.png" % f)) for f in ("dragged", "typed")]
+    for mine, theirs in kept:
+        if sha(os.path.join(media, mine)) != sha(os.path.join(gather.ROOT, theirs)):
+            raise ValueError("media/%s is no longer byte-identical to %s" % (mine, theirs))
     for f in ("typed", "dragged"):
         if sha(os.path.join(media, "img-fw-%s-8.png" % f)) != sha(os.path.join(gather.ROOT, "docs", "images", "first-window", "dos-8-%s.png" % f)):
             raise ValueError("the kept DOS read-back of %s is no longer byte-identical to the golden" % f)

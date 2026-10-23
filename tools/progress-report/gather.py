@@ -691,7 +691,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         p["base"] = g.get("baseRefName")
         p["ghAdditions"], p["ghDeletions"], p["ghChangedFiles"] = g.get("additions"), g.get("deletions"), g.get("changedFiles")
         concl = ci_by_sha.get(p["mergeFull"])
-        p["ci"] = "passing" if concl == "success" else ("failing" if concl else "unknown")
+        p["ci"] = "passing" if concl == "success" else ("cancelled" if concl == "cancelled" else ("failing" if concl else "unknown"))
         # the host tests the tree held when the pull request landed, so prose written while it was open can say the same after the merge
         merged_tree = Repo(root, p["mergeFull"])
         p["hostTests"] = sum(len(re.findall(rb"^\s*#\[test\]", b or b"", flags=re.M)) for b in merged_tree.blobs(merged_tree.matching(r"^hal/.*\.rs$")).values())

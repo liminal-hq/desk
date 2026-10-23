@@ -22,7 +22,7 @@
    "id": "convergence",
    "label": "Convergence (shared)",
    "next": "Live input into the shell on both tracks, then widgets and menus on the first window's core.",
-   "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (chapter 23)."
+   "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (the anatomy page of the Desk)."
   },
   {
    "id": "native",

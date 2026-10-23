@@ -4,7 +4,7 @@
  "statuses": ["verified", "unverified", "planned", "external"],
  "layers": ["The program", "Shared core", "rt: the runtime", "The build", "At run time", "The hardware", "The machine"],
  "boxes": [
-  {"id": "main", "layer": 0, "col": 0, "span": 6, "label": "shell/dos/src/main.rs", "sub": "435 lines: wires the core to DOS and runs the scenario or the keys", "status": "verified",
+  {"id": "main", "layer": 0, "col": 0, "span": 6, "label": "shell/dos/src/main.rs", "sub": "wires the core to DOS and runs the scenario or the keys", "status": "verified",
    "evidence": ["pr:30", "repo:shell/dos/src/main.rs", "repo:docs/FIRST-WINDOW.md"],
    "text": "The program SHELL.EXE is one Rust file that opens a display and an input source, builds the presenter and calls the core's Shell::handle and Shell::frame itself: the platform owns the loop."},
   {"id": "assets", "layer": 0, "col": 6, "span": 6, "label": "Embedded scenario and fonts", "sub": "first-window.scn, UI.DFN, TITLE.DFN (or files with fontfile)", "status": "verified",
