@@ -58,6 +58,8 @@ static ORIGINAL_SELECTOR: AtomicU32 = AtomicU32::new(0);
 static ORIGINAL_OFFSET: AtomicU32 = AtomicU32::new(0);
 static ORIGINAL_FLAGS: AtomicU32 = AtomicU32::new(0);
 static MOUSE_IN_USE: AtomicBool = AtomicBool::new(false);
+/// Whether the BIOS keyboard handler kept running (`chain`), and so kept the lock flags and the LEDs in step.
+static CHAINED: AtomicBool = AtomicBool::new(false);
 
 /// Registered first, so it runs last: says what is true after the rest of the clean-up list has run.
 fn report() {
@@ -77,9 +79,15 @@ fn report() {
     );
 }
 
-/// The BIOS keyboard state goes back as it was found.
+/// The BIOS keyboard state goes back as it was found. With the BIOS handler chained, it also drove the LEDs, so a lock key pressed
+/// meanwhile is kept (the flags then still agree with the LEDs); only the held keys and the type-ahead buffer are cleared.
 fn restore_bios_keyboard() {
-    bios_kbd::restore(bios_kbd::Saved::from_flags(ORIGINAL_FLAGS.load(Ordering::Relaxed) as u8));
+    let saved = if CHAINED.load(Ordering::Relaxed) {
+        bios_kbd::save()
+    } else {
+        bios_kbd::Saved::from_flags(ORIGINAL_FLAGS.load(Ordering::Relaxed) as u8)
+    };
+    bios_kbd::restore(saved);
 }
 
 /// Function 0000h again: the driver's defaults (cursor hidden, full range, centred), which is where a DOS program expects it.
@@ -287,6 +295,7 @@ fn main() -> i32 {
     ORIGINAL_OFFSET.store(original.1, Ordering::Relaxed);
     cleanup::register(restore_bios_keyboard);
     let chain = if has("chain") { Chain::Previous } else { Chain::None };
+    CHAINED.store(chain == Chain::Previous, Ordering::Relaxed);
     DosIrq
         .register(Irq::KEYBOARD, IrqHandler::from_static(service), chain)
         .expect("install the IRQ 1 handler");

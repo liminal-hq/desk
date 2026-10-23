@@ -7,7 +7,7 @@ use desk_hal::ring::Consumer;
 use desk_hal::{Bios, InputSource, KeyEvent, Modifiers, MouseEvent};
 use desk_kbd::Decoder;
 
-use crate::Mouse;
+use crate::{Mouse, Position};
 
 /// Turns the driver's counters into `MouseEvent`s.
 ///
@@ -38,7 +38,13 @@ impl<B: Bios> MouseInput<B> {
     /// reads as a mouse that is not moving.
     pub fn poll(&mut self) -> Option<MouseEvent> {
         let (dx, dy) = self.mouse.motion().ok()?;
-        let state = self.mouse.position().ok()?;
+        // The motion counters are already cleared, so a failed read of the buttons must not throw the motion away: keep the buttons.
+        let state = self.mouse.position().unwrap_or(Position {
+            buttons: self.buttons,
+            wheel: 0,
+            x: 0,
+            y: 0,
+        });
         if dx == 0 && dy == 0 && state.wheel == 0 && state.buttons == self.buttons {
             return None;
         }

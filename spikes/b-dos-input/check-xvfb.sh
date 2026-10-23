@@ -65,8 +65,11 @@ python3 -I tools/raw2png.py dist/b/SCREEN.RAW dist/b/SCREEN.PAL 640 480 dist/b/s
 [ "$(head -c 8 dist/b/screen.png | od -An -c | tr -d ' ')" = '211PNG\r\n032\n' ] || fail "screen.png is not a PNG"
 echo "dist/b/screen.png"
 
-step "A wrong expectation is rejected"
-[ "$got" != 'dx=55 dy=50 wheel=0 states=-,L,-,R,-,M,-' ] || fail "a wrong expectation matched"
+step "A transcript with the middle button missing is rejected"
+saved_out=$out
+out="$(printf '%s\n' "$out" | grep -v 'buttons=M' || true)"
+[ "$(reduce)" != "$want" ] || fail "a transcript with the middle button missing matched"
+out=$saved_out
 echo "rejected, as it should be"
 
 step "No mouse driver, pointer moving anyway: keyboard-only, no mouse events, the keys still arrive"

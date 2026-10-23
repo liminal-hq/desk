@@ -96,6 +96,15 @@ has "chained buffer" "dropped, 0 decoder recoveries, BIOS type-ahead 8 keys"
 has "chained restore" "(were 0x00), BIOS type-ahead 0 keys"
 printf '%s\n' "$out" | grep -E '^input: (keyboard|[0-9]+ key)' | cut -c1-200
 
+step "A lock key pressed once: replaced, the BIOS flags go back as found; chained, the BIOS moved them (and the LED) and they stay"
+run "capslock esc" INPUT.EXE text
+[ "$status" = 0 ] || fail "INPUT.EXE exited with status $status: $out"
+has "replaced lock" "BIOS keyboard flags 0x00 (were 0x00)"
+run "capslock esc" INPUT.EXE text chain
+[ "$status" = 0 ] || fail "INPUT.EXE chain exited with status $status: $out"
+has "chained lock" "BIOS keyboard flags 0x40 (were 0x00)"
+echo "replaced: flags 0x00 (were 0x00); chained: flags 0x40 (were 0x00)"
+
 step "Overflow: 80 scancode bytes arrive while the core is not reading; the ring drops 16 and the decoder recovers"
 many="$(printf 'a %.0s' $(seq 40)) $(printf ', %.0s' $(seq 200)) esc"
 TYPE="-w 1 -p 0.05" run "$many" INPUT.EXE text stall=6

@@ -190,6 +190,39 @@ fn a_driver_that_stops_answering_reads_as_a_still_mouse() {
     assert_eq!(mi.poll(), None);
 }
 
+#[test]
+fn motion_survives_a_failed_button_read() {
+    use core::cell::Cell;
+    // Function 000Bh answers and clears its counters; function 0003h then fails. The motion must still be reported.
+    struct Flaky {
+        inner: Int33Model,
+        fail_position: Cell<bool>,
+    }
+    impl Bios for Flaky {
+        fn int(&self, vector: u8, regs: &mut BiosRegs, buffer: Option<&mut [u8]>) -> Result<(), HalError> {
+            if regs.eax as u16 == func::POSITION && self.fail_position.get() {
+                return Err(HalError::Platform(0x8021));
+            }
+            self.inner.int(vector, regs, buffer)
+        }
+        fn read_low(&self, segment: u16, offset: u16, out: &mut [u8]) -> Result<(), HalError> {
+            self.inner.read_low(segment, offset, out)
+        }
+    }
+    let mut mi = MouseInput::new(
+        Mouse::detect(Flaky {
+            inner: Int33Model::two_button(),
+            fail_position: Cell::new(false),
+        })
+        .unwrap(),
+    );
+    mi.mouse().bios.inner.move_by(4, 5);
+    mi.mouse().bios.fail_position.set(true);
+    assert_eq!(mi.poll().map(|e| (e.dx, e.dy, e.buttons)), Some((4, 5, 0)));
+    mi.mouse().bios.fail_position.set(false);
+    assert_eq!(mi.poll(), None);
+}
+
 // ---- The whole path ----
 
 #[derive(Clone, Copy)]
