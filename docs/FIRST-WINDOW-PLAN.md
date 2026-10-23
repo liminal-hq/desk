@@ -106,7 +106,7 @@ Two tasks in the same wave touch shared files: T1 and T2 both edit `shell/Cargo.
 - `planarise`: every one of the 16 colours at every bit position, and a random row checked against a per-pixel reference.
 - `LinearPresent` over an `MmioRegion` on a `Vec` (pitch larger than the width included): the same spans give the same bytes as `MemoryPresent`; spans at the last column and row; refused geometry.
 - `PlanarPresent` over a test `PlaneSink` that keeps four planes: after any sequence of aligned spans, recombining the planes gives the same indices as `MemoryPresent`; an unaligned span is refused with `InvalidArgument`.
-- `PlanarPresent` over `desk-hal-mock`'s `MockPortBus`: `begin` writes exactly the four graphics controller registers, each span writes the map mask four times in plane order, `end` restores it; `begin` after a `Planar16` was created and dropped still leaves set/reset off.
+- `PlanarPresent` over `desk-hal-mock`'s `MockPortBus`: `begin` writes exactly the four graphics controller registers, each span writes the map mask four times in plane order, `end` restores it; `begin` after a `Planar16` was created and leaked with `core::mem::forget` (so its `Drop`, which already turns set/reset off, does not run) still leaves set/reset off.
 - The read-back of a known picture through a `Vec` region (linear) gives it back; the planar read-back is covered by the DOS run (T9), because the mock region is plain memory.
 
 **Depends on**: T1. **Parallel with**: T4. **Labels**: `enhancement`, `shell`, `graphics`, `compositor`, `rust`.
@@ -164,7 +164,7 @@ Two tasks in the same wave touch shared files: T1 and T2 both edit `shell/Cargo.
 
 **Acceptance.**
 
-- The parser accepts the example scenario in the design and gives the steps it lists; each malformed line (unknown command, missing argument, bad number, unterminated string, a name of nine characters or with a capital, a frame name used twice, `screen` after a step, a key name that is not a `KeyCode`) is an error naming its line; `type` expands to key events with Shift for capitals; the parser is `no_std` (built by the cross step).
+- The parser accepts the example scenario in the design and gives the steps it lists; each malformed line (unknown command, missing argument, bad number, unterminated string, a name of nine characters or with a capital, a frame name used twice or one that is a prefix of another, `expect-damage` without a depth, `screen` after a step, a key name that is not a `KeyCode`) is an error naming its line; `type` expands to key events with Shift for capitals; the parser is `no_std` (built by the cross step).
 - `frames.py`: a PNG written then read gives the same indices and palette; a PPM of known colours gives the expected colour digest, and the same picture as RAW plus PAL gives the same colour digest (the six-bit comparison holds for both `v << 2 | v >> 4` and QEMU-style expansions, tested with both); `check` passes on matching captures and fails, with a diff PNG and the bounding box, on a one-pixel change; names match without case; `transcript` finds a changed digest; `inject` on the example gives one `wait shell: ready NAME`, `screendump {out}/NAME.ppm`, `sendkey spc` triple per frame after `wait input: ready`, in the format `tools/native-inject.py` reads.
 - The CRC-32 in `frames.py` is `zlib.crc32`, and a test checks it against the Rust `crc32` values T1's tests use.
 
@@ -205,7 +205,7 @@ Two tasks in the same wave touch shared files: T1 and T2 both edit `shell/Cargo.
 - `tools/shell-goldens.sh` re-records from clean and leaves no diff.
 - `python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window` passes.
 - The PNGs are looked at: halo rings, hairline, title text, control icons, field and caret, cursor; the PR shows them.
-- The `expect-damage` step after the cursor move passes.
+- The `expect-damage` steps after the cursor move pass at both depths (456 pixels at 8, 608 at 4).
 
 **Depends on**: T3, T7. **Parallel with**: nothing (wave 5). **Labels**: `enhancement`, `testing`, `shell`, `graphics`.
 
@@ -228,13 +228,13 @@ Two tasks in the same wave touch shared files: T1 and T2 both edit `shell/Cargo.
 
 **Depends on**: T8. **Parallel with**: T10. **Labels**: `enhancement`, `dos`, `shell`, `graphics`, `rust`.
 
-**Risks.** The 300 KiB back buffer comes from `rt`'s heap, which grows by at least the request (`rt::heap::grow`), so it should be one DPMI allocation; confirm it in DOSBox. DOSBox's `cputype = 486` rejects `cmpxchg`, which the shell never emits (the clippy ban), but a dependency's code could: check the disassembly for `cmpxchg` once, as spike H did. The scenario's `dump` writes about 600 KiB a frame through INT 21h; if the run nears `DOS_TIMEOUT`, dump only the frames the check needs.
+**Risks.** The 300 KiB back buffer comes from `rt`'s heap, which grows by at least the request (`rt::heap::grow`), so it should be one DPMI allocation; confirm it in DOSBox. DOSBox's `cputype = 486` rejects `cmpxchg`, which the shell never emits (the clippy ban), but a dependency's code could: check the disassembly for `cmpxchg` once, as spike H did. The scenario's `dump` writes about 300 KiB a frame (the 307,200-byte `RAW` and the 768-byte `PAL`) through INT 21h; if the run nears `DOS_TIMEOUT`, dump only the frames the check needs.
 
 ## T10. Native wiring: the kernel's shell mode in QEMU
 
 **Goal.** The shell running in the native kernel at both depths, its QEMU screendumps equal to the goldens, in `tools/native-test.sh`.
 
-**Files.** `kernel/Cargo.toml` and `kernel/Cargo.lock` (path dependencies on the shell crates and `desk-present`), `kernel/src/main.rs` (test modes `Shell = 13` and `ShellCorrupt = 14`), `kernel/src/shell.rs`, `kernel/src/gfx.rs` (make `rendezvous` and `lfb_region` usable from `shell.rs`), `tools/native-image.sh` (`--test-mode shell`, `shell-corrupt`), `tools/native-test.sh` (a "Shell: first window" section), `tests/native/expected-shell-8.txt`, `tests/native/expected-shell-4.txt`. `docs/NATIVE-BOOT.md`: the new test modes. `docs/RUST-TARGETS.md`: the native wiring in the spikes table.
+**Files.** `kernel/Cargo.toml` and `kernel/Cargo.lock` (path dependencies on the shell crates and `desk-present`), `kernel/src/main.rs` (test modes `Shell = 13` and `ShellCorrupt = 14`), `kernel/src/shell.rs`, `kernel/src/gfx.rs` (make `rendezvous` and `lfb_region` usable from `shell.rs`; `rendezvous` takes the marker's prefix, since it prints `gfx: ready` today), `tools/native-image.sh` (`--test-mode shell`, `shell-corrupt`), `tools/native-test.sh` (a "Shell: first window" section), `tests/native/expected-shell-8.txt`, `tests/native/expected-shell-4.txt`. `docs/NATIVE-BOOT.md`: the new test modes. `docs/RUST-TARGETS.md`: the native wiring in the spikes table.
 
 **What `shell.rs` does.** As [`FIRST-WINDOW.md`](FIRST-WINDOW.md#native-the-kernels-shell-test-mode-in-qemu): depth 8 over the loader's linear frame buffer when there is one, otherwise mode 12h by registers at depth 4; the palette through `desk_vga::dac::set_palette`; the embedded fonts and scenario; at each frame the digests, `shell: ready NAME` and the rendezvous; `shell: done`, then text mode as the `gfx` tour restores it. `shell-corrupt` flips one pixel after the `moved` frame.
 

@@ -248,7 +248,7 @@ pub trait PlaneSink {
 
 /// Capture: the frame buffer read back as indices, through desk-vga's Linear8 or Planar16 read_row, for the DOS dumps.
 pub fn read_back_linear(region: &mut MmioRegion, width: u32, height: u32, pitch: u32, out: &mut [u8]) -> Result<(), HalError>;
-pub fn read_back_planar<P: PortIo>(ports: &P, region: &mut MmioRegion, width: u32, height: u32, out: &mut [u8]) -> Result<(), HalError>;
+pub fn read_back_planar<P: PortIo>(ports: &P, region: &mut MmioRegion, width: u32, height: u32, pitch: u32, out: &mut [u8]) -> Result<(), HalError>;
 ```
 
 - **Planar `begin`** sets, every frame, everything the spans rely on: graphics controller mode (write mode 0), data rotate 0 with replace, enable set/reset 0 (so the CPU byte is written), bit mask `FFh`. It must not trust earlier state: `desk_vga::Planar16` (used by the read-back) turns set/reset on while it lives. Each span then does, for each plane, one sequencer map-mask write (`1 << p`) and one `write_bytes` of `width / 8` bytes; `end` restores the map mask to `0Fh`.
@@ -339,7 +339,7 @@ All measurements are from the window's **outer box** `(x, y, w, h)`, which exclu
 | Halo ring 1, focused | the 1-pixel ring just outside the box, `inflate(1)` minus the box | `Accent` |
 | Halo ring 2, focused | `inflate(2)` minus `inflate(1)` | `Halo2` |
 | Halo ring 3, focused | `inflate(3)` minus `inflate(2)` | `Halo3` |
-| Hairline, unfocused | `inflate(1)` minus the box; rings 2 and 3 are the desktop | `Line` |
+| Hairline, unfocused | `inflate(1)` minus the box; rings 2 and 3 are not painted, so whatever is beneath (the desktop or a lower window) shows | `Line` |
 | Title bar | `(x, y, w, 22)` | `Chrome` |
 | Title text | Desk Title, cell top at `y + 4`, from `x + 8`, cut with `…` to end 8 pixels before the first control box | `Text` focused, `TextSecondary` unfocused |
 | Control boxes | three 18 × 18 at `y + 2`, the close box's right edge at `x + w - 8`, 2 pixels apart: minimise, maximise, close | box: `Chrome` |
@@ -406,7 +406,7 @@ Behaviour and the damage each change reports (the rows are the damage-accounting
 |---|---|
 | Open | the new window's `extent` |
 | Close | the closed window's `extent` |
-| Focus without a change of order (it was already on top) | both windows' title bars and ring areas (`extent` minus `content`) |
+| Focus of the window already on top | none: focus always raises, so the top window is already the focused one |
 | Focus that raises | the raised window's `extent`, and the previously focused window's title bar and rings |
 | Drag by (dx, dy) | old `extent` ∪ new `extent`, merged by `Damage` |
 | A key into a text field | the field's bounds, offset to the screen |
@@ -435,7 +435,7 @@ pub mod scenario {
     pub struct Scenario { pub screen: (u32, u32), pub depths: Vec<Depth>, pub steps: Vec<Step> }
     pub enum Step { Open { name: String, outer: Rect, title: String }, Label { window: String, x: i32, y: i32, text: String },
                     Field { window: String, x: i32, y: i32, width: u32 }, Close(String), Focus(String),
-                    Event(Event), Type(String), Frame(FrameName), ExpectDamage { max_pixels: u32, max_rects: u8 } }
+                    Event(Event), Type(String), Frame(FrameName), ExpectDamage { depth: Depth, max_pixels: u32, max_rects: Option<u8> } }
     pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);
     pub struct ParseError { pub line: u32, pub kind: ParseErrorKind }
     pub fn parse(text: &str) -> Result<Scenario, ParseError>;
@@ -451,7 +451,7 @@ pub mod scenario {
 
 ## The scenario format
 
-A UTF-8 text file, one step per line, `#` starts a comment, blank lines are ignored. Names are 1 to 8 characters of `a-z`, `0-9` and `-`, so a frame's capture can be an 8.3 file on DOS. Numbers are decimal and may be negative where a coordinate allows. Strings are in double quotes with `\"` and `\\`.
+A UTF-8 text file, one step per line, `#` starts a comment, blank lines are ignored. Names are 1 to 8 characters of `a-z`, `0-9` and `-`, so a frame's capture can be an 8.3 file on DOS, and no frame name may be a prefix of another, because the native run's monitor script waits for `shell: ready NAME` by substring. Numbers are decimal and may be negative where a coordinate allows. Strings are in double quotes with `\"` and `\\`.
 
 | Line | Meaning |
 |---|---|
@@ -468,7 +468,7 @@ A UTF-8 text file, one step per line, `#` starts a comment, blank lines are igno
 | `key NAME down` / `key NAME up` | A key by its `desk_hal::KeyCode` name (`A`, `Backspace`, `Enter`, …) |
 | `type "TEXT"` | Each character as a key down and up (`a-z`, `0-9`, space and the punctuation `desk_kbd::char_for` maps without Shift; capitals with Shift) |
 | `frame NAME` | Capture the screen as frame NAME |
-| `expect-damage PIXELS [RECTS]` | The frame just presented wrote at most PIXELS pixels in at most RECTS rectangles (host only) |
+| `expect-damage DEPTH PIXELS [RECTS]` | At DEPTH only, the frame just presented wrote at most PIXELS pixels in at most RECTS rectangles (host only; the bound is per depth because depth 4 widens damage to 8-pixel columns) |
 
 The first window's scenario, as the shell task writes it (the coordinates are its to choose; the goldens are what matters):
 
@@ -485,7 +485,8 @@ pointer 320 240
 frame open
 move 100 60
 frame moved
-expect-damage 456 2
+expect-damage 8 456 2
+expect-damage 4 608 2
 pointer 120 70
 press left
 release left
@@ -505,7 +506,7 @@ release left
 frame closed
 ```
 
-Read as a story: two windows open, Welcome on top and focused with its field; the pointer moves (overlay damage only); a click on Notes' title bar focuses and raises it; a drag moves Notes by (40, 30); a click in Welcome's content focuses it again and "desk" is typed into its field; a click on Welcome's close box (`x + w - 8 - 18` to `x + w - 8`, so 534 to 552, and `y + 2` to `y + 20`) closes it and focuses Notes.
+Read as a story: two windows open, Welcome on top and focused with its field; the pointer moves (overlay damage only: two 12 × 19 rectangles, 456 pixels at depth 8 and 608 at depth 4, where each is widened to two 8-pixel columns); a click on Notes' title bar focuses and raises it; a drag moves Notes by (40, 30); a click in Welcome's content focuses it again and "desk" is typed into its field; a click on Welcome's close box (`x + w - 8 - 18` to `x + w - 8`, so 534 to 552, and `y + 2` to `y + 20`) closes it and focuses Notes.
 
 ## Goldens and frame digests
 
@@ -553,7 +554,7 @@ All in `cargo test` in `shell/`, so `tools/check.sh` runs them:
   - the first frame writes exactly `width × height` pixels; a frame with no events writes none;
   - a cursor move writes at most the area of the old and new 12 × 19 sprite rectangles (456 pixels when they are apart, their bounding box when they overlap), and repaints nothing into the back buffer;
   - at depth 4 the same move writes at most the rectangles widened to 8-pixel columns;
-  - a focus change between two windows that do not overlap writes only their title bars and ring areas;
+  - a focus change that raises a window writes at most the raised window's `extent` plus the previously focused window's title bar and ring areas (`extent` minus `content`), as the damage table says;
   - a drag writes at most the union of the old and new extents, plus the cursor;
   - a key into a field writes at most the field's bounds;
   - `Damage`'s invariants (inside the bounds, disjoint, at most 16, covering) hold over 10,000 random adds from a fixed-seed generator.
