@@ -52,7 +52,7 @@ The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one 
 | `core` | The OS-independent shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
 | `c` | The hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit |
 | `launcher` | `DESK.COM`, the hosted track's real-mode launcher (empty until the handoff spike) |
-| `sdk` | The app interface (empty until the first spike settles how apps load) |
+| `sdk` | The app interface (empty until milestone 2; the first spike settled that apps are DXE3 modules, `docs/S1-DXE3.md`) |
 | `spikes` | Experiments that decide the architecture |
 | `tests/dos` | Test programs of our own for the headless DOS runs |
 | `fonts` | The four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), the emoji, and their build into OTF, TTF, `.DFN` and `.DEM` files ([`docs/FONTS.md`](docs/FONTS.md), [`docs/EMOJI.md`](docs/EMOJI.md)); the fonts are under the SIL Open Font License 1.1 |

@@ -1,0 +1,6 @@
+host: dlopen HELLO.DXE failed: unresolved symbol: _desk_free
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='late' window=1 events=7
+  log> hello: stop app=1 events=7 kept=0
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: noreg ok, the failed dlopen left nothing behind

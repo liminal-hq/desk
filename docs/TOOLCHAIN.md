@@ -62,7 +62,7 @@ i586-pc-msdosdjgpp-gcc      c/main.c c/out.c c/panic.c + the archive
 dist/DESK.EXE  +  dist/CWSDPMI.EXE
 ```
 
-`tools/build.sh` is the reference and is short. The cargo options live in `core/.cargo/config.toml` (`build-std = ["core", "alloc", "compiler_builtins"]`, `json-target-spec = true`, `target = "dos.json"`), and the script sets `RUSTC_BOOTSTRAP=1` for that one command so the pinned stable toolchain accepts them. `core/` is its own cargo workspace because that config makes `dos.json` the default target for everything beneath it. The profile is `opt-level = "s"`, LTO and one codegen unit, so the static library holds one object for all the Rust code.
+`tools/build.sh` is the reference and is short. Apps add one step, `dxe3gen`, which turns a converted static library into a loadable `.DXE` module; that pipeline and its limits are in [`S1-DXE3.md`](S1-DXE3.md), and `tools/check.sh` runs it after the skeleton. The cargo options live in `core/.cargo/config.toml` (`build-std = ["core", "alloc", "compiler_builtins"]`, `json-target-spec = true`, `target = "dos.json"`), and the script sets `RUSTC_BOOTSTRAP=1` for that one command so the pinned stable toolchain accepts them. `core/` is its own cargo workspace because that config makes `dos.json` the default target for everything beneath it. The profile is `opt-level = "s"`, LTO and one codegen unit, so the static library holds one object for all the Rust code.
 
 Cargo downloads a few crates (`libc`, `gimli` and others) because the standard library sources have dependencies of their own; the build needs network access the first time, and `Cargo.lock` is committed and used with `--locked`.
 

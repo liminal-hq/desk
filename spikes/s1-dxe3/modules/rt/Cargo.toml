@@ -1,0 +1,12 @@
+[package]
+name = "rt"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0 OR MIT"
+
+# What every module shares: the allocator, the panic handler, the callbacks into the core and the three entry points.
+[features]
+# Route b: the core passes a table of function pointers to app_start. Without it, route a: the core's functions are imported by
+# name and resolved by dlopen from the table the core registered with dlregsym.
+route-b = []

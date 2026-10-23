@@ -1,0 +1,16 @@
+host: fault div, signal handlers on
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='good' window=1 events=7
+  log> crash: start app=2
+  log> hello[1]: event 8 kind=1 x=1 y=1
+  log> crash: dividing by zero
+host: module CRASH crashed: fault: SIGFPE (289)
+host: survived the fault, state crashed
+host: unloaded CRASH (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  log> hello[1]: event 9 kind=2 x=2 y=2
+  log> counter: start app=3 events=100
+  log> counter: stop app=3 events=101 sum=5.0 mean=5.000 sqrt=2.2361
+host: unloaded COUNTER (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  log> hello: stop app=1 events=9 kept=2
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: fault div recovered, the core kept running

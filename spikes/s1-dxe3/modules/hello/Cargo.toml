@@ -1,0 +1,16 @@
+[package]
+name = "hello"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0 OR MIT"
+
+# A static library: spikes/s1-dxe3/build.sh converts it and dxe3gen turns it into a .DXE.
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+rt = { path = "../rt" }
+
+[features]
+route-b = ["rt/route-b"]

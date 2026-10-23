@@ -158,9 +158,9 @@ Exit to DOS writes no `DESK.RUN`; `DESK.COM` then exits too. `docs/HANDOFF.md` h
 - The prototype mirrors this: each app is its own component (`NotesApp`, `MidiApp`, `PaintApp`, `CalcApp`, `ClockApp`, `InspectorApp`, `ProgramsApp`, `SettingsApp`, `DeskFiles`, `DeskProperties`) that only talks to the Desk through one `ops` object, built from the shared `DeskMenuBar`, `DeskToolbar`, `DeskTabs`, `DeskPicker` and `FileIcon`.
 - Apps can be written in Rust (`no_std` + `alloc`, the `dos.json` target from Fizz) or C.
 - Only integers, pointers and lengths cross the boundary, never structs passed by value (the rule from Fizz's `RUST_ON_DOS.md`).
-- An app that panics is unloaded and its windows closed, with a toast. The Desk keeps running.
+- An app that panics is unloaded and its windows closed, with a toast. The Desk keeps running. The core wraps every call into an app in `setjmp`; a panic, or a CPU fault caught by a signal handler, jumps back to that frame, and the core unloads the module and frees the memory it held. It is not a sandbox: a stack overflow in an app takes the Desk down, and apps share the core's address space.
 
-**Risk:** Rust objects reach DXE3 through `coff2go32.py` and DJGPP's `dxe3gen`. This is the first spike. If it fails, apps are compiled into the core and installing an app becomes enabling it.
+**Risk (spike `s1-dxe3`, done; `docs/S1-DXE3.md`):** Rust objects reach DXE3 through `coff2go32.py` and DJGPP's `dxe3gen`, and it works: a Rust `no_std` module loads with `dlopen`, calls back into the core through names registered with `dlregsym`, panics without taking the core down, and loads and unloads 200 times with memory unchanged. The limits: LTO is required, one `.DXE` is one instance, a stack overflow in an app cannot be recovered, and page faults could be run only under QEMU (DOSBox Staging aborts on them), not on hardware. If real hardware disagrees, apps are compiled into the core and installing an app becomes enabling it.
 
 ## Installing the Desk
 
@@ -199,14 +199,14 @@ All names are 8.3.
 ## Build and test
 
 - Built in CI on `ghcr.io/liminal-hq/ci-dos`, pinned by digest. The tool versions (Rust, DJGPP, DOSBox Staging, CWSDPMI) are whatever the image carries; `rust-toolchain.toml` pins Rust.
-- The pipeline proved by Fizz DOS (to be re-derived and simplified here): `cargo build -Zbuild-std` for `dos.json`, `coff2go32.py`, link with `i586-pc-msdosdjgpp-gcc`, plus `dxe3gen` for apps.
+- The pipeline proved by Fizz DOS and re-derived in `docs/TOOLCHAIN.md`: `cargo build -Zbuild-std` for `dos.json`, `coff2go32.py`, link with `i586-pc-msdosdjgpp-gcc`. Apps add `dxe3gen`, with the exact commands in `docs/S1-DXE3.md`.
 - **Headless tests** through `dosrun.sh`: the core starts, loads each app, opens and closes its window, and writes a frame checksum of the desktop in both colour depths. A scripted input file drives the mouse and keyboard.
 - **A native bench**, as Fizz DOS's `m5/bench`: the compositor and widgets built for `i586-unknown-linux-gnu` to count instructions per redraw.
 - **Release artefacts**: `-core.img` and `-apps.img` floppy images, the same as zips, a DOSBox demo zip, a `.jsdos` bundle, `SHA256SUMS`.
 
 ## Milestones
 
-1. **Spikes**: VBE 2.0 linear frame buffer and mode 12h from Rust; INT 33h; a Rust DXE3 module that calls back into the core.
+1. **Spikes**: VBE 2.0 linear frame buffer and mode 12h from Rust; INT 33h; a Rust DXE3 module that calls back into the core (done, with the limits above; `docs/S1-DXE3.md`).
 2. **Shell**: compositor, windows, launcher bar, cursor, keyboard focus, both looks.
 3. **Handoff**: `DESK.COM`, `DESK.RUN`, resume; run FIZZ.EXE and come back.
 4. **Core apps**: Files, Programs (folders and `.DAP`), Settings.

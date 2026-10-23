@@ -6,7 +6,7 @@ What was open before scaffolding `liminal-hq/desk`, and what was decided. The re
 
 | Question | Decision | Changes |
 |---|---|---|
-| Rust code as DXE3 modules (`coff2go32` → `dxe3gen` → `dlopen`, with calls back into the core) | **Decide after the spike.** It is milestone 1, before any app code. The fallbacks on the table are: build apps into the core; write apps in C against the SDK; separate EXEs. | The `apps/` layout and the SDK crate. Keep both possible until the spike passes. |
+| Rust code as DXE3 modules (`coff2go32` → `dxe3gen` → `dlopen`, with calls back into the core) | **Yes, with limits (spike `s1-dxe3`, `S1-DXE3.md`).** Optional apps are `.DXE` modules that import `desk_*` by name from a table the core registers with `dlregsym` (route a). Function-pointer tables passed to `app_start` (route b) work too and stay the fallback. LTO is required; one file is one instance; a stack overflow in an app is not recoverable. The core's own apps may be linked in instead of loaded (a milestone 4 choice). Not needed: apps built into the core, C apps only, separate EXEs. | `apps/` is one Cargo workspace with a crate per app; `sdk/` holds the app-side crate (allocator, panic handler, `desk_app!`) and `desk.h`; `tools/build-app.sh` (to be added) generalises the spike's build. `SDK.md` and `FORMATS.md` corrected. |
 | js-dos and the VESA linear frame buffer | **Ship DOSBox-only until it works.** The browser build waits; nothing is forked or patched yet. | Release artefacts: no `.jsdos` bundle in 0.1 unless the spike shows the LFB working. |
 | Games that need EMS | **DESK.COM loads an EMS driver for that program, as its `.DIF` asks.** `[needs] ems=yes` makes DESK.COM run `JEMMEX` before the program and unload it after. | `.DIF` gains `ems=`; HANDOFF gains a step; `JEMMEX.EXE` (GPL, separate binary) ships beside DESK.COM. |
 
@@ -45,13 +45,13 @@ What was open before scaffolding `liminal-hq/desk`, and what was decided. The re
 
 Done: `tools/check.sh` builds a program from Rust (`core/`, `no_std` with `alloc`) and C (`c/`, DJGPP), links it into `DESK.EXE` and runs it under headless DOSBox Staging, in CI and locally. It proves the target specification, the object converter, the allocator and panic glue, an x87 operation, exit-status propagation and the headless run, and it records what changed from Fizz DOS in `TOOLCHAIN.md`. It does not touch the open questions below: no module loading, no video, no input.
 
-The next spike is `s1-dxe3` (milestone 1): can Rust code run as a DXE3 module that calls back into the core? It starts from `tools/coff2go32.py`, which the module build will need to extend, and from the same `tools/check.sh` run.
+The first spike, `s1-dxe3`, is done: Rust runs as a DXE3 module that calls back into the core, and the converter needed no change. The result, the commands and the limits are in [`S1-DXE3.md`](S1-DXE3.md); the next spike is `s2-vbe`.
 
 ## Still open
 
 Hosted track:
 
-- Which Rust/DXE route wins (after the spike).
+- Whether the page-fault recovery (`SIGSEGV` from a null write in an app) and the unrecoverable stack overflow behave on real hardware and on DPMI hosts other than CWSDPMI r7; DOSBox Staging cannot run them and QEMU was used (after the spike).
 - Whether the browser build uses mode 12h or waits for the LFB (after the js-dos spike).
 - Whether the four bitmap faces drafted in `fonts/` (see `FONTS.md`) are the ones that ship: they have not been seen on a DOS screen yet, and the 6×8 face is the one to check first.
 - Whether Desk reads real TrueType files so any font can be used, and how (the section below).

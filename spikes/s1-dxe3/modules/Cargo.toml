@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["rt", "hello", "counter", "crash"]
+
+# Its own workspace for the same reason core/ is: .cargo/config.toml makes the DOS target the default for everything below it.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 0
