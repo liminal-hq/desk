@@ -45,6 +45,7 @@ python3 -m http.server -d dist/progress-report 8000                            #
 | `snapshots/` | `gh.json` (a snapshot of `gh` data for offline runs) and `measured.json` (numbers that need a build to measure, with the command) |
 | `media/` | A captured serial transcript and screenshot of the native boot (how they were made is in `snapshots/measured.json`), and the files copied from other branches, listed in `captures.json` |
 | `manual.py`, `manual/` | The Manual: `plan.json` (parts, chapters, both reading orders, the task index), `MNN-id.md` (one file per chapter), `explainers/*.py` (one module per manual explainer), and the code that loads, checks and draws them |
+| `manual_maps.py` | The tables of appendix B (memory while booting, ports, IRQ lines and vectors, exception vectors, BIOS calls, exit statuses, test modes), read from the files that hold the numbers, each row with a proof that a test checks |
 | `pages/manual-preface.md` | The archivist's preface on `manual.html` |
 | `pages/front.md`, `pages/coming.json` | The text at the top of the front page, and the chapters that are expected and not written, which show as "coming" rows |
 | `templates/site.css`, `templates/site.js` | Shared style and behaviour |

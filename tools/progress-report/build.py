@@ -30,6 +30,7 @@ import explainers_hw as hw  # noqa: E402
 import figures  # noqa: E402
 import gather  # noqa: E402
 import manual  # noqa: E402
+import manual_maps as maps  # noqa: E402
 import mdlite  # noqa: E402
 from mdlite import Ctx, esc, inline  # noqa: E402
 
@@ -621,9 +622,12 @@ class Site:
                 ("<ul>%s</ul>" % s1) if s1 else '<p class="sub">No sidebar has cited a source yet.</p>', ("<ul>%s</ul>" % s2) if s2 else '<p class="sub">No chapter has linked a design document yet.</p>')
             lead = "Every source a &#8220;From the stacks&#8221; sidebar cites, and every design document a chapter links. A sidebar is background history and is never evidence."
         else:
-            inner = ('<p class="sub col">Reference tables in one place: physical memory while booting and after, the I/O ports the code touches, IRQ lines and interrupt vectors, the BIOS calls made and by whom, the exit statuses of every runner, and the test modes. '
-                     'Each table will cite the source file it was read from, and the ones a script can read will be generated from it. None has been generated yet.</p>')
-            lead = "Maps and numbers: the tables a contributor looks up. Not written yet."
+            tbls = maps.tables()
+            problems = maps.check(tbls)
+            if problems:
+                raise mdlite.MdError("appendix B: " + "; ".join(problems))
+            inner = maps.html(tbls, esc, ctx.href)
+            lead = "Maps and numbers: the tables a contributor looks up, read from the files that hold the numbers. Each says which file, and the build refuses a table whose numbers are no longer there."
         body = ('%s<main id="main" class="wrap chapter manual"><article><header class="chead"><div class="eyebrow">Manual · Appendix</div><h1>%s</h1><p class="lead">%s</p></header><div class="prose">%s</div></article></main>') % (
             site_header("", self.ids + self.extra_ids()), esc(a["title"]), lead, inner)
         return a["id"] + ".html", document("%s · %s" % (TITLE, a["title"]), body + site_footer(self.data, None, None))
