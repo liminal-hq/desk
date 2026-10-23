@@ -22,6 +22,7 @@ mod pit;
 mod serial;
 mod sync;
 mod vga;
+mod video;
 
 use alloc::format;
 use alloc::string::String;
@@ -69,7 +70,12 @@ pub struct BootInfo {
     test_mode: u32,
     map_source: u32,
     map_count: u32,
-    _reserved: [u32; 3],
+    /// Boot information version: 1 adds the next two fields (they were reserved before, and the loader did not write them).
+    version: u32,
+    /// Address of the 32-byte video block (see `video.rs`), 0 for none.
+    video: u32,
+    /// Address of the BIOS 8x16 font (4096 bytes), 0 for none.
+    font: u32,
     // E820-style entries follow at offset 32.
 }
 
@@ -140,6 +146,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     assert_eq!(memory::free_frames(), free_before);
     println!("frames: alloc and free of two frames ok");
     heap::init();
+    let video = video::init(info);
 
     let v: Vec<u32> = (1..=10).map(|x| x * x).collect();
     let sum: u32 = v.iter().sum();
@@ -161,6 +168,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     fpu::init();
     fpu::demo();
 
+    let _ = &video;
     run_test_mode(mode);
     input_section(mode);
     println!("boot complete");
