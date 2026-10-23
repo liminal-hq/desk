@@ -112,7 +112,7 @@ def tables(root=None):
              ("INT 10h AX=1130h", "The address of the 8x16 font", "boot/stage2.asm", "stage 2", "int 0x10", "mov ax, 0x1130"),
              ("INT 10h AX=4F00h / 4F01h / 4F02h", "VBE controller information, mode information, set mode", "boot/stage2.asm", "stage 2", "int 0x10", "mov ax, 0x4F02")]
     rows = [[c[0], c[1], c[3], c[2], (c[2], c[4]), (c[2], c[5])] for c in calls]
-    rows += [["INT 10h, 13h, 15h, 1Ah by a real-mode trampoline", "The kernel's `bios::call` for VBE, disk, memory and time", "the kernel", "kernel/src/bios.rs", ("kernel/src/bios.rs", "pub fn call"), ("kernel/bios16.asm", "int")]]
+    rows += [["INT 10h, 13h, 15h, 1Ah by a real-mode trampoline", "The kernel's bios::call, for VBE, disk, memory and time", "the kernel", "kernel/src/bios.rs", ("kernel/src/bios.rs", "pub fn call"), ("kernel/bios16.asm", "int")]]
     out.append({"id": "bios", "title": "The BIOS calls made, and by whom", "source": "boot/stage1.asm, boot/stage2.asm, kernel/src/bios.rs", "head": ["Call", "What for", "Made by", "In"], "rows": rows})
 
     # ---- exit statuses
@@ -138,7 +138,9 @@ def tables(root=None):
     rows = []
     for variant, n in enum:
         name = codes[int(n)]
-        files = [f for f in expected if f[len("expected-"):-4] == name or f[len("expected-"):-4].startswith(name + "-")]
+        longer = [m for m in codes.values() if len(m) > len(name) and m.startswith(name + "-")]
+        files = [f for f in expected if (f[len("expected-"):-4] == name or f[len("expected-"):-4].startswith(name + "-"))
+                 and not any(f[len("expected-"):-4] == m or f[len("expected-"):-4].startswith(m + "-") for m in longer)]
         rows.append([n, name, variant, ", ".join(files) if files else ("none" if name != "none" else "expected.txt"), ("kernel/src/main.rs", "%s = %s," % (variant, n))])
     out.append({"id": "modes", "title": "Test modes of the native kernel", "source": "kernel/src/main.rs, tools/native-image.sh, tests/native/", "head": ["No.", "Name", "Variant", "Expected transcript"], "rows": rows})
     return out

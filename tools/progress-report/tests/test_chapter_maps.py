@@ -32,6 +32,9 @@ class MapsTests(unittest.TestCase):
         modes = [(r[0], r[1], r[2]) for r in self.t["modes"]["rows"]]
         self.assertEqual(modes[0], ("0", "none", "Normal"))
         self.assertEqual(modes[14], ("14", "shell-corrupt", "ShellCorrupt"))
+        files = {r[1]: r[3] for r in self.t["modes"]["rows"]}
+        self.assertEqual(files["input"], "expected-input.txt", "a longer mode name (input-masked) does not lend its file to a shorter one")
+        self.assertEqual(files["input-masked"], "expected-input-masked.txt")
         vec = {r[0]: r for r in self.t["irq"]["rows"]}
         self.assertEqual((vec["0"][2], vec["0"][3], vec["12"][2], vec["12"][3]), ("0x20", "0x08", "0x2C", "0x74"))
         self.assertIn(["0x00", "divide error", "no"], [r[:3] for r in self.t["exceptions"]["rows"]])
