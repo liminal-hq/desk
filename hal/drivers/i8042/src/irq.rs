@@ -101,7 +101,12 @@ impl<P: PortIo + Send + 'static> IrqService for KbdIrq<P> {
                     let _ = self.tx.push(byte);
                     IrqStats::bump(&self.stats.kbd_bytes);
                 }
-                Some(Err(())) => IrqStats::bump(&self.stats.kbd_errors),
+                Some(Err(())) => {
+                    IrqStats::bump(&self.stats.kbd_errors);
+                    // Tell the decoder a byte is missing (0xFF is the keyboard's own error code) so a half-received `E0` or Pause
+                    // sequence is dropped instead of misreading the next key.
+                    let _ = self.tx.push(0xFF);
+                }
             }
         }
     }

@@ -35,4 +35,4 @@ mouse: dx=0 dy=0 buttons=4 wheel=0
 mouse: dx=0 dy=0 buttons=0 wheel=0
 
 KERNEL PANIC: panicked at src/input.rs:{N:1..9999}:{N:1..200}:
-input: no Escape within 300 ticks (0 key events, 8 mouse events)
+input: no Escape within 500 ticks (0 key events, 8 mouse events)

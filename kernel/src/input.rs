@@ -29,22 +29,33 @@ pub enum Fault {
 
 /// Brings up the controller and both devices, registers the handlers and unmasks the lines. Prints one line per step. A missing
 /// device is reported and skipped, not fatal: a machine may have only a keyboard.
-pub fn init(fault: Fault) -> Ps2Input {
+///
+/// `None` when the controller itself fails its set-up: a machine without a working 8042 still boots, without input.
+pub fn init(fault: Fault) -> Option<Ps2Input> {
     let ctl = I8042::new(PORTS);
-    let info = ctl.init().expect("8042 controller set-up");
+    let info = match ctl.init() {
+        Ok(info) => info,
+        Err(e) => {
+            println!("input: controller unavailable: {}", e);
+            return None;
+        }
+    };
     println!(
         "input: 8042 {} channel, translation {}",
         if info.dual_channel { "dual" } else { "single" },
         if info.translation { "on" } else { "off" }
     );
-    let kbd = ctl.init_keyboard(info);
+    // A keyboard that could not be put in scancode set 1 would feed the decoder bytes it cannot read, so it counts as unavailable.
+    let kbd = ctl.init_keyboard(info).map(|k| k.set1.then_some(k));
     match kbd {
-        Ok(k) => println!(
+        Ok(Some(k)) => println!(
             "input: keyboard ready, scancode set 1 {}",
             if k.translated { "translated by the controller" } else { "selected on the keyboard" }
         ),
+        Ok(None) => println!("input: keyboard unavailable: scancode set 1 could not be selected"),
         Err(e) => println!("input: keyboard unavailable: {}", e),
     }
+    let kbd_ok = matches!(kbd, Ok(Some(_)));
     let mouse = if info.dual_channel { ctl.init_mouse(true) } else { Err(desk_i8042::Error::NoDevice) };
     match mouse {
         Ok(m) => println!("input: mouse ready, id {} ({}-byte packets)", m.id, m.packet_len()),
@@ -56,17 +67,22 @@ pub fn init(fault: Fault) -> Ps2Input {
     let wheel = mouse.is_ok_and(|m| m.id == 3);
     let kbd_irq = Box::leak(Box::new(KbdIrq::new(PORTS, ktx, &STATS)));
     let mouse_irq = Box::leak(Box::new(MouseIrq::new(PORTS, mtx, &STATS, wheel)));
-    IRQS.register(Irq::KEYBOARD, IrqHandler::from_static(kbd_irq), Chain::None).expect("IRQ 1 is free");
-    IRQS.register(Irq::MOUSE, IrqHandler::from_static(mouse_irq), Chain::None).expect("IRQ 12 is free");
-    if fault != Fault::KeyboardMasked && kbd.is_ok() {
-        crate::pic::unmask(Irq::KEYBOARD);
+    // Registering a handler unmasks its line; a device that is not there gets none, and the negative test masks IRQ 1 again.
+    if kbd_ok {
+        IRQS.register(Irq::KEYBOARD, IrqHandler::from_static(kbd_irq), Chain::None).expect("IRQ 1 is free");
+        if fault == Fault::KeyboardMasked {
+            crate::pic::mask(Irq::KEYBOARD);
+        }
     }
     if mouse.is_ok() {
-        crate::pic::unmask(Irq::MOUSE);
+        IRQS.register(Irq::MOUSE, IrqHandler::from_static(mouse_irq), Chain::None).expect("IRQ 12 is free");
     }
-    ctl.set_interrupts(kbd.is_ok(), mouse.is_ok()).expect("enabling the controller's interrupts");
+    // A byte that arrived since the set-up would sit in the output buffer, and a controller may raise no interrupt for a byte
+    // that was already there when the interrupts were enabled. Drop it so the next byte raises the edge.
+    ctl.flush();
+    ctl.set_interrupts(kbd_ok, mouse.is_ok()).expect("enabling the controller's interrupts");
     println!("input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on");
-    Ps2Input::new(krx, mrx)
+    Some(Ps2Input::new(krx, mrx))
 }
 
 fn modifier_names(m: Modifiers) -> alloc::string::String {

@@ -433,8 +433,7 @@ impl<P: PortIo> I8042<P> {
             if id != 3 {
                 id = 0;
             }
-        }
-        if id == 3 {
+            // The probe left the sample rate at 80 whether or not the mouse took the hint.
             self.device_command_with(true, device::SET_RATE, 100)?;
         }
         self.device_byte(true, device::ENABLE)?;

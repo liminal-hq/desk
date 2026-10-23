@@ -193,10 +193,15 @@ fn timer_demo() {
 /// masked so the wait must fail, and `InputIdle` waits long enough that the run script's watchdog ends the run.
 fn input_section(mode: TestMode) {
     let fault = if mode == TestMode::InputMasked { input::Fault::KeyboardMasked } else { input::Fault::None };
-    let mut ps2 = input::init(fault);
+    let Some(mut ps2) = input::init(fault) else {
+        if mode == TestMode::Normal {
+            return;
+        }
+        panic!("input: no keyboard controller, so the input test cannot run");
+    };
     let timeout_ticks = match mode {
         TestMode::Input => 1500,
-        TestMode::InputMasked => 300,
+        TestMode::InputMasked => 500,
         TestMode::InputIdle => 100_000,
         _ => return,
     };

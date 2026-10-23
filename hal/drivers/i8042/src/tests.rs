@@ -377,6 +377,13 @@ fn a_mouse_without_a_wheel_answers_the_probe_with_id_0() {
 }
 
 #[test]
+fn a_mouse_without_a_wheel_gets_its_sample_rate_back_after_the_probe() {
+    let (bus, model) = rig(I8042Model::new());
+    I8042::new(&bus).init_mouse(true).unwrap();
+    assert_eq!(model.borrow().mouse.sample_rate, 100);
+}
+
+#[test]
 fn a_missing_mouse_is_no_device_and_one_that_asks_for_resends_is_retried() {
     let mut m = I8042Model::new();
     m.mouse.knobs.absent = true;
@@ -826,6 +833,7 @@ fn bytes_flagged_with_a_link_error_are_dropped_and_counted() {
     let mut kbd = KbdIrq::new(Bus(bus), tx, stats);
     kbd.on_irq();
     assert!(bus.script_done());
+    assert_eq!(rx.pop(), Some(0xFF), "the decoder is told a byte is missing");
     assert_eq!(rx.pop(), None);
     assert_eq!(IrqStats::get(&stats.kbd_errors), 1);
 }

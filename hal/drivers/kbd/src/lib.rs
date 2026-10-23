@@ -117,6 +117,8 @@ impl Decoder {
             State::Extended => {
                 self.state = State::Idle;
                 match byte {
+                    // The error marker the driver queues for a byte the link flagged bad: the sequence is lost.
+                    0xFF => None,
                     // Another prefix straight after a prefix: start over with the new one.
                     EXTENDED => {
                         self.state = State::Extended;
@@ -133,6 +135,10 @@ impl Decoder {
                 }
             }
             State::Pause(done) => {
+                if byte == 0xFF {
+                    self.state = State::Idle;
+                    return None;
+                }
                 if byte == PAUSE_TAIL[usize::from(done)] {
                     if usize::from(done) + 1 == PAUSE_TAIL.len() {
                         self.state = State::Idle;
@@ -600,6 +606,20 @@ mod tests {
         assert_eq!(d.feed(0xE1), None);
         assert_eq!(d.feed(0xE0), None);
         assert_eq!(d.feed(0x48).unwrap().code, KeyCode::Up);
+    }
+
+    #[test]
+    fn an_error_marker_inside_a_sequence_drops_the_sequence() {
+        let mut d = Decoder::new();
+        // E0, then a lost byte: the next key is read on its own, not as an extended key.
+        assert_eq!(
+            feed_all(&mut d, &[0xE0, 0xFF, 0x48]),
+            [ev(KeyCode::Kp8, true, Modifiers::NONE)]
+        );
+        assert_eq!(
+            feed_all(&mut d, &[0xE1, 0x1D, 0xFF, 0x1E]),
+            [ev(KeyCode::A, true, Modifiers::NONE)]
+        );
     }
 
     #[test]

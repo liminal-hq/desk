@@ -36,7 +36,7 @@ unsafe impl Sync for IrqTable {}
 pub static IRQS: IrqTable = IrqTable { handlers: UnsafeCell::new([None; 16]) };
 
 impl IrqRegistry for IrqTable {
-    /// Installs the handler and the IDT gate for the line. The kernel always sends the end-of-interrupt itself, so only
+    /// Installs the handler and the IDT gate for the line and unmasks it (and the cascade, for IRQ 8 to 15). The kernel always sends the end-of-interrupt itself, so only
     /// `Chain::None` is accepted. `Busy` if the line already has a handler.
     fn register(&self, irq: Irq, handler: IrqHandler, chain: Chain) -> Result<(), HalError> {
         if chain != Chain::None {
@@ -51,6 +51,8 @@ impl IrqRegistry for IrqTable {
             }
             *slot = Some(handler);
             idt::set_irq_gate(irq.line());
+            // The registry contract: a registered line is live.
+            PIC.unmask(irq);
             Ok(())
         })
     }
@@ -60,7 +62,11 @@ impl IrqRegistry for IrqTable {
             // SAFETY: as in `register`.
             let table = unsafe { &mut *self.handlers.get() };
             match table[usize::from(irq.line())].take() {
-                Some(_) => Ok(()),
+                Some(_) => {
+                    // Natively an unregistered line is masked.
+                    PIC.mask(irq);
+                    Ok(())
+                }
                 None => Err(HalError::InvalidArgument),
             }
         })

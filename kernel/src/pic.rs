@@ -19,7 +19,7 @@ pub fn mask_timer() {
     sync::without_interrupts(|| PIC.mask(Irq::TIMER));
 }
 
-/// Unmasks a line (and, for IRQ 8-15, the cascade).
-pub fn unmask(irq: Irq) {
-    sync::without_interrupts(|| PIC.unmask(irq));
+/// Masks a line.
+pub fn mask(irq: Irq) {
+    sync::without_interrupts(|| PIC.mask(irq));
 }
