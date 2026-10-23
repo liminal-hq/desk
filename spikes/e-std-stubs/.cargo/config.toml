@@ -1,0 +1,16 @@
+# std is built from rust-src for these targets. The options are unstable; check.sh and build.sh set RUSTC_BOOTSTRAP=1 so the pinned
+# stable toolchain accepts them. compiler-builtins-mem supplies memcpy and friends, which nothing else provides without a C library.
+[unstable]
+build-std = ["std", "panic_abort"]
+build-std-features = ["compiler-builtins-mem"]
+json-target-spec = true
+
+# Run cargo from this directory: the linker script path is relative. rust-lld links the ELF; tools/elf2go32.py packs it.
+[target.dos-std]
+rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]
+[target.desk-app]
+rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]
+[target.dos-trusty]
+rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]
+[target.stub-std]
+rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]

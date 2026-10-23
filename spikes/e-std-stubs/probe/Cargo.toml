@@ -1,0 +1,21 @@
+[package]
+name = "probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike E: a std program that exercises the platform layer, linked with the d0 runtime"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt", default-features = false }
+shim = { path = "../shim", optional = true }
+
+[features]
+# Link the libc-style symbols that the `trusty` platform layer of unmodified std expects
+trusty = ["dep:shim", "shim/trusty"]
+# Link the `desk_*` functions that the patched platform layer of std calls
+desk = ["dep:shim", "shim/desk"]
+
+[lints.rust]
+# The "stub" platform of the patched std is one of the operating system names this crate is built for
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("stub"))'] }

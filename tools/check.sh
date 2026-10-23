@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
 # and lints, the HAL's host tests and cross builds, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
-# checks, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
+# checks, the e-std-stubs checks, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
@@ -87,6 +87,9 @@ spikes/s1-dxe3/run.sh
 
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
 spikes/d0-rust-dos/check.sh
+
+step "Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer"
+spikes/e-std-stubs/check.sh
 
 step "Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime"
 spikes/a-vga-vbe/check.sh
