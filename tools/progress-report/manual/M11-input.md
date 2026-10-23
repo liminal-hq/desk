@@ -51,7 +51,7 @@ The second half of the crate is `char_for(code, modifiers)`, a small US key map:
 
 ### The mouse packet
 
-Section after section of the hardware is in M3; here is what the code does with it. A [PS/2 mouse packet](term:ps2-mouse-packet) is three bytes, or four with a wheel. `MouseIrq::feed` takes the stream one byte at a time, because the interrupt cannot wait for the rest. While no packet is in progress, a byte whose bit 3 is clear cannot be a first byte, so it is dropped and counted in `mouse_resyncs`; that is how a stream that lost a byte finds its feet again. When the last byte arrives `decode` builds the event: it refuses the packet if either overflow bit (`0xC0`) is set, because the delta is then meaningless; it takes each delta as a nine-bit two's complement number (the byte minus 256 when the sign bit in byte 0 is set); it negates the vertical delta, since the device counts upward as positive and the screen counts downward; it takes the buttons from bits 0 to 2; and it takes the fourth byte as a signed wheel count, but only if a wheel was negotiated. A byte read with a parity or timeout flag abandons the packet in progress. None of this can be seen from QEMU, which never loses a byte; the resynchronisation is a host test only, and the chapter's state table says so.
+Section after section of the hardware is in M3; here is what the code does with it. A [PS/2 mouse packet](term:ps2-mouse-packet) is three bytes, or four with a wheel. `MouseIrq::feed` takes the stream one byte at a time, because the interrupt cannot wait for the rest. While no packet is in progress, a byte whose bit 3 is clear cannot be a first byte, so it is dropped and counted in `mouse_resyncs`; that is how a stream that lost a byte finds its feet again. When the last byte arrives `decode` builds the event: it refuses the packet if either overflow bit (`0xC0`) is set, because the delta is then meaningless; it takes each delta as a nine-bit two's complement number (the byte minus 256 when the sign bit in byte 0 is set); it negates the vertical delta, since the device counts upward as positive and the screen counts downward; it takes the buttons from bits 0 to 2; and it takes the fourth byte as a signed wheel count, but only if a wheel was negotiated. A byte read with a parity or timeout flag abandons the packet in progress. None of this can be seen from QEMU, which never loses a byte and whose monitor cannot send a malformed packet (`docs/C-INPUT.md`, "Resynchronisation" and "How it is tested"); the resynchronisation is a host test only, and the chapter's state table says so.
 
 ### The event contract
 
@@ -192,18 +192,19 @@ id: input.decoder
 label: The scancode set 1 decoder: extended keys, Pause, fake shifts, modifiers and locks
 state: built-verified
 evidence: test:hal/drivers/kbd/src/lib.rs::the_pause_sequence_is_one_press_and_no_release, test:hal/drivers/kbd/src/lib.rs::fake_shifts_do_not_release_a_real_shift, test:tests/native/expected-input.txt::key: LeftAlt down mods=ctrl+alt, sym:hal/drivers/kbd/src/lib.rs::Decoder
-note: Typematic repeat, the lock-key lights and a real keyboard's timing were not exercised; QEMU's sendkey does not repeat.
+note: Typematic repeat, the lock-key lights and a real keyboard's timing were not exercised; QEMU's sendkey does not repeat (docs/C-INPUT.md, "QEMU against real hardware").
 
 id: input.packet
 label: The PS/2 mouse packet: nine-bit deltas, flipped Y, buttons, wheel and overflow
 state: built-verified
 evidence: test:hal/drivers/i8042/src/tests.rs::packets_decode_with_sign_extension_and_a_flipped_y, test:tests/native/expected-input.txt::mouse: dx=-20 dy=7 buttons=0 wheel=0, sym:hal/drivers/i8042/src/irq.rs::decode
+note: Wheel motion is a host test only: QEMU's monitor cannot send it, so every QEMU line has wheel=0 (docs/C-INPUT.md, "What was and was not verified").
 
 id: input.resync
 label: Resynchronising a mouse stream that lost a byte
 state: built-unverified
 evidence: test:hal/drivers/i8042/src/tests.rs::a_lost_byte_costs_a_packet_or_two_and_then_the_stream_is_back_in_step, sym:hal/drivers/i8042/src/irq.rs::MouseIrq
-note: Runs on the host only, where the test drops a byte on purpose. QEMU never loses one, so nothing in an emulator has exercised it, and the host test is not an emulator run.
+note: Runs on the host only, where the test drops a byte on purpose. QEMU never loses one (docs/C-INPUT.md, "Resynchronisation"), so nothing in an emulator has exercised it, and the host test is not an emulator run.
 
 id: input.ring
 label: The single-producer, single-consumer ring: no lock, no compare-and-swap, drops and counts when full
@@ -231,7 +232,7 @@ id: input.inject
 label: Input injected through the QEMU monitor and compared with a transcript
 state: built-verified
 evidence: sym:tools/native-inject.py::main, repo:tests/native/input.inject, test:tests/native/expected-input.txt::input: ready
-note: QEMU folds a mouse press and release that arrive before the guest reads the previous packet, which is why the script pauses after each mouse command.
+note: QEMU folds a mouse press and release that arrive before the guest reads the previous packet, which is why the script pauses after each mouse command (docs/C-INPUT.md, "How it is tested").
 
 id: input.dos.kbd
 label: The keyboard on DOS: a protected-mode IRQ 1 stub, the shared handler, ring and decoder

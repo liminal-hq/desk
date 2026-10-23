@@ -50,7 +50,7 @@ Mode 12h has one deliberate difference from a BIOS. A BIOS leaves the EGA-compat
 
 ### Where a pixel lives
 
-In mode 13h with chain-4 a pixel is one byte, at `0xA0000 + y × 320 + x`, a surface of 64,000 bytes. `Linear8` is that view over an `MmioRegion` and also over a VBE linear frame buffer: it takes a `width`, a `height` and a [pitch](term:pitch), checks that a row of `pitch` bytes holds the width and that `pitch × height` fits the region, and then the address of a pixel is `y × pitch + x`. The pitch is the number of bytes from the start of one row to the start of the next, and it is not always the width: the information the BIOS reports for VBE mode `0x101` is 640 for 640 pixels, but 1,280 for a 640 by 480 mode at 16 bits per pixel (`docs/S5-JSDOS.md` quotes the listing the probe printed), and a planar mode has a pitch in bytes of one plane, 100 for 800 pixels. The driver reads the pitch; it never computes it.
+In mode 13h with chain-4 a pixel is one byte, at `0xA0000 + y × 320 + x`, a surface of 64,000 bytes. `Linear8` is that view over an `MmioRegion` and also over a VBE linear frame buffer: it takes a `width`, a `height` and a [pitch](term:pitch), checks that a row of `pitch` bytes holds the width and that `pitch × height` fits the region, and then the address of a pixel is `y × pitch + x`. The pitch is the number of bytes from the start of one row to the start of the next, and it is not always the width: the information the BIOS reports for VBE mode `0x101` is 640 for 640 pixels, but 1,280 for a 640 by 480 mode at 16 bits per pixel (`spikes/s5-jsdos/evidence/vbe-jsdos.txt` is the listing the probe printed), and a planar mode has a pitch in bytes of one plane, 100 for 800 pixels. The driver reads the pitch; it never computes it.
 
 Mode 12h is different, and `Planar16` (`planar.rs`) is the longest piece of the crate. The 640 by 480 picture is four [bit planes](term:bit-plane), each 80 bytes per row, all at `0xA0000`, and the same address in each plane holds one bit of eight pixels' colours: bit 0 of the colour in plane 0, up to bit 3 in plane 3. One CPU write goes through the graphics controller's logic into every plane the sequencer's map mask enables. `Planar16` sets the controller to write mode 0 with enable set/reset on all four planes: the colour goes into the set/reset register (GC register 0), the **bit mask** (GC register 8) selects which of the eight pixels of the byte change, and the *latches*, loaded by any read of that address, keep the others. So the value the CPU writes does not matter; the driver writes zero. A whole byte (mask `0xFF`) needs no read, and a horizontal line is two masked ends and a run of whole bytes. Reading the picture back goes the other way: the read map select (GC register 4) names one plane per read, so `get_pixel` makes four reads. `Planar16` leaves the controller in that state while it lives and puts set/reset off and the mask open when dropped. The cost is port traffic: a 640 by 480 mode 12h fill measured about 190 per second under QEMU's emulation, against about 8,300 for the 8-bit linear fill (`docs/D-NATIVE-VGA.md`, "Speed", emulated speed and not 486 numbers).
 
@@ -73,7 +73,7 @@ The kernel's ordinary console, `kernel/src/vga.rs`, is a different and much smal
 
 VBE is a set of BIOS functions on INT 10h with `AX = 4F00h` and up, and `desk-vga`'s `vbe.rs` implements the calls over the HAL's `Bios` trait, which is "one real-mode software interrupt with an optional buffer in low memory". The platform decides how the interrupt is made: on DOS it is DPMI function 0300h; in the kernel it is the real-mode trampoline of [M8](chapter:m-bioscalls); in a test it is `MockBios`, scripted replies. The `Vbe` type is unchanged across them.
 
-`Vbe::info` (4F00h) puts the signature `VBE2` in a 512-byte buffer first, which asks for the VBE 2.0 layout, and `VbeInfo::parse` insists on `VESA` at the start, the version, the video memory in 64 KiB units, and two real-mode far pointers, to the OEM string and to the mode list. Those pointers are read with `Bios::read_low`, not assumed to be inside the buffer, because a BIOS may leave them in its own ROM. `mode_list` reads 16-bit mode numbers until `0xFFFF`, at most `MAX_MODES` (128). `Vbe::mode` (4F01h) fills a 256-byte block and `VbeMode::parse` takes from it the attribute word (offset 0), the pitch (16), the width and height (18 and 20), the planes, bits per pixel and memory model (24, 25 and 27) and the physical base of the linear frame buffer (40). `find` picks the first supported graphics mode of an exact size and depth in the packed-pixel or direct-colour model, with a linear frame buffer if asked. `set_mode` (4F02h) ORs `MODE_LINEAR` (`0x4000`) into the mode number when a linear buffer is wanted, and leaves bit 15, "keep memory", clear so the BIOS clears the screen. `set_window` (4F05h) is the banked fallback: wrapped and unit-tested, and never called, because the Desk has no banked driver.
+`Vbe::info` (4F00h) puts the signature `VBE2` in a 512-byte buffer first, which asks for the VBE 2.0 layout, and `VbeInfo::parse` insists on `VESA` at the start, the version, the video memory in 64 KiB units, and two real-mode far pointers, to the OEM string and to the mode list. Those pointers are read with `Bios::read_low`, not assumed to be inside the buffer, because a BIOS may leave them in its own ROM. `mode_list` reads 16-bit mode numbers until `0xFFFF`, at most as many as the caller's array holds (the programs size it with `MAX_MODES`, 128). `Vbe::mode` (4F01h) fills a 256-byte block and `VbeMode::parse` takes from it the attribute word (offset 0), the pitch (16), the width and height (18 and 20), the planes, bits per pixel and memory model (24, 25 and 27) and the physical base of the linear frame buffer (40). `find` picks the first supported graphics mode of an exact size and depth in the packed-pixel or direct-colour model, with a linear frame buffer if asked. `set_mode` (4F02h) ORs `MODE_LINEAR` (`0x4000`) into the mode number when a linear buffer is wanted, and leaves bit 15, "keep memory", clear so the BIOS clears the screen. `set_window` (4F05h) is the banked fallback: wrapped and unit-tested, and never called, because the Desk has no banked driver.
 
 The attribute word has the answer to the first question about any mode. `ATTR_SUPPORTED` is bit 0, `ATTR_GRAPHICS` bit 4, `ATTR_NO_BANKED` bit 6 and `ATTR_LINEAR` bit 7. `VbeMode::linear` needs both bit 7 *and* a non-zero physical base, which matters because a BIOS can set the one and not give the other.
 
@@ -85,7 +85,7 @@ The figure decodes three real lines from the probe run in js-dos (the browser sp
 
 A linear frame buffer is a card's video memory presented as one block of address space, normally in a PCI window near the top of the 32-bit space. Each track has to get a pointer to it, and they do it differently.
 
-**Native.** The loader asks the BIOS while it still can ([M4](chapter:m-loader)): `video_setup` in `boot/stage2.asm` walks the mode list, takes the first 8-bit packed-pixel mode with the linear bit and a non-zero base (a 640 by 480 mode wins at once; otherwise the largest area up to 1,280 wide, the width `checksum` can read back), sets it, and leaves a 32-byte video block at `0x820` that the boot information block points to.
+**Native.** The loader asks the BIOS while it still can ([M4](chapter:m-loader)): `video_setup` in `boot/stage2.asm` walks the mode list, walks the mode list for 8-bit packed-pixel modes with the linear bit and a non-zero base (the first 640 by 480 one wins at once; otherwise the largest area up to 1,280 wide, the width `checksum` can read back), sets it, and leaves a 32-byte video block at `0x820` that the boot information block points to.
 
 <!-- figure bootinfo -->
 
@@ -188,7 +188,7 @@ id: gfx.regs13
 label: Mode 13h by register programming, 128 writes in the documented order
 state: built-verified
 evidence: test:hal/drivers/vga/tests/registers.rs::mode_13h_writes_the_documented_sequence, test:tests/native/expected-gfx-vbe.txt::gfx: 13h: frame buffer checksum 0x5c0f1f16, sym:hal/drivers/vga/src/regs.rs::MODE_13H
-note: The tables were checked against DOSBox's BIOS and QEMU's VGA. No monitor, no real VGA chip.
+note: The tables were checked against DOSBox Staging's BIOS (docs/A-VGA-VBE.md, "Register tables"); the pictures read back right on QEMU's VGA too. No monitor, no real VGA chip.
 
 id: gfx.regs12
 label: Mode 12h by register programming, with the identity attribute palette
@@ -210,7 +210,7 @@ id: gfx.retrace
 label: The retrace wait on a display whose retrace bit is real
 state: built-unverified
 evidence: sym:hal/drivers/vga/src/dac.rs::wait_vretrace, doc:docs/D-NATIVE-VGA.md#the-palette-and-the-fade
-note: Both emulators toggle the bit freely, so the wait always succeeds at once; the bounded timeout is tested on a model of a dead display, and a real card has never been asked.
+note: QEMU appears to toggle the bit on every read, so the wait succeeds at once there (docs/D-NATIVE-VGA.md, "The palette and the fade"); DOSBox models retrace timing and the bit toggled in all 64 waits (docs/A-VGA-VBE.md, "What DOSBox does and does not model"). The bounded timeout is tested on a model of a dead display, and a real card has never been asked.
 
 id: gfx.text
 label: Text mode restored without the BIOS: registers, palette and font in plane 2
@@ -276,7 +276,7 @@ state: planned
 evidence: doc:docs/D-NATIVE-VGA.md#what-was-and-was-not-verified
 ```
 
-The picture on the screen is {{state.gfx.regs13}} in mode 13h and {{state.gfx.regs12}} in mode 12h, and the VBE layer is {{state.gfx.vbe}}. The retrace wait is {{state.gfx.retrace}}, on purpose: the evidence is that the emulators do not model it.
+The picture on the screen is {{state.gfx.regs13}} in mode 13h and {{state.gfx.regs12}} in mode 12h, and the VBE layer is {{state.gfx.vbe}}. The retrace wait is {{state.gfx.retrace}}, on purpose: QEMU's bit is not a timed one and DOSBox's has never met a real monitor.
 
 ## Proved in the log
 
