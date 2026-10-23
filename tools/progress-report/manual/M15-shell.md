@@ -214,7 +214,7 @@ evidence: doc:docs/FIRST-WINDOW.md#not-verified
 
 The window manager and the shell are {{state.shell.wm}} and {{state.shell.shell}} on the host, and the runner is {{state.shell.scenario}}. The native run is {{state.shell.native}} in QEMU; the DOS run is {{state.shell.dos}}; live input on DOS is {{state.shell.live}} and on the native kernel {{state.shell.livenative}}; a real machine is {{state.shell.hardware}}. "Verified" here means on the host or in an emulator.
 
-> **From the stacks — Stacking.** The Wikipedia article on stacking window managers says the order in which windows are stacked is called their z-order, and that the Xerox Alto, which it describes as containing the first working commercial GUI, used a stacking window manager. It says the Alto's successor, the Xerox Star, used tiling for most main application windows and overlapping only for dialogue windows. A second article, on z-order, says the term refers to the order of objects along the z-axis, the one perpendicular to x and y. Neither article names an inventor.
+> **From the stacks — Stacking.** The Wikipedia article on stacking window managers says the order in which windows are stacked is called their z-order, and that the Xerox Alto, which it describes as containing the first working commercial GUI, used a stacking window manager. It also says the Xerox Star used tiling for most main application windows and overlapping only for dialogue windows. The page names no inventor.
 > Source: [Stacking window manager, Wikipedia](https://en.wikipedia.org/wiki/Stacking_window_manager)
 
 ## Try it yourself
