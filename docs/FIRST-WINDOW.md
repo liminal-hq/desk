@@ -306,6 +306,7 @@ pub enum Role { Desktop, Chrome, Content, Raised, Line, Border, TextMuted, TextS
 
 pub struct Theme { /* depth, slots: [u8; Role::COUNT] */ }
 impl Theme { pub const fn afterglow(depth: Depth) -> Theme; pub fn slot(&self, r: Role) -> u8; pub fn depth(&self) -> Depth; }
+impl Role { pub const COUNT: usize = 15; pub const ALL: [Role; 15]; }   // in the table's order
 
 pub fn palette(depth: Depth) -> [Rgb6; 256];   // entries the depth does not use are black
 pub const DESK16: [Rgb6; 16];                  // PALETTE.md's 16-colour set, the home spike D asked for
@@ -364,12 +365,13 @@ All measurements are from the window's **outer box** `(x, y, w, h)`, which exclu
 pub const TITLE_HEIGHT: u32 = 22; pub const HALO: i32 = 3; pub const BOX: u32 = 18;
 pub struct ChromeLayout { pub outer: Rect, pub extent: Rect /* outer.inflate(HALO) */, pub title_bar: Rect, pub title_text: Rect,
                           pub buttons: [Rect; 3], pub rule: Rect, pub content: Rect }
-impl ChromeLayout { pub fn new(outer: Rect) -> ChromeLayout; }
+impl ChromeLayout { pub fn new(outer: Rect) -> ChromeLayout; pub fn button(&self, c: Control) -> Rect; }
+pub const MIN_WIDTH: u32 = 120; pub const MIN_HEIGHT: u32 = 40;
 pub enum Control { Minimise, Maximise, Close }
 pub fn paint_chrome(s: &mut Surface, t: &Theme, title_font: &Font, l: &ChromeLayout, title: &str, focused: bool);
 ```
 
-The minimum outer size is 120 × 40. `extent` is what a window owns on screen in either focus state, so a focus change never has to know what the other state looked like.
+The minimum outer size is 120 × 40 (`MIN_WIDTH`, `MIN_HEIGHT`): `ChromeLayout::new` widens a smaller box to it, so a layout is never degenerate, and `title_text` is the room for the title, 14 rows high (the cell of Desk Title) from `x + 8` to 8 pixels before the minimise box. The icons are `Icon`s (`MINIMISE`, `MAXIMISE`, `CLOSE`: ten rows of two bytes in the `.DFN` row form, drawn with `Surface::mono`). `extent` is what a window owns on screen in either focus state, so a focus change never has to know what the other state looked like.
 
 ### Widgets
 
@@ -377,6 +379,8 @@ The minimum outer size is 120 × 40. `extent` is what a window owns on screen in
 pub enum Widget { Label(Label), TextLine(TextLine) }
 pub struct Label { pub at: (i32, i32), pub text: String, pub role: Role }
 pub struct TextLine { pub at: (i32, i32), pub width: u32, pub text: String, pub max_chars: u16 }
+impl TextLine { pub fn new(at: (i32, i32), width: u32, max_chars: u16) -> TextLine; pub fn bounds(&self) -> Rect; }
+pub const FIELD_HEIGHT: u32 = 20; pub const CARET_HEIGHT: u32 = 12;
 impl Widget {
     pub fn bounds(&self, font: &Font) -> Rect;                       // relative to the content area
     pub fn paint(&self, s: &mut Surface, t: &Theme, font: &Font, origin: (i32, i32), focused: bool);
@@ -385,7 +389,7 @@ impl Widget {
 }
 ```
 
-`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; the caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
 
 ## desk-wm: windows, focus and damage
 
