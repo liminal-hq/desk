@@ -10,14 +10,17 @@
 #   wait TEXT       wait until TEXT appears in the serial transcript (up to 30 s); the kernel prints "input: ready" when its
 #                   handlers are live, and keys sent earlier could be lost
 #   sleep SECONDS   pause, so a mouse burst and a key burst do not interleave in the kernel's queues
-#   anything else   a monitor command, for example "sendkey shift-a", "mouse_move 10 -5" or "mouse_button 1"
+#   anything else   a monitor command (`{out}` in it is replaced by the directory in $DESK_SHOTS, for `screendump {out}/a.ppm`), for example "sendkey shift-a", "mouse_move 10 -5" or "mouse_button 1"
 # Each monitor command is sent only after the previous one has been answered. Exit status 0 when the script ran to the end, 1 if
 # the socket never appeared, the text never came or the monitor closed early.
+import os
+import re
 import socket
 import sys
 import time
 
 PROMPT = b"(qemu) "
+ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def read_prompt(sock):
@@ -66,12 +69,14 @@ def main(socket_path, serial_path, script_path):
         elif line.startswith("sleep "):
             time.sleep(float(line[6:]))
         else:
+            line = line.replace("{out}", os.environ.get("DESK_SHOTS", "."))
             sock.sendall(line.encode() + b"\n")
             reply = read_prompt(sock)
             # The monitor echoes the command; anything else it prints is an error message worth showing.
-            extra = reply.replace(PROMPT, b"").decode(errors="replace").replace("\r", "").strip().splitlines()
-            for e in extra:
-                if e.strip() and e.strip() != line:
+            text = ANSI.sub("", reply.replace(PROMPT, b"").decode(errors="replace")).replace("\r", "")
+            for e in text.strip().splitlines():
+                # The monitor's line editor echoes the command, in pieces when it is long; anything else is worth showing.
+                if e.strip() and not e.strip().endswith(line.split()[-1]):
                     print("monitor: " + e.strip(), file=sys.stderr)
     sock.close()
 

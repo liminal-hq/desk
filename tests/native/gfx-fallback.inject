@@ -1,0 +1,27 @@
+# The graphics tour without VBE: modes 13h and 12h by registers, the window in mode 12h, then text mode (docs/D-NATIVE-VGA.md).
+wait input: ready
+wait gfx: ready mode-13h
+screendump {out}/mode-13h.ppm
+sendkey spc
+wait gfx: ready mode-12h
+screendump {out}/mode-12h.ppm
+sendkey spc
+wait gfx: cursor 320,240
+screendump {out}/window-a.ppm
+mouse_move 100 60
+wait gfx: cursor 420,300 buttons 0
+screendump {out}/window-b.ppm
+sleep 0.2
+sendkey d
+sleep 0.2
+sendkey e
+sleep 0.2
+sendkey s
+sleep 0.2
+sendkey k
+wait gfx: echo "desk"
+screendump {out}/window-c.ppm
+sendkey esc
+wait gfx: ready text
+screendump {out}/text.ppm
+sendkey spc

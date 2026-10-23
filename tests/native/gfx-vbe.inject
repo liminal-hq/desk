@@ -1,0 +1,32 @@
+# The graphics tour with a VBE linear frame buffer (docs/D-NATIVE-VGA.md). At each `gfx: ready NAME` line the kernel is waiting for
+# a key, so the screenshot is taken first and the key sent after it. The window then gets mouse motion and typing; the pauses keep
+# the mouse and key streams apart in the kernel's queues. {out} is the directory the screenshots go to.
+wait input: ready
+wait gfx: ready vbe-picture
+screendump {out}/vbe-picture.ppm
+sendkey spc
+wait gfx: ready vbe-fade-half
+screendump {out}/vbe-fade-half.ppm
+sendkey spc
+wait gfx: cursor 320,240
+screendump {out}/vbe-window-a.ppm
+mouse_move 100 60
+wait gfx: cursor 420,300 buttons 0
+screendump {out}/vbe-window-b.ppm
+sleep 0.2
+sendkey d
+sleep 0.2
+sendkey e
+sleep 0.2
+sendkey s
+sleep 0.2
+sendkey k
+wait gfx: echo "desk"
+screendump {out}/vbe-window-c.ppm
+sendkey esc
+wait gfx: ready mode-13h
+screendump {out}/mode-13h.ppm
+sendkey spc
+wait gfx: ready text
+screendump {out}/text.ppm
+sendkey spc

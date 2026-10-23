@@ -109,7 +109,7 @@ fn modifier_names(m: Modifiers) -> alloc::string::String {
     out
 }
 
-fn print_key(e: KeyEvent) {
+pub fn print_key(e: KeyEvent) {
     let ch = if e.pressed { desk_kbd::char_for(e.code, e.modifiers) } else { None };
     match ch {
         Some(c) => println!("key: {:?} down mods={} char={:?}", e.code, modifier_names(e.modifiers), c),
