@@ -9,7 +9,8 @@
 ;   1. Serial port and screen output, so every later step can report what it did.
 ;   2. A20. The 8086 wrapped addresses past 1 MiB; the PC keeps that behaviour until the A20 gate is opened. Without it, every
 ;      other megabyte of memory would alias the one below it.
-;   3. The memory map (E820, else E801). Only the BIOS knows what RAM exists, and it is only reachable in real mode.
+;   3. The memory map (E820, else E801, else INT 15h AH=88). Only the BIOS knows what RAM exists, and it is only reachable in real
+;      mode.
 ;   4. The boot information block at 0x500, which is how the kernel finds the map.
 ;   5. A GDT and the switch to protected mode with flat 4 GiB segments, so the kernel sees plain 32-bit addresses.
 ;   6. Copy the kernel from its low buffer to 1 MiB (real mode cannot address that high, so this has to wait), set a stack and
@@ -17,7 +18,7 @@
 ;
 ; Build flags for testing the less common paths (see tools/native-build.sh): -DA20_TEST=1 closes the A20 gate first so the
 ; enabling code really runs; -DA20_TEST=2 also skips the fast gate so the keyboard controller method runs; -DNO_E820 pretends
-; the BIOS lacks E820 so the E801 fallback runs.
+; the BIOS lacks E820 so the E801 fallback runs; -DNO_E820 -DNO_E801 pretends it lacks both so the AH=88 fallback runs.
 
 bits 16
 org 0x7E00
@@ -92,6 +93,8 @@ entry:
         jnc .map_ok
         call map_e801
         jnc .map_ok
+        call map_88
+        jnc .map_ok
         mov si, msg_map
         jmp die
 .map_ok:
@@ -101,7 +104,10 @@ entry:
         cmp eax, 1
         mov si, name_e820
         je .named
+        cmp eax, 2
         mov si, name_e801
+        je .named
+        mov si, name_88
 .named: call print
         mov si, msg_map_count
         call print
@@ -248,6 +254,10 @@ map_e820:
 ; blocks above 16 MiB. The answer is rewritten as E820-style entries so the kernel parses only one format: conventional
 ; memory from INT 12h, then the two extended ranges. CF set on failure.
 map_e801:
+%ifdef NO_E801
+        stc
+        ret
+%endif
         mov ax, 0xE801
         xor cx, cx
         xor dx, dx
@@ -260,19 +270,9 @@ map_e801:
 .have:
         test ax, ax
         jz .fail
-        mov di, MAP
         push ax
         push bx
-        int 0x12                        ; AX = conventional memory in KiB
-        movzx eax, ax
-        shl eax, 10
-        mov dword [di + 0], 0           ; base
-        mov dword [di + 4], 0
-        mov [di + 8], eax               ; length
-        mov dword [di + 12], 0
-        mov dword [di + 16], 1          ; usable
-        mov dword [di + 20], 1
-        add di, 24
+        call map_conventional
         pop bx
         pop ax
         movzx eax, ax
@@ -302,6 +302,49 @@ map_e801:
         clc
         ret
 .fail:  stc
+        ret
+
+; map_88: the last resort, for BIOSes from before E801 (an AMIBIOS of 1993 has neither E820 nor E801). INT 15h AH=88 reports the
+; KiB of extended memory above 1 MiB, at most 15 MiB on most BIOSes and 63 MiB on some, and nothing above that. Written as the
+; same E820-style entries: conventional memory from INT 12h, then the extended range. CF set on failure.
+map_88:
+        mov ah, 0x88
+        clc
+        int 0x15
+        jc .fail
+        test ax, ax
+        jz .fail
+        push ax
+        call map_conventional
+        pop ax
+        movzx eax, ax
+        shl eax, 10                     ; KiB to bytes
+        mov dword [di + 0], 0x100000
+        mov dword [di + 4], 0
+        mov [di + 8], eax
+        mov dword [di + 12], 0
+        mov dword [di + 16], 1
+        mov dword [di + 20], 1
+        mov dword [BOOTINFO + 12], 3
+        mov dword [BOOTINFO + 16], 2
+        clc
+        ret
+.fail:  stc
+        ret
+
+; map_conventional: writes the first map entry, the conventional memory INT 12h reports, at MAP and leaves DI at the second.
+map_conventional:
+        mov di, MAP
+        int 0x12                        ; AX = conventional memory in KiB
+        movzx eax, ax
+        shl eax, 10
+        mov dword [di + 0], 0           ; base
+        mov dword [di + 4], 0
+        mov [di + 8], eax               ; length
+        mov dword [di + 12], 0
+        mov dword [di + 16], 1          ; usable
+        mov dword [di + 20], 1
+        add di, 24
         ret
 
 ; Output goes to both the BIOS screen and COM1, so a headless run records the loader too.
@@ -394,6 +437,7 @@ msg_pm:         db 'stage2: entering protected mode', 13, 10, 0
 msg_crlf:       db 13, 10, 0
 name_e820:      db 'E820', 0
 name_e801:      db 'E801', 0
+name_88:        db 'INT 15h AH=88', 0
 
 ; ---------------------------------------------------------------------------------------------------------------------------
 ; Protected mode

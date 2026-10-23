@@ -7,8 +7,8 @@
 #
 # usage: tools/native-test.sh
 #
-# Positive: the normal boot, plus three loader variants (A20 through the fast gate, A20 through the keyboard controller, and the
-# E801 memory map fallback) that exercise code a normal QEMU boot would skip. Negative: a wrong expected transcript must be
+# Positive: the normal boot, plus four loader variants (A20 through the fast gate, A20 through the keyboard controller, and the
+# E801 and AH=88 memory map fallbacks) that exercise code a normal QEMU boot would skip. Negative: a wrong expected transcript must be
 # rejected; a divide error, a general protection fault, an invalid opcode, a panic and a masked timer must each end the run with
 # a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
@@ -60,7 +60,12 @@ tools/native-image.sh --out dist/native-e801.img > /dev/null
 sed -e 's|memory map from E820, entries: {N:1..32}|memory map from E801, entries: {N:2..3}|' \
   -e 's|memory map from E820 ({N:1..32} entries)|memory map from E801 ({N:2..3} entries)|' tests/native/expected.txt > "$work/expected-e801.txt"
 run e801 dist/native-e801.img 0 "$work/expected-e801.txt"
-rm -f dist/native-a20-fast.img dist/native-a20-keyboard.img dist/native-e801.img
+tools/native-build.sh --nasm-flags "-DNO_E820 -DNO_E801"
+tools/native-image.sh --out dist/native-e88.img > /dev/null
+sed -e 's|memory map from E820, entries: {N:1..32}|memory map from INT 15h AH=88, entries: 2|' \
+  -e 's|memory map from E820 ({N:1..32} entries)|memory map from INT 15h AH=88 (2 entries)|' tests/native/expected.txt > "$work/expected-e88.txt"
+run e88 dist/native-e88.img 0 "$work/expected-e88.txt"
+rm -f dist/native-a20-fast.img dist/native-a20-keyboard.img dist/native-e801.img dist/native-e88.img
 
 echo "== Normal boot"
 tools/native-build.sh
