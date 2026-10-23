@@ -1009,6 +1009,7 @@ class BootChaptersTests(unittest.TestCase):
         reads = image.reads(c["KERNEL_LBA"], ksec, c["KERNEL_SEG"], c)
         self.assertIn("%d calls of INT 13h" % len(reads), self.text("m-loader"))
         self.assertEqual(len(reads), 21)
+        self.assertIn("%d reads" % (len(reads) + 1), self.text("m-loader"))
         self.assertIn("%d sectors" % ksec, self.text("m-loader"))
         self.assertEqual(639 + 15232, 15871)
         self.assertIn("15871 KiB", self.text("m-loader"))

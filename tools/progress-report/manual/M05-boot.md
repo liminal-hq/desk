@@ -140,7 +140,7 @@ A kernel that has finished has nothing to return to, so it has to tell the outsi
 | 1 | The guest wrote failure (35): a panic, an exception dump or a failed assertion |
 | 2 | QEMU exited some other way, for example a reset or triple fault with `-no-reboot` |
 | 124 | The [watchdog](term:watchdog) ended the run: the script runs QEMU under `timeout`, 20 seconds by default and 5 for the tests that expect to be killed |
-| 3 | Neither QEMU nor Docker is available |
+| 3 | Neither QEMU nor Docker is available, or the image (or the injection script) does not exist |
 
 Both loader stages use the same trick: `die` in stage 1 and stage 2 writes `0x11` before halting, so a boot that never reaches the kernel is a failure too. The watchdog is what turns "the kernel stopped and said nothing" into a result.
 

@@ -39,7 +39,10 @@ def constants():
     if not m:
         raise ValueError("tools/native-image.sh no longer computes the image size as SECTORS * BYTES")
     c["TOTAL_SECTORS"], c["SECTOR_BYTES"] = int(m.group(1)), int(m.group(2))
-    c["KERNEL_LIMIT"] = int(re.search(r'"\$ksectors" -gt (\d+)', tool).group(1))
+    m = re.search(r'"\$ksectors" -gt (\d+)', tool)
+    if not m:
+        raise ValueError("tools/native-image.sh no longer limits the kernel length in sectors")
+    c["KERNEL_LIMIT"] = int(m.group(1))
     # the image tool's dd offsets must be the layout stage 1 reads
     seeks = {m.group(1): int(m.group(2)) for m in re.finditer(r'dd if="\$in/(stage1|stage2|kernel)\.bin" of="\$out" bs=512 seek=(\d+)', tool)}
     if seeks != {"stage1": 0, "stage2": c["STAGE2_LBA"], "kernel": c["KERNEL_LBA"]}:
@@ -167,10 +170,10 @@ def render(D, ctx):
             r["n"], r["cyl"], r["sector"], r["head"], r["start"] // 16, hx(r["start"]), hx(r["end"] - 1), r["why"]))
         if "64 KiB" in r["why"] and "also" not in r["why"]:
             text += " The floppy's DMA transfer cannot cross a 64 KiB boundary of physical memory, so the rest of the track is read by the next call."
-        title = "Read %d: %s, LBA %d%s" % (i + 1, who, r["lba"], " (split)" if "64 KiB" in r["why"] or (i > 0 and allreads[i - 1]["why"].startswith("the 64")) else "")
+        title = "Read %d: %s, LBA %d%s" % (i + 1, who, r["lba"], " (split)" if ("64 KiB" in r["why"] and "also" not in r["why"]) or (i > 0 and allreads[i - 1]["why"].startswith("the 64")) else "")
         steps.append((title, Raw(esc(text))))
     steps.append(("Then stage 2 moves the kernel", Raw(esc("Stage 1 has read %d sectors in %d calls, printing a dot after each (%d dots) and jumping to stage 2 at 0000:7E00. Real mode cannot reach 1 MiB, so the kernel waits at %s until stage 2 is in protected mode; it then copies %d sectors * 512 bytes as %d dwords to %s and jumps there." % (
-        len(allreads) and c["STAGE2_SECTORS"] + ksec, len(allreads), len(allreads), hx(c["KERNEL_SEG"] * 16), ksec, ksec * c["SECTOR_BYTES"] // 4, hx(c["KERNEL_ENTRY"]))))))
+        c["STAGE2_SECTORS"] + ksec, len(allreads), len(allreads), hx(c["KERNEL_SEG"] * 16), ksec, ksec * c["SECTOR_BYTES"] // 4, hx(c["KERNEL_ENTRY"]))))))
     cap = ('Replayed from <code>boot/stage1.asm</code> (the geometry, the layout and <code>read_sectors</code>), <code>tools/native-image.sh</code> (the image size and where each stage is written), <code>boot/stage2.asm</code> (where it expects the kernel) and the kernel length in <code>snapshots/measured.json</code>. '
            'This is a replay of the algorithm, not a capture of the floppy controller: the transcript of a boot proves the reads worked, and this figure shows the order and size of each. The build refuses a layout whose regions overlap or a read that crosses a 64 KiB boundary.')
     return stepper(ID, "The floppy image and the reads of the boot sector, one INT 13h call at a time", stage, steps, cap, ctx, "x-wide")
