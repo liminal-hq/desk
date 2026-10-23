@@ -275,7 +275,8 @@ def check_item(kind, rest, root, data):
             return "commit:%s is not in this repository" % rest
         return None
     if kind == "repo":
-        return None if rest and os.path.exists(os.path.join(root, rest)) else "repo:%s does not exist in the tree" % rest
+        path = rest.split("#")[0]
+        return None if path and os.path.exists(os.path.join(root, path)) else "repo:%s does not exist in the tree" % rest
     if kind in ("sym", "test"):
         path, sep, name = rest.partition("::")
         if not sep or not name:
@@ -283,7 +284,9 @@ def check_item(kind, rest, root, data):
         text = file_text(root, path)
         if text is None:
             return "%s:%s: the file does not exist" % (kind, rest)
-        return None if name in text else "%s:%s: %r does not appear in %s" % (kind, rest, name, path)
+        # a plain identifier must appear as a whole word (Heap is not HeapAlloc); a longer name, such as a transcript line, as written
+        found = re.search(r"(?<![\w])%s(?![\w])" % re.escape(name), text) if re.fullmatch(r"\w+", name) else name in text
+        return None if found else "%s:%s: %r does not appear in %s" % (kind, rest, name, path)
     if kind == "doc":
         path, sep, anchor = rest.partition("#")
         if not sep or not anchor:
@@ -534,6 +537,8 @@ def check_terms(chapters):
     problems, defined = [], {}
     for c in chapters:
         for t in c.get("glossary", []):
+            if not t["id"]:
+                problems.append("%s: the term %r has no letters or digits to make an anchor from" % (c["id"], t["term"]))
             if t["id"] in defined:
                 problems.append("the term %r is defined in %s and in %s" % (t["term"], defined[t["id"]], c["id"]))
             defined[t["id"]] = c["id"]

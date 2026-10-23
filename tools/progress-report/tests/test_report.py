@@ -712,6 +712,13 @@ class ManualCheckTests(unittest.TestCase):
         recs["fix.heap"]["items"] = [("pr", "4")]
         self.assertEqual(manual.effective_state(recs["fix.heap"], FAKE_DATA)[0], "built-unverified", "an open pull request is not run evidence")
 
+    def test_a_symbol_must_appear_as_a_whole_word_and_a_repo_link_may_carry_a_fragment(self):
+        self.assertIsNone(manual.check_item("sym", "tools/progress-report/manual.py::check_chapter", gather.ROOT, FAKE_DATA))
+        self.assertIsNotNone(manual.check_item("sym", "tools/progress-report/manual.py::check_chapte", gather.ROOT, FAKE_DATA), "a prefix of a name is not the name")
+        self.assertIsNone(manual.check_item("repo", "docs/MANUAL-PLAN.md#build-notes", gather.ROOT, FAKE_DATA))
+        self.assertIsNotNone(manual.check_item("repo", "docs/NO-SUCH.md#x", gather.ROOT, FAKE_DATA))
+        self.assertRefused(lambda t: t.replace("term: Segment", "term: ++"), "no letters or digits")
+
     def test_try_commands_must_exist(self):
         self.assertRefused(lambda t: t.replace("$ python3 -I tools/progress-report/tests/test_report.py", "$ python3 tools/no-such.py"), "the script tools/no-such.py does not exist")
         self.assertRefused(lambda t: t.replace("$ python3 -I tools/progress-report/tests/test_report.py", "$ tools/nothing.sh"), "no such script")
