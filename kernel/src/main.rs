@@ -25,6 +25,7 @@ mod pit;
 #[path = "../../spikes/a-vga-vbe/prog/src/scene.rs"]
 mod scene;
 mod serial;
+mod shell;
 mod sync;
 mod vga;
 mod video;
@@ -102,6 +103,8 @@ enum TestMode {
     Gfx = 10,
     Bios = 11,
     BiosSolo = 12,
+    Shell = 13,
+    ShellCorrupt = 14,
 }
 
 impl TestMode {
@@ -119,6 +122,8 @@ impl TestMode {
             10 => TestMode::Gfx,
             11 => TestMode::Bios,
             12 => TestMode::BiosSolo,
+            13 => TestMode::Shell,
+            14 => TestMode::ShellCorrupt,
             _ => TestMode::Normal,
         }
     }
@@ -238,6 +243,12 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
         gfx::tour(video, ps2);
         return;
     }
+    if mode == TestMode::Shell || mode == TestMode::ShellCorrupt {
+        // The first window's scripted scenario (`shell.rs`, `docs/FIRST-WINDOW.md`); the keyboard acknowledges its screendumps.
+        println!("input: ready");
+        shell::run(video, ps2, mode == TestMode::ShellCorrupt);
+        return;
+    }
     let timeout_ticks = match mode {
         TestMode::Input => 1500,
         TestMode::InputMasked => 500,
@@ -251,7 +262,7 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo | TestMode::Shell | TestMode::ShellCorrupt => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

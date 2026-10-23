@@ -33,7 +33,7 @@ const SECOND: u32 = pit::HZ;
 const ACK_TIMEOUT: u32 = 20 * SECOND;
 const INTERACTIVE_TIMEOUT: u32 = 60 * SECOND;
 
-fn vga_window() -> MmioRegion {
+pub(crate) fn vga_window() -> MmioRegion {
     // SAFETY: A0000h to AFFFFh is the VGA's graphics window, ordinary physical memory in the first megabyte that the kernel owns
     // (the frame allocator never hands it out) and that the flat segments make addressable; nothing else holds a reference to it.
     unsafe { MmioRegion::new(0xA0000 as *mut u8, 0x10000) }
@@ -78,7 +78,7 @@ fn show_picture<C: Canvas>(c: &mut C, depth: Depth, label: &str, hosted: Option<
 const DISPI_INDEX: u16 = 0x1CE;
 const DISPI_DATA: u16 = 0x1CF;
 
-fn leave_vbe() {
+pub(crate) fn leave_vbe() {
     PORTS.outw(DISPI_INDEX, 0);
     let id = PORTS.inw(DISPI_DATA);
     if (0xB0C0..=0xB0CF).contains(&id) {
@@ -134,7 +134,7 @@ fn fade_paced(ps2: &mut Ps2Input, base: &[Rgb6; ENTRIES], out: bool, pause: Opti
         dac::set_palette_scaled(&PORTS, base, num, dac::FADE_STEPS);
         if i == dac::FADE_STEPS / 2 {
             if let Some(name) = pause {
-                rendezvous(ps2, name);
+                rendezvous(ps2, "gfx", name);
                 // The pause is not part of the fade: the remaining steps keep their spacing.
                 start = pit::ticks().wrapping_sub(i * FADE_STEP_TICKS);
             }
@@ -408,10 +408,10 @@ fn draw_echo<C: Canvas>(c: &mut C, font: Option<&[u8; FONT_BYTES]>, win: &Window
 
 // ---- Waiting for input
 
-/// Prints the marker the run script waits for, then waits for a key press (any key) as the acknowledgement that the screenshot is
-/// taken. Mouse events that arrive meanwhile are dropped.
-fn rendezvous(ps2: &mut Ps2Input, name: &str) {
-    println!("gfx: ready {}", name);
+/// Prints the marker the run script waits for (`PREFIX: ready NAME`), then waits for a key press (any key) as the acknowledgement
+/// that the screenshot is taken. Mouse events that arrive meanwhile are dropped.
+pub(crate) fn rendezvous(ps2: &mut Ps2Input, prefix: &str, name: &str) {
+    println!("{}: ready {}", prefix, name);
     let start = pit::ticks();
     loop {
         while ps2.poll_mouse().is_some() {}
@@ -421,7 +421,7 @@ fn rendezvous(ps2: &mut Ps2Input, name: &str) {
             }
         }
         if pit::ticks().wrapping_sub(start) > ACK_TIMEOUT {
-            panic!("gfx: no key to acknowledge {} within {} ticks", name, ACK_TIMEOUT);
+            panic!("{}: no key to acknowledge {} within {} ticks", prefix, name, ACK_TIMEOUT);
         }
         input::idle(ps2);
     }
@@ -495,7 +495,7 @@ fn window_session<C: Canvas>(c: &mut C, ps2: &mut Ps2Input, looks: &Looks, font:
 
 /// Leaves graphics for 80 × 25 text without the BIOS: the text registers, the 16 text colours, the font in plane 2 (the loader kept
 /// a copy of the BIOS's), and a cleared screen. Without the font the text would be garbage, so it is then left alone and reported.
-fn restore_text(font: Option<&[u8; FONT_BYTES]>) {
+pub(crate) fn restore_text(font: Option<&[u8; FONT_BYTES]>) {
     regs::set_mode_03h(&PORTS);
     text::set_text_palette(&PORTS).expect("the text palette");
     match font {
@@ -521,7 +521,7 @@ fn tour_vbe(l: &Lfb, ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
     c.clear(0);
     let hosted = (l.width, l.height) == (640, 480);
     show_picture(&mut c, Depth::Colours256, "vbe picture", hosted.then_some(HOSTED_VBE_640X480));
-    rendezvous(ps2, "vbe-picture");
+    rendezvous(ps2, "gfx", "vbe-picture");
     fade_demo(ps2, "vbe", &palette, Some("vbe-fade-half"));
     perf(&mut c, "vbe", Looks::COLOURS_256.cursor);
     perf_pixels(&mut c, "vbe");
@@ -540,7 +540,7 @@ fn tour_13h(ps2: &mut Ps2Input) {
     let mut c = Linear8::new(&mut region, 320, 200, 320).expect("mode 13h surface");
     c.clear(0);
     show_picture(&mut c, Depth::Colours256, "13h", Some(HOSTED_13H));
-    rendezvous(ps2, "mode-13h");
+    rendezvous(ps2, "gfx", "mode-13h");
     fade_demo(ps2, "13h", &palette, None);
 }
 
@@ -556,7 +556,7 @@ fn tour_12h(ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
     // Direct programming leaves whatever the previous mode had in the planes.
     c.clear(0);
     show_picture(&mut c, Depth::Colours16, "12h", Some(HOSTED_12H));
-    rendezvous(ps2, "mode-12h");
+    rendezvous(ps2, "gfx", "mode-12h");
     fade_demo(ps2, "12h", &palette, None);
     perf(&mut c, "12h, planar", Looks::COLOURS_16.cursor);
     window_session(&mut c, ps2, &Looks::COLOURS_16, font);
@@ -579,6 +579,6 @@ pub fn tour(video: &Video, mut ps2: Ps2Input) {
         tour_12h(&mut ps2, font);
     }
     restore_text(font);
-    rendezvous(&mut ps2, "text");
+    rendezvous(&mut ps2, "gfx", "text");
     println!("gfx: tour complete");
 }

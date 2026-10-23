@@ -16,6 +16,12 @@ desk-pic = { path = "../hal/drivers/pic" }
 desk-kbd = { path = "../hal/drivers/kbd" }
 desk-i8042 = { path = "../hal/drivers/i8042" }
 desk-vga = { path = "../hal/drivers/vga" }
+desk-gfx = { path = "../shell/gfx" }
+desk-font = { path = "../shell/font" }
+desk-present = { path = "../shell/present" }
+desk-ui = { path = "../shell/ui" }
+desk-wm = { path = "../shell/wm" }
+desk-shell = { path = "../shell/shell" }
 
 [features]
 default = []
