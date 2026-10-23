@@ -7,7 +7,7 @@
 // twice within each tick, so the counter alone is ambiguous. The read-back command latches the count together with the status byte,
 // whose bit 7 is the output pin: high for the first half of the period and low for the second. That gives a position within the tick
 // to 838 ns. Reads are retried when a tick arrives between them, and the result never goes backwards (the BIOS counts a tick a little
-// after the PIT wraps). The count restarts at midnight, which this does not handle.
+// after the PIT wraps). The count restarts at midnight; a fall of more than half a day is taken as that, and a day is added from then on.
 use crate::Cell64;
 use core::arch::asm;
 
@@ -49,8 +49,19 @@ fn pit_position() -> u64 {
 }
 
 static LAST: Cell64 = Cell64::new(0);
+/// Whole days added so far because the BIOS count restarted at midnight, in nanoseconds.
+static OFFSET: Cell64 = Cell64::new(0);
 
-/// Nanoseconds since the BIOS counted its first tick (midnight), never decreasing.
+/// A BIOS day is 0x1800B0 ticks.
+const DAY_CLOCKS: u64 = 0x1800B0 * CLOCKS_PER_TICK;
+
+/// PIT clocks to nanoseconds: 1e9 / 1_193_182 = 838.0953 ns per clock.
+fn clocks_to_ns(clocks: u64) -> u64 {
+    clocks * 838 + clocks * 95 / 1000
+}
+
+/// Nanoseconds since the BIOS counted its first tick (midnight) of the first day this was called, never decreasing, and carrying on
+/// across midnight.
 pub fn now_ns() -> u64 {
     let (ticks, pos) = loop {
         let t1 = rt::timer::bios_ticks();
@@ -59,9 +70,14 @@ pub fn now_ns() -> u64 {
             break (t1 as u64, p);
         }
     };
-    let clocks = ticks * CLOCKS_PER_TICK + pos;
-    // 1e9 / 1_193_182 = 838.0953 ns per clock
-    let ns = clocks * 838 + clocks * 95 / 1000;
+    let day_ns = clocks_to_ns(DAY_CLOCKS);
+    let mut ns = clocks_to_ns(ticks * CLOCKS_PER_TICK + pos) + OFFSET.get();
+    // The reading fell by more than the retry jitter could explain: the BIOS count restarted at midnight. Without this the clamp
+    // below would hold the clock still (and a `sleep` spin would never end) until the same time the next day.
+    if LAST.get().saturating_sub(ns) > day_ns / 2 {
+        OFFSET.set(OFFSET.get() + day_ns);
+        ns += day_ns;
+    }
     let ns = ns.max(LAST.get());
     LAST.set(ns);
     ns
