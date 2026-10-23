@@ -297,6 +297,10 @@ broken() { # NAME FILTER...: the live script with the lines matching FILTER remo
   grep -v "$@" "$work/shell-live-8.inject" > "$work/$name.inject"
   cmp -s "$work/shell-live-8.inject" "$work/$name.inject" && fail "$name: nothing was removed from the script"
   play_live "$name" dist/native-shell-live-8.img std "$work/$name.inject" "dist/shell-live-native-$name"
+  # The run must have gone through to the end (every mark printed, the summary written), so what rejects it is the wrong input and not a
+  # guest that never started.
+  [ "$(grep -c '^shell: mark ' "$work/$name.txt")" = 8 ] || fail "$name: the guest did not print all eight marks"
+  grep -q '^shell: live ended by Escape: ' "$work/$name.txt" || fail "$name: the guest did not end by Escape"
 }
 broken live-nomouse -e '^mouse_move '
 must_fail "a live run whose mouse_move lines were removed (the marks, from the dragged frame)" frames marks "$live_sums" tests/shell/live.scn 8 "$work/live-nomouse.txt"

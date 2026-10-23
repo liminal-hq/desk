@@ -142,7 +142,11 @@ fn live_session<P: Present>(depth: Depth, out: &mut P, ps2: &mut Ps2Input) {
             match live::route(&k) {
                 Route::Shell => shell.handle(Event::Key(k)),
                 Route::Mark => mark_due = true,
-                Route::End => end = true,
+                Route::End => {
+                    // What was typed after Escape is not part of the session: it is neither handled nor counted.
+                    end = true;
+                    break;
+                }
                 Route::Swallow => {}
             }
         }
