@@ -70,6 +70,16 @@ impl Decoder {
         }
     }
 
+    /// A decoder that starts with the lock keys in the state `locks` names (only `CAPS`, `NUM` and `SCROLL` count; other bits are
+    /// ignored) and nothing held. A platform whose firmware already owns the lock state and the keyboard's LEDs seeds the decoder
+    /// from it, so the first Caps Lock press toggles from what the LED shows: under DOS that is the BIOS's flag byte at 0040:0017.
+    pub const fn with_locks(locks: Modifiers) -> Decoder {
+        Decoder {
+            locks: Modifiers(locks.0 & (Modifiers::CAPS.0 | Modifiers::NUM.0 | Modifiers::SCROLL.0)),
+            ..Decoder::new()
+        }
+    }
+
     /// The modifier and lock state now.
     pub fn modifiers(&self) -> Modifiers {
         let mut m = self.locks;
@@ -445,6 +455,20 @@ mod tests {
             pressed,
             modifiers,
         }
+    }
+
+    #[test]
+    fn a_decoder_can_start_with_the_locks_the_firmware_shows() {
+        let mut d = Decoder::with_locks(Modifiers::CAPS.union(Modifiers::SHIFT).union(Modifiers::NUM));
+        assert_eq!(
+            d.modifiers(),
+            Modifiers::CAPS.union(Modifiers::NUM),
+            "held keys are not locks and are dropped"
+        );
+        // The first Caps Lock press toggles from on to off.
+        let e = feed_all(&mut d, &[0x3A, 0xBA]);
+        assert_eq!(e[0].modifiers, Modifiers::NUM);
+        assert_eq!(e[1].modifiers, Modifiers::NUM);
     }
 
     #[test]

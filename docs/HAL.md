@@ -253,7 +253,7 @@ pub trait Display {
 - Fades and dims go through the DAC, never the frame buffer (`AGENTS.md`), so `set_palette` is in the trait from the start.
 - The core sees `Display` and a `FrameBuffer`; it never sees INT 10h, a VBE info block or a DPMI selector.
 
-### Input (built by spike C for the kernel; spike B adds the DOS mouse adapter)
+### Input (built by spike C for the kernel and spike B for DOS)
 
 Spike C built this and changed it a little; the result and the feedback are in [`C-INPUT.md`](C-INPUT.md). The sketch below is the original; the built types are in `hal/hal/src/input.rs`: `KeyEvent` is `{ code, pressed, modifiers }`, `MouseEvent` has a `wheel: i8`, and the handlers test the controller's source bit before reading a byte.
 
@@ -274,7 +274,7 @@ pub trait InputSource {
 ```
 
 - **Event queues filled by interrupt handlers, drained by the core**: the keyboard handler pushes raw `Scancode`s into an `SpscRing<u8, 64>`, the PS/2 mouse handler assembles three-byte packets and pushes `MouseEvent`s into an `SpscRing<MouseEvent, 32>`. Decoding (the `E0` prefix, `E1` for Pause, make and break codes, the key map) is done by `desk-kbd`'s `Decoder` on the core side, which is pure and host-tested.
-- **Hosted:** IRQ 1 is the same `desk-i8042` keyboard handler with `Chain::None` (Desk owns the keyboard while it runs, as `SPEC.md` says: "a Fizz-style IRQ 1 handler"), so DOS and the native kernel share the scancode path entirely. The mouse is INT 33h, a different device interface, so the hosted platform has an INT 33h adapter that produces the same `MouseEvent`s into the same ring type (polling the motion counters with AX=0Bh and the buttons with AX=03h once per frame, or a real-mode callback through DPMI 0303h). The core cannot tell the difference.
+- **Hosted:** IRQ 1 is the same `desk-i8042` keyboard handler with `Chain::None` (Desk owns the keyboard while it runs, as `SPEC.md` says: "a Fizz-style IRQ 1 handler"), so DOS and the native kernel share the scancode path entirely. The mouse is INT 33h, a different device interface, so the hosted platform has an INT 33h adapter that produces the same `MouseEvent`s into the same ring type (polling the motion counters with AX=0Bh and the buttons with AX=03h once per frame, or a real-mode callback through DPMI 0303h). The core cannot tell the difference. Spike B built it ([`B-DOS-INPUT.md`](B-DOS-INPUT.md)): `desk-int33`'s `MouseInput` polls 000Bh and 0003h once per core iteration (one event per poll with the summed mickeys; the callback was not built), `DosInput` is the hosted `InputSource` (with `has_mouse`, false when there is no driver), and the keyboard half is exactly the kernel's, with `Decoder::with_locks` seeding the lock state from the BIOS.
 
 ### Sound (sketch; the sound milestone builds it)
 
@@ -391,7 +391,7 @@ What each platform supplies, by surface:
 |---|---|---|---|
 | `PortIo` | `RawPorts` (ring 3 with I/O permission under CWSDPMI; not yet verified, spike A does) | `RawPorts` | `MockPortBus` |
 | `InterruptController` | `Pic8259` without `init` | `Pic8259` with `init(REMAPPED_BASES, …)` | `MockIrq` |
-| `IrqRegistry` | DPMI 0204h/0205h, a stub per line, `Chain::Previous` for IRQ 0, clean-up list | IDT gates 20h–2Fh, a stub per line, EOI after the handler | `MockIrq::raise` |
+| `IrqRegistry` | DPMI 0204h/0205h, a stub per line (built by spike B: `rt::irq`), `Chain::Previous` for IRQ 0, clean-up list | IDT gates 20h–2Fh, a stub per line, EOI after the handler | `MockIrq::raise` |
 | `Clock` | `PitClock` ticked by the chained IRQ 0 hook at 18,207 mHz | `PitClock` at the programmed rate | `MockClock` |
 | `Delay` | Calibrated loop | Calibrated loop | `MockDelay` |
 | `WallClock` | INT 21h 2Ah/2Ch | CMOS RTC | (not yet) |

@@ -8,6 +8,7 @@
 // - `devices` holds small models of real chips (the 16550, the 8254, the 8042 with a keyboard and a mouse in `ps2`), just enough to check what a driver programs.
 // - `VgaModel` is the VGA's register file at 0x3C0..=0x3DF (attribute controller, sequencer, graphics controller, CRTC, DAC).
 // - `MockBios` answers real-mode calls from a script, for the VBE layer.
+// - `Int33Model` is a DOS mouse driver behind INT 33h, for the hosted platform's input tests.
 // - `MockIrq` is an interrupt controller and handler registry with a `raise` that delivers an interrupt the way a platform does.
 // - `MockClock` and `MockDelay` stand in for time.
 //
@@ -19,6 +20,7 @@ extern crate alloc;
 
 pub mod bus;
 pub mod devices;
+pub mod int33;
 pub mod irq;
 pub mod ps2;
 pub mod time;
@@ -26,6 +28,7 @@ pub mod vga;
 pub mod video;
 
 pub use bus::{Access, Device, MockPortBus, Width};
+pub use int33::{Int33Kind, Int33Model};
 pub use irq::MockIrq;
 pub use ps2::I8042Model;
 pub use time::{MockClock, MockDelay};
