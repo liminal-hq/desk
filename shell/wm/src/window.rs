@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use desk_gfx::Rect;
 use desk_ui::{ChromeLayout, Control, Widget, HALO};
 
-/// A window's identity. Ids are not reused while the window manager lives.
+/// A window's identity: unique among the open windows (ids are handed out in order and skip any still in use after wrapping).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WindowId(pub u16);
 
