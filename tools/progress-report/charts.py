@@ -176,3 +176,22 @@ def pr_stack(D):
     o.append("</svg>")
     cap = ("The open pull requests as the generator reads them from <code>gh</code> and <code>git</code>. A solid arrow points to the branch a pull request is based on; a dashed line joins it to other open branches it contains by merge. The two pull requests that carry this report are drawn dashed.")
     return _fig("".join(o), cap)
+
+
+# ---- which open pull requests would conflict --------------------------------------------------------------------------------------------
+
+def open_conflicts(D):
+    """A table of the pairs of open pull requests that conflict when merged together, from the trial merges the generator ran."""
+    rows = D["open"].get("conflicts", [])
+    if not rows:
+        return '<p class="how">The trial merges found no conflict between the open pull requests.</p>'
+    shared = {"AGENTS.md", "tools/check.sh", "tools/README.md", "docs/README.md", "spikes/README.md", "docs/RUST-TARGETS.md", "docs/DIRECTION.md", "docs/NATIVE-BOOT.md", "hal/Cargo.lock", "kernel/Cargo.lock"}
+    body = ""
+    for r in rows:
+        src = [f for f in r["files"] if f not in shared]
+        body += '<tr><td class="nw">#%d with #%d</td><td class="n">%d</td><td>%s</td><td>%s</td></tr>' % (
+            r["a"], r["b"], len(r["files"]), ", ".join("<code>%s</code>" % esc(f) for f in src) or '<span class="muted">none</span>',
+            ", ".join("<code>%s</code>" % esc(f) for f in r["files"] if f in shared))
+    return ('<details class="conf"><summary>%d pairs of open pull requests conflict when merged together: the files, from trial merges</summary><div class="tbl"><table><caption class="sr">Pairs of open pull requests that conflict, with the files</caption>'
+            '<thead><tr><th scope="col">Pair</th><th scope="col" class="n">Files</th><th scope="col">Code and other files</th><th scope="col">Shared documents and scripts</th></tr></thead><tbody>%s</tbody></table></div>'
+            '<p class="how">Found with <code>git merge-tree --write-tree</code> on the heads of the open branches, which writes objects and never touches a working tree. A pair is skipped when one branch contains the other. A conflict between two pairs does not mean a merge in order would conflict: it is what meets when the second one arrives.</p></details>') % (len(rows), body)

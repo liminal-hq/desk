@@ -385,3 +385,16 @@ figcaption{overflow-wrap:anywhere}
 .pv-spec{background:var(--spec-dark-bg);color:var(--spec-dark-fg)}
 
 .px-box.is-off,.px-ring.is-off,.px-count.is-off,.px-pit .x-code .mk.is-off{display:none}
+
+/* the loader's fallback chain, the real-mode round trip, and the conflicts table */
+.mc{display:grid;gap:12px;min-width:0}
+.mc-row{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mc-box{border:1px solid var(--line-strong);border-radius:6px;padding:8px 10px;display:grid;gap:2px;font-size:13px;color:var(--text-2);background:var(--bg);min-width:0}
+.mc-box b{color:var(--text);font-size:15px} .mc-ok{font-style:normal;color:var(--s-done);font-weight:700} .mc-no{font-style:normal;color:var(--muted)}
+.rm-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.rm{border:1px solid var(--line-strong);border-radius:6px;padding:8px;text-align:center;font-size:13px;color:var(--muted)}
+.rm.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);font-weight:700}
+.rm-state{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px;font-size:13.5px;color:var(--text-2)} .rm-state b{color:var(--text)}
+.bt.is-off{display:none}
+details.conf{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--panel)} details.conf summary{cursor:pointer;color:var(--accent-ink)}
+@media (max-width:560px){.mc-row,.rm-row{grid-template-columns:1fr}}

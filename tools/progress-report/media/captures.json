@@ -220,5 +220,73 @@
   "branch": "spike/d-native-vga",
   "path": "docs/images/d-native-vga/mode-13h-picture.png",
   "commit": "563f6c4"
+ },
+ {
+  "file": "g-results.md",
+  "branch": "spike/g-boot-bochs-86box",
+  "path": "docs/NATIVE-EMULATORS.md",
+  "extract": {
+   "after": "## Results",
+   "table": 1
+  },
+  "commit": "04f1212"
+ },
+ {
+  "file": "g-cpu-probe.md",
+  "branch": "spike/g-boot-bochs-86box",
+  "path": "docs/NATIVE-EMULATORS.md",
+  "extract": {
+   "after": "A one-sector probe",
+   "table": 1
+  },
+  "commit": "04f1212"
+ },
+ {
+  "file": "g-stage2.asm.txt",
+  "branch": "spike/g-boot-bochs-86box",
+  "path": "boot/stage2.asm",
+  "commit": "04f1212"
+ },
+ {
+  "file": "g-native-test.sh.txt",
+  "branch": "spike/g-boot-bochs-86box",
+  "path": "tools/native-test.sh",
+  "commit": "04f1212"
+ },
+ {
+  "file": "n3-switch.md",
+  "branch": "spike/n3-native-bios",
+  "path": "docs/N3-BIOS-PATH.md",
+  "extract": {
+   "after": "## The switching sequence",
+   "table": 1
+  },
+  "commit": "8704850"
+ },
+ {
+  "file": "n3-results.md",
+  "branch": "spike/n3-native-bios",
+  "path": "docs/N3-BIOS-PATH.md",
+  "extract": {
+   "after": "## Results",
+   "table": 1
+  },
+  "commit": "8704850"
+ },
+ {
+  "file": "n3-cost.md",
+  "branch": "spike/n3-native-bios",
+  "path": "docs/N3-BIOS-PATH.md",
+  "extract": {
+   "after": "## Cost",
+   "table": 1
+  },
+  "commit": "8704850"
+ },
+ {
+  "file": "n3-expected-bios.txt",
+  "branch": "spike/n3-native-bios",
+  "path": "tests/native/expected-bios.txt",
+  "commit": "8704850"
  }
 ]

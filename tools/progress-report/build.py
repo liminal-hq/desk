@@ -130,6 +130,9 @@ def values_of(data):
     subject = [o for o in data["open"]["prs"] if not o["isReport"]]
     for t in data["open"].get("tips", []):
         vals["pr%d.hostTests" % t["number"]] = t["hostTests"]
+    boot = [c for c in data["open"].get("conflicts", []) if "boot/stage2.asm" in c["files"]]
+    vals["conflicts.boot"] = ", ".join("#%d with #%d" % (c["a"], c["b"]) for c in boot) or "no pair"
+    vals["conflicts.pairs"] = len(data["open"].get("conflicts", []))
     vals["open.numbers"] = ", ".join("#%d" % o["number"] for o in subject)
     vals["open.count"] = len(subject)
     vals["merged.since"] = ", ".join("#%d" % n for n in data["mergeDay"]["since"]) or "nothing"
@@ -303,7 +306,7 @@ class Site:
                     return ex.pipeline(d, ctx)
                 if xid == "mergeday":
                     return ex.mergeday(d, ctx, [int(a) for a in args[1:]])
-                hwx = {"pit": hw.pit_test, "input": hw.input_replay, "vga13": hw.vga13, "vbeattrs": hw.vbe_attrs, "pipelines": hw.pipelines}
+                hwx = {"pit": hw.pit_test, "input": hw.input_replay, "vga13": hw.vga13, "vbeattrs": hw.vbe_attrs, "pipelines": hw.pipelines, "memchain": hw.memchain, "biscall": hw.bios_roundtrip}
                 if xid in hwx:
                     return hwx[xid](d, ctx)
                 raise mdlite.MdError("unknown explainer %s in %s" % (xid, chapter["id"]))
@@ -315,6 +318,10 @@ class Site:
                 return hw.shots(d, args[1:])
             if name == "figure" and args[0] in ("font-matrix", "emoji-coverage", "track-progress", "pr-stack"):
                 return {"font-matrix": charts.font_matrix, "emoji-coverage": charts.emoji_coverage, "track-progress": charts.track_progress, "pr-stack": charts.pr_stack}[args[0]](d)
+            if name == "figure" and args[0] == "open-conflicts":
+                return charts.open_conflicts(d)
+            if name == "figure" and args[0] == "bios-cost":
+                return hw.bios_cost(d, ctx)
             if name == "figure" and args[0] in ("hal-layers", "bootinfo", "std-sizes"):
                 return {"hal-layers": lambda: '<figure><div class="chart scroll" tabindex="0" aria-label="HAL layers diagram, scrolls sideways"><div style="min-width:760px">%s</div></div><figcaption>The layers and crate layout of the HAL design (PR #8) and of what the later pull requests added on top of it. Solid blue: built and in an open pull request, not merged. Dashed: designed or sketched only. Nothing here has run on real hardware, and the platforms are the only code that touches the machine.</figcaption></figure>' % hw.hal_layers(d, ctx),
                                                   "bootinfo": lambda: hw.bootinfo(d, ctx), "std-sizes": lambda: hw.std_sizes(d, ctx)}[args[0]]()
@@ -403,11 +410,17 @@ class Site:
             im = Image.open(fp)
             if im.width > 1000 and im.height > 1000:
                 im = im.crop((0, 0, 560, 420))
+            mode = im.mode
             im.thumbnail((480, 360), Image.LANCZOS)
             jpg = src.lower().endswith((".jpg", ".jpeg"))
+            if mode == "P" and not jpg:
+                im = im.convert("RGB").quantize(colors=64, method=Image.MEDIANCUT)
             name = "thumbs/%s.%s" % (os.path.splitext(os.path.basename(src))[0], "jpg" if jpg else "png")
             os.makedirs(os.path.join(self.out, "thumbs"), exist_ok=True)
             (im.convert("RGB") if jpg else im).save(os.path.join(self.out, name), **({"quality": 78, "optimize": True} if jpg else {"optimize": True}))
+            if os.path.getsize(os.path.join(self.out, name)) >= os.path.getsize(fp):
+                os.remove(os.path.join(self.out, name))
+                continue
             out[src] = name
             written.append(name)
         return out, written

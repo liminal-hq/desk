@@ -48,6 +48,7 @@ def captable(name, ctx, caption_for=""):
         return [c.strip() for c in re.split(r"(?<!\\)\|", r.strip().strip("|"))]
 
     def fix(c):
+        c = re.sub(r"\[([^\]]+)\]\((?!https?://)[^)]*\)", r"\1", c)  # a link into the source document means nothing here: keep its words
         return re.sub(r"``\s*(.*?)\s*``", lambda m: "`%s`" % m.group(1).replace("`", "'"), c)
     head = cells(rows[0])
     body = [cells(r) for r in rows[2:]]
@@ -684,3 +685,118 @@ def shots(D, names):
         figs.append('<figure class="shot" id="shot-%s"><div class="screen"><img src="img/%s" alt="%s" width="%d" height="%d" loading="lazy"></div><figcaption>%s</figcaption></figure>' % (
             n[:-4], n, esc(alt), w, h, cap))
     return '<div class="shotrow">%s</div><p class="how">%s</p>' % ("".join(figs), cap_note(D, list(names)))
+
+
+# ---- the memory-map fallback chain (spike G) ---------------------------------------------------------------------------------------------
+
+def memchain(D, ctx):
+    asm = media("g-stage2.asm.txt")
+    order = re.findall(r"call (map_e820|map_e801|map_88)\n\s+jnc \.map_ok", asm)
+    if order != ["map_e820", "map_e801", "map_88"]:
+        raise ValueError("the loader no longer tries E820, E801 and AH=88 in that order: %r" % order)
+    if "msg_map:        db 'stage2: no memory map from the BIOS'" not in asm:
+        raise ValueError("the loader no longer reports a missing memory map")
+    nt = media("g-native-test.sh.txt")
+    e801 = re.search(r'--nasm-flags "(-DNO_E820)"\ntools/native-image\.sh --out dist/native-e801\.img.*?\n\s*sed -e \'s\|memory map from E820, entries: \{N:1\.\.32\}\|(memory map from E801, entries: \{N:2\.\.3\})\|\'', nt, re.S)
+    e88 = re.search(r'--nasm-flags "(-DNO_E820 -DNO_E801)"\ntools/native-image\.sh --out dist/native-e88\.img.*?\n\s*sed -e \'s\|memory map from E820, entries: \{N:1\.\.32\}\|(memory map from INT 15h AH=88, entries: 2)\|\'', nt, re.S)
+    if not e801 or not e88:
+        raise ValueError("native-test.sh no longer rewrites the expected transcript for the E801 and AH=88 variants as the explainer says")
+    res = media("g-results.md")
+    row88 = [r for r in res.splitlines() if "86Box" in r and "AH=88" in r]
+    if not row88:
+        raise ValueError("the results table no longer says that 86Box needed the AH=88 fallback")
+    boxes = [("E820", "INT 15h AX=E820", "map_e820"), ("E801", "INT 15h AX=E801", "map_e801"), ("AH=88", "INT 15h AH=88", "map_88")]
+    lines = [("stage2: memory map from E820, entries: 5", 1, "QEMU and Bochs: the first call answers"),
+             ("stage2: memory map from E801, entries: 2", 2, "the test build with `-DNO_E820`, as a BIOS from before E820 would"),
+             ("stage2: memory map from INT 15h AH=88, entries: 2", 3, "the test build with `-DNO_E820 -DNO_E801`; what 86Box's 1993 AMIBIOS gives"),
+             ("stage2: no memory map from the BIOS", 4, "what the loader printed on 86Box before the fallback existed")]
+    row = ""
+    for i, (n, call, lab) in enumerate(boxes):
+        row += '<li class="mc-box" data-from="%d"><b>%s</b><span>%s</span><em class="mc-ok" data-at="%d">answers</em><em class="mc-no" data-from="%d">no answer in this case</em></li>' % (i + 1, esc(n), esc(call), i + 1, i + 2 if i < 2 else 99)
+    out = ('<div class="mc"><ol class="mc-row" aria-label="The three calls the loader tries, in order">%s</ol>'
+           '<div class="px-box"><div class="px-h">What the transcript says</div>%s</div></div>') % (
+        row, "".join('<p class="px-calc" data-at="%d"><code>%s</code> <span class="muted">%s</span></p>' % (s, esc(t), inline(why, ctx)) for t, s, why in lines))
+    steps = [
+        ("Why the loader asks", "Only the BIOS knows what RAM exists, and it can only be asked in real mode, so stage 2 asks before it switches to protected mode. It tries three calls, in order, and the order is read from the loader's own source: `map_e820`, then `map_e801`, then `map_88`, each followed by a jump to the same label when the carry flag says it answered."),
+        ("INT 15h AX=E820", "The modern call: a list of entries, one per range, each saying usable or reserved. SeaBIOS under QEMU and all three BIOSes under Bochs answer it, with five or six entries that differ from BIOS to BIOS, which is why the expected transcript accepts a range."),
+        ("INT 15h AX=E801", "The fallback for BIOSes from before E820: the KiB between 1 and 16 MiB, and the 64 KiB blocks above. No BIOS in these runs lacks E820, so this path runs only as a test build of the loader, `-DNO_E820`, whose expected transcript the test script rewrites to say E801 with two or three entries."),
+        ("INT 15h AH=88", "The last resort: the KiB above 1 MiB, in one 16-bit count. The loader rewrites it as the same kind of entries, with map source 3. This is the call 86Box's 1993 AMIBIOS answers, because that BIOS has neither of the others (E801, as the spike notes, dates from 1994). The document warns that it reports at most 15 MiB, or 63 MiB on some BIOSes, so RAM above that is invisible when it is the only call available."),
+        ("If all three fail", "The loader printed `stage2: no memory map from the BIOS` and stopped. That was the real boot bug of the spike: before the fallback, the 86Box machine could not get past the loader. The fix is `map_88` and the `e88` test variant, which runs under QEMU and Bochs and checks the same transcript as the real thing."),
+    ]
+    cap = ("The memory-map fallback chain of <code>boot/stage2.asm</code> in spike G (PR #16), with the transcript lines the test script expects for each variant. The order of the calls and the rewritten expected lines are read from the captured loader source and test script, and the page refuses to build if they change; the E820 line's entry count is the example of a range the real checker accepts. %s" % cap_note(D, ["g-stage2.asm.txt", "g-native-test.sh.txt", "g-results.md"]))
+    return stepper("memchain", "The loader's memory-map fallback chain", out, steps, cap, ctx, "x-wide")
+
+
+# ---- the real-mode round trip (spike n3) ----------------------------------------------------------------------------------------------------
+
+def bios_roundtrip(D, ctx):
+    tbl = [r for r in media("n3-switch.md").strip().splitlines() if r.startswith("|")][2:]
+    rows = []
+    for r in tbl:
+        c = [x.strip() for x in r.strip("|").split("|")]
+        rows.append((int(c[0]), c[1], re.sub(r"\[([^\]]+)\]\((?!https?://)[^)]*\)", r"\1", c[2])))
+    if [r[0] for r in rows] != list(range(1, 15)) or {r[1] for r in rows} != {"32-bit", "16-bit protected", "real"}:
+        raise ValueError("the switching-sequence table is no longer 14 numbered rows in three modes")
+    # a small state machine read from the words of the rows
+    state = {"mode": "32-bit", "pics": "kernel", "nmi": "kernel", "pg": True, "pe": True}
+    trail = []
+    for n, mode, text in rows:
+        t = text
+        if "masks NMI" in t:
+            state["nmi"] = "masked for the call"
+        if "BIOS vectors" in t:
+            state["pics"] = "BIOS"
+        if "Clears `CR0.PG` and `CR0.PE`" in t:
+            state["pg"], state["pe"] = False, False
+        if "sets `CR0.PE`" in t:
+            state["pe"] = True
+        if "restores CR3 and then CR0" in t:
+            state["pg"], state["pe"] = True, True
+        if "Puts the PICs back" in t:
+            state["pics"] = "kernel"
+        if "restores NMI" in t:
+            state["nmi"] = "kernel"
+        state["mode"] = mode
+        trail.append(dict(state))
+    last = trail[-1]
+    if not (last["pics"] == "kernel" and last["nmi"] == "kernel" and last["pe"] and last["pg"]):
+        raise ValueError("the round trip does not end with the PICs, NMI and CR0 put back: %r" % last)
+    if not (any(t["pics"] == "BIOS" for t in trail) and any(not t["pe"] for t in trail)):
+        raise ValueError("the round trip never visited real mode with the BIOS's vectors")
+    exp = media("n3-expected-bios.txt").splitlines()
+    want = [l for l in exp if l.startswith("bios: INT 1Ah time and date") or l.startswith("bios: the kernel's CPU state is the same") or l.startswith("bios: stress: 1000 INT 1Ah") or l.startswith("bios: keyboard: the call returned") or l.startswith("bios: cost:")]
+    if len(want) != 5:
+        raise ValueError("the expected BIOS transcript no longer has the lines the round-trip explainer shows (found %d)" % len(want))
+    modes = ["32-bit", "16-bit protected", "real"]
+    panels = []
+    for i, st in enumerate(trail):
+        ribbon = "".join('<span class="rm%s">%s</span>' % (" on" if st["mode"] == m else "", esc(m if m != "32-bit" else "32-bit protected")) for m in modes)
+        panels.append('<div class="px-ring bt" data-at="%d"><div class="rm-row" role="img" aria-label="CPU mode: %s">%s</div>'
+                      '<ul class="rm-state"><li>8259 vector bases: <b>%s</b></li><li>NMI: <b>%s</b></li><li>CR0 paging bit and protection bit: <b>%s</b></li></ul></div>' % (
+                          i, esc(st["mode"]), ribbon, "BIOS (0x08 and 0x70)" if st["pics"] == "BIOS" else "kernel (0x20 and 0x28)",
+                          st["nmi"], "both set" if st["pg"] and st["pe"] else ("cleared" if not st["pe"] else "protection set, paging off")))
+    cons = console(want, [13] * len(want), "The expected transcript lines that come after the call")
+    stage = "".join(panels) + '<div data-from="13">%s</div>' % cons
+    steps = [("Step %d, %s" % (n, mode), text) for n, mode, text in rows]
+    cap = ("The switching sequence of the real-mode trampoline in spike n3 (PR #17), one row of the document's table per step; the CPU mode, the 8259 vector bases, NMI and the control register bits are read from the words of the rows, and the page refuses to build unless the trip ends with them all put back. The transcript lines are from <code>tests/native/expected-bios.txt</code>, the real check of every CI run; they contain ranges where the numbers vary. It is the documented sequence, not a trace of a run. %s" % cap_note(D, ["n3-switch.md", "n3-expected-bios.txt"]))
+    return stepper("biscall", "One BIOS call from the protected-mode kernel", stage, steps, cap, ctx, "x-wide")
+
+
+def bios_cost(D, ctx):
+    rows = [r for r in media("n3-cost.md").strip().splitlines() if r.startswith("|")][2:]
+    data = []
+    for r in rows:
+        c = [x.strip() for x in r.strip("|").split("|")]
+        m = re.search(r"about (\d+) µs", c[1])
+        if not m:
+            raise ValueError("cost row %r has no figure" % c)
+        data.append((c[0], int(m.group(1))))
+    mx = max(v for _, v in data)
+    o = ['<svg viewBox="0 0 760 %d" role="img" class="diagram sz" aria-label="Bars of the time of one BIOS call from the kernel in emulators: %s.">' % (40 + 34 * len(data), "; ".join("%s %d microseconds" % d for d in data))]
+    for i, (n, v) in enumerate(data):
+        y = 14 + i * 34
+        w = v / mx * 430
+        o.append('<text x="250" y="%d" text-anchor="end" font-size="13" class="a-t1">%s</text><rect x="260" y="%d" width="%.1f" height="20" rx="2" class="sz-f sz-%d"/><text x="%.1f" y="%d" font-size="12" class="num d-text2">about %d µs</text>' % (y + 15, esc(n), y, w, i + 1, 266 + w, y + 15, v))
+    o.append("</svg>")
+    return ('<figure class="chartfig"><div class="chart scroll" tabindex="0" aria-label="Cost of a BIOS call, scrolls sideways"><div style="min-width:640px">%s</div></div>'
+            '<figcaption>The cost of one <code>INT 1Ah</code> call from the kernel, 5,000 in a row, timed in 10 ms kernel ticks, from the table in <code>docs/N3-BIOS-PATH.md</code> (PR #17). These are <strong>emulated</strong> speeds under QEMU&apos;s translator and Bochs&apos;s default 4 MIPS, and say nothing about a 486: the document guesses about 100 µs for a trivial call on one, and says it is unmeasured. %s</figcaption></figure>') % ("".join(o), cap_note(D, ["n3-cost.md"]))

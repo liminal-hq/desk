@@ -32,7 +32,7 @@ STATES = ("merged", "in review", "in progress", "planned", "none")
 REQUIRED = ("id", "kind", "track", "title", "alt", "caption", "thumb")
 # directives that draw something and so must be registered; the others (facts strips, tables of text, cards) are not figures
 DRAWN = {"explainer", "figure"}
-NOT_FIGURES = {("figure", "nexts"), ("figure", "conflicts")}
+NOT_FIGURES = {("figure", "nexts"), ("figure", "conflicts"), ("figure", "open-conflicts")}
 
 
 def parse_block(text, chapter):

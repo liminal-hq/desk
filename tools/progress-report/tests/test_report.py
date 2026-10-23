@@ -462,6 +462,23 @@ class OpenWorkTests(unittest.TestCase):
             prs[0]["headRefOid"] = "0" * 40
             self.assertTrue(gather.open_work(d, prs)["warnings"])
 
+    def test_trial_merges_find_the_conflict_between_independent_branches(self):
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            for name in ("p1", "p2"):
+                git(d, "checkout", "-q", "-b", "feat/" + name, "main")
+                wr(os.path.join(d, "shared.txt"), name + "\n")
+                git(d, "add", "shared.txt")
+                git(d, "commit", "-q", "-m", "feat: " + name)
+            git(d, "checkout", "-q", "main")
+            out = gather.trial_merges(d, {2: "feat/p1", 3: "feat/p2"})
+            self.assertEqual(out, [{"a": 2, "b": 3, "files": ["shared.txt"]}])
+            git(d, "checkout", "-q", "-b", "feat/z", "feat/p1")
+            wr(os.path.join(d, "z.txt"), "z\n")
+            git(d, "add", "z.txt")
+            git(d, "commit", "-q", "-m", "feat: z")
+            self.assertEqual(gather.trial_merges(d, {2: "feat/p1", 4: "feat/z"}), [], "a branch that contains the other is skipped")
+
     def test_pr_state_and_ci(self):
         self.assertEqual(gather.pr_state({"mergedAt": "x"}), "merged")
         self.assertEqual(gather.pr_state({"state": "OPEN", "isDraft": True}), "in progress")
@@ -500,7 +517,7 @@ class HardwareExplainerTests(unittest.TestCase):
 
     def test_every_hardware_explainer_builds_from_the_captures(self):
         ctx = mdlite.Ctx()
-        counts = {"pit": (hw.pit_test, 9), "input": (hw.input_replay, 19), "vga13": (hw.vga13, 10), "vbe": (hw.vbe_attrs, 3), "pipelines": (hw.pipelines, 7)}
+        counts = {"pit": (hw.pit_test, 9), "input": (hw.input_replay, 19), "vga13": (hw.vga13, 10), "vbe": (hw.vbe_attrs, 3), "pipelines": (hw.pipelines, 7), "memchain": (hw.memchain, 5), "biscall": (hw.bios_roundtrip, 14)}
         for name, (fn, n) in counts.items():
             html = fn(self.D, ctx)
             self.assertEqual(html.count('class="x-step"'), n, name)
@@ -508,6 +525,7 @@ class HardwareExplainerTests(unittest.TestCase):
         self.assertIn("std, desk", hw.std_sizes(self.D, ctx))
         self.assertIn("video block", hw.bootinfo(self.D, ctx).lower())
         self.assertIn("<svg", hw.hal_layers(self.D, ctx))
+        self.assertIn("microseconds", hw.bios_cost(self.D, ctx))
 
     def with_media(self, name, old, new):
         real = hw.media
@@ -532,6 +550,21 @@ class HardwareExplainerTests(unittest.TestCase):
         self.with_media("vga-regs.rs.txt", "0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00, 0x41,", "0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00,")
         with self.assertRaises(ValueError):
             hw.vga13(self.D, mdlite.Ctx())
+
+    def test_the_loader_explainer_refuses_a_changed_fallback_order(self):
+        self.with_media("g-stage2.asm.txt", "call map_e801\n        jnc .map_ok", "call map_88\n        jnc .map_ok")
+        with self.assertRaises(ValueError):
+            hw.memchain(self.D, mdlite.Ctx())
+
+    def test_the_round_trip_refuses_a_trip_that_does_not_put_the_pics_back(self):
+        self.with_media("n3-switch.md", "Puts the PICs back", "Leaves the PICs")
+        with self.assertRaises(ValueError):
+            hw.bios_roundtrip(self.D, mdlite.Ctx())
+
+    def test_a_link_into_the_source_document_keeps_its_words(self):
+        self.with_media("n3-switch.md", "[below](#x)", "[below](#x)")
+        html = hw.captable("n3-switch.md", mdlite.Ctx(), "t")
+        self.assertNotIn('href="#', html)
 
     def test_the_decoder_replica_and_packets(self):
         t = hw.kbd_tables()

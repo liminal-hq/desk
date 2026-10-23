@@ -476,7 +476,28 @@ def open_work(root, gh_prs):
     if subject:
         union = subprocess.run(["git", "rev-list", "--count", *[refs[o["number"]] for o in subject], "^" + main], cwd=root, capture_output=True, text=True).stdout.strip()
     best = max(tips, key=lambda t: t["hostTests"]) if tips else None
-    return {"prs": out, "tips": tips, "commitsOnBranches": int(union or 0), "widest": best["number"] if best else None, "warnings": warnings}
+    return {"prs": out, "tips": tips, "commitsOnBranches": int(union or 0), "widest": best["number"] if best else None, "warnings": warnings,
+            "conflicts": trial_merges(root, {o["number"]: refs[o["number"]] for o in subject})}
+
+
+def trial_merges(root, refs):
+    """Which pairs of open branches would conflict if both were merged, found with `git merge-tree`, which writes only objects and
+    never touches a working tree. Pairs where one branch contains the other are skipped: merging the second is not a new question."""
+    out = []
+    nums = sorted(refs)
+    for i, a in enumerate(nums):
+        for b in nums[i + 1:]:
+            if is_ancestor(root, refs[a], refs[b]) or is_ancestor(root, refs[b], refs[a]):
+                continue
+            p = subprocess.run(["git", "merge-tree", "--write-tree", "--name-only", refs[a], refs[b]], cwd=root, capture_output=True, text=True)
+            if p.returncode == 1:
+                files = []
+                for line in p.stdout.splitlines()[1:]:
+                    if not line.strip():
+                        break
+                    files.append(line.strip())
+                out.append({"a": a, "b": b, "files": files})
+    return out
 
 
 # ---- captures: the few files of other branches that the explainers replay ------------------------------------------------------
