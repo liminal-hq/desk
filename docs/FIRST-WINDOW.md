@@ -2,7 +2,7 @@
 
 The design for the first piece of the OS-independent Desk core: a `shell/` workspace of `no_std` crates that draws a desktop, two windows with the stepped halo, text from the `.DFN` faces and a software cursor into an 8-bit back buffer, presents only what changed, and produces **the same pixels** on the hosted track (DOS in DOSBox) and the native track (the kernel in QEMU). It is milestone 5 of the hosted track and milestone 3 of the native track in [`DIRECTION.md`](DIRECTION.md), built once. The task-by-task build plan is [`FIRST-WINDOW-PLAN.md`](FIRST-WINDOW-PLAN.md).
 
-> **Status.** A design, written on 2026-10-23 against `main` at `c4a897c`. The `shell/` crates, the scenario runner, the goldens and the kernel's `shell` test mode are built (the sections below say "As built" where they record it); the hosted `shell/dos` program is not. It rests on what spikes A, B, C, D and n3 measured ([`A-VGA-VBE.md`](A-VGA-VBE.md), [`B-DOS-INPUT.md`](B-DOS-INPUT.md), [`C-INPUT.md`](C-INPUT.md), [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md), [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md)) and on the `.DFN` files the font build already writes ([`FONTS.md`](FONTS.md)). When the code disagrees with this document, the code wins and this document is corrected in the same branch.
+> **Status.** A design, written on 2026-10-23 against `main` at `c4a897c`. The `shell/` crates, the scenario runner, the goldens and the kernel's `shell` test mode are built (the sections below say "As built" where they record it); the hosted `shell/dos` program and the comparison of the two tracks are ([Result](#result)). It rests on what spikes A, B, C, D and n3 measured ([`A-VGA-VBE.md`](A-VGA-VBE.md), [`B-DOS-INPUT.md`](B-DOS-INPUT.md), [`C-INPUT.md`](C-INPUT.md), [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md), [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md)) and on the `.DFN` files the font build already writes ([`FONTS.md`](FONTS.md)). When the code disagrees with this document, the code wins and this document is corrected in the same branch.
 
 ## Contents
 
@@ -25,6 +25,7 @@ The design for the first piece of the OS-independent Desk core: a `shell/` works
 - [Questions for the owner](#questions-for-the-owner)
 - [Risks](#risks)
 - [What changes in other documents](#what-changes-in-other-documents)
+- [Result](#result)
 
 ## What the first window is
 
@@ -649,7 +650,7 @@ DOSBox headless has no screenshot command that a script can use, so the hosted c
 
 ### Both tracks at once
 
-The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/check.sh` also states it directly: after both runs, `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4) must pass. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels.
+The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/shell-compare.sh` (called from `tools/check.sh` after both runs, or run alone with `--run`) also states it directly: `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4, and for the DOS run with no VBE against native depth 4) must pass, and it must fail for each of the depths swapped, a pixel changed in the DOS dump, a frame missing and a frame swapped for another. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels.
 
 ## Rules carried over
 
@@ -697,3 +698,47 @@ Made by the tasks that change the behaviour, in the same branch:
 - [`HAL.md`](HAL.md): the status line and the core's entry (the narrower seam above).
 - [`DIRECTION.md`](DIRECTION.md) and [`SPEC.md`](SPEC.md): the milestones and the headless frame checks, once both wirings pass.
 - This document: a "Result" section with what was built, measured and not verified.
+
+## Result
+
+Measured on 2026-10-23 on the branch that merges the hosted wiring ([#30](https://github.com/liminal-hq/desk/pull/30)) and the native wiring ([#29](https://github.com/liminal-hq/desk/pull/29)), in the `ci-dos` image with QEMU and NASM installed from apt as CI does (QEMU as the image's Debian package provides it; DOSBox Staging from `/opt/dos-toolchain`), by `tools/shell-compare.sh --run`. Not verified comes first.
+
+### Not verified
+
+- **The mouse.** Both runs are scripted: the scenario's pointer moves and drags are events handed to the shell, not motion through INT 33h (DOS) or the PS/2 mouse (native). Keys reached the shell through IRQ 1 on DOS (the interactive run) but not on the native side in this comparison. The live-input task is separate.
+- **Real hardware.** Nothing ran on a real VGA card, a real monitor or a 486. Real cards, DAC rounding on real parts and timing are untested.
+- **The DOS capture is not a screen capture.** `SHELL.EXE` reads the frame buffer back through the linear mapping (or the four planes) and the DAC through the ports, so it records what the emulated card holds, not what DOSBox draws. QEMU's screendump is the emulator's rendered output. A fault that wrote the same wrong thing into memory and the DAC would agree with itself on DOS and be caught only by the goldens, which come from host code with no VGA in it; the native side is an independent path and agrees with them too.
+- **One emulator per track.** DOSBox Staging with the S3 card and QEMU with the std and Cirrus cards. Bochs and 86Box were not run for this.
+- **The other documents of the plan's T11** (`HAL.md`, `DIRECTION.md`, `SPEC.md`, `RUST-TARGETS.md`) were not updated here; this section and the check are.
+
+### What matched
+
+The scenario has six frames (`open`, `moved`, `focus`, `dragged`, `typed`, `closed`) at each depth, 640 × 480. For each, the DOS read-back (RAW with its 6-bit DAC dump) and the native screendump (QEMU's PPM, kept as a PNG) have the same six-bit colour digest, which is also the golden's.
+
+| Frame | Depth 8 colour digest | Depth 4 colour digest |
+|---|---|---|
+| open | `c310363f` | `216c6cb6` |
+| moved | `03faf8b3` | `e186a23a` |
+| focus | `8fa785c2` | `4239a1ae` |
+| dragged | `a8143a01` | `2c6aaaf5` |
+| typed | `2cd55463` | `4682055d` |
+| closed | `379c4c02` | `df1b4c3a` |
+
+- `frames.py same` passes: 6 frames equal at depth 8 (DOS mode `0x101` on the S3 card against QEMU's std card with the loader's VBE linear frame buffer), 6 at depth 4 (DOS mode 12h against QEMU's Cirrus card in mode 12h by registers), and the DOS run on a machine with no VBE (depth 8 asked for, depth 4 by fallback) equals the native depth 4 set too. Every digest is the one in `tests/shell/first-window.sums`, so the two tracks are equal to each other and to the host goldens, with no frame needing a tolerance. No pixel differs.
+- The index digests (palette indices) are equal on DOS and on the host, and are not compared with the native dumps: the kept native PNGs renumber the palette, so only colour is comparable across the tracks. The check that held the native PPMs to the index digests ran before the conversion (`tools/native-test.sh`).
+- The comparison fails when it should (all five were run): DOS depth 8 against native depth 4 (`closed`: `379c4c02` against `df1b4c3a`), DOS depth 4 against native depth 8, one palette index changed in the DOS `typed` dump (`c6c912f0` against `2cd55463`), a DOS set with `closed` missing, and the native `typed` frame replaced by `focus`.
+- Sizes: `SHELL.EXE` 102,400 bytes; the native `kernel.bin` 173,344 bytes (1,474,560-byte floppy image).
+
+### What differs
+
+The pictures do not. The paths differ: the DOS files are raw indices with a 768-byte DAC dump and are 2.2 to 2.7 KB as PNG, the native ones are renumbered by `native-shot.py png` and are 1.5 to 1.8 KB, with the same colours. The DOS run prints `shell: readback NAME ... equal` against its own digest at every frame, which the native track has no counterpart for (it cannot read its own display); the native track instead has QEMU's independent screendump.
+
+### What was seen
+
+The `typed` frame from each track at each depth is in [`images/first-window/`](images/first-window/) (`dos-8-typed.png`, `native-8-typed.png`, `dos-4-typed.png`, `native-4-typed.png`, and the `dragged` frames beside them, which were not looked at). Viewed one after the other, the four are indistinguishable: a near-black desktop, a dimmer "Notes" window at the back reading "The first window." with its title text and minimise, maximise and close glyphs, and the focused "Welcome to Desk" window over it with the orange halo, the prompt "Type something:", a text field holding "desk" with the caret after it, and the arrow cursor at about (400, 310). No stray pixels, no fringe on the halo, no shift between the tracks. Only the four `typed` frames were looked at by eye; the others are held by their digests.
+
+| DOS, depth 8 | Native, depth 8 |
+|---|---|
+| ![SHELL.EXE depth 8, typed frame](images/first-window/dos-8-typed.png) | ![The kernel at depth 8, typed frame](images/first-window/native-8-typed.png) |
+| **DOS, depth 4** | **Native, depth 4** |
+| ![SHELL.EXE depth 4, typed frame](images/first-window/dos-4-typed.png) | ![The kernel at depth 4, typed frame](images/first-window/native-4-typed.png) |
