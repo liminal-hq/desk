@@ -455,9 +455,23 @@ fn keyboard_during_call(ps2: &mut Ps2Input) {
 // ---- Stress
 
 fn stress() {
-    // Interrupts are on, as they are for the whole scenario, so the timer ticks between and during the calls.
-    let before = snapshot();
+    // The cost of a call: plain calls back to back, timed in kernel ticks of 10 ms, so the figure is a mean over many.
+    const COST_CALLS: u32 = 5000;
     let t0 = pit::ticks();
+    for _ in 0..COST_CALLS {
+        let (res, r) = int(0x1A, 0x0200);
+        assert!(res.is_ok() && !r.carry());
+    }
+    let took = pit::ticks().wrapping_sub(t0);
+    println!(
+        "bios: cost: {} INT 1Ah calls took {} kernel ticks, about {} microseconds each (emulated speed, not real hardware)",
+        COST_CALLS,
+        took,
+        u64::from(took) * 10_000 / u64::from(COST_CALLS)
+    );
+    // The same calls, with the kernel's state checked after every one. Interrupts are on, as they are for the whole scenario, so the
+    // timer ticks between and during the calls.
+    let before = snapshot();
     let mut same = true;
     let mut last = before;
     for i in 0..1000 {
@@ -467,10 +481,8 @@ fn stress() {
         same &= now == last;
         last = now;
     }
-    let took = pit::ticks().wrapping_sub(t0);
     println!("bios: stress: 1000 INT 1Ah calls with the timer running, the stack, GDT, IDT, segments, CR0 and PIC masks identical after every one: {}", same && last == before);
     assert!(same && last == before);
-    println!("bios: stress: the 1000 calls took {} kernel ticks, about {} microseconds each (emulated speed, not real hardware)", took, u64::from(took) * 10_000 / 1000);
     // The kernel tick count against the RTC: each change of the RTC second is noted as it is seen, and the ticks between two of
     // them must be a second's worth, 100, give or take the one-tick resolution of seeing a change.
     let mut edges = [0u32; 4];

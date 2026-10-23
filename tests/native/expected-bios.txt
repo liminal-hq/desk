@@ -60,8 +60,8 @@ bios: keyboard: the call returned, {N:1..2} byte(s) were waiting in the controll
 bios: the one-second wait took {N:98..102} kernel ticks (the BIOS timer handler counted {N:95..102}, undelivered ticks recovered {N:0..2})
 key: A down mods=- char='a'
 key: A up mods=-
+bios: cost: 5000 INT 1Ah calls took {N:1..100000} kernel ticks, about {N:1..100000} microseconds each (emulated speed, not real hardware)
 bios: stress: 1000 INT 1Ah calls with the timer running, the stack, GDT, IDT, segments, CR0 and PIC masks identical after every one: true
-bios: stress: the 1000 calls took {N:0..2000} kernel ticks, about {N:0..2000000} microseconds each (emulated speed, not real hardware)
 bios: stress: kernel ticks between three RTC seconds while calling INT 1Ah every tick: {N:98..102}, {N:98..102} and {N:98..102}
 bios: stress: the tick count kept one hundred ticks to the RTC second: true
 bios: VBE 4F00h: version {N:2..3}.{N:0..2}, {N:16..1024} x 64 KiB of video memory, {N:5..400} modes listed, OEM "{ANY}"
@@ -90,6 +90,6 @@ bios: VBE set, draw and return to text worked twice
 bios: ready keys
 key: K down mods=- char='k'
 key: K up mods=-
-bios: the kernel's keyboard works after {N:1100..4000} calls: true
+bios: the kernel's keyboard works after {N:1100..20000} calls: true
 bios: scenarios complete
 boot complete
