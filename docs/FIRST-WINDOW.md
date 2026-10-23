@@ -89,7 +89,7 @@ shell/                          one Cargo workspace; no default target, so `carg
 ├── shell/      desk-shell      Shell (events, cursor, frame loop), the scenario parser and runner
 └── dos/        (own workspace, excluded) the hosted program SHELL.EXE on rt and dos-elf.json
 kernel/src/shell.rs             the native wiring, a `shell` test mode
-tests/shell/                    first-window.scn, first-window.sums, golden/first-window/*.png, expected DOS transcripts
+tests/shell/                    first-window.scn, first-window.sums, golden/first-window/*.png, README.md, expected DOS transcripts
 tools/frames.py                 PNG writing and reading, digests, checks and diffs for captures
 ```
 
@@ -507,7 +507,7 @@ A UTF-8 text file, one step per line, `#` starts a comment, blank lines are igno
 | `frame NAME` | Capture the screen as frame NAME |
 | `expect-damage DEPTH PIXELS [RECTS]` | At DEPTH only, the frame just presented wrote at most PIXELS pixels in at most RECTS rectangles (host only; the bound is per depth because depth 4 widens damage to 8-pixel columns) |
 
-The first window's scenario, as the shell task writes it (the coordinates are its to choose; the goldens are what matters):
+The first window's scenario, as committed in `tests/shell/first-window.scn` (which also carries a comment above each stage):
 
 ```
 desk-scenario 1
@@ -579,7 +579,7 @@ frames.py inject SCENARIO > FILE                   the QEMU monitor script for t
 
 A RAW has no size of its own, so `digest` takes it on the command line and `check` takes it from the SUMS line. Exit status is 0 on success, 1 on a failed check or an unreadable input, 2 on a usage error, as `tools/native-shot.py` does; `tools/test_frames.py` holds the tests. The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
 
-**Recording.** `tools/shell-goldens.sh` runs the host scenario test with `DESK_FRAMES_RECORD=1`, which writes each frame's `RAW` and `PAL` into `shell/target/frames/` and a new `.sums`, then converts them to the golden PNGs. A change that moves a pixel is a deliberate re-record in the same branch, and the reviewer looks at the PNGs. Without the variable the test compares and, on a mismatch, writes the dumps and names the `frames.py diff` command to run.
+**Recording.** `tools/shell-goldens.sh` runs the host scenario test with `DESK_FRAMES_RECORD=1`, which writes each frame's `RAW` and `PAL` (`NAME-DEPTH.RAW`, `NAME-DEPTH.PAL`) into `shell/target/frames/` and a new `.sums`, then converts them to the golden PNGs; it starts from clean, so a removed frame leaves no stale PNG. `tests/shell/README.md` says the same for people who find the files first. A change that moves a pixel is a deliberate re-record in the same branch, and the reviewer looks at the PNGs. Without the variable the test compares and, on a mismatch, writes the dumps and prints, for each frame that differs, the `frames.py png` command that makes a PNG of the new frame and the `frames.py diff` command that shows it against the golden.
 
 ## Host tests
 
@@ -587,7 +587,7 @@ All in `cargo test` in `shell/`, so `tools/check.sh` runs them:
 
 - **The goldens.** Every scenario at every depth through `MemoryPresent`: each frame's digests equal the `.sums` line.
 - **Incremental equals full.** After every step of every scenario, the damage-driven front buffer equals a second shell's front buffer redrawn in full from the same state. This is the test that catches a missing damage rect.
-- **Through the real presenters.** The same scenario through `LinearPresent` over a `Vec`-backed `MmioRegion`, and through `PlanarPresent` over a four-plane `PlaneSink` model, produce front buffers whose digests equal the `.sums`. The planar presenter's register writes are also checked against `desk-hal-mock`'s `MockPortBus` log.
+- **Through the real presenters.** (`shell/shell/tests/scenarios.rs`; `desk-present` is a dev-dependency of `desk-shell`.) The runner itself drives `MemoryPresent`, which is where the `expect-damage` steps are checked; the other presenters step the scenario with `apply` and `Shell::frame` (the runner's `capture` has no access to the presenter it is running into) and read their pixels back after each frame, the linear one through `read_back_linear` over a region with a pitch wider than the screen. The same scenario through `LinearPresent` over a `Vec`-backed `MmioRegion`, and through `PlanarPresent` over a four-plane `PlaneSink` model, produce front buffers whose digests equal the `.sums`. The planar presenter's register writes are also checked against `desk-hal-mock`'s `MockPortBus` log.
 - **Damage accounting**, with `MemoryPresent`'s counts:
   - the first frame writes exactly `width × height` pixels; a frame with no events writes none;
   - a cursor move writes at most the area of the old and new 12 × 19 sprite rectangles (456 pixels when they are apart, their bounding box when they overlap), and repaints nothing into the back buffer;

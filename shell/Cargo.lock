@@ -50,6 +50,7 @@ dependencies = [
  "desk-gfx",
  "desk-hal",
  "desk-kbd",
+ "desk-present",
  "desk-ui",
  "desk-wm",
 ]

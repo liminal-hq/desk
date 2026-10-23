@@ -16,3 +16,7 @@ desk-kbd = { path = "../../hal/drivers/kbd" }
 
 [features]
 std = ["desk-hal/std", "desk-gfx/std", "desk-ui/std", "desk-wm/std", "desk-kbd/std"]
+
+[dev-dependencies]
+desk-present = { path = "../present", features = ["std"] }
+desk-hal = { workspace = true, features = ["std"] }
