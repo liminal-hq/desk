@@ -95,7 +95,8 @@ class InterruptsChapterTests(unittest.TestCase):
 
     def test_the_selector_in_the_gp_case_decodes_as_the_prose_says(self):
         sel = 0x28
-        self.assertEqual((sel & 3, (sel >> 2) & 1, sel >> 3), (0, 0, 5))
+        # The error code carries EXT (bit 0), IDT (bit 1), TI (bit 2) and the index; the selector's RPL bits are not reported.
+        self.assertEqual((sel & 1, (sel >> 1) & 1, (sel >> 2) & 1, sel >> 3), (0, 0, 0, 5))
         self.assertGreater(sel, 0x17)
 
     def test_the_spurious_lines_and_the_eoi_are_where_the_prose_puts_them(self):
