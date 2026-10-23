@@ -48,7 +48,7 @@ A 1,474,560-byte image (2,880 sectors of 512 bytes), assembled by `tools/native-
 
 Three values are patched in after the build, so the loader never needs rebuilding when the kernel grows: the kernel length in sectors at stage 1 offset 3 (16 bits), the test mode at stage 2 offset 3 (see [The checks](#the-checks)) and the video request at stage 2 offset 4 (0 keeps the BIOS text screen, 1 tries a VBE linear mode). The kernel must fit between `0x10000` and the BIOS data area (the image tool refuses more than 1,000 sectors).
 
-Physical memory used while booting: `0x500` boot information and memory map (to `0x820`), `0x820` the video block (32 bytes), `0x2000` the BIOS font (4 KiB), `0x3000` and `0x3200` the VBE information and mode blocks while stage 2 runs, `0x7C00` stage 1, `0x7E00` stage 2 (to about `0xA000`), `0x10000` the kernel's staging copy, `0x100000` the kernel.
+Physical memory used while booting: `0x500` boot information and memory map (to `0x820`), `0x820` the video block (32 bytes), `0x2000` the BIOS font (4 KiB), `0x3000` and `0x3200` the VBE information and mode blocks while stage 2 runs, `0x7C00` stage 1, `0x7E00` stage 2 (to about `0xA000`), `0x10000` the kernel's staging copy, `0x100000` the kernel. Once the kernel is running, `0x10000` to `0x13FFF` is the BIOS trampoline, the bounce buffer for BIOS calls and the real-mode stack (see [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md#the-low-memory-map)).
 
 ## The kernel target
 
@@ -86,6 +86,10 @@ The kernel's serial, PIC and PIT code runs on the shared drivers in `hal/`, and 
 
 Spike D (n2) adds the loader's VBE step above and, in the kernel, `kernel/src/video.rs` (the video block, and checks that the linear frame buffer overlaps no RAM, the heap or the kernel) and `kernel/src/gfx.rs` (the graphics tour the `gfx` test mode runs: modes 13h and 12h by registers, the VBE frame buffer, a palette fade, a software cursor driven by the mouse, a window, and the way back to text mode), all through the shared `desk-vga` driver. A normal boot keeps the BIOS text screen; only the `gfx` images ask for VBE. The design, the tables, the screenshots and what QEMU hides are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md).
 
+## The BIOS path
+
+Spike n3 gives the protected-mode kernel the BIOS back, one call at a time. `kernel/bios16.asm` (assembled by `tools/native-build.sh` and embedded in the kernel) is a one-page blob that `kernel/src/bios.rs` copies to `0x10000` at boot; a call drops the CPU to real mode, runs one `INT n` with a register block and a buffer in low memory, and returns, with the 8259s put on the BIOS vectors and back, NMI masked, the BIOS's timer ticks added to the kernel's clock and any keyboard byte left in the 8042 handed to its driver. `bios::NativeBios` implements the HAL's `Bios` trait, so the `desk-vga` VBE layer runs in the kernel unchanged, and `INT 13h`, `INT 15h` and `INT 1Ah` work too. The `bios` test mode exercises it. Every boot prints one `bios:` line. The design, the contract and the measurements are in [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md).
+
 ## The FPU
 
 The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping them), CR0.MP and CR0.NE set (errors report as exception 16 rather than the legacy IRQ 13 wiring) and CR0.TS clear, then `fninit`. The kernel checks the control word is `0x037F`, computes `sqrt(2)` with `fsqrt` and the harmonic sum H(10) in ordinary Rust `f64` (which the compiler turns into x87 code), prints both and asserts them. (Some 486SX machines have no FPU; this kernel assumes one.)
@@ -104,6 +108,7 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 - **Deliberate faults.** Test modes patched into the image make the kernel divide by zero (`div0`), load a bad segment selector (`gp`), execute `ud2` (`ud`), panic (`panic`) or mask the timer (`notick`). Each must end with exit code 1 and the expected exception dump or panic message.
 - **Keyboard and mouse.** In `input` mode keys and mouse motion injected through the QEMU monitor must appear decoded in the transcript; with an event missing from the injected input the comparison must fail; with IRQ 1 masked (`input-masked`) no key arrives and the kernel must report it (exit 1); with nothing injected (`input-idle`) the watchdog must end the run.
 - **Graphics.** The `gfx` test mode boots with a VBE linear frame buffer (`-vga std`), with the register modes only (`-vga cirrus`) and with a loader whose VBE mode set is made to fail (`-DVBE_FAIL=1`); screenshots taken through the QEMU monitor must match reference checksums, the cursor must have moved between two of them, and seven wrong inputs must be rejected (`D-NATIVE-VGA.md`, "How it is tested").
+- **BIOS calls.** The `bios` test mode calls the BIOS from the kernel on `-vga std`, `-vga cirrus` and `-vga vmware` (VBE set after boot and the way back to text, INT 13h sector reads equal to memory, E820 after boot, the RTC, a key sent during a call, 1,000 calls, the error paths), once more with an IDE disk for the LBA extensions, and the VBE tour on Cirrus leaves VBE through the BIOS; screenshots must match references and five wrong inputs must be rejected (`N3-BIOS-PATH.md`, "How it is tested").
 - **A hang.** In `hang` mode the kernel stops with interrupts off; the run must end by the five-second watchdog (exit 124).
 
 ## Debugging
@@ -117,13 +122,13 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 
 Verified: the whole chain above, including each negative check and the three loader variants, on the development machine with QEMU 11.1 and NASM 3.02, and again inside the shared CI image `ghcr.io/liminal-hq/ci-dos` (pinned by digest in the workflow) with `qemu-system-x86` and `nasm` added by `apt-get` (Ubuntu 24.04's QEMU). The Docker backend of `tools/native-run.sh` was exercised with an Ubuntu 24.04 image carrying the same two packages; the exact `tools/docker/Dockerfile.native-qemu` image was not built.
 
-The keyboard and mouse checks (spike C) were verified on the host's QEMU only; the CI image's QEMU runs them as part of `tools/native-test.sh`. The same goes for the graphics checks (spike D): the screenshot checksums were recorded on QEMU 11.1.2 and CI's QEMU decides whether they hold there.
+The keyboard and mouse checks (spike C) were verified on the host's QEMU only; the CI image's QEMU runs them as part of `tools/native-test.sh`. The same goes for the graphics checks (spike D): the screenshot checksums were recorded on QEMU 11.1.2 and CI's QEMU decides whether they hold there. The BIOS checks (spike n3) were also run on Ubuntu 24.04's QEMU 8.2.2 with the same transcript and screenshots, and the BIOS scenarios without key injection on Bochs 2.7 with two Bochs BIOSes (`N3-BIOS-PATH.md`, "Results").
 
 Not verified:
 
 - Anything on real hardware, a real floppy drive or a real 486. QEMU's `-cpu 486` is an approximation.
 - 86Box or Bochs, which model old hardware more closely, were not tried.
 - Booting from a hard disk or IDE (the loader assumes the 1.44 MB floppy geometry of 18 sectors and 2 heads).
-- BIOSes other than SeaBIOS: the E820 and E801 paths and the keyboard-controller A20 path were exercised only against QEMU, and the E801 and A20 paths only through the test builds.
+- BIOSes other than SeaBIOS for the loader: the E820 and E801 paths and the keyboard-controller A20 path were exercised only against QEMU, and the E801 and A20 paths only through the test builds.
 - A machine with an 8086-style A20 wrap that needs INT 15h AX=2401 or other chipset-specific methods, or one with no FPU.
 - Memory above 256 MiB, and the speed of the allocators.

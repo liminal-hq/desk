@@ -109,7 +109,7 @@ These are new with the decision. `OPEN-QUESTIONS.md` lists them under "Still ope
 - **Filesystem.** FAT12 and FAT16 for floppies and for sharing with FreeDOS, and perhaps a filesystem of our own for the system volume.
 - **Boot media.** A bootable floppy, an IDE disk image, or both, and whether the loader is ours or an existing one.
 - **Early disk access.** BIOS calls (INT 13h) in the loader versus own floppy and IDE drivers in the kernel.
-- **Real-mode switching.** Whether the protected-mode kernel ever goes back to real mode or V86 to call the BIOS (for VBE, for disks), and what that costs in complexity.
+- **Real-mode switching.** Whether the protected-mode kernel ever goes back to real mode or V86 to call the BIOS (for VBE, for disks), and what that costs in complexity. *Spike n3 built the real-mode trampoline and measured it (about 200 lines of assembly, 450 of Rust, tens of microseconds a call under emulation); V86 stays the later upgrade, for calls that must not turn interrupts off and for FreeDOS ([`N3-BIOS-PATH.md`](N3-BIOS-PATH.md)).*
 - **Graphics driver strategy.** VBE set up through the BIOS in real mode before switching to protected mode, V86 calls into the video BIOS, or native drivers for specific cards. Each trades simplicity against flexibility, such as changing mode later.
 - **Sound hardware detection.** Finding a Sound Blaster, OPL chip or MPU-401 without `BLASTER` and without DOS, and handling ISA DMA and IRQs.
 - **Input.** Our own PS/2 keyboard and mouse drivers, and whether USB is ever in scope (not for the 486 target).

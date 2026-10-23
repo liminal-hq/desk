@@ -92,6 +92,7 @@ Costs to weigh:
 | H: HAL design | Shared crates | Scott Morris | PR #8 | done: the design ([`HAL.md`](HAL.md)) and `hal/` with host-tested 16550, 8254 and 8259 drivers, built for both targets |
 | A: VGA and VBE (s2-vbe) | Hosted, shared driver | Scott Morris | PR #11 (on PR #8) | done in DOSBox: the `desk-vga` driver (mode 13h and 12h by registers, DAC, VBE 2.0 over a `Bios` trait) and `rt::hal::DosDisplay`, run by `spikes/a-vga-vbe` (`docs/A-VGA-VBE.md`); not run on hardware |
 | D: native graphics (n2) | Native, shared driver | Scott Morris | on PR #10 and PR #11 | done in QEMU: VBE asked in the loader, `desk-vga` modes 13h and 12h by registers and a VBE linear frame buffer from the kernel, a software cursor and a window, text restore, screenshot tests (`docs/D-NATIVE-VGA.md`); not run on hardware |
+| n3: a real BIOS path (native) | Native, shared driver | Scott Morris | on PR #14 | done in QEMU and Bochs: a real-mode trampoline (one NASM page, `kernel/bios16.asm`, embedded in the kernel by `tools/native-build.sh`) and the Rust around it (`kernel/src/bios.rs`) give the kernel `INT 10h`, `13h`, `15h` and `1Ah` after boot, the HAL's `Bios` trait natively, and a way back to text on every QEMU card (`docs/N3-BIOS-PATH.md`); not run on hardware |
 | s-std-stubs | Any | Not assigned | None | planned: build `std` for an unknown OS name and measure |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |
