@@ -103,7 +103,7 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 
 ## What was and was not verified
 
-Verified: the whole chain above, including each negative check and the three loader variants, on the development machine with QEMU 11.1 and NASM 3.02, and again inside the shared CI image `ghcr.io/liminal-hq/ci-dos` (pinned by digest in the workflow) with `qemu-system-x86` and `nasm` added by `apt-get` (Ubuntu 24.04's QEMU). The Docker backend of `tools/native-run.sh` was exercised with an Ubuntu 24.04 image carrying the same two packages; the exact `tools/docker/Dockerfile.native-qemu` image was not built.
+Verified: the whole chain above, including each negative check and the four loader variants, on the development machine with QEMU 11.1 and NASM 3.02, and again inside the shared CI image `ghcr.io/liminal-hq/ci-dos` (pinned by digest in the workflow) with `qemu-system-x86` and `nasm` added by `apt-get` (Ubuntu 24.04's QEMU). The Docker backend of `tools/native-run.sh` was exercised with an Ubuntu 24.04 image carrying the same two packages; the exact `tools/docker/Dockerfile.native-qemu` image was not built.
 
 Not verified:
 
