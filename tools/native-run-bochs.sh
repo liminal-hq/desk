@@ -82,18 +82,16 @@ docker run -d --rm --name "$name" --user "$(id -u):$(id -g)" -v "$work:/work" -w
 status=""
 last_size=-1
 stable=0
-ticks=0
-limit=$((timeout_s * 5))
-while [ "$ticks" -lt "$limit" ]; do
+deadline=$((SECONDS + timeout_s))
+while [ "$SECONDS" -lt "$deadline" ]; do
   sleep 0.2
-  ticks=$((ticks + 1))
   if grep -q '^boot complete' "$work/serial.txt"; then status=0; break; fi
   if grep -q -E '^(KERNEL PANIC|EXCEPTION 0x|Disk read error|stage2: cannot enable a20|stage2: no memory map)' "$work/serial.txt"; then
     size=$(stat -c %s "$work/serial.txt")
     if [ "$size" = "$last_size" ]; then stable=$((stable + 1)); else stable=0; last_size=$size; fi
     if [ "$stable" -ge 5 ]; then status=1; break; fi
   fi
-  if [ -z "$(docker ps -q -f "name=$name")" ]; then status=2; break; fi
+  if [ -z "$(docker ps -q -f "name=^$name\$")" ]; then status=2; break; fi
 done
 [ -n "$status" ] || status=124
 
