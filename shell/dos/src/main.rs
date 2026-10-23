@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
-// usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [fontfile] [corrupt] [timeout=N]
+// usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]
 //
 // - `depth8`    VBE 640 x 480 x 8 with a linear frame buffer (the default). With no such mode it says so and runs at depth 4.
 // - `depth4`    VGA mode 12h, 16 colours on four planes.
@@ -12,13 +12,17 @@
 // - `dump`      with `scenario`: reads the frame buffer and the DAC back after each frame, prints their digests as
 //               `shell: readback ...` (which must equal the frame's) and writes NAME.RAW and NAME.PAL for tools/frames.py.
 //               Without it, writes the last screen as SCREEN.RAW and SCREEN.PAL when the run ends.
+// - `marks`     interactive mode only: at each mark (mark 00 after the set-up, then each F12) reads the frame buffer and the DAC back, prints
+//               `shell: readback mark NN ...` (which must equal the mark's digests), and writes Mkk.RAW and Mkk.PAL for tools/frames.py
+//               (`frames.py marks --dumps`). Without it F12 prints the mark line only.
 // - `fontfile`  loads the faces from UI.DFN and TITLE.DFN beside the program instead of using the embedded copies.
 // - `corrupt`   flips one pixel of the frame buffer after the `moved` frame is presented, so the read-back must differ (the negative
 //               check); it implies the read-back.
 // - `timeout=N` interactive mode only: gives up after N seconds without Escape.
 //
-// Without `scenario` the shell runs on the keyboard (IRQ 1) and the mouse (INT 33h) until Escape. Exit status: 0 success, 1 a
-// read-back differed from the shell's frame or a step failed, 2 the requested video mode was not available, 3 a panic (the
+// Without `scenario` the shell runs live on the keyboard (IRQ 1) and the mouse (INT 33h) until Escape (docs/LIVE-INPUT.md): the
+// scenario's set-up, mark 00, then each poll's input to the shell, a present when it is dirty, F12 for a mark and Escape to end with a
+// summary line. Exit status: 0 success, 1 a read-back differed from the shell's frame or a step failed, 2 the requested video mode was not available, 3 a panic (the
 // runtime's), 4 the interactive timeout, 5 an argument it does not know.
 #![no_std]
 #![no_main]
@@ -34,10 +38,11 @@ use desk_gfx::{FrameDigest, Present};
 use desk_hal::irq::{Chain, Irq, IrqHandler, IrqRegistry};
 use desk_hal::ring::SpscRing;
 use desk_hal::x86::RawPorts;
-use desk_hal::{Bios, BiosRegs, Display, FrameBuffer, HalError, InputSource, KeyCode, PixelLayout, Rgb6};
+use desk_hal::{Bios, BiosRegs, Display, FrameBuffer, HalError, InputSource, PixelLayout, Rgb6};
 use desk_i8042::{IrqStats, KbdIrq};
 use desk_int33::{DosInput, Mouse};
 use desk_present::{read_back_linear, read_back_planar, LinearPresent, PlanarPresent};
+use desk_shell::live::{self, Route, Tally};
 use desk_shell::scenario::{apply, parse, Step};
 use desk_shell::{Event, Shell};
 use desk_ui::{palette, Depth};
@@ -297,8 +302,47 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
     Ok(ok)
 }
 
-/// The shell on the keyboard and the mouse until Escape (or the timeout): returns the exit status.
-fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, timeout_s: Option<u32>) -> i32 {
+/// Prints mark `n`'s line and, with `marks`, reads the screen back: the read-back must equal the shell's digests (`shell: readback mark
+/// NN ... equal`) and goes to `Mnn.RAW` and `Mnn.PAL`. Returns whether the read-back matched (true without `marks`).
+fn mark(display: &DosDisplay, screen: &mut Screen, shell: &Shell, n: u32, readback: bool) -> bool {
+    let d = shell.digest();
+    println!("{}", live::mark_line(n, screen.depth, &d));
+    if !readback {
+        return true;
+    }
+    let ports = display.ports();
+    let read = screen.read(ports).map_err(|e| alloc::format!("{e}"));
+    let mut dac = [Rgb6::BLACK; 256];
+    let read = read.and_then(|px| display.palette(0, &mut dac).map(|()| px).map_err(|e| alloc::format!("{e}")));
+    let px = match read {
+        Ok(px) => px,
+        Err(e) => {
+            println!("shell: readback mark {n:02}: {e}");
+            return false;
+        }
+    };
+    let back = FrameDigest::from_rows(WIDTH, HEIGHT, &dac, |y, buf| {
+        let start = y as usize * WIDTH as usize;
+        buf.copy_from_slice(&px[start..start + WIDTH as usize]);
+    });
+    let same = back == d;
+    println!(
+        "shell: readback mark {n:02} {} {}x{} {:08x} {:08x} {}",
+        bits(screen.depth),
+        back.width,
+        back.height,
+        back.index,
+        back.colour,
+        if same { "equal" } else { "DIFFERENT" }
+    );
+    write_capture(&alloc::format!("M{n:02}"), &px, &dac);
+    same
+}
+
+/// The live loop (`docs/LIVE-INPUT.md`): the scenario's set-up, the first frame as mark 00, then each pass drains the mouse and the keys
+/// (F12 asks for a mark, Escape ends, every other key is the shell's), presents when the shell is dirty and prints a due mark, until
+/// Escape (or the timeout). Returns the exit status: 0, 1 when a read-back differed, 4 on the timeout.
+fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, timeout_s: Option<u32>, readback: bool) -> i32 {
     let saved = bios_kbd::save();
     ORIGINAL_FLAGS.store(u32::from(saved.flags()), Ordering::Relaxed);
     let locks = bios_kbd::locks();
@@ -330,30 +374,72 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         .expect("install the IRQ 1 handler");
     let mut input = DosInput::new(rx, locks, mouse);
 
+    println!("shell: live, depth {}", bits(screen.depth));
     // The scenario's opening steps (up to its first frame), so there is something to move and a field to type in.
     if let Ok(sc) = parse(SCENARIO) {
         for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
             let _ = apply(shell, step);
         }
     }
+    let mut tally = Tally::default();
+    let mut ok = true;
+    match screen.present(display.ports(), |p| shell.frame(p)).and_then(|r| r) {
+        Ok(stats) => tally.frame(&stats),
+        Err(e) => {
+            println!("shell: frame failed: {e}");
+            return 1;
+        }
+    }
+    ok &= mark(display, screen, shell, 0, readback);
+    tally.marks = 1;
 
     let start = timer::bios_ticks();
     let limit = timeout_s.map(|s| s.saturating_mul(19));
     loop {
-        let mut escape = false;
-        while let Some(e) = input.poll_key() {
-            escape |= e.code == KeyCode::Escape && e.pressed;
-            shell.handle(Event::Key(e));
-        }
+        let (mut mark_due, mut end) = (false, false);
         while let Some(m) = input.poll_mouse() {
+            tally.pointer += 1;
             shell.handle(Event::Pointer(m));
         }
-        if let Err(e) = screen.present(display.ports(), |p| shell.frame(p)).and_then(|r| r) {
-            println!("shell: frame failed: {e}");
-            return 1;
+        while let Some(e) = input.poll_key() {
+            tally.keys += 1;
+            match live::route(&e) {
+                Route::Shell => shell.handle(Event::Key(e)),
+                Route::Mark => mark_due = true,
+                Route::End => end = true,
+                Route::Swallow => {}
+            }
         }
-        if escape {
-            return 0;
+        if mark_due {
+            // Motion that arrived while the keys were handled belongs before the mark.
+            while let Some(m) = input.poll_mouse() {
+                tally.pointer += 1;
+                shell.handle(Event::Pointer(m));
+            }
+        }
+        if mark_due || shell.is_dirty() {
+            match screen.present(display.ports(), |p| shell.frame(p)).and_then(|r| r) {
+                Ok(stats) => tally.frame(&stats),
+                Err(e) => {
+                    println!("shell: frame failed: {e}");
+                    return 1;
+                }
+            }
+        }
+        if mark_due {
+            if tally.marks < live::MAX_MARKS {
+                ok &= mark(display, screen, shell, tally.marks, readback);
+                tally.marks += 1;
+            } else {
+                println!("{}", live::marks_full_line());
+            }
+        }
+        if end {
+            println!("{}", live::summary_line(&tally));
+            if !ok {
+                println!("shell: FAILED, a read-back differs from the shell's frame");
+            }
+            return if ok { 0 } else { 1 };
         }
         if limit.is_some_and(|l| elapsed_ticks(start) > l) {
             println!("shell: timed out without Escape");
@@ -370,11 +456,11 @@ fn main() -> i32 {
         .find_map(|a| a.strip_prefix("timeout=").and_then(|n| n.parse::<u32>().ok()));
     cleanup::register(report);
     for a in &args {
-        let known = ["depth8", "depth4", "scenario", "dump", "fontfile", "corrupt"].contains(&a.as_str())
+        let known = ["depth8", "depth4", "scenario", "dump", "marks", "fontfile", "corrupt"].contains(&a.as_str())
             || a.strip_prefix("timeout=")
                 .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
         if !known {
-            println!("shell: unknown argument {a:?}; usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [fontfile] [corrupt] [timeout=N]");
+            println!("shell: unknown argument {a:?}; usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]");
             return 5;
         }
     }
@@ -419,7 +505,7 @@ fn main() -> i32 {
             }
         }
     } else {
-        interactive(&display, &mut screen, &mut shell, timeout_s)
+        interactive(&display, &mut screen, &mut shell, timeout_s, has("marks"))
     };
     // The interactive run's last screen, for a look at what the keys and the pointer did.
     if has("dump") && !has("scenario") {
