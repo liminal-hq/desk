@@ -23,4 +23,4 @@ tools/shell-goldens.sh
 git status tests/shell
 ```
 
-The script runs the test with `DESK_FRAMES_RECORD=1`, which rewrites each `.sums`, starts from clean (stale PNGs are removed), and converts the dumps to the PNGs with `tools/frames.py png`. Running it twice leaves no diff. The PNGs depend on the font build (`fonts/generated/*.dfn`): rebuilding the fonts is a re-record, and the commit that does it says which build it used.
+The script runs the test with `DESK_FRAMES_RECORD=1`, which rewrites each `.sums`, starts from clean (stale PNGs are removed), and converts the dumps to the PNGs with `tools/frames.py png`. Running it twice leaves no diff. The native transcripts `tests/native/expected-shell-8.txt` and `expected-shell-4.txt` repeat each frame's digests and damage counts, so a re-record that changes a pixel changes them too: update those lines from the `shell: frame` and `shell: damage` lines of a `tools/native-test.sh` run, and `frames.py transcript` and the screendump checks say which frame is off. The PNGs depend on the font build (`fonts/generated/*.dfn`): rebuilding the fonts is a re-record, and the commit that does it says which build it used.

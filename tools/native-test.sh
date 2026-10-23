@@ -242,10 +242,10 @@ for depth in 8 4; do
   if frames check "$shell_sums" "$depth" "dist/shell-native-corrupt-$depth" > "$work/corrupt-$depth.check" 2>&1; then fail "a screen with one wrong pixel was accepted at depth $depth"; fi
   grep -q 'moved' "$work/corrupt-$depth.check" || fail "the depth $depth corrupt run was not rejected at the moved frame"
   echo "native: ok — a screen with one wrong pixel is rejected at depth $depth: $(grep moved "$work/corrupt-$depth.check" | head -n 1)"
-  finish_shell "dist/shell-native-corrupt-$depth"
   rm -rf "dist/shell-native-corrupt-$depth"
 done
-sed 's/^moved 8 640x480 10201b69 03faf8b3/moved 8 640x480 10201b69 03faf8b2/' "$shell_sums" > "$work/wrong-shell.sums"
+# One digest changed, whatever the goldens currently hold: the last hex digit of the depth 8 `moved` line's colour digest.
+awk '$1 == "moved" && $2 == 8 { d = substr($5, 8, 1); $5 = substr($5, 1, 7) (d == "0" ? "1" : "0") } { print }' "$shell_sums" > "$work/wrong-shell.sums"
 cmp -s "$shell_sums" "$work/wrong-shell.sums" && fail "the altered sums were not altered"
 must_fail "screendumps checked against sums with one digest changed" frames check "$work/wrong-shell.sums" 8 dist/shell-native-8
 must_fail "the depth 8 screendumps checked against the depth 4 sums" frames check "$shell_sums" 4 dist/shell-native-8
