@@ -1,0 +1,20 @@
+# The shared hardware abstraction layer and the drivers written once against it, as one workspace.
+#
+# Every library crate here is `no_std` (the mock adds `alloc`) and builds for three places: the host, where `cargo test` runs the
+# drivers against the mock port bus; the native kernel's target (`kernel/i486-desk-none.json`); and the pure-Rust DOS target
+# (`spikes/d0-rust-dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line (see
+# `tools/check.sh`), so the default target stays the host's. Nothing outside this workspace depends on it yet; see `docs/HAL.md`.
+[workspace]
+members = ["hal", "drivers/serial", "drivers/pit", "drivers/pic", "platform/mock"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[workspace.dependencies]
+desk-hal = { path = "hal" }
+desk-hal-mock = { path = "platform/mock" }
+

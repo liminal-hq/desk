@@ -1,6 +1,7 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
-# and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
+# and lints, the HAL's host tests and cross builds, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
+# checks, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -31,6 +32,15 @@ fi
 step "Rust format and lints"
 (cd core && cargo fmt --check)
 (cd core && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
+# The shared HAL and drivers: host tests against the mock port bus, then the no_std crates built for the kernel's target and for the
+# pure-Rust DOS target (cargo check; clippy for the kernel target, where the x86 port instructions are compiled).
+step "HAL: host tests and no_std builds"
+(cd hal && cargo fmt --check)
+(cd hal && cargo clippy --locked --all-targets -- -D warnings)
+(cd hal && cargo test --locked --quiet)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 
 step "Build DESK.EXE"
 tools/build.sh

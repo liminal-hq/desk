@@ -1,6 +1,6 @@
 # Docs
 
-Working design documents for Desk, an operating system in Rust for old hardware, built hosted on DOS and native in parallel (see `DIRECTION.md`). They were derived from a design-agent brainstorm that had no code to check against. The design in these documents has not been built or measured; only the toolchain and the boot path have (see `TOOLCHAIN.md` and `NATIVE-BOOT.md`). Numbers, versions and formats are targets until a spike confirms them, and when code and a document disagree, the code wins and the document is corrected in the same branch.
+Working design documents for Desk, an operating system in Rust for old hardware, built hosted on DOS and native in parallel (see `DIRECTION.md`). They were derived from a design-agent brainstorm that had no code to check against. The design in these documents has not been built or measured; only the toolchain, the boot path and the first shared drivers have (see `TOOLCHAIN.md`, `NATIVE-BOOT.md` and `HAL.md`). Numbers, versions and formats are targets until a spike confirms them, and when code and a document disagree, the code wins and the document is corrected in the same branch.
 
 "Fizz DOS" below means [`ScottMorris/lieutenant-fizz-dos`](https://github.com/ScottMorris/lieutenant-fizz-dos), the Rust-on-DOS port this project learns from. Its code is a reference, not something to copy.
 
@@ -18,6 +18,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
+| [`HAL.md`](HAL.md) | Spike H: the hardware abstraction layer and the shared drivers, the platforms, the concurrency and `unsafe` rules, the migration plan and the contracts for the next spikes; the reference crates are in `hal/` |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |

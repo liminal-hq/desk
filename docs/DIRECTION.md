@@ -1,6 +1,6 @@
 # Direction: an operating system in Rust for old hardware
 
-> **Status:** a decision and a plan, recorded on 2026-10-22. Nothing here has been built, booted or measured, and no native code exists. Every number and claim is a target until a spike confirms it, and when code and this document disagree, the code wins and this document is corrected in the same branch.
+> **Status:** a decision and a plan, recorded on 2026-10-22. Since then the native walking skeleton boots in QEMU ([`NATIVE-BOOT.md`](NATIVE-BOOT.md)) and the HAL is designed with its first shared drivers host-tested ([`HAL.md`](HAL.md)); the rest is not built, booted or measured. Every number and claim is a target until a spike confirms it, and when code and this document disagree, the code wins and this document is corrected in the same branch.
 
 ## The vision
 
@@ -19,7 +19,7 @@ Until this decision the documents described Desk as a graphical shell for MS-DOS
 | Tested in | DOSBox Staging headless, then js-dos in the browser | QEMU, 86Box and Bochs; v86 in the browser |
 | Spec | `SPEC.md`, the detailed spec until a native spec exists | This document, until a native spec exists |
 
-The hosted track is what the repository has been building toward so far: the walking skeleton (pull request #3) and the DXE3 spike. It gives quick feedback on everything above the hardware. The native track starts small and grows; the hosted track keeps the shared core honest and gives the design somewhere to run in the meantime.
+The hosted track is what the repository built first: the walking skeleton, the DXE3 spike and the d0 Rust-DOS spike, all merged into `main`. It gives quick feedback on everything above the hardware. The native track starts small and grows; the hosted track keeps the shared core honest and gives the design somewhere to run in the meantime.
 
 ### How they share a core
 
@@ -30,11 +30,11 @@ The OS-independent Desk core (compositor, window manager, widgets, palette, font
 | Apps (modules) and the SDK | Shared | Shared |
 | Desk core: compositor, windows, widgets, fonts, palette | Shared | Shared |
 | HAL: display, input, timer, sound, storage, memory, module loading | Implemented over DOS, the BIOS, VBE, INT 33h and DJGPP | Implemented over our own drivers |
-| Drivers (VGA and VBE, keyboard, PIT, OPL, Sound Blaster), written once against a small port-I/O and IRQ abstraction | Shared (target) | Shared (target) |
+| Drivers (VGA and VBE, keyboard, PIT, OPL, Sound Blaster), written once against a small port-I/O and IRQ abstraction ([`HAL.md`](HAL.md); serial, PIT and PIC built and host-tested) | Shared (target) | Shared (target) |
 | Kernel and runtime | DOS with CWSDPMI, and a Rust runtime crate instead of the C layer and DJGPP's libc (target) | Rust kernel: memory, interrupts, scheduling, filesystem |
 | Boot | `DESK.COM` from the DOS prompt | Own boot sector or loader |
 
-The HAL surface is not designed yet. It should be as small as the core's real needs allow, and it should be written against the first two consumers (the hosted skeleton and the native walking skeleton) rather than in the abstract. A native bench build of the core (the `i586-unknown-linux-gnu` bench in `SPEC.md`) is a third consumer that costs little and is worth keeping.
+The HAL is designed in [`HAL.md`](HAL.md) (spike H): its traits, the platforms, the concurrency and `unsafe` rules, and the migration of the existing kernel and runtime code. It should stay as small as the core's real needs allow, and grow with its consumers (the native kernel, the DOS runtime, the host tests) rather than in the abstract. A native bench build of the core (the `i586-unknown-linux-gnu` bench in `SPEC.md`) is a third consumer that costs little and is worth keeping.
 
 ## What each track delivers and how it is tested
 
@@ -44,18 +44,18 @@ The HAL surface is not designed yet. It should be as small as the core's real ne
 
 ## Rust for DOS: shared machinery
 
-The Desk is the product layer: a shell with apps above whatever sits below it. The owner wants a path for more native machinery below the shell, so that a future DOS game such as Lieutenant Fizz Episode 2 could be a plain native Rust DOS program instead of the pipeline Episode 1 needed: a gcc-built C layer, `coff2go32.py` patching rustc's COFF objects, and DJGPP's libc. None of this exists yet beyond the hosted skeleton and the spike on other branches; all of it is a target, and the extender in item 3 is research.
+The Desk is the product layer: a shell with apps above whatever sits below it. The owner wants a path for more native machinery below the shell, so that a future DOS game such as Lieutenant Fizz Episode 2 could be a plain native Rust DOS program instead of the pipeline Episode 1 needed: a gcc-built C layer, `coff2go32.py` patching rustc's COFF objects, and DJGPP's libc. The hosted skeleton, the d0 runtime and packer, and the first shared drivers (`hal/`) exist on `main`; the rest is a target, and the extender in item 3 is research.
 
-1. **A Rust compile target for 32-bit DOS programs.** Today that is `core/dos.json` on the hosted-skeleton branch (pull request #3). A published prebuilt sysroot or an upstream Tier 3 target are ideas only.
+1. **A Rust compile target for 32-bit DOS programs.** Today that is `core/dos.json` (the hosted skeleton, merged in pull request #3) and the d0 spike's freestanding `spikes/d0-rust-dos/dos-elf.json`. A published prebuilt sysroot or an upstream Tier 3 target are ideas only.
 2. **A Rust runtime crate** that replaces the C layer and DJGPP's libc: startup, a DPMI client (INT 31h) for memory and real-mode calls, INT 21h file and console I/O, and drivers for VGA and VBE, the keyboard, the PIT timer, OPL and the Sound Blaster.
 3. **A small packer** that wraps a linked Rust program for CWSDPMI. Much later, and only if CWSDPMI becomes a constraint, an extender of our own could replace it; that would need VCPI, XMS and DPMI-compatibility work, and is research, not planned.
-4. **Drivers written once** against a small port-I/O and IRQ abstraction, so Lieutenant Fizz Episode 2 on DOS, the Desk hosted on DOS and the Desk native kernel can share them. This sits beside the HAL: the HAL is what the core needs, the abstraction is what the drivers need.
+4. **Drivers written once** against a small port-I/O and IRQ abstraction, so Lieutenant Fizz Episode 2 on DOS, the Desk hosted on DOS and the Desk native kernel can share them. [`HAL.md`](HAL.md) puts both in one crate: a lower edge for the drivers and an upper edge for the core.
 5. **Its own repository.** Once stable, this machinery may belong in its own repository (for example `liminal-hq/dos-rs`). It incubates in this repository until then.
-6. **The d0 Rust-DOS spike** (hosted track, planned): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld`, packed with CWSDPMI's stub and run headless in DOSBox. If it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
+6. **The d0 Rust-DOS spike** (hosted track, done: yes, [`D0-RUST-DOS.md`](D0-RUST-DOS.md)): a Rust-only DOS program with its own `_start`, DPMI wrappers and INT 21h output, linked by `lld`, packed with CWSDPMI's stub and run headless in DOSBox. If it works, the hosted skeleton's C layer and `coff2go32.py` can be retired.
 
 [`RUST-TARGETS.md`](RUST-TARGETS.md) tracks how Rust is built for each application space.
 
-The s1-dxe3 result is in (pull request #4, on the spike branch, `docs/S1-DXE3.md`): yes, with limits. It is a hosted-track result. A native module loader would need the same properties: symbol import, per-module state, panic containment and clean unload.
+The s1-dxe3 result is in (merged in pull request #4, [`S1-DXE3.md`](S1-DXE3.md)): yes, with limits. It is a hosted-track result. A native module loader would need the same properties: symbol import, per-module state, panic containment and clean unload.
 
 ## DOS programs: bundle FreeDOS
 
@@ -115,7 +115,7 @@ These are new with the decision. `OPEN-QUESTIONS.md` lists them under "Still ope
 - **Input.** Our own PS/2 keyboard and mouse drivers, and whether USB is ever in scope (not for the 486 target).
 - **Launching DOS programs and FreeDOS.** Booting into it, running it in a V86 task, or both; how state is saved; how the screen and sound are shared.
 - **Licensing of FreeDOS components.** What is bundled and how, relative to our own licence.
-- **The HAL.** Its surface, and whether the module loader belongs behind it.
+- **The HAL.** Designed in [`HAL.md`](HAL.md), which proposes that the module loader stays out of it; its own open questions are listed there.
 
 ## Risks
 
@@ -131,18 +131,18 @@ Small, testable and in order. Each track's list starts from what exists.
 
 **Hosted track**
 
-1. The walking skeleton (open as PR #3 at the time of writing): a build that runs headless in DOSBox and produces a frame.
+1. The walking skeleton (done, pull request #3): a build that runs headless in DOSBox and produces a result line.
 2. The DXE3 spike (s1-dxe3; the result is in, pull request #4: yes, with limits): a Rust module loaded into the core, calling back into it.
 3. **d0 Rust-DOS** (done, pull request #7: yes): a Rust-only DOS program with its own runtime, linked by `rust-lld` and packed by a small script, runs headless in DOSBox under CWSDPMI with no gcc, libc or crt0; retiring the C layer and `coff2go32.py` is the next decision.
-4. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`), moving into the shared Rust drivers if d0 works.
+4. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`), written as shared drivers against the HAL ([`HAL.md`](HAL.md), spikes A and B).
 5. Shell: compositor, windows, launcher bar, cursor, keyboard focus.
 6. The handoff to DOS programs and back.
 7. Core apps, then optional apps, then release (see `SPEC.md#milestones`).
 
 **Native track**
 
-1. **n0 boot:** a native walking skeleton that boots a Rust kernel in QEMU (`-cpu 486`) and prints to the screen or serial port.
-2. Protected mode, interrupts, a timer and a memory map.
+1. **n0 boot** (done, pull request #6, [`NATIVE-BOOT.md`](NATIVE-BOOT.md)): a native walking skeleton that boots a Rust kernel in QEMU (`-cpu 486`) and prints to the screen or serial port.
+2. Protected mode, interrupts, a timer and a memory map (done in the walking skeleton); then the kernel moves its serial, PIC and PIT code onto the shared drivers ([`HAL.md`](HAL.md), migration step 1).
 3. VGA or VBE graphics and a frame drawn by the shared compositor through a native HAL.
 4. PS/2 keyboard and mouse.
 5. Floppy or IDE reads and a filesystem the kernel can read.
@@ -153,6 +153,6 @@ Small, testable and in order. Each track's list starts from what exists.
 10. FreeDOS bundled, and a DOS program launched from the Desk.
 11. A real 486, when one is available.
 
-Across both tracks, the shared drivers and the runtime crate (see "Rust for DOS: shared machinery") may be moved to their own repository once stable.
+Across both tracks, the shared drivers ([`HAL.md`](HAL.md)) and the runtime crate (see "Rust for DOS: shared machinery") may be moved to their own repository once stable.
 
 The order of the later native steps is expected to change with what the first ones teach.
