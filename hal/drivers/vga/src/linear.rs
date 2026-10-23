@@ -109,7 +109,7 @@ impl Canvas for Linear8<'_> {
         Ok(())
     }
 
-    /// Rows are copied with `write_bytes` where the block is not clipped, which is the fast path a platform can replace.
+    /// Each visible row is copied with one `write_bytes`, which is the fast path a platform can replace.
     fn blit(&mut self, x: i32, y: i32, w: u32, h: u32, src: &[u8], src_pitch: usize) {
         let (Some((x0, nw)), Some((y0, nh))) = (clip_span(x, w, self.width), clip_span(y, h, self.height)) else {
             return;

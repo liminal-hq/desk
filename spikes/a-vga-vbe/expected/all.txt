@@ -12,6 +12,7 @@ avga: wrote M13.RAW (64000 bytes) and M13.PAL
 avga: 13h direct: fade out ends black: true
 avga: 13h direct: fade in restores the palette: true
 avga: 13h direct: 32 frames, every one synchronised to retrace: true
+avga: 13h direct: the text mode registers are back: true
 avga: back in video mode 0x03
 avga: display offers 37 modes, VBE present
 avga: 13h by INT 10h: BIOS reports mode 13h: true
@@ -26,6 +27,7 @@ avga: 12h direct: planes read back checksum 0xfaf8b758, picture in memory 0xfaf8
 avga: 12h direct: checksums match: true
 avga: 12h direct: pixel probes: true
 avga: wrote M12.RAW (307200 bytes) and M12.PAL
+avga: 12h direct: the text mode registers are back: true
 avga: back in video mode 0x03
 avga: 12h by INT 10h: BIOS reports mode 12h: true
 avga: 12h by INT 10h: 640 x 480 pitch 80 per plane

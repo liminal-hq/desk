@@ -99,13 +99,18 @@ impl Bios for DosBios {
 /// The linear address of the live frame buffer mapping, or 0.
 static MAPPED: AtomicU32 = AtomicU32::new(0);
 
-/// Back to 80x25 text, then the frame buffer mapping is released. Safe to call twice.
-fn restore() {
-    vga::leave();
+/// Releases the live frame buffer mapping, if there is one.
+fn unmap() {
     let linear = MAPPED.swap(0, Ordering::Relaxed);
     if linear != 0 {
         let _ = dpmi::unmap_physical(linear);
     }
+}
+
+/// Back to 80x25 text, then the frame buffer mapping is released. Safe to call twice.
+fn restore() {
+    vga::leave();
+    unmap();
     cleanup::forget(restore);
 }
 
@@ -228,6 +233,8 @@ impl Display for DosDisplay {
                     return Err(HalError::Unsupported);
                 }
                 let len = (mode.frame_bytes() + 0xFFF) & !0xFFF;
+                // A mapping from an earlier VBE mode would otherwise be forgotten by the store below and never released.
+                unmap();
                 let linear = dpmi::map_physical(mode.phys_base, len).map_err(|e| HalError::Platform(e.0))?;
                 // Registered before the mode is set so that a failure or a panic after it cannot leave graphics on the screen.
                 MAPPED.store(linear, Ordering::Relaxed);

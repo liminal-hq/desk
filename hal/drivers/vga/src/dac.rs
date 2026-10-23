@@ -104,7 +104,7 @@ pub fn set_palette_scaled<P: PortIo>(ports: &P, base: &[Rgb6; ENTRIES], num: u32
 }
 
 /// How a fade ended: how many of its frames waited the full retrace and how many gave up (a display with no retrace bit still
-/// fades, just without sync).
+/// fades, just without sync; after the first frame that gives up the rest do not wait at all).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FadeReport {
     pub synced: u32,
@@ -124,10 +124,21 @@ pub fn fade_in<P: PortIo>(ports: &P, base: &[Rgb6; ENTRIES], steps: u32) -> Fade
 
 fn fade<P: PortIo>(ports: &P, base: &[Rgb6; ENTRIES], steps: u32, out: bool) -> FadeReport {
     let mut report = FadeReport { synced: 0, timed_out: 0 };
+    // At least one frame, so a fade always ends on its target.
+    let steps = steps.max(1);
+    let mut dead = false;
     for i in 1..=steps {
-        match wait_vretrace(ports) {
-            Ok(()) => report.synced += 1,
-            Err(_) => report.timed_out += 1,
+        // After one timeout the display has no usable retrace bit; polling again would cost a full bound on every remaining frame.
+        if dead {
+            report.timed_out += 1;
+        } else {
+            match wait_vretrace(ports) {
+                Ok(()) => report.synced += 1,
+                Err(_) => {
+                    dead = true;
+                    report.timed_out += 1;
+                }
+            }
         }
         let num = if out { steps - i } else { i };
         set_palette_scaled(ports, base, num, steps);

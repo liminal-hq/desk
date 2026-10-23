@@ -13,7 +13,9 @@
 // - **Read map select** (read mode 0): a read returns one plane's byte, the plane chosen by graphics controller register 4. It is
 //   the only way to see what is in the planes, one at a time.
 //
-// `Planar16` holds the controller in that state for as long as it lives and puts the registers it changed back when dropped.
+// `Planar16` holds the controller in that state for as long as it lives. Dropping it switches set/reset off and opens the bit mask;
+// the other registers it sets (write mode 0, no rotate, all planes in the map mask) are the standard mode 12h values, and the read
+// map select is returned to plane 0 after every read.
 
 use desk_hal::{HalError, MmioRegion, PortIo};
 
@@ -130,7 +132,8 @@ impl<P: PortIo> Canvas for Planar16<'_, P> {
         let mut colour = 0u8;
         for plane in 0..4u8 {
             gc_write(self.ports, gc::READ_MAP_SELECT, plane);
-            let byte = self.region.read8(o).ok()?;
+            // In range: the coordinates were checked against the geometry `new` validated against the region.
+            let byte = self.region.read8(o).unwrap_or(0);
             colour |= ((byte >> bit) & 1) << plane;
         }
         gc_write(self.ports, gc::READ_MAP_SELECT, 0);
@@ -179,14 +182,21 @@ impl<P: PortIo> Canvas for Planar16<'_, P> {
         let out = &mut out[..self.width as usize];
         out.fill(0);
         let row = self.offset(0, y);
-        for plane in 0..4u8 {
+        let mut result = Ok(());
+        'planes: for plane in 0..4u8 {
             gc_write(self.ports, gc::READ_MAP_SELECT, plane);
             for (i, px) in out.iter_mut().enumerate() {
-                let byte = self.region.read8(row + i / 8)?;
-                *px |= ((byte >> (7 - i % 8)) & 1) << plane;
+                match self.region.read8(row + i / 8) {
+                    Ok(byte) => *px |= ((byte >> (7 - i % 8)) & 1) << plane,
+                    Err(e) => {
+                        result = Err(e);
+                        break 'planes;
+                    }
+                }
             }
         }
+        // Plane 0 again whether or not a read failed.
         gc_write(self.ports, gc::READ_MAP_SELECT, 0);
-        Ok(())
+        result
     }
 }

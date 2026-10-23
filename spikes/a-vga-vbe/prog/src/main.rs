@@ -56,6 +56,16 @@ fn report() {
     println!("avga: after the clean-up list the video mode is {:#04x}", vga::get_mode());
 }
 
+/// Back to text mode after a mode that was set by programming the registers. The BIOS never learned of that mode, so the video mode
+/// it reports is still 3 and `vga::leave`, which only acts when the reported mode is not 3, would leave the screen in graphics.
+fn leave_direct() {
+    vga::set_mode(3);
+    cleanup::forget(leave_direct);
+}
+
+/// Graphics controller register 6 in text mode: alphanumeric, 32 KiB at B8000h. Graphics modes have 05h.
+const TEXT_GC_MISC: u8 = 0x0E;
+
 fn window(linear: u32, len: usize) -> MmioRegion {
     // SAFETY: the caller passes video memory that is mapped for as long as the region is used (A0000h in the first megabyte).
     unsafe { MmioRegion::new(rt::dpmi::linear_to_ptr::<u8>(linear), len) }
@@ -183,7 +193,7 @@ fn linear_picture(c: &mut Linear8, depth: Depth, label: &str, corrupt: bool) {
 
 fn stage_13_direct(ports: &RawPorts, corrupt: bool, dump_files: bool) {
     println!("avga: mode 13h by registers, from video mode {:#04x}", vga::get_mode());
-    cleanup::register(vga::leave);
+    cleanup::register(leave_direct);
     regs::set_mode_13h(ports);
     let got = regs::read_mode_registers(ports);
     check("registers read back equal the table", got == MODE_13H);
@@ -197,7 +207,11 @@ fn stage_13_direct(ports: &RawPorts, corrupt: bool, dump_files: bool) {
         dump("M13", &read_all(&mut c), &palette);
     }
     fade_check(ports, &palette, "13h direct");
-    vga::leave();
+    leave_direct();
+    check(
+        "13h direct: the text mode registers are back",
+        regs::read_mode_registers(ports).gc[6] == TEXT_GC_MISC,
+    );
     println!("avga: back in video mode {:#04x}", vga::get_mode());
 }
 
@@ -243,7 +257,7 @@ fn planar_picture<P: desk_hal::PortIo>(ports: &P, region: &mut MmioRegion, label
 
 fn stage_12_direct(ports: &RawPorts, corrupt: bool, dump_files: bool) {
     println!("avga: mode 12h by registers, from video mode {:#04x}", vga::get_mode());
-    cleanup::register(vga::leave);
+    cleanup::register(leave_direct);
     regs::set_mode_12h(ports);
     check(
         "registers read back equal the table",
@@ -257,7 +271,11 @@ fn stage_12_direct(ports: &RawPorts, corrupt: bool, dump_files: bool) {
         c.clear(0);
     }
     planar_picture(ports, &mut region, "12h direct", corrupt, dump_files);
-    vga::leave();
+    leave_direct();
+    check(
+        "12h direct: the text mode registers are back",
+        regs::read_mode_registers(ports).gc[6] == TEXT_GC_MISC,
+    );
     println!("avga: back in video mode {:#04x}", vga::get_mode());
 }
 

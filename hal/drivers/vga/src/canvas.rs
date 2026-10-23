@@ -37,10 +37,10 @@ pub trait Canvas {
         self.hline(x, y, w, colour);
         self.vline(x, y, h, colour);
         if h > 1 {
-            self.hline(x, y.saturating_add(h as i32 - 1), w, colour);
+            self.hline(x, y.saturating_add(h.min(i32::MAX as u32) as i32 - 1), w, colour);
         }
         if w > 1 {
-            self.vline(x.saturating_add(w as i32 - 1), y, h, colour);
+            self.vline(x.saturating_add(w.min(i32::MAX as u32) as i32 - 1), y, h, colour);
         }
     }
 

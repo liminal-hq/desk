@@ -134,7 +134,7 @@ impl VbeMode {
             planes: block[24],
             bits_per_pixel: block[25],
             memory_model: block[27],
-            phys_base: if block.len() >= 44 { u32_at(block, 40) } else { 0 },
+            phys_base: u32_at(block, 40),
         })
     }
 

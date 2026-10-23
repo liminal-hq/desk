@@ -193,3 +193,37 @@ fn a_fade_with_no_retrace_still_completes() {
     assert_eq!(r, dac::FadeReport { synced: 0, timed_out: 2 });
     assert!(vga.borrow().dac.iter().all(|c| *c == [0, 0, 0]));
 }
+
+#[test]
+fn a_fade_stops_polling_after_its_first_timeout() {
+    let (bus, vga) = bus();
+    vga.borrow_mut().retrace_period = 0;
+    let base = ramp();
+    let r = dac::fade_out(&bus, &base, dac::FADE_STEPS);
+    assert_eq!(
+        r,
+        dac::FadeReport {
+            synced: 0,
+            timed_out: 16
+        }
+    );
+    let polls = bus
+        .log()
+        .iter()
+        .filter(|a| matches!(a, desk_hal_mock::Access::In { port: 0x3DA, .. }))
+        .count();
+    assert!(
+        polls <= dac::VRETRACE_POLLS as usize + 2,
+        "{polls} reads of the status port for 16 frames"
+    );
+}
+
+#[test]
+fn a_fade_of_no_steps_still_ends_on_its_target() {
+    let (bus, vga) = bus();
+    let base = ramp();
+    dac::fade_out(&bus, &base, 0);
+    assert!(vga.borrow().dac.iter().all(|c| *c == [0, 0, 0]));
+    dac::fade_in(&bus, &base, 0);
+    assert_eq!(vga.borrow().dac[200], [base[200].r, base[200].g, base[200].b]);
+}
