@@ -8,7 +8,8 @@
 # usage: shell/dos/check.sh        (after tools/setup.sh)
 #
 # The transcripts are tests/shell/expected-dos-8.txt and expected-dos-4.txt. Each run's dumps are kept in dist/shell/dumps-DEPTH/ for the
-# comparison with the native track's (frames.py same). The interactive mode runs with typed keys only; the mouse is tried by hand (docs/FIRST-WINDOW.md).
+# comparison with the native track's (frames.py same). The live mode runs with typed keys only (AUTOTYPE); the mouse path is tried under Xvfb
+# (shell/dos/check-xvfb.sh, opt-in) and by hand (docs/LIVE-INPUT.md).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 DIR=shell/dos
@@ -89,16 +90,57 @@ keep dumps-vga
 frames check $SUMS 4 "$OUT/dumps-vga"
 frames same "$OUT/dumps-4" "$OUT/dumps-vga"
 
-step "Interactive: the keys typed through IRQ 1 reach the focused field, and Escape ends the run"
-rm -f "$OUT"/SCREEN.*
+# The live mode on the keys alone (tests/shell/live-keys.scn, docs/LIVE-INPUT.md): AUTOTYPE types the scenario's keys through the emulated
+# keyboard controller (so IRQ 1, the ring and the decoder are what read them), with F12 at each frame; at each mark SHELL.EXE marks reads the screen
+# back and writes Mkk.RAW and Mkk.PAL. The marks must carry the scenario's digests, in order (frames.py marks), and the dumps, renamed to the
+# frames' names, must equal the goldens (frames.py check). AUTOTYPE's pace (0.3 s a key) leaves the 64-byte key ring room while a read-back is
+# written.
+live_sums=tests/shell/live-keys.sums
+live_scn=tests/shell/live-keys.scn
+# live <depth> <name> <autotype> [<args>...]: SHELL.EXE depth<depth> marks timeout=60 with the keys, its dumps kept in $OUT/<name>/ and its
+# transcript in $OUT/<name>.txt; sets $out and $status.
+live() {
+  local depth=$1 name=$2 keys=$3
+  shift 3
+  rm -f "$OUT"/*.RAW "$OUT"/*.PAL
+  status=0
+  out="$(env DOS_AUTOTYPE="$keys" "$@" tools/dosrun.sh $OUT SHELL.EXE depth$depth marks timeout=60 2> /dev/null)" || status=$?
+  printf '%s\n' "$out" > "$OUT/$name.txt"
+  keep "$name"
+}
+live_keys="$(frames live $live_scn --autotype)" || fail "$live_scn does not translate for AUTOTYPE"
+for depth in 8 4; do
+  step "Live: $live_scn typed through IRQ 1 at depth $depth, each mark read back and held to the goldens"
+  live $depth live-$depth "$live_keys"
+  [ "$status" = 0 ] || fail "live SHELL.EXE depth$depth exited with status $status; output: $out"
+  case "$out" in *'shell: live ended by Escape: '*' keys, '*' pointer reports, '*' frames, '*' pixels presented, 4 marks'*'the video mode is 0x03') ;; *) fail "no summary, or text mode not restored: $out" ;; esac
+  readbacks="$(printf '%s\n' "$out" | grep -c '^shell: readback mark .* equal$' || true)"
+  [ "$readbacks" = 4 ] || fail "$readbacks of 4 marks were read back equal"
+  frames marks $live_sums $live_scn $depth "$OUT/live-$depth.txt" --dumps "$OUT/live-$depth"
+  frames check $live_sums $depth "$OUT/live-$depth"
+done
+
+step "Live without a mouse driver: the same frames, keyboard only"
+live 8 live-nomouse "$live_keys" DOS_CONF=$'[mouse]\nbuiltin_dos_mouse_driver = off'
+[ "$status" = 0 ] || fail "live SHELL.EXE without a mouse exited with status $status; output: $out"
+case "$out" in *'shell: no mouse driver; keyboard only'*) ;; *) fail "the mouse driver was not taken away: $out" ;; esac
+frames marks $live_sums $live_scn 8 "$OUT/live-nomouse.txt" --dumps "$OUT/live-nomouse"
+frames check $live_sums 8 "$OUT/live-nomouse"
+frames same "$OUT/live-8" "$OUT/live-nomouse"
+
+step "Live without marks: F12 prints the mark line only, and the last screen is written with dump"
+rm -f "$OUT"/*.RAW "$OUT"/*.PAL
 status=0
-out="$(DOS_AUTOTYPE='-w 3 -p 0.3 d e s k esc' tools/dosrun.sh $OUT SHELL.EXE depth8 dump timeout=30 2> /dev/null)" || status=$?
-[ "$status" = 0 ] || fail "interactive SHELL.EXE exited with status $status; output: $out"
+out="$(DOS_AUTOTYPE="$live_keys" tools/dosrun.sh $OUT SHELL.EXE depth8 dump timeout=60 2> /dev/null)" || status=$?
+[ "$status" = 0 ] || fail "live SHELL.EXE without marks exited with status $status; output: $out"
+printf '%s\n' "$out" > "$OUT/live-plain.txt"
+frames marks $live_sums $live_scn 8 "$OUT/live-plain.txt"
+case "$out" in *'shell: readback'*) fail "a read-back was done without marks" ;; esac
 case "$out" in *'shell: wrote SCREEN.RAW'*'the video mode is 0x03') ;; *) fail "no screen written, or text mode not restored: $out" ;; esac
-[ "$(wc -c < "$OUT/SCREEN.RAW")" = 307200 ] || fail "SCREEN.RAW is not 640 x 480 bytes"
-# The screen is deterministic: the scenario's two windows, "desk" in the field, the cursor at the centre. A broken key path changes it.
+# The last frame of the scenario is `again` ("deok" in the field): its dump is the last screen.
 got="$(frames digest "$OUT/SCREEN.RAW" "$OUT/SCREEN.PAL" 640 480)"
-[ "$got" = "640x480 dc85a936 436a5df4" ] || fail "the interactive screen is $got, not the one with desk typed into the field"
+want="$(awk '$1 == "again" && $2 == 8 { print $3, $4, $5 }' $live_sums)"
+[ "$got" = "$want" ] || fail "the last screen is $got, not the scenario's last frame $want"
 python3 -I tools/frames.py png "$OUT/SCREEN.RAW" "$OUT/SCREEN.PAL" 640 480 "$OUT/screen.png"
 rm -f "$OUT"/SCREEN.RAW "$OUT"/SCREEN.PAL
 echo "status $status, $OUT/screen.png written"
@@ -140,6 +182,23 @@ cmp -s "$wrong" tests/shell/expected-dos-8.txt && fail "the wrong transcript equ
 if frames transcript $SUMS 8 "$wrong" > /dev/null; then fail "a transcript with one digest changed was accepted"; fi
 out="$(cat "$OUT/transcript-8.txt")"
 if (same depth8 "$wrong") > /dev/null 2>&1; then fail "a wrong expected transcript was accepted"; fi
+echo "refused, as it should be"
+
+step "Negative: AUTOTYPE without one key of the typed word, one pixel altered in a live dump, one mark line removed"
+# One `s` fewer: the field holds "dek", so the typed mark and every later one differ from the sums.
+missing="$(printf '%s\n' "$live_keys" | sed 's/ d e s k / d e k /')"
+[ "$missing" != "$live_keys" ] || fail "the key was not removed from the AUTOTYPE arguments"
+live 8 live-missing "$missing"
+[ "$status" = 0 ] || fail "the live run with a key missing exited with status $status; output: $out"
+if frames marks $live_sums $live_scn 8 "$OUT/live-missing.txt" --dumps "$OUT/live-missing" > /dev/null; then fail "a live run with a key missing passed the marks"; fi
+if frames check $live_sums 8 "$OUT/live-missing" > /dev/null; then fail "the dumps of a live run with a key missing matched the goldens"; fi
+rm -rf "$OUT/live-altered"
+cp -r "$OUT/live-8" "$OUT/live-altered"
+printf '\x7f' | dd of="$OUT/live-altered/TYPED.RAW" bs=1 seek=100000 count=1 conv=notrunc 2> /dev/null
+if frames check $live_sums 8 "$OUT/live-altered" > /dev/null; then fail "an altered pixel of a live dump was accepted"; fi
+grep -v '^shell: mark 02 ' "$OUT/live-8.txt" > "$OUT/live-onemark.txt"
+if frames marks $live_sums $live_scn 8 "$OUT/live-onemark.txt" > /dev/null; then fail "a transcript with one mark line removed was accepted"; fi
+if frames marks $live_sums $live_scn 4 "$OUT/live-8.txt" > /dev/null; then fail "the depth 8 marks were accepted against the depth 4 sums"; fi
 echo "refused, as it should be"
 
 printf '\nAll shell on DOS checks passed.\n'
