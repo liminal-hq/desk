@@ -30,6 +30,8 @@ pub const MIN_DIVISOR: u32 = 2;
 
 /// Channel 0, low byte then high byte, mode 2 (rate generator), binary.
 const CMD_CH0_LOHI_RATE: u8 = 0x34;
+/// Channel 0, low byte then high byte, mode 3 (square wave), binary: what the BIOS programs.
+const CMD_CH0_LOHI_SQUARE: u8 = 0x36;
 /// Channel 0, counter latch.
 const CMD_CH0_LATCH: u8 = 0x00;
 
@@ -47,8 +49,12 @@ pub const fn divisor_for(hz: u32) -> Result<u32, HalError> {
     Ok(divisor)
 }
 
-/// The rate a divisor really gives, in millihertz, rounded to the nearest (100 Hz asks for 11,932 and gets 99,998 mHz).
+/// The rate a divisor really gives, in millihertz, rounded to the nearest (100 Hz asks for 11,932 and gets 99,998 mHz). Zero for
+/// a divisor of 0, which is not a rate (the chip's encoding of 65,536 is `MAX_DIVISOR` here).
 pub const fn actual_millihertz(divisor: u32) -> u32 {
+    if divisor == 0 {
+        return 0;
+    }
     ((INPUT_HZ as u64 * 1000 + divisor as u64 / 2) / divisor as u64) as u32
 }
 
@@ -82,15 +88,20 @@ impl<P: PortIo> Pit<P> {
         Ok(divisor)
     }
 
-    /// Puts back the BIOS rate (about 18.2 Hz). The hosted platform runs this on exit if Desk changed the rate.
+    /// Puts back what the BIOS set: mode 3 (square wave) with divisor 65,536 (written as 0), about 18.2 Hz. The hosted platform
+    /// runs this on exit if Desk changed the rate.
     pub fn restore_bios_rate(&self) {
-        // MAX_DIVISOR is in range, so this cannot fail.
-        let _ = self.program_divisor(MAX_DIVISOR);
+        self.ports.outb(COMMAND, CMD_CH0_LOHI_SQUARE);
+        self.ports.outb(CHANNEL0, 0);
+        self.ports.outb(CHANNEL0, 0);
     }
 
-    /// Latches channel 0 and reads its current count, which runs down from the divisor once per input clock (838 ns). With the
-    /// tick count this gives sub-tick time without a TSC. Run with interrupts off: an interrupt handler that touches the PIT
-    /// between the latch and the two reads would scramble them.
+    /// Latches channel 0 and reads its current count. In mode 2, which `program_divisor` sets, the count runs down from the divisor
+    /// by one per input clock (838 ns), so `divisor - count` is the time since the last tick. In the BIOS's mode 3, which the
+    /// hosted track has unless it reprograms the PIT, the count runs down by two and covers each period twice, so it does not
+    /// give sub-tick time without knowing the output's phase; reprogram with `program_divisor(MAX_DIVISOR)` (the same rate in mode
+    /// 2) first. Run with interrupts off: an interrupt handler that touches the PIT between the latch and the two reads would
+    /// scramble them.
     pub fn read_counter(&self) -> u16 {
         self.ports.outb(COMMAND, CMD_CH0_LATCH);
         let lo = self.ports.inb(CHANNEL0);
@@ -115,9 +126,13 @@ impl PitClock {
     }
 
     /// Records the divisor channel 0 was programmed with (the BIOS rate is `MAX_DIVISOR`), so the clock reports the real rate.
-    /// Call before registering the handler.
-    pub fn set_divisor(&self, divisor: u32) {
+    /// Call before registering the handler. `InvalidArgument`, and nothing recorded, outside `MIN_DIVISOR..=MAX_DIVISOR`.
+    pub fn set_divisor(&self, divisor: u32) -> Result<(), HalError> {
+        if !(MIN_DIVISOR..=MAX_DIVISOR).contains(&divisor) {
+            return Err(HalError::InvalidArgument);
+        }
         self.millihertz.store(actual_millihertz(divisor), Ordering::Relaxed);
+        Ok(())
     }
 }
 
@@ -168,6 +183,14 @@ mod tests {
         assert_eq!(actual_millihertz(11_932), 99_998);
         assert_eq!(actual_millihertz(MAX_DIVISOR), 18_207);
         assert_eq!(actual_millihertz(1_193), 1_000_153);
+        assert_eq!(actual_millihertz(0), 0);
+        let clock = PitClock::new();
+        for bad in [0, 1, MAX_DIVISOR + 1] {
+            assert_eq!(clock.set_divisor(bad), Err(HalError::InvalidArgument), "divisor {bad}");
+        }
+        assert_eq!(clock.millihertz(), 0, "a refused divisor records nothing");
+        clock.set_divisor(MAX_DIVISOR).unwrap();
+        assert_eq!(clock.millihertz(), 18_207);
     }
 
     #[test]
@@ -190,8 +213,13 @@ mod tests {
             (3, 2, false, 1_193, true)
         );
         pit.restore_bios_rate();
-        assert_eq!(chip.borrow().channels[0].reload, 0, "65,536 is written as 0");
-        assert_eq!(bus.writes()[3..], [(0x43, 0x34), (0x40, 0), (0x40, 0)]);
+        let ch0 = chip.borrow().channels[0];
+        assert_eq!(
+            (ch0.mode, ch0.reload, ch0.loaded),
+            (3, 0, true),
+            "the BIOS's mode 3, with 65,536 written as 0"
+        );
+        assert_eq!(bus.writes()[3..], [(0x43, 0x36), (0x40, 0), (0x40, 0)]);
     }
 
     #[test]
@@ -224,7 +252,7 @@ mod tests {
         let bus = MockPortBus::new();
         let irq = MockIrq::new();
         let divisor = Pit::new(&bus).program_periodic(100).unwrap();
-        CLOCK.set_divisor(divisor);
+        CLOCK.set_divisor(divisor).unwrap();
         assert_eq!(CLOCK.millihertz(), 99_998);
         let state: &'static mut &'static PitClock = Box::leak(Box::new(&CLOCK));
         irq.register(Irq::TIMER, IrqHandler::from_static(state), Chain::None).unwrap();
