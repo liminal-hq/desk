@@ -16,12 +16,12 @@ Spike `e-std-stubs`: since we write our own target specifications, can Rust's `s
 
 ## Verdict and recommendation
 
-**Verdict.** The stubs alone are not a `std`. In Rust 1.98.0 an unknown `os` name does not get the "unsupported" platform in full: `std` fails to build (21 errors) because four pieces have no fallback arm — the system allocator, the I/O error mapping, the thread-local keys and the random-data function. Once those four exist, everything else falls back to stubs that compile and link, and the result is poor but predictable: `println!` is silent, clocks and `sleep` abort the process, `thread::current()` aborts when the system allocator is a stub, and `process::exit` aborts. **A small patched platform layer works.** A patch of 55 added lines in 12 existing files of `library/std/src/sys` plus about 340 lines of new files select a "desk" platform (also reachable as os "dos") that calls 14 `desk_*` C functions; a 450-line shim implements them over the d0 runtime. With it `println!`, `eprintln!`, `stdin`, `Vec`, `HashMap` (with a real seed), `Instant` (microsecond resolution from the PIT), `SystemTime`, `thread::sleep`, `env::args`, `env::var`/`vars` and `process::exit(7)` all work in DOSBox. A hello program is 19.5 KB against 9.7 KB for the `no_std` + `alloc` version, or 10.2 KB against 8.2 KB with `-Cpanic=immediate-abort`.
+**Verdict.** The stubs alone are not a `std`. In Rust 1.98.0 an unknown `os` name does not get the "unsupported" platform in full: `std` fails to build (21 errors) because four pieces have no fallback arm — the system allocator, the I/O error mapping, the thread-local keys and the random-data function. Once those four exist, everything else falls back to stubs that compile and link, and the result is poor but predictable: `println!` is silent, clocks and `sleep` abort the process, `thread::current()` aborts when the system allocator is a stub, and `process::exit` aborts. **A small patched platform layer works.** A patch of 55 added lines in 12 existing files of `library/std/src/sys` plus about 340 lines of new files select a "desk" platform (also reachable as os "dos") that calls 15 `desk_*` C functions; a 450-line shim implements them over the d0 runtime. With it `println!`, `eprintln!`, `stdin`, `Vec`, `HashMap` (with a real seed), `Instant` (microsecond resolution from the PIT), `SystemTime`, `thread::sleep`, `env::args`, `env::var`/`vars` and `process::exit(7)` all work in DOSBox. A hello program is 19.5 KB against 9.7 KB for the `no_std` + `alloc` version, or 10.2 KB against 8.2 KB with `-Cpanic=immediate-abort`.
 
 **Recommendation.**
 
 - **Kernel, runtime, drivers and the Desk shell:** stay `no_std` + `alloc`, as the matrix in [`RUST-TARGETS.md`](RUST-TARGETS.md) says. `std` doubles a plain hello program and adds machinery (panic hooks, thread handles, `fmt` for `Duration`) these programs do not need.
-- **Desk apps (matrix row d) and DOS programs that want the crates ecosystem:** use a **patched `std` platform layer in a copied sysroot**, with the `desk_*` C functions as the contract between `std` and the runtime. It is cheaper than it looked: the layer is small, builds in 12 seconds, needs no precompiled sysroot, and the same layer serves the hosted runtime (the shim here) and, later, the native Desk (syscalls behind the same 14 functions). Do not rely on the unmodified stubs, and do not rely on borrowing another OS's layer (below) beyond experiments.
+- **Desk apps (matrix row d) and DOS programs that want the crates ecosystem:** use a **patched `std` platform layer in a copied sysroot**, with the `desk_*` C functions as the contract between `std` and the runtime. It is cheaper than it looked: the layer is small, builds in 12 seconds, needs no precompiled sysroot, and the same layer serves the hosted runtime (the shim here) and, later, the native Desk (syscalls behind the same 15 functions). Do not rely on the unmodified stubs, and do not rely on borrowing another OS's layer (below) beyond experiments.
 - **A thin `desk_std` crate on `core` + `alloc`** is still the right answer for size-critical programs (floppy-sized games, the first-stage tools), and a good complement: it needs no patch and no tracking. It is not a substitute for `std` when a dependency needs `std::io`, `std::collections::HashMap` or `std::time`.
 - **An upstream Tier 3 target** remains a long-term idea only. The patch is small enough to propose, but nothing here depends on it.
 - **Next:** (1) `fn main` as the entry — let `std`'s `lang_start` run (a C `main` called from `_start`) so the main thread has a name, the arguments are passed in and `std::rt` initialises, instead of `#![no_main]` + `rt::entry!`; (2) `std::fs` over the `rt::dos` file calls; (3) track Rust releases with the patch (a CI job that applies it to the next toolchain); (4) a real-hardware run of the clock.
@@ -117,7 +117,7 @@ Three platform layers were run through the same probe. **stub** is the minimum p
 | `thread::sleep` | panics (`can't sleep`), aborts | same | works (busy-wait; 1000 ms is 18 BIOS ticks) |
 | `thread::current()`, `available_parallelism`, `yield_now` | `current()` **aborts**; `available_parallelism` is `Err(NotFound)`; `yield_now` returns | `ThreadId(1)`, `Err(NotFound)`, returns | same as trusty |
 | `Mutex`, `RwLock`, `Once`, `OnceLock`, atomics | work (no-contention implementations) | work | work |
-| `env::args` | empty | empty | the command tail (`["all"]`); no program name, as in d0 |
+| `env::args` | empty | empty | the program path, then the command tail (`[path, "all"]`) |
 | `env::var` | `Err(NotPresent)` | `Err(NotPresent)` | works (`COMSPEC`); `vars()` works |
 | `env::vars()` | panics (`not supported on this platform`) | panics | works |
 | `fs::File::open`, `fs::write` | `Err(Unsupported)` | `Err(Unsupported)` | `Err(Unsupported)` (not implemented) |
@@ -139,7 +139,7 @@ Two cheaper paths were tried, then the patch.
 
 | Module | Change |
 |---|---|
-| `sys/pal` | `any(target_os = "desk", target_os = "dos") => mod desk`: the unsupported `common` plus `abort_internal` that calls `desk_exit(134)`, and `abi.rs`, the 14 `extern "C"` declarations |
+| `sys/pal` | `any(target_os = "desk", target_os = "dos") => mod desk`: the unsupported `common` plus `abort_internal` that calls `desk_exit(134)`, and `abi.rs`, the 15 `extern "C"` declarations |
 | `sys/alloc` | `System: GlobalAlloc` over `desk_alloc`, `desk_alloc_zeroed`, `desk_dealloc` and `desk_realloc` |
 | `sys/stdio` | `Stdin` over `desk_read`; `Stdout` and `Stderr` over `desk_write`; `panic_output` is standard error |
 | `sys/random` | `fill_bytes` over `desk_random` (`HashMap` seeds itself from it) |
@@ -150,7 +150,7 @@ Two cheaper paths were tried, then the patch.
 | `sys/io/error`, `sys/thread_local` | `desk` and `dos` (and `stub`) added to the existing `generic` and `no_threads` arms |
 | `std/build.rs` | `desk` and `dos` added to the `restricted_std` list |
 
-`shim/src/desk.rs` implements the 14 functions over `rt`:
+`shim/src/desk.rs` implements the 15 functions over `rt`:
 
 - **Memory:** `alloc::alloc`, i.e. `rt`'s heap.
 - **Output and input:** `rt::dos::write_all` and `read`.
@@ -213,7 +213,8 @@ Verified, by running (and by `check.sh`, which asserts each line of the table in
 
 Not verified:
 
-- **Real hardware and other hosts.** Nothing ran on a 486, under EMM386, QEMM or a Windows 9x DOS box. The PIT read-back command (`0xC2`) is a 8254 feature; DOSBox emulates it and the clock was only exercised there. The BIOS tick count restarts at midnight, which the clock does not handle. The wall clock takes the local time as UTC.
+- **Real hardware and other hosts.** Nothing ran on a 486, under EMM386, QEMM or a Windows 9x DOS box. The PIT read-back command (`0xC2`) is a 8254 feature; DOSBox emulates it and the clock was only exercised there. The BIOS tick count restarts at midnight; the clock treats a fall of more than half a day as that and adds a day, but no run crossed midnight. The wall clock takes the local time as UTC.
+- **Flushing and the environment.** A program that returns from `rt::entry!` does not run `std`'s exit clean-up, so a `print!` without a newline is still in the `LineWriter` and is lost (call `io::stdout().flush()` or leave through `process::exit`, which flushes). `env::set_var` and `remove_var` return `Unsupported`, and `std` turns that into a panic.
 - **Threads.** There are none: spawn is `Unsupported`, locks do not block, and `thread_local!` destructors were not tested.
 - **`std::fs`, `net`, `process::Command`:** unsupported, as on the stock stubs. A DOS-backed `fs` was not tried.
 - **The ordinary `fn main` entry.** Every program is `#![no_main]`; `std`'s own start-up (`lang_start`, the main thread's name, argument passing) never ran, so `thread::current().name()` is `None` and a panic message names the thread `<unnamed>`.

@@ -127,7 +127,7 @@ for flavour in desk dos; do
   step "Patched Desk platform layer (os \"$flavour\"): stdout, alloc, args, env, random, time, sleep and exit over the runtime"
   run $flavour PROBE.EXE all
   expect "$flavour all" 0 "STD-PRINTLN visible" "STD-EPRINTLN visible" "STD-WRITE_ALL visible" "System.alloc(64) null? false" \
-    "hashmap: len=100 get(42)=Some(84)" "two RandomState hashes of 1 differ" "env::args: 1 [\"all\"]" "env::var(COMSPEC) -> Ok(" \
+    "hashmap: len=100 get(42)=Some(84)" "two RandomState hashes of 1 differ" "env::args: 2 [" "\"all\"]" "env::var(COMSPEC) -> Ok(" \
     "try_lock while held fails=true" "fs: File::open(HELLO.EXE) -> Err kind=Unsupported" \
     "PROBE all returned"
   run $flavour PROBE.EXE thread_spawn

@@ -95,7 +95,9 @@ fn cache() -> &'static (Vec<String>, Vec<String>) {
     unsafe {
         let slot = &mut *CACHE.0.get();
         slot.get_or_insert_with(|| {
-            let args = rt::env::args();
+            // argv[0] is the program's path, as std programs expect; the runtime keeps it apart from the command tail.
+            let mut args = alloc::vec![rt::env::program_path().unwrap_or_default()];
+            args.extend(rt::env::args());
             let vars = rt::env::vars().into_iter().map(|(k, v)| alloc::format!("{k}={v}")).collect();
             (args, vars)
         })
