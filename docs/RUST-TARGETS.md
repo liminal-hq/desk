@@ -53,7 +53,7 @@ The native kernel specification (`kernel/i486-desk-none.json`, PR #6) differs: E
 | (f) Lt. Fizz, Episode 2 for DOS | A new game | Planned: the shared DOS target | Program | `core`, `alloc` (maybe a thin std-like crate) | Rust-only link and a CWSDPMI packer | The shared runtime and drivers | DOSBox | planned |
 | (g) Lt. Fizz on the web | The existing wasm build, in `liminal-hq/lieutenant-fizz` | `wasm32` | Library for the browser | Reference only | Browser | Browser | Reference only | exists elsewhere; reference only |
 | (h) Host tools | The font build (Bun and TypeScript), and any Rust host tools such as a packer | The host target | Ordinary crates | `std` | Host toolchain | The host OS | Host test runs, for example a native 32-bit bench as Fizz DOS has | planned for Rust tools; the font build exists |
-| (i) Shared HAL and drivers | The HAL traits, the drivers written once against them, and the mock platform (`hal/`, [`HAL.md`](HAL.md)) | The host for tests; `kernel/i486-desk-none.json` and `spikes/d0-rust-dos/dos-elf.json` for the cross builds | `rlib` | `core` (the mock adds `alloc`); a `std` feature for host builds only | Linked into the kernel or a DOS program by their own builds | The platform: `rt` under DOS, the kernel natively, `desk-hal-mock` in tests | `cargo test` on the host, `cargo check` and `clippy` for both targets with `-Zbuild-std` | in a PR (spike H): traits, 16550, 8254 and 8259 drivers; no binary uses them yet |
+| (i) Shared HAL and drivers | The HAL traits, the drivers written once against them, and the mock platform (`hal/`, [`HAL.md`](HAL.md)) | The host for tests; `kernel/i486-desk-none.json` and `spikes/d0-rust-dos/dos-elf.json` for the cross builds | `rlib` | `core` (the mock adds `alloc`); a `std` feature for host builds only | Linked into the kernel or a DOS program by their own builds | The platform: `rt` under DOS, the kernel natively, `desk-hal-mock` in tests | `cargo test` on the host, `cargo check` and `clippy` for both targets with `-Zbuild-std` | in a PR (PR #8, spike H): traits, 16550, 8254 and 8259 drivers; no binary uses them yet |
 
 ## The std question
 
@@ -89,7 +89,7 @@ Costs to weigh:
 | s1-dxe3 | Hosted | Scott Morris | PR #4 (on PR #3) | done: Rust modules as DXE3 files, yes with limits (`docs/S1-DXE3.md`) |
 | native walking skeleton | Native | Scott Morris | PR #6 | done: NASM boot sector and a Rust kernel in QEMU with a 486 CPU (`docs/NATIVE-BOOT.md`) |
 | d0-rust-dos | Hosted | Scott Morris | PR #7 (on PR #3) | done: yes, a pure Rust DOS program with no gcc, libc or crt0 (a `rust-lld` link, a 139-line packer and a roughly 1,600-line runtime, `docs/D0-RUST-DOS.md`); next: a freestanding ELF target, `rt` as a top-level crate, Rust drivers |
-| H: HAL design | Shared crates | Scott Morris | `feat/hal-design` | done: the design ([`HAL.md`](HAL.md)) and `hal/` with host-tested 16550, 8254 and 8259 drivers, built for both targets |
+| H: HAL design | Shared crates | Scott Morris | PR #8 | done: the design ([`HAL.md`](HAL.md)) and `hal/` with host-tested 16550, 8254 and 8259 drivers, built for both targets |
 | s-std-stubs | Any | Not assigned | None | planned: build `std` for an unknown OS name and measure |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |
