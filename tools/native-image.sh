@@ -12,7 +12,8 @@
 # Test modes make the kernel misbehave on purpose for the negative checks: none, div0, gp, ud, panic, hang, notick, input, input-masked, input-idle (the last three wait for keyboard and mouse events that tools/native-run.sh --inject sends),
 # gfx (the graphics tour: modes, palette, a window and a cursor; docs/D-NATIVE-VGA.md), bios (BIOS calls from the kernel through the
 # real-mode trampoline: VBE, disk, memory, time and the stress run; docs/N3-BIOS-PATH.md), bios-solo (the same without the steps that
-# need typed keys, for an emulator that cannot inject them).
+# need typed keys, for an emulator that cannot inject them), shell (the first window's scripted scenario, a frame at a time:
+# docs/FIRST-WINDOW.md) and shell-corrupt (the same, with one pixel of the screen changed after the `moved` frame).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -30,6 +31,7 @@ done
 case "$mode" in
   none) code=0 ;; div0) code=1 ;; gp) code=2 ;; ud) code=3 ;; panic) code=4 ;; hang) code=5 ;; notick) code=6 ;;
   input) code=7 ;; input-masked) code=8 ;; input-idle) code=9 ;; gfx) code=10 ;; bios) code=11 ;; bios-solo) code=12 ;;
+  shell) code=13 ;; shell-corrupt) code=14 ;;
   *) echo "unknown test mode: $mode" >&2; exit 2 ;;
 esac
 
