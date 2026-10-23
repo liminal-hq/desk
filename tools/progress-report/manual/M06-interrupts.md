@@ -24,6 +24,8 @@ After the chapter you should be able to say what each of the four set-up lines d
 
 The loader left a GDT in use, but it lives in the loader's memory, which the kernel is free to overwrite ([M4](chapter:m-loader)). [`gdt::init`](sym:kernel/src/gdt.rs::init) therefore loads a table of its own: a static array of three 64-bit [descriptors](term:descriptor), the null one and the same two the loader used, `0x00CF9A000000FFFF` for code and `0x00CF92000000FFFF` for data (base 0, limit `0xFFFFF` in 4 KiB pages, which is 4 GiB, 32-bit, [ring](term:ring) 0). The decoding is in [M2](chapter:m-cpu); the kernel's copy is the same two numbers. The [selectors](term:selector) are the constants `KERNEL_CODE = 0x08` and `KERNEL_DATA = 0x10`, the byte offsets of the two descriptors. The table is 24 bytes, so the limit given to `lgdt` is 23, which is `0x17`.
 
+<!-- explainer m-gdt -->
+
 Loading the table is not enough, because the segment registers still hold copies of the old descriptors. `init` does four things in one block of assembly. It runs `lgdt`. It pushes the code selector and the address of the next instruction and executes `retf`, a far return, which is how a 32-bit program reloads `CS` (there is no `mov` to `CS`). It then moves `0x10` through `AX` into `DS`, `ES`, `FS`, `GS` and `SS`. The print that follows, `gdt: loaded, flat 4 GiB code and data segments`, is the first line the transcript owes to this chapter. Because every segment is flat and based at 0, an address in the kernel is its linear address, and the rest of the kernel never thinks about segments again.
 
 ### The 256-gate IDT and its stubs
@@ -273,6 +275,10 @@ def: One interrupt of the timer on IRQ 0. At 100 Hz a tick is about 10 ms, and t
 id: m6-pit
 reuse: pit-test
 at: explainer pit
+
+id: m6-gdt
+reuse: m2-gdt
+at: explainer m-gdt
 ```
 
 ## Revisions

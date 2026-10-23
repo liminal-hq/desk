@@ -467,3 +467,10 @@ tr.m-part th{background:var(--raised);text-align:left;font-family:var(--f-displa
 @media (max-width:760px){.m-paths{grid-template-columns:minmax(0,1fr)}}
 .m-term,.mn-pre{max-width:100%}
 .manual-landing .prose,.manual .prose{grid-template-columns:minmax(0,1fr)}
+/* manual explainers: address translation and the GDT */
+.m-gdtfig .gd-base{fill:var(--c1)} .m-gdtfig .gd-limit{fill:var(--c3)} .m-gdtfig .gd-access{fill:var(--c4)} .m-gdtfig .gd-flags{fill:var(--c5)}
+.m-gdtfig .gd-bit{fill:#fff;font-family:var(--f-mono)} .m-gdtfig .gd-cur,.m-addrfig .gd-cur{stroke:var(--text)}
+.sw.gd-base{background:var(--c1)} .sw.gd-limit{background:var(--c3)} .sw.gd-access{background:var(--c4)} .sw.gd-flags{background:var(--c5)}
+.m-addrfig .ad-ram{fill:var(--raised);stroke:var(--line-strong)} .m-addrfig .ad-bound{stroke:var(--s-decision);stroke-dasharray:4 3;stroke-width:1.6}
+.m-addrfig .ad-a{stroke:var(--c1);fill:var(--c1)} .m-addrfig .ad-open{stroke:var(--c3);fill:var(--c3)} .m-addrfig .ad-closed{stroke:var(--c2);fill:var(--c2)}
+.m-addrfig .ad-t{fill:var(--text)} .m-addrfig .is-off,.m-gdtfig .is-off{display:none}

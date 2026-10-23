@@ -158,6 +158,8 @@ Seven full tracks later the reads are at `0x1FC00`, and the track in hand (LBA 1
 
 With the granularity bit set, the limit `0xFFFFF` counts 4 KiB units: (`0xFFFFF` + 1) × 4,096 = 4 GiB. The data descriptor differs only in its access byte, `0x92` (`1001 0010`): not executable, writable. Both start at 0 and span the whole 32-bit address space, so a segment-relative address and a physical address are the same number, which is what "flat" means. Selector `0x08` is the second entry (index 1, times 8) and `0x10` the third.
 
+<!-- explainer m-gdt -->
+
 **The memory the BIOS reported.** In the recorded QEMU run the six E820 entries that stage 2 stored include two of usable RAM: `0x00000000`–`0x0009fc00` and `0x00100000`–`0x00fe0000`. The first is 0x9fc00 = 654,336 bytes = 639 KiB. The second is 0xee0000 = 15,597,568 bytes = 15,232 KiB. Together, 639 + 15,232 = 15,871 KiB, which is what the kernel prints as `memory: usable RAM 15871 KiB`. The same total comes out of the E801 and AH=88 builds (below), each with only two entries.
 
 ## State of this layer
@@ -335,6 +337,10 @@ at: explainer memchain
 id: m4-bootinfo
 reuse: boot-info
 at: figure bootinfo
+
+id: m4-gdt
+reuse: m2-gdt
+at: explainer m-gdt
 ```
 
 ## Revisions
