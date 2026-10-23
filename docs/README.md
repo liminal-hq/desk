@@ -18,6 +18,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
+| [`S5-JSDOS.md`](S5-JSDOS.md) | Spike result: the DOS programs in the browser through js-dos 8, VBE and the linear frame buffer there, sound, what differs from native DOSBox Staging, timings and the recommended site and bundle layout |
 | [`E-STD-STUBS.md`](E-STD-STUBS.md) | Spike result: `std` for an invented OS name — what the stubs give and cost, a patched platform layer over the runtime that makes `println!`, `HashMap`, `Instant` and `exit` work in DOSBox, sizes, and the cost of tracking Rust releases |
 | [`HAL.md`](HAL.md) | Spike H: the hardware abstraction layer and the shared drivers, the platforms, the concurrency and `unsafe` rules, the migration plan and the contracts for the next spikes; the reference crates are in `hal/` |
 | [`C-INPUT.md`](C-INPUT.md) | Spike C: the keyboard and PS/2 mouse in the native kernel, the 8042 tables and set-up sequences, the event contracts, the interrupt hand-off, the QEMU input tests and what real hardware may do differently |

@@ -6,7 +6,7 @@
 #
 # usage: tools/check-headers.sh
 #
-# Covers .rs, .c, .h, .py, .sh, .ts, .js, .asm (NASM, `;` comments) and workflow YAML. Skips design/ (reference material),
+# Covers .rs, .c, .h, .py, .sh, .ts, .js, .mjs, .asm (NASM, `;` comments) and workflow YAML. Skips design/ (reference material),
 # vendor/, target/, dist/ and node_modules/. Markdown, JSON and other config-only files carry no header.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,7 +18,7 @@ while IFS= read -r f; do
     bad=1
   fi
 done < <(git ls-files --cached --others --exclude-standard -- \
-  '*.rs' '*.c' '*.h' '*.py' '*.sh' '*.ts' '*.js' '*.asm' '.github/workflows/*.yml' \
+  '*.rs' '*.c' '*.h' '*.py' '*.sh' '*.ts' '*.js' '*.mjs' '*.asm' '.github/workflows/*.yml' \
   ':!design' ':!vendor' ':!target' ':!dist' ':!node_modules')
 
 [ "$bad" = 0 ] && echo "licence headers: ok"

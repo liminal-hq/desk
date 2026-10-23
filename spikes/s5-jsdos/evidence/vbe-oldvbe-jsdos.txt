@@ -1,0 +1,31 @@
+S5-VBE start (access: linear frame buffer)
+info: AX=0x004f (0x004f is supported and successful)
+info: signature "VESA" version 1.2 oem "S3 Incorporated. Trio64"
+info: capabilities 0x00000000, video memory 2048 KiB, mode list at 0xc0100
+modes: 24 listed
+mode 0x100: 640x400x8 model 4 attrs 0x009b lfb true pitch 640 phys 0xc0000000
+mode 0x101: 640x480x8 model 4 attrs 0x009b lfb true pitch 640 phys 0xc0000000
+mode 0x102: 800x600x4 model 3 attrs 0x001b lfb false pitch 100 phys 0xc0000000
+mode 0x103: 800x600x8 model 4 attrs 0x009b lfb true pitch 800 phys 0xc0000000
+mode 0x104: 1024x768x4 model 3 attrs 0x001b lfb false pitch 128 phys 0xc0000000
+mode 0x105: 1024x768x8 model 4 attrs 0x009b lfb true pitch 1024 phys 0xc0000000
+mode 0x106: 1280x1024x4 model 3 attrs 0x001b lfb false pitch 160 phys 0xc0000000
+mode 0x107: 1280x1024x8 model 4 attrs 0x009b lfb true pitch 1280 phys 0xc0000000
+mode 0x108: 80x60x4 model 0 attrs 0x000f lfb false pitch 160 phys 0xc0000000
+mode 0x109: 132x25x4 model 0 attrs 0x000f lfb false pitch 264 phys 0xc0000000
+mode 0x10a: 132x43x4 model 0 attrs 0x000f lfb false pitch 264 phys 0xc0000000
+mode 0x10b: 132x50x4 model 0 attrs 0x000f lfb false pitch 264 phys 0xc0000000
+mode 0x10c: 132x60x4 model 0 attrs 0x000f lfb false pitch 264 phys 0xc0000000
+mode 0x10d: 320x200x15 model 6 attrs 0x009b lfb true pitch 640 phys 0xc0000000
+mode 0x10e: 320x200x16 model 6 attrs 0x009b lfb true pitch 640 phys 0xc0000000
+mode 0x10f: 320x200x32 model 6 attrs 0x009b lfb true pitch 1280 phys 0xc0000000
+mode 0x110: 640x480x15 model 6 attrs 0x009b lfb true pitch 1280 phys 0xc0000000
+mode 0x111: 640x480x16 model 6 attrs 0x009b lfb true pitch 1280 phys 0xc0000000
+mode 0x112: 640x480x32 model 6 attrs 0x009b lfb true pitch 2560 phys 0xc0000000
+mode 0x113: 800x600x15 model 6 attrs 0x009b lfb true pitch 1600 phys 0xc0000000
+mode 0x114: 800x600x16 model 6 attrs 0x009b lfb true pitch 1600 phys 0xc0000000
+mode 0x115: 800x600x32 model 6 attrs 0x009b lfb true pitch 3200 phys 0xc0000000
+mode 0x116: 1024x768x15 model 6 attrs 0x009b lfb true pitch 2048 phys 0xc0000000
+mode 0x117: 1024x768x16 model 6 attrs 0x009b lfb true pitch 2048 phys 0xc0000000
+mode=0x101 bx=0x4101 set_ax=0x004f get_ax=0x004f current=0x4101 int10_0f_mode=0x69; access=lfb phys=0xc0000000 mapped_linear=0xc0000000 length=307200; checksum=0x3d8bcade expected=0x3d8bcade match=true
+S5-VBE done

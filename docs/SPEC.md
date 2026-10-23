@@ -26,7 +26,7 @@ The design boards are in `design/Afterglow Desk.dc.html`: the looks (1a Void, 1b
 
 | Target | First version | Notes |
 |---|---|---|
-| Browser (js-dos 8) | Not yet | Waits for the js-dos and VBE linear frame buffer spike (`OPEN-QUESTIONS.md`); a bundle like `lieutenant-fizz-dos/site`'s is the goal |
+| Browser (js-dos 8) | Yes (spike s5-jsdos, `S5-JSDOS.md`) | The same DOS programs run unchanged in js-dos 8.5.3 with `CWSDPMI.EXE` beside them. VBE 2.0 with the linear frame buffer works: 640×480×8, DPMI 0800h and a pixel-exact picture in headless Chromium. Read the LFB address from `4F01h` (`0xC0000000` here, `0xE0000000` on the DOSBox-X backend), expect 2 MiB of video memory and a different mode list from DOSBox Staging, and keep the banked path; mode 12h is not needed for the browser. Shipped as a `.jsdos` bundle beside a separately served js-dos (GPL-2.0), like `lieutenant-fizz-dos/site`. Only Chromium and the skeleton programs were tried |
 | DOSBox Staging 0.83 | Yes | `machine = svga_s3`, VBE 2.0 |
 | 86Box / real 486 with VESA | Later | Mode 12h fallback covers plain VGA |
 | 1.44 MB floppy | Core only | Target: the core install fits one disk; apps ship on a second |

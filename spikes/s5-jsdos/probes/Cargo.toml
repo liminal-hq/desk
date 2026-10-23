@@ -1,0 +1,19 @@
+[package]
+name = "probes"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Graphics probes for the s5-jsdos spike: VGA mode 13h and VBE with a linear frame buffer, built on the d0-rust-dos runtime"
+license = "Apache-2.0 OR MIT"
+
+[workspace]
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 0

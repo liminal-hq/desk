@@ -1,0 +1,35 @@
+{
+ "rate": 44100,
+ "seconds": 8,
+ "segments": [
+  {
+   "start": 0.1,
+   "seconds": 1.99,
+   "hz": 440,
+   "peak": 0.187,
+   "rms": 0.132
+  },
+  {
+   "start": 3.07,
+   "seconds": 1.1,
+   "hz": 400,
+   "peak": 0.5,
+   "rms": 0.493
+  },
+  {
+   "start": 5.32,
+   "seconds": 1.99,
+   "hz": 440.1,
+   "peak": 0.153,
+   "rms": 0.149
+  }
+ ]
+}
+S5-TONE start
+opl: detected true
+sb: reset answer Some(170) (Some(170) is 0xAA, a DSP is there)
+sb: DSP version Some(2).Some(1)
+tone 1: OPL2, 440 Hz, 2 s
+tone 2: Sound Blaster DMA, 400 Hz, 1 s
+sb: DMA count register 0xffff (0xffff is terminal count), IRQ 7 pending true
+tone 3: PC speaker, 440 Hz, 2 s

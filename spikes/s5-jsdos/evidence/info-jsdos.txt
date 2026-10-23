@@ -1,0 +1,39 @@
+DOSBox version jsdos. Reported DOS version 5.00.
+
+       632 Kb free conventional memory
+        63 Kb free upper memory in 1 blocks (largest UMB 63 Kb)
+     14912 Kb free extended memory
+     14912 Kb free expanded memory
+svga_s316autoautomaxfastopl2sb2No such section or property.
+No such section or property.
+
+--- dosbox.conf as js-dos holds it ---
+[sdl]
+fullscreen = false
+
+[dosbox]
+machine = svga_s3
+memsize = 16
+
+[cpu]
+core = auto
+cputype = auto
+cycles = max
+
+[sblaster]
+sbtype = sb2
+sbbase = 220
+irq = 7
+dma = 1
+oplmode = opl2
+oplemu = fast
+
+[mixer]
+rate = 44100
+blocksize = 1024
+prebuffer = 0
+
+[autoexec]
+mount c .
+c:
+call s5run.bat

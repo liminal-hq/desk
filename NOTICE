@@ -21,5 +21,11 @@ DJGPP (linked into the Desk's executables)
 DOSBox Staging (used to run tests headless; not distributed here)
   GPL-2.0-or-later. https://www.dosbox-staging.org
 
+js-dos (used to run the DOS programs in a browser, in spike s5-jsdos; not distributed here)
+  GPL-2.0. https://js-dos.com, source https://github.com/caiiiycuk/js-dos. It is fetched at build time
+  into vendor/js-dos by spikes/s5-jsdos/fetch-jsdos.sh (pinned version, SHA-256 checked) and is not
+  committed. A site that serves it does so as a separate program beside the page and the DOS
+  bundles, with its licence and provenance beside it; it does not change the licence of Desk's own code.
+
 The design reference in design/ was produced in a design-agent brainstorm. It is not built or
 shipped, and its bundled design-system files (design/_ds) are Liminal HQ's own.
