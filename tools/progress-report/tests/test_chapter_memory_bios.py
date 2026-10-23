@@ -85,6 +85,8 @@ class MemoryChapterTests(unittest.TestCase):
         self.assertEqual(pass1 - 159 - (0x13C000 - 0x100000) // 4096, 3748)
         self.assertEqual((0x13C000 - 0x100000) // 4096, 60)
         self.assertEqual(4096 - 256 - 60 - 32, 3748)
+        self.assertEqual(0x9FC00 - 0x9F000, 0xC00)
+        self.assertIn("the three-quarters of frame 159 that is RAM", self.text)
         for needle in ("**3,748**", "3,967", "15,868 KiB", "245,760 bytes"):
             self.assertIn(needle, self.text)
 
