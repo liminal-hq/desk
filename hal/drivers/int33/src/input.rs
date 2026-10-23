@@ -54,6 +54,10 @@ impl<B: Bios> MouseInput<B> {
             return Some(e);
         }
         let (dx, dy) = self.mouse.motion().ok()?;
+        // Both counters are read every poll, whatever the state says, so they never hold a click over to the next poll, and before the
+        // state: a click that lands between the two reads is then seen by the state or by the next poll's counters, never split.
+        let presses = self.mouse.presses(LEFT_INDEX).map_or(0, |e| e.count);
+        let releases = self.mouse.releases(LEFT_INDEX).map_or(0, |e| e.count);
         // The motion counters are already cleared, so a failed read of the buttons must not throw the motion away: keep the buttons.
         let state = self.mouse.position().unwrap_or(Position {
             buttons: self.buttons,
@@ -61,9 +65,6 @@ impl<B: Bios> MouseInput<B> {
             x: 0,
             y: 0,
         });
-        // Read both counters every poll, whatever the state says, so they never hold a click over to the next poll.
-        let presses = self.mouse.presses(LEFT_INDEX).map_or(0, |e| e.count);
-        let releases = self.mouse.releases(LEFT_INDEX).map_or(0, |e| e.count);
         let was = self.buttons & MouseEvent::LEFT != 0;
         let is = state.buttons & MouseEvent::LEFT != 0;
         // The state of the buttons after the first event of a hidden click, and the state the poll ends in.

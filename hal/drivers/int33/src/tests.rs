@@ -225,7 +225,7 @@ fn motion_survives_a_failed_button_read() {
 
 // ---- Clicks shorter than one poll: the press and release counters ----
 
-fn edges(mi: &mut MouseInput<Int33Model>) -> Vec<(i16, i16, u8)> {
+fn edges<B: Bios>(mi: &mut MouseInput<B>) -> Vec<(i16, i16, u8)> {
     std::iter::from_fn(|| mi.poll()).map(|e| (e.dx, e.dy, e.buttons)).collect()
 }
 
@@ -344,6 +344,36 @@ fn a_driver_that_answers_the_counters_with_zeros_changes_nothing() {
     assert_eq!(edges(&mut mi), [(3, 3, 1)]);
     mi.mouse().bios.release(MouseEvent::LEFT);
     assert_eq!(edges(&mut mi), [(0, 0, 0)]);
+}
+
+#[test]
+fn a_click_between_the_counter_reads_and_the_state_read_is_reported_by_the_next_poll() {
+    // The counters are read before the state, so a click that is over before the state is read (up before and after) is held by the
+    // counters until the next poll, which reports it; it is never split between a state that saw it and counters that did not.
+    struct ClickAfterCounters(Int33Model, std::cell::Cell<bool>);
+    impl Bios for ClickAfterCounters {
+        fn int(&self, vector: u8, regs: &mut BiosRegs, buffer: Option<&mut [u8]>) -> Result<(), HalError> {
+            // The release counter is the last of the two reads: the click happens right after it, before function 0003h.
+            let ax = regs.eax as u16;
+            let r = self.0.int(vector, regs, buffer);
+            if ax == 0x0006 && !self.1.replace(true) {
+                self.0.click(MouseEvent::LEFT);
+            }
+            r
+        }
+        fn read_low(&self, segment: u16, offset: u16, out: &mut [u8]) -> Result<(), HalError> {
+            self.0.read_low(segment, offset, out)
+        }
+    }
+    let mut mi =
+        MouseInput::new(Mouse::detect(ClickAfterCounters(Int33Model::wheel_mouse(), std::cell::Cell::new(true))).unwrap());
+    mi.mouse().bios.1.set(false);
+    assert_eq!(
+        mi.poll(),
+        None,
+        "the click came after this poll's counter reads and left the state as it was"
+    );
+    assert_eq!(edges(&mut mi), [(0, 0, 1), (0, 0, 0)], "the next poll's counters report it");
 }
 
 #[test]
