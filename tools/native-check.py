@@ -10,36 +10,43 @@
 #   plain text    must match exactly
 #   {N:lo..hi}    a decimal number in the range, inclusive (memory totals, entry counts, line numbers)
 #   {HEX}         a hex number written with a 0x prefix (addresses)
+#   {BITS:m=v}    a hex number written with a 0x prefix whose bits under the mask m equal v (both hex, 0x prefix), for a register
+#                 whose other bits depend on the machine (CR0's cache-disable bits are set by a 486's reset and cleared by SeaBIOS)
 #   {ANY}         any text
 #   ...           on a line of its own: zero or more lines of any content (the BIOS-dependent memory map, for example)
 # Exit status 0 when the transcript matches, 1 when it does not (with the first line that could not be matched).
 import re
 import sys
 
-TOKEN = re.compile(r"\{N:(\d+)\.\.(\d+)\}|\{HEX\}|\{ANY\}")
+TOKEN = re.compile(r"\{N:(\d+)\.\.(\d+)\}|\{BITS:(0x[0-9a-fA-F]+)=(0x[0-9a-fA-F]+)\}|\{HEX\}|\{ANY\}")
 
 
 def compile_line(text):
-    """Returns (regex, ranges) for one expected line."""
-    out, ranges, pos = [], [], 0
+    """Returns (regex, checks) for one expected line; a check takes the text a capture group matched and says whether it is allowed."""
+    out, checks, pos = [], [], 0
     for m in TOKEN.finditer(text):
         out.append(re.escape(text[pos:m.start()]))
         if m.group(0).startswith("{N:"):
             out.append(r"(\d+)")
-            ranges.append((int(m.group(1)), int(m.group(2))))
+            lo, hi = int(m.group(1)), int(m.group(2))
+            checks.append(lambda t, lo=lo, hi=hi: lo <= int(t) <= hi)
+        elif m.group(0).startswith("{BITS:"):
+            out.append(r"(0x[0-9a-fA-F]+)")
+            mask, value = int(m.group(3), 16), int(m.group(4), 16)
+            checks.append(lambda t, mask=mask, value=value: int(t, 16) & mask == value)
         elif m.group(0) == "{HEX}":
             out.append(r"0x[0-9a-fA-F]+")
         else:
             out.append(r".*")
         pos = m.end()
     out.append(re.escape(text[pos:]))
-    return re.compile("^" + "".join(out) + "$"), ranges
+    return re.compile("^" + "".join(out) + "$"), checks
 
 
 def line_matches(pattern, actual):
-    regex, ranges = pattern
+    regex, checks = pattern
     m = regex.match(actual)
-    return bool(m) and all(lo <= int(g) <= hi for g, (lo, hi) in zip(m.groups(), ranges))
+    return bool(m) and all(check(g) for g, check in zip(m.groups(), checks))
 
 
 def clean(path):
