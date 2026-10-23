@@ -178,7 +178,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for apps, the installer and the icons are created when their milestone starts; the platform implementations of the HAL live with their environment (`rt` for DOS, `kernel/` natively), not in `hal/`. Spike 1 settled the layout of `apps/`: one Cargo workspace for the DOS target with a crate per app, built into `.DXE` modules by a script in `tools/` that is still to be written (`docs/S1-DXE3.md`).
+Directories for apps, the installer and the icons are created when their milestone starts; the real platform implementations of the HAL live with their environment (`rt` for DOS, `kernel/` natively); `hal/` holds only what builds for every target, including the test platform `hal/platform/mock`. Spike 1 settled the layout of `apps/`: one Cargo workspace for the DOS target with a crate per app, built into `.DXE` modules by a script in `tools/` that is still to be written (`docs/S1-DXE3.md`).
 
 ## Licence and Copyright
 
