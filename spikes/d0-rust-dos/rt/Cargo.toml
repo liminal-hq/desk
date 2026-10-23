@@ -8,4 +8,5 @@ license = "Apache-2.0 OR MIT"
 
 [dependencies]
 desk-hal = { path = "../../../hal/hal" }
+desk-pic = { path = "../../../hal/drivers/pic" }
 desk-vga = { path = "../../../hal/drivers/vga" }
