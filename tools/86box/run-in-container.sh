@@ -38,8 +38,13 @@ xdotool key Return
 status=124
 last_size=-1
 stable=0
-for _ in $(seq 1 $((timeout_s * 5))); do
+deadline=$((SECONDS + timeout_s))
+tick=0
+while [ "$SECONDS" -lt "$deadline" ]; do
   sleep 0.2
+  tick=$((tick + 1))
+  # Until the guest has written anything, press Return again every 5 seconds in case the first press came before the message box.
+  if [ ! -s /vm/serial.txt ] && [ $((tick % 25)) = 0 ]; then xdotool key Return; fi
   if grep -q '^boot complete' /vm/serial.txt; then status=0; break; fi
   if grep -q -E '^(KERNEL PANIC|EXCEPTION 0x|Disk read error|stage2: cannot enable a20|stage2: no memory map)' /vm/serial.txt; then
     size=$(stat -c %s /vm/serial.txt)
