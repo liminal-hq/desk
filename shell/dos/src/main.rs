@@ -436,6 +436,12 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         }
         if end {
             println!("{}", live::summary_line(&tally));
+            if input.keys_dropped() > 0 {
+                println!(
+                    "shell: {} scancode bytes were dropped by the full key ring",
+                    input.keys_dropped()
+                );
+            }
             if !ok {
                 println!("shell: FAILED, a read-back differs from the shell's frame");
             }
@@ -443,6 +449,9 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         }
         if limit.is_some_and(|l| elapsed_ticks(start) > l) {
             println!("shell: timed out without Escape");
+            if !ok {
+                println!("shell: FAILED, a read-back differs from the shell's frame");
+            }
             return 4;
         }
     }
