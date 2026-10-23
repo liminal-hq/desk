@@ -78,6 +78,8 @@ The input types are `Scancode` (a `u8`), `Modifiers` (a bit set of shift, contro
 
 Every fallible operation returns [`HalError`](sym:hal/hal/src/error.rs::HalError), a `Copy` enum of seven cases: `Unsupported`, `NoDevice`, `Timeout`, `InvalidArgument`, `Busy`, `OutOfMemory` and `Platform(u16)` for a passed-through DPMI code. It has `Display`, and `std::error::Error` only on a host build. Device classes that need more would add their own error type; none has yet.
 
+<!-- explainer m-crates -->
+
 ### no_std and features
 
 `desk-hal` has no dependencies and one feature. Its `lib.rs` begins `#![cfg_attr(not(any(test, feature = "std")), no_std)]`, so a kernel or DOS build is `no_std` and a test build has `std`. The `std` feature only adds `impl std::error::Error for HalError`, "never on for a DOS or kernel build" in the `Cargo.toml` comment. No driver uses `alloc`. The mock platform does (`Vec`, `VecDeque`, `Rc`), which is why it too builds for both targets. There are no features to choose a platform: a binary picks its platform by depending on it.
@@ -322,6 +324,10 @@ def: The host platform in hal/platform/mock/: a scripted port bus, models of a f
 id: m9-layers
 reuse: hal-layers
 at: figure hal-layers
+
+id: m9-crates
+reuse: m1-crates
+at: explainer m-crates
 ```
 
 ## Revisions

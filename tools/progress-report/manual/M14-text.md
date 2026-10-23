@@ -49,6 +49,8 @@ The count is two bytes, so `21 01` is `0x0121` = 289 and `4C 01` is `0x014C` = 3
 
 `glyph(c)` is a binary search of the index by code point, which is why the format requires ascending order. `glyph_or_fallback(c)` returns the glyph for `?` when the face lacks `c`, and an empty glyph of advance 0 if it lacks `?` too. `advance(s)` is the sum of the advances of the characters of `s`, fallbacks included: the width of a line of text is a sum, with no kerning. `Glyph::bit(x, y)` reads one pixel and is clear outside the cell. All four files have `?`, `…` (U+2026) and `×` (U+00D7) and none has U+FFFD, so the fallback is always `?`. The crate has no drawing code.
 
+<!-- explainer m-dfn -->
+
 ### Drawing text
 
 `draw_text` takes a surface, a face, an `x`, the `top` of the cell, a string and a palette index. For each character it fetches the glyph (or the `?`) and calls `Surface::mono` with the glyph's rows, then moves right by the advance and returns the new `x`. It does not move down for the baseline: the caller names the top of the cell, which is why the layout code below says "cell top at `y + 4`". Set bits take the colour; clear bits leave whatever is underneath, so text does not erase its background.
@@ -325,6 +327,15 @@ def: An entry in the 256-colour palette: a number the frame buffer holds, which 
 id: m14-fontmatrix
 reuse: font-matrix
 at: figure font-matrix
+
+id: m14-dfn
+kind: explainer
+track: shared
+title: A glyph out of a .DFN file, byte by byte
+alt: A step-through of the header of fonts/generated/ui.dfn, field by field, then the letter A as a grid of pixels revealed row by row with the bytes of each row.
+caption: The magic, cell height, baseline and glyph count of ui.dfn, and one glyph read row by row.
+at: explainer m-dfn
+thumb: svg
 ```
 
 ## Revisions
