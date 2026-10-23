@@ -149,7 +149,7 @@
       detail.appendChild(el('div', { 'class': 'eyebrow' }, n.branch + (n.critical ? ' · on the critical path' : '')));
       detail.appendChild(h);
       var dl = el('dl');
-      [['State', n.state + (n.pr ? ' · PR #' + n.pr : '')], ['What', n.what], ['Why it matters', n.why], ['Needs', n.needs.join(', ') || 'nothing'],
+      [['State', n.state + ' · ' + n.tag + (n.pr ? ' · PR ' + n.pr : '')], ['What', n.what], ['Why it matters', n.why], ['Needs', n.needs.join(', ') || 'nothing'],
        ['Unlocks', n.unlocks.join(', ') || 'nothing yet'], ['Evidence', n.evidence]].forEach(function (r) {
         dl.appendChild(el('dt', {}, r[0]));
         dl.appendChild(el('dd', {}, r[1]));
@@ -164,5 +164,75 @@
       g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(id); } });
     });
     show('first-window');
+  }
+
+  // ---- the gallery ----------------------------------------------------------------------------------------------------------------
+  // Filter chips are links to their own ids, so they work as plain links; with script they also filter. State is kept in the hash as
+  // dot-separated tokens (#kind-screenshot.track-native.sort-new), which a shared link can restore. Nothing is hidden for good: the list
+  // view and every tile stay in the page.
+  var tiles = document.getElementById('tiles');
+  if (tiles) {
+    var state = { kind: '', track: '', sort: 'chapter', view: 'grid' };
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-group]'));
+    var sortBtns = Array.prototype.slice.call(document.querySelectorAll('[data-sort]'));
+    var viewBtns = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+    var items = Array.prototype.slice.call(tiles.querySelectorAll('.tile'));
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#figList tbody tr'));
+    var listBox = document.getElementById('figList');
+    var count = document.getElementById('galleryCount');
+    var fromHash = function () {
+      var h = (location.hash || '').replace(/^#/, '').split('.');
+      h.forEach(function (t) {
+        var m = /^(kind|track)-([a-z0-9-]+)$/.exec(t);
+        if (m) state[m[1]] = m[2] === 'all' ? '' : m[2];
+        if (t === 'sort-new') state.sort = 'new';
+        if (t === 'view-list') state.view = 'list';
+      });
+    };
+    var toHash = function () {
+      var t = [];
+      if (state.kind) t.push('kind-' + state.kind);
+      if (state.track) t.push('track-' + state.track);
+      if (state.sort === 'new') t.push('sort-new');
+      if (state.view === 'list') t.push('view-list');
+      try { history.replaceState(null, '', t.length ? '#' + t.join('.') : location.pathname + location.search); } catch (e) { /* a sandboxed frame may refuse */ }
+    };
+    var apply = function () {
+      var shown = 0;
+      items.forEach(function (li) {
+        var ok = (!state.kind || li.getAttribute('data-kind') === state.kind) && (!state.track || li.getAttribute('data-track') === state.track);
+        li.hidden = !ok;
+        if (ok) shown++;
+      });
+      rows.forEach(function (tr) {
+        tr.hidden = !((!state.kind || tr.getAttribute('data-kind') === state.kind) && (!state.track || tr.getAttribute('data-track') === state.track));
+      });
+      var sorted = items.slice().sort(function (a, b) {
+        if (state.sort === 'new') {
+          var d = b.getAttribute('data-date').localeCompare(a.getAttribute('data-date'));
+          if (d) return d;
+          return parseInt(b.getAttribute('data-i'), 10) - parseInt(a.getAttribute('data-i'), 10);
+        }
+        return parseInt(a.getAttribute('data-i'), 10) - parseInt(b.getAttribute('data-i'), 10);
+      });
+      sorted.forEach(function (li) { tiles.appendChild(li); });
+      chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c.getAttribute('data-value') === state[c.getAttribute('data-group')])); });
+      sortBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === state.sort)); });
+      viewBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-view') === state.view)); });
+      tiles.hidden = state.view === 'list';
+      if (listBox) listBox.open = state.view === 'list';
+      count.textContent = 'Showing ' + shown + ' of ' + items.length + ' figures' + (state.kind ? ', kind ' + state.kind : '') + (state.track ? ', track ' + state.track : '') + '.';
+    };
+    chips.forEach(function (c) {
+      c.addEventListener('click', function (e) {
+        e.preventDefault();
+        state[c.getAttribute('data-group')] = c.getAttribute('data-value');
+        apply(); toHash();
+      });
+    });
+    sortBtns.forEach(function (b) { b.addEventListener('click', function () { state.sort = b.getAttribute('data-sort'); apply(); toHash(); }); });
+    viewBtns.forEach(function (b) { b.addEventListener('click', function () { state.view = b.getAttribute('data-view'); apply(); toHash(); }); });
+    fromHash();
+    apply();
   }
 })();
