@@ -153,16 +153,17 @@ pub trait InterruptController {
     fn is_masked(&self, irq: Irq) -> bool;
     fn eoi(&self, irq: Irq);                        // called by the platform only
     fn is_spurious(&self, irq: Irq) -> bool { false }
+    fn eoi_spurious(&self, irq: Irq) {}             // what a spurious line needs instead of eoi
 }
 
 pub trait IrqService { fn on_irq(&mut self); }      // a driver's interrupt-side half, state only it touches
 pub trait SharedIrqService: Sync { fn on_irq(&self); }  // interrupt work over atomics shared with the core
 
-pub struct IrqHandler { func: unsafe fn(*mut ()), ctx: *mut () }
+pub struct IrqHandler { func: unsafe extern "C" fn(*mut ()), ctx: *mut () }
 impl IrqHandler {
     pub fn from_static<T: IrqService + Send + 'static>(svc: &'static mut T) -> IrqHandler;
     pub fn from_shared<T: SharedIrqService + 'static>(svc: &'static T) -> IrqHandler;
-    pub const unsafe fn from_raw(func: unsafe fn(*mut ()), ctx: *mut ()) -> IrqHandler;
+    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()), ctx: *mut ()) -> IrqHandler;
     pub unsafe fn call(&self);                      // the platform's dispatch only
 }
 
@@ -174,9 +175,9 @@ pub trait IrqRegistry {
 }
 ```
 
-- **Registration is a function pointer plus a context pointer**, two words the platform's assembly stub can keep in a locked table. Two safe constructors cover driver code. `from_static` takes a `&'static mut T` (typically `Box::leak` at start-up) for state only the handler touches, such as a ring's producer and a packet being assembled: the `&'static mut` moves to the handler, so nothing else can touch it, and anything the core shares with it sits behind a separate `&'static` (an atomic counter, an `SpscRing`). `from_shared` takes a `&'static T` whose state is all atomics (`TickCounter`), which can be a plain `static` with no allocation. A platform with no allocator and mutable handler state uses `from_raw` over a static it owns, inside its own audited `unsafe`. The trampolines are monomorphised, so there is no `dyn` and no closure.
+- **Registration is a function pointer plus a context pointer**, two words the platform's assembly stub can keep in a locked table. Two safe constructors cover driver code. `from_static` takes a `&'static mut T` (typically `Box::leak` at start-up) for state only the handler touches, such as a ring's producer and a packet being assembled: the `&'static mut` moves to the handler, so nothing else can touch it, and anything the core shares with it sits behind a separate `&'static` (an atomic counter, an `SpscRing`). `from_shared` takes a `&'static T` whose state is all atomics (`TickCounter`), which can be a plain `static` with no allocation. A platform with no allocator and mutable handler state uses `from_raw` over a static it owns, inside its own audited `unsafe`. The trampolines are monomorphised, so there is no `dyn` and no closure, and they are `extern "C"`, so an assembly stub may call the function directly with the context as its one cdecl argument.
 - **Who sends the end-of-interrupt.** The platform, after the handler returns, according to `Chain`: `Chain::None` means the platform sends it (natively always; under DOS for lines Desk owns outright, the keyboard and the PS/2 mouse); `Chain::Previous` means the previous owner runs next and sends it (under DOS, the BIOS timer handler, which also keeps the DOS clock; the d0 IRQ 0 hook already works this way). A driver never sends one: the kernel's `pit::tick` did, and under DOS chaining that would acknowledge a second, unrelated interrupt.
-- **Spurious interrupts.** For IRQ 7 and 15 the platform asks `is_spurious` first; `desk-pic` reads the in-service register. A spurious IRQ 7 gets no end-of-interrupt; a spurious IRQ 15 gets one on the master only (`Pic8259::eoi_master`), because the master did see IRQ 2.
+- **Spurious interrupts.** For IRQ 7 and 15 the platform asks `is_spurious` first; `desk-pic` reads the in-service register. If it is, the platform runs no handler and calls `eoi_spurious` instead of `eoi`: a spurious IRQ 7 gets no end-of-interrupt; a spurious IRQ 15 gets one on the master only, because the master did see IRQ 2 (otherwise IRQ 3 to 7 stay blocked).
 - **Masking is a read-modify-write** of a register every line shares, so the core calls `mask` and `unmask` inside the platform's "interrupts off" critical section; otherwise a handler (ours, the BIOS's, a TSR's) that changes the mask in between has its change lost. Drivers cannot turn interrupts off, so this is a rule for the platform and the core.
 - **The 8259 under DOS.** The BIOS programmed the controllers (vectors 08h and 70h) and owns them; the hosted platform never calls `Pic8259::init`, only `mask`, `unmask`, `eoi` and `is_spurious`, which DJGPP programs also do directly. The native kernel calls `init(REMAPPED_BASES, mask)`.
 - **Rules for handlers**, which a reviewer checks and the types help with:
@@ -338,7 +339,7 @@ The core's entry is `fn run<P: Platform>(p: &mut P) -> !`. Associated types keep
 | `load`, `store` (any ordering, up to 32 bits) | `mov` (`xchg` for a `SeqCst` store) | yes | yes | yes |
 | `swap` | `xchg` | yes | yes | yes |
 | `fetch_add`, `fetch_sub` | `lock xadd` | yes (from the 486) | yes ([`D0-RUST-DOS.md`](D0-RUST-DOS.md)) | yes |
-| `fetch_and`, `fetch_or`, `fetch_xor` | `lock and`/`or`/`xor` if the result is unused, a `cmpxchg` loop if used | yes | loop rejected | no |
+| `fetch_and`, `fetch_or`, `fetch_xor`, `fetch_not` | `lock and`/`or`/`xor` if the result is unused, a `cmpxchg` loop if used | yes | loop rejected | no |
 | `compare_exchange`, `fetch_update`, `fetch_max`, `fetch_min`, `fetch_nand` | `lock cmpxchg` | yes (from the B step) | **rejected** | no |
 | anything 64-bit | `cmpxchg8b` | **no** (Pentium) | no | no (`max-atomic-width: 32`) |
 
@@ -357,7 +358,7 @@ The core's entry is `fn run<P: Platform>(p: &mut P) -> !`. Associated types keep
 - One small `Copy` error type, `HalError` (built): `Unsupported`, `NoDevice`, `Timeout`, `InvalidArgument`, `Busy`, `OutOfMemory`, and `Platform(u16)` for a passed-through DPMI error code. Small enough to return from a panic path, with `Display`, and `std::error::Error` with the `std` feature.
 - Device classes add their own where the caller acts on the difference (`BlockError::NoMedia` versus `Io`). A driver error converts to `HalError` with `From` where the core does not care.
 - **Bounded waits, never hangs.** Every poll of a status bit has a bound (`WRITE_POLLS` in `desk-serial`, the kernel's same bound). Where the kernel's behaviour on timeout is to carry on (the UART writes the byte anyway), the shared driver keeps it; where carrying on would be wrong (an 8042 command), it returns `Timeout`.
-- **Programming errors** (a ring capacity that is not a power of two) fail at compile time where possible (`SpscRing::new` is a `const fn` that asserts) and panic otherwise; out-of-range device arguments are `InvalidArgument` and write nothing (tested for the PIT and the UART).
+- **Programming errors** (a ring capacity that is not a power of two) fail at compile time where possible (`SpscRing::new` checks its capacity in an inline `const` block, an error wherever the ring is made; `Serial16550::new` asserts its base range, an error in a `const` or `static`) and panic otherwise; out-of-range device arguments are `InvalidArgument` and write nothing (tested for the PIT and the UART).
 
 ## no_std, alloc and features
 

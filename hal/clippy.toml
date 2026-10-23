@@ -10,6 +10,7 @@ disallowed-methods = [
   { path = "core::sync::atomic::Atomic::fetch_or", reason = "a CMPXCHG loop when the result is used" },
   { path = "core::sync::atomic::Atomic::fetch_xor", reason = "a CMPXCHG loop when the result is used" },
   { path = "core::sync::atomic::Atomic::fetch_nand", reason = "a CMPXCHG loop" },
+  { path = "core::sync::atomic::Atomic::fetch_not", reason = "a CMPXCHG loop when the result is used" },
   { path = "core::sync::atomic::Atomic::fetch_max", reason = "a CMPXCHG loop" },
   { path = "core::sync::atomic::Atomic::fetch_min", reason = "a CMPXCHG loop" },
 ]

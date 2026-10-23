@@ -129,6 +129,13 @@ impl<P: PortIo> InterruptController for Pic8259<P> {
             _ => false,
         }
     }
+
+    /// Nothing for a spurious IRQ 7; the master's end-of-interrupt for a spurious IRQ 15, because the master did see IRQ 2.
+    fn eoi_spurious(&self, irq: Irq) {
+        if irq.is_slave() {
+            self.eoi_master();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -203,5 +210,15 @@ mod tests {
         assert!(pic.is_spurious(Irq::IDE_SECONDARY_OR_SPURIOUS));
         assert!(!pic.is_spurious(Irq::TIMER), "other lines read nothing");
         assert!(bus.script_done());
+    }
+
+    #[test]
+    fn a_spurious_irq_15_is_acknowledged_on_the_master_only() {
+        let bus = MockPortBus::new();
+        let pic = Pic8259::new(&bus);
+        pic.eoi_spurious(Irq::LPT1_OR_SPURIOUS);
+        assert!(bus.writes().is_empty(), "a spurious IRQ 7 gets no end-of-interrupt");
+        pic.eoi_spurious(Irq::IDE_SECONDARY_OR_SPURIOUS);
+        assert_eq!(bus.writes(), [(0x20, 0x20)]);
     }
 }

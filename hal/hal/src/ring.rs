@@ -31,9 +31,9 @@ pub struct SpscRing<T, const N: usize> {
 unsafe impl<T: Send, const N: usize> Sync for SpscRing<T, N> {}
 
 impl<T: Copy, const N: usize> SpscRing<T, N> {
-    /// An empty ring. `N` must be a power of two of at least 2; in a `static` a wrong `N` fails the build.
+    /// An empty ring. `N` must be a power of two of at least 2; a wrong `N` fails the build wherever the ring is made.
     pub const fn new() -> SpscRing<T, N> {
-        assert!(N >= 2 && N.is_power_of_two(), "SpscRing capacity must be a power of two");
+        const { assert!(N >= 2 && N.is_power_of_two(), "SpscRing capacity must be a power of two") };
         SpscRing {
             slots: [const { UnsafeCell::new(MaybeUninit::uninit()) }; N],
             head: AtomicUsize::new(0),
