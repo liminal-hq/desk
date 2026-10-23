@@ -287,7 +287,8 @@ fn main() -> i32 {
         // Bank window A at its segment (A000h), 4F05h BH=0 BL=0 DX=granularity units.
         let win = (m.gran as usize).max(1) * 1024;
         let size = pitch * H;
-        let base = (m.seg_a as u32) << 4;
+        // A window segment of 0 means the controller did not say; the standard VGA window is at A000h.
+        let base = (if m.seg_a == 0 { 0xA000 } else { m.seg_a } as u32) << 4;
         let mut bank_calls = 0;
         let mut pos = 0usize;
         let mut bad = 0;

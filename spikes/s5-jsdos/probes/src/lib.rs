@@ -37,7 +37,18 @@ pub fn in8(port: u16) -> u8 {
 pub fn delay_ms(ms: u32) {
     let start = rt::timer::bios_ticks();
     let ticks = (ms * 182 / 10_000).max(1);
-    while rt::timer::bios_ticks().wrapping_sub(start) < ticks {
+    // The counter returns to 0 at midnight (after 0x1800B0 ticks); a plain wrapping_sub would then end the wait at once.
+    const TICKS_PER_DAY: u32 = 0x1800B0;
+    loop {
+        let now = rt::timer::bios_ticks();
+        let elapsed = if now >= start {
+            now - start
+        } else {
+            now + TICKS_PER_DAY - start
+        };
+        if elapsed >= ticks {
+            break;
+        }
         core::hint::spin_loop();
     }
 }
