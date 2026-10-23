@@ -2,6 +2,8 @@
 stage2: loader running
 stage2: a20 already enabled
 stage2: memory map from E820, entries: 6
+stage2: font: 8x16 copied from the BIOS
+stage2: vbe: not requested, the screen stays in text mode
 stage2: entering protected mode
 Desk native kernel 0.1.0 (i486)
 boot: drive 0x00, memory map from E820 (6 entries)
@@ -20,6 +22,9 @@ memory: kernel image 0x100000-0x11a000
 memory: 3782 frames of 4 KiB free after reservations
 frames: alloc and free of two frames ok
 heap: 4096 KiB at 0x11a000
+video: boot info version 1
+video: 8x16 font, 4096 bytes at 0x2000
+video: the loader did not try VBE (the screen is in text mode)
 alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
 heap: 4096 KiB free after the demo
 timer: waited for 10 ticks with hlt, elapsed 10 ticks
