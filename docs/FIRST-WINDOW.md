@@ -583,6 +583,8 @@ frames.py goldens SUMS DIR                         every PNG in DIR matches its 
 frames.py same DIR_A DIR_B [--size WxH]            two capture sets hold the same frames with equal COLOUR digests (the size of RAW dumps, 640x480 by default)
 frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A (exit status 0 once written; 1 if the sizes differ)
 frames.py inject SCENARIO > FILE                   the QEMU monitor script for the native run (below)
+frames.py live SCENARIO --qemu|--autotype|--xdotool [--quick]   a live scenario's input steps for an emulator (`LIVE-INPUT.md`)
+frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]    a live run's `shell: mark NN` lines carry the SUMS digests, in order
 ```
 
 A RAW has no size of its own, so `digest` takes it on the command line and `check` takes it from the SUMS line. Exit status is 0 on success, 1 on a failed check or an unreadable input, 2 on a usage error, as `tools/native-shot.py` does; `tools/test_frames.py` holds the tests. The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.

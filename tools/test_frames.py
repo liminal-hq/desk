@@ -548,6 +548,315 @@ class Inject(unittest.TestCase):
         self.assertEqual(self.script("desk-scenario 1\nscreen 1 1\n")[0], 1, "no frames")
 
 
+SETUP = slurp(os.path.join(ROOT, "tests", "shell", "first-window.scn")).split("frame open")[0]
+SETUP_LINES = len(SETUP.splitlines())
+
+
+def live_scn(tmp, body, setup=SETUP, name="t.scn"):
+    """A live scenario in `tmp`: the first window's set-up, `frame start`, then `body`; its directory also holds first-window.scn."""
+    ref = os.path.join(tmp, "first-window.scn")
+    if not os.path.exists(ref):
+        write(ref, slurp(os.path.join(ROOT, "tests", "shell", "first-window.scn")).encode())
+    path = os.path.join(tmp, name)
+    write(path, (setup + "frame start\n" + body).encode())
+    return path
+
+
+def live_status(*argv):
+    """(status, stdout, stderr) of `frames.py live ...`."""
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        status = frames.main([str(a) for a in argv])
+    return status, out.getvalue(), err.getvalue()
+
+
+class Live(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def scn(self, body, **kw):
+        return live_scn(self.tmp.name, body, **kw)
+
+    def lines(self, body, form, *extra):
+        status, out, err = live_status("live", self.scn(body), form, *extra)
+        self.assertEqual(status, 0, err)
+        return [l for l in out.splitlines() if not l.startswith("#")]
+
+    def refused(self, body, form, line, *extra, **kw):
+        status, out, err = live_status("live", self.scn(body, **kw), form, *extra)
+        self.assertEqual(status, 1, out)
+        self.assertEqual(out, "", "a refused scenario prints no script")
+        self.assertIn(f"t.scn:{SETUP_LINES + 1 + line}:", err)
+        return err
+
+    def test_the_qemu_script_waits_for_mark_zero_and_ends_with_escape(self):
+        lines = self.lines("frame two\n", "--qemu")
+        self.assertEqual(lines[:2], ["wait shell: mark 00", "screendump {out}/start.ppm"])
+        self.assertEqual(lines[2:], ["sleep 0.3", "sendkey f12", "wait shell: mark 01", "screendump {out}/two.ppm", "sleep 0.3", "sendkey esc"])
+
+    def test_qemu_moves_are_relative_to_the_tracked_pointer_and_split_at_100(self):
+        # The set-up leaves the pointer at (320, 240).
+        got = self.lines("pointer 120 70\nmove 250 -3\n", "--qemu")[2:]
+        self.assertEqual(got[:4], ["mouse_move -100 -100", "sleep 0.1", "mouse_move -100 -70", "sleep 0.1"])
+        self.assertEqual(got[4:], ["mouse_move 100 -3", "sleep 0.1", "mouse_move 100 0", "sleep 0.1", "mouse_move 50 0", "sleep 0.1"] + got[10:])
+
+    def test_the_tracked_pointer_clamps_to_the_screen_as_the_shell_does(self):
+        # Off the left edge: the shell clamps to x 0, so a later `pointer 10 240` is 10 to the right, not 410.
+        got = self.lines("move -1000 0\npointer 10 240\n", "--qemu")[2:]
+        self.assertEqual(got[0], "mouse_move -100 0")
+        self.assertEqual(got.count("mouse_move -100 0"), 10)
+        self.assertEqual(got[20:22], ["mouse_move 10 0", "sleep 0.1"])
+        # A pointer step to where the pointer already is sends nothing.
+        self.assertEqual(self.lines("pointer 320 240\n", "--qemu")[2:], ["sleep 0.3", "sendkey esc"])
+
+    def test_qemu_buttons_and_the_pause_after_each_mouse_command(self):
+        got = self.lines("press left\nrelease left\n", "--qemu")[2:]
+        self.assertEqual(got, ["mouse_button 1", "sleep 0.1", "mouse_button 0", "sleep 0.1", "sleep 0.3", "sendkey esc"])
+
+    def test_qemu_types_by_key_with_shift_for_capitals_and_symbols(self):
+        got = self.lines('type "aZ 1!"\n', "--qemu")[2:-2]
+        self.assertEqual(got, ["sendkey a", "sendkey shift-z", "sendkey spc", "sendkey 1", "sendkey shift-1"])
+
+    def test_qemu_chords_and_plain_keys(self):
+        body = "key LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\nkey F4 down\nkey F4 up\n" \
+               "key LeftShift down\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\nkey LeftShift up\n"
+        self.assertEqual(self.lines(body, "--qemu")[2:-2], ["sendkey alt-tab", "sendkey f4", "sendkey shift-alt-tab"])
+
+    def test_a_mouse_step_and_a_key_step_are_a_third_of_a_second_apart_either_way_round(self):
+        got = self.lines("press left\nrelease left\nkey A down\nkey A up\nmove 1 1\n", "--qemu")[2:]
+        self.assertEqual(
+            got,
+            ["mouse_button 1", "sleep 0.1", "mouse_button 0", "sleep 0.1", "sleep 0.3", "sendkey a", "sleep 0.3", "mouse_move 1 1", "sleep 0.1", "sleep 0.3", "sendkey esc"],
+        )
+
+    def test_autotype_gives_the_arguments_with_f12_at_each_frame_but_the_first(self):
+        status, out, err = live_status("live", self.scn('type "ok"\nframe a\nkey Backspace down\nkey Backspace up\nframe b\n'), "--autotype")
+        self.assertEqual((status, out), (0, "-w 3 -p 0.3 o k f12 bspace f12 esc\n"))
+        status, out, _ = live_status("live", self.scn("key Enter down\nkey Enter up\n"), "--autotype", "--wait", 5, "--pace", 0.5)
+        self.assertEqual(out, "-w 5 -p 0.5 enter esc\n")
+
+    def test_autotype_refuses_the_mouse_chords_and_shifted_characters(self):
+        self.refused("move 1 1\n", "--autotype", 1)
+        self.refused("pointer 1 1\n", "--autotype", 1)
+        self.refused("press left\n", "--autotype", 1)
+        self.refused("type \"a\"\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\n", "--autotype", 3)
+        self.refused('type "A"\n', "--autotype", 1)
+
+    def test_xdotool_lines(self):
+        got = self.lines("move 5 -6\npress left\nrelease left\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\nframe a\n", "--xdotool")
+        self.assertEqual(
+            got,
+            ["mousemove_relative -- 5 -6", "mousedown 1", "sleep 0.3", "mouseup 1", "sleep 0.3", "sleep 0.3", "key alt+Tab",
+             "sleep 0.3", "key F12", "sleep 0.5", "sleep 0.3", "key Escape"],
+        )
+
+    def test_quick_makes_an_adjacent_press_and_release_one_click(self):
+        got = self.lines("press left\nrelease left\npress left\nmove 1 1\nrelease left\n", "--xdotool", "--quick")
+        self.assertEqual(got[:2], ["click 1", "sleep 0.3"])
+        self.assertIn("mousedown 1", got)
+        self.assertEqual(got.count("click 1"), 1, "a press and release with motion between them stay apart")
+        self.assertEqual(self.lines("press left\nrelease left\n", "--xdotool").count("click 1"), 0)
+
+    def test_quick_is_for_xdotool_only(self):
+        status, _, err = live_status("live", self.scn("move 1 1\n"), "--qemu", "--quick")
+        self.assertEqual(status, 2, err)
+
+    def test_every_refusal_names_its_line(self):
+        self.refused("open w 1 1 10 10 \"W\"\n", "--qemu", 1)
+        self.refused("frame a\nclose welcome\n", "--qemu", 2)
+        self.refused("focus notes\n", "--qemu", 1)
+        self.refused("label notes 1 1 \"x\"\n", "--qemu", 1)
+        self.refused("field notes 1 1 10\n", "--qemu", 1)
+        self.refused("press right\n", "--qemu", 1)
+
+    def test_a_lone_key_down_is_refused_with_its_line(self):
+        self.refused("move 1 1\nkey LeftAlt down\n", "--qemu", 2)
+        self.refused("key A down\nmove 1 1\n", "--qemu", 1)
+        self.refused("key A up\n", "--qemu", 1)
+        self.refused("key LeftAlt down\nkey Tab down\nkey Tab up\nframe a\nkey LeftAlt up\n", "--qemu", 4)
+        self.refused("key LeftAlt down\nmove 1 1\nkey LeftAlt up\n", "--qemu", 2)
+        self.refused("key LeftShift down\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftShift up\nkey LeftAlt up\n", "--qemu", 5)
+
+    def test_malformed_steps_are_refused_with_their_line_not_a_traceback(self):
+        for body in ("key Tab\n", "move 1\n", "move a b\n", "frame\n", "press\n", "type\n", "key Tab dwon\n", "frame Open\n", "pointer 1 2 3\n"):
+            status, out, err = live_status("live", self.scn(body), "--qemu")
+            self.assertEqual((status, out), (1, ""), body)
+            self.assertIn(f"t.scn:{SETUP_LINES + 2}:", err, body)
+            self.assertNotIn("Traceback", err)
+
+    def test_a_held_button_or_a_repeated_modifier_is_refused(self):
+        self.refused("press left\n", "--qemu", 1)
+        self.refused("press left\npress left\nrelease left\n", "--qemu", 2)
+        self.refused("release left\n", "--qemu", 1)
+        self.refused("key LeftAlt down\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\nkey LeftAlt up\n", "--qemu", 2)
+
+    def test_unknown_keys_and_characters_are_refused(self):
+        self.refused("key Nonsense down\n", "--qemu", 1)
+        self.refused('type "é"\n', "--qemu", 1)
+        self.refused("key Break down\nkey Break up\n", "--qemu", 1)
+
+    def test_a_set_up_that_differs_from_the_first_windows_is_refused(self):
+        bad = SETUP.replace("pointer 320 240", "pointer 300 240")
+        status, out, err = live_status("live", self.scn("move 1 1\n", setup=bad), "--qemu")
+        self.assertEqual((status, out), (1, ""))
+        self.assertIn("not the first window's set-up", err)
+        extra = SETUP + "label notes 1 1 \"extra\"\n"
+        self.assertEqual(live_status("live", self.scn("move 1 1\n", setup=extra), "--xdotool")[0], 1)
+        self.assertEqual(live_status("live", self.scn("move 1 1\n", setup=SETUP.replace("depths 8 4", "depths 8")), "--autotype")[0], 1)
+
+    def test_a_scenario_with_no_frame_or_a_hundred_and_one_marks_is_refused(self):
+        path = os.path.join(self.tmp.name, "n.scn")
+        write(os.path.join(self.tmp.name, "first-window.scn"), slurp(os.path.join(ROOT, "tests", "shell", "first-window.scn")).encode())
+        write(path, SETUP.encode())
+        self.assertEqual(live_status("live", path, "--qemu")[0], 1)
+        many = "".join(f"frame f{i}\n" for i in range(100))
+        self.assertEqual(live_status("live", self.scn(many), "--qemu")[0], 1)
+
+    def test_comments_and_strings_with_hashes(self):
+        got = self.lines('# a comment\ntype "a#b" # trailing\nkey A down # c\nkey A up\n', "--qemu")[2:-2]
+        self.assertEqual(got, ["sendkey a", "sendkey shift-3", "sendkey b", "sendkey a"])
+
+    def test_the_key_table_covers_every_key_a_scenario_can_name(self):
+        names = set(re.findall(r"^    (\w+),$", slurp(os.path.join(ROOT, "shell", "shell", "src", "scenario.rs")).split("key_table!(")[1].split(");")[0], re.M))
+        self.assertTrue({"A", "Tab", "LeftAlt", "F12", "Kp9", "KpEnter"} <= names)
+        missing = names - set(frames.KEY_NAMES) - {"Break"}
+        self.assertEqual(missing, set(), "a key the scenarios can name has no emulator names")
+
+    def test_every_typeable_character_has_a_key_on_each_emulator(self):
+        for code in range(32, 127):
+            c = chr(code)
+            k = frames.key_for_char(c)
+            self.assertIsNotNone(k, repr(c))
+            self.assertIn(k[0], frames.KEY_NAMES)
+        self.assertIsNone(frames.key_for_char("é"))
+
+    def test_qemu_key_names_are_distinct_and_the_ones_the_design_names(self):
+        q = {n: v[0] for n, v in frames.KEY_NAMES.items()}
+        self.assertEqual(len(set(q.values())), len(q), "two keys share a QEMU name")
+        for name, want in {"Space": "spc", "Enter": "ret", "Backspace": "backspace", "Tab": "tab", "F12": "f12", "Escape": "esc",
+                           "LeftAlt": "alt", "LeftShift": "shift"}.items():
+            self.assertEqual(q[name], want)
+
+    def test_the_committed_live_scenarios_translate_in_the_forms_the_checks_use(self):
+        shell = os.path.join(ROOT, "tests", "shell")
+        for form in ("--qemu", "--xdotool"):
+            self.assertEqual(live_status("live", os.path.join(shell, "live.scn"), form)[0], 0, form)
+        for form in ("--qemu", "--autotype", "--xdotool"):
+            self.assertEqual(live_status("live", os.path.join(shell, "live-keys.scn"), form)[0], 0, form)
+        status, _, err = live_status("live", os.path.join(shell, "live.scn"), "--autotype")
+        self.assertEqual(status, 1)
+        self.assertIn("live.scn:13:", err)
+
+
+class Marks(unittest.TestCase):
+    """`frames.py marks` against a small scenario and its SUMS."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        d = self.tmp.name
+        self.scn = live_scn(d, "frame b\nframe c\n")
+        self.sums = os.path.join(d, "t.sums")
+        write(self.sums, b"start 8 640x480 11111111 aaaaaaaa\nb 8 640x480 22222222 bbbbbbbb\nc 8 640x480 33333333 cccccccc\nstart 4 640x480 44444444 dddddddd\nb 4 640x480 55555555 eeeeeeee\nc 4 640x480 66666666 ffffffff\n")
+        self.good = [
+            "shell: mark 00 8 640x480 11111111 aaaaaaaa",
+            "shell: mark 01 8 640x480 22222222 bbbbbbbb",
+            "shell: mark 02 8 640x480 33333333 cccccccc",
+        ]
+
+    def transcript(self, lines):
+        path = os.path.join(self.tmp.name, "serial.txt")
+        write(path, ("boot\nshell: live, depth 8\n" + "\n".join(lines) + "\nshell: live ended by Escape: 3 keys\n").encode())
+        return path
+
+    def marks(self, lines, depth=8, *extra):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            status = frames.main(["marks", self.sums, self.scn, str(depth), self.transcript(lines), *extra])
+        return status, out.getvalue()
+
+    def test_matching_marks_pass_and_dos_line_ends_are_fine(self):
+        status, out = self.marks(self.good)
+        self.assertEqual(status, 0, out)
+        self.assertEqual(self.marks([l + "\r" for l in self.good])[0], 0)
+
+    def test_the_same_marks_fail_at_the_other_depth(self):
+        status, out = self.marks(self.good, 4)
+        self.assertEqual(status, 1)
+        self.assertIn("FAIL start", out)
+
+    def test_a_missing_mark_fails(self):
+        status, out = self.marks(self.good[:2])
+        self.assertEqual(status, 1)
+        self.assertIn("FAIL c: mark 02 is missing", out)
+        status, out = self.marks([self.good[0], self.good[2]])
+        self.assertEqual(status, 1, "the second mark is missing even if a later one is there")
+        self.assertIn("FAIL", out)
+
+    def test_an_extra_mark_fails(self):
+        status, out = self.marks(self.good + ["shell: mark 03 8 640x480 11111111 aaaaaaaa"])
+        self.assertEqual(status, 1)
+        self.assertIn("mark 03: an extra mark", out)
+
+    def test_a_wrong_digest_names_the_frame_and_both_digests(self):
+        bad = list(self.good)
+        bad[1] = "shell: mark 01 8 640x480 22222222 bbbbbbb0"
+        status, out = self.marks(bad)
+        self.assertEqual(status, 1)
+        self.assertIn("FAIL b", out)
+        self.assertIn("bbbbbbb0", out)
+        self.assertIn("bbbbbbbb", out)
+        bad[1] = "shell: mark 01 8 640x480 22222223 bbbbbbbb"
+        self.assertEqual(self.marks(bad)[0], 1, "the index digest counts")
+
+    def test_a_transcript_with_no_marks_or_dots_for_digests_fails(self):
+        self.assertEqual(self.marks([])[0], 1)
+        bad = [self.good[0], "shell: mark 01 8 640x480 ........ ........", self.good[2]]
+        self.assertEqual(self.marks(bad)[0], 1)
+
+    def test_dumps_are_renamed_to_the_frame_names(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        for k in range(3):
+            write(os.path.join(dumps, f"M{k:02d}.RAW"), bytes([k]))
+            write(os.path.join(dumps, f"M{k:02d}.PAL"), bytes([k + 10]))
+        status, out = self.marks(self.good, 8, "--dumps", dumps)
+        self.assertEqual(status, 0, out)
+        self.assertEqual(sorted(os.listdir(dumps)), ["B.PAL", "B.RAW", "C.PAL", "C.RAW", "START.PAL", "START.RAW"])
+        self.assertEqual(slurp(os.path.join(dumps, "C.PAL"), "rb"), bytes([12]))
+
+    def test_a_wrong_digest_still_renames_a_complete_set_so_check_can_show_the_difference(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        for k in range(3):
+            write(os.path.join(dumps, f"M{k:02d}.RAW"), bytes([k]))
+            write(os.path.join(dumps, f"M{k:02d}.PAL"), bytes([k]))
+        bad = list(self.good)
+        bad[2] = "shell: mark 02 8 640x480 33333333 cccccc00"
+        self.assertEqual(self.marks(bad, 8, "--dumps", dumps)[0], 1)
+        self.assertIn("C.RAW", os.listdir(dumps))
+
+    def test_an_incomplete_set_of_dumps_is_left_alone(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        for k in range(2):
+            write(os.path.join(dumps, f"M{k:02d}.RAW"), bytes([k]))
+            write(os.path.join(dumps, f"M{k:02d}.PAL"), bytes([k]))
+        self.assertEqual(self.marks(self.good, 8, "--dumps", dumps)[0], 1)
+        self.assertEqual(sorted(os.listdir(dumps)), ["M00.PAL", "M00.RAW", "M01.PAL", "M01.RAW"], "nothing is renamed")
+
+    def test_the_inject_and_marks_commands_read_scenarios_as_live_does(self):
+        path = live_scn(self.tmp.name, "frame abcdefghi\n")
+        self.assertEqual(live_status("live", path, "--qemu")[0], 1)
+        self.assertEqual(run("inject", path)[0], 1)
+
+    def test_a_missing_dump_fails(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        write(os.path.join(dumps, "M00.RAW"), b"x")
+        status, out = self.marks(self.good, 8, "--dumps", dumps)
+        self.assertEqual(status, 1)
+        self.assertIn("no dump M00.PAL", out)
+        self.assertIn("no dump M01.RAW", out)
+
+
 class Usage(unittest.TestCase):
     def test_usage_errors_exit_with_status_2(self):
         for argv in ([], ["bogus"], ["check", "a", "b"], ["check", "a", "x", "c"], ["diff", "a"], ["same", "a"]):

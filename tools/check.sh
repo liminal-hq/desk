@@ -54,6 +54,19 @@ step "Shell: host tests and no_std builds"
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
 python3 -I tools/frames.py goldens tests/shell/keys.sums tests/shell/golden/keys
+python3 -I tools/frames.py goldens tests/shell/live.sums tests/shell/golden/live
+python3 -I tools/frames.py goldens tests/shell/live-keys.sums tests/shell/golden/live-keys
+# The live scenarios translate for every emulator that can play them, so a step an emulator cannot express fails here, before any
+# emulator runs. live.scn uses the mouse, which AUTOTYPE cannot send: that refusal is itself checked.
+for form in --qemu --xdotool; do
+  for scn in live live-keys; do
+    python3 -I tools/frames.py live "tests/shell/$scn.scn" "$form" > /dev/null || fail "tests/shell/$scn.scn does not translate with $form"
+  done
+done
+python3 -I tools/frames.py live tests/shell/live-keys.scn --autotype > /dev/null || fail "tests/shell/live-keys.scn does not translate for AUTOTYPE"
+if python3 -I tools/frames.py live tests/shell/live.scn --autotype > /dev/null 2>&1; then
+  fail "frames.py live accepted a mouse scenario for AUTOTYPE"
+fi
 
 step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
 python3 -I tools/test_frames.py

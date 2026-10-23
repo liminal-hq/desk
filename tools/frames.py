@@ -20,6 +20,16 @@
 #                                                                   size is for RAW dumps, 640x480 unless given)
 #   python3 -I tools/frames.py diff A B OUT.png                    the differing pixels in red over a dimmed A
 #   python3 -I tools/frames.py inject SCENARIO > FILE              the QEMU monitor script tools/native-inject.py reads
+#   python3 -I tools/frames.py live SCENARIO --qemu > FILE         a live scenario's steps after its first frame as input for a running
+#                                                                   emulator: the monitor script for native-inject.py (--qemu), the arguments
+#   python3 -I tools/frames.py live SCENARIO --autotype             for DOSBox's AUTOTYPE (--autotype), or the xdotool lines for
+#   python3 -I tools/frames.py live SCENARIO --xdotool [--quick]    tools/xvfb-dos.sh (--xdotool; --quick makes an adjacent press and
+#                                                                   release one click). A step the emulator cannot express is refused
+#                                                                   with its line number
+#   python3 -I tools/frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]
+#                                                                   the transcript's `shell: mark NN ...` lines, in order, carry the digests
+#                                                                   of the scenario's frames (mark k is the k-th frame); with --dumps,
+#                                                                   renames DIR/Mkk.RAW and .PAL to the frame names for `check`
 #
 # A SUMS file has one line per frame and depth, "NAME DEPTH WIDTHxHEIGHT INDEX COLOUR" (hex), and ignores blank lines and lines starting
 # with #. The INDEX digest is the CRC-32 of the palette indices row by row; the COLOUR digest is the CRC-32 of every pixel's six-bit
@@ -569,14 +579,9 @@ def cmd_diff(args):
 
 def scenario_frames(path):
     """The frame names of a scenario file in order, validated as the scenario parser does."""
-    try:
-        text = slurp(path, "r", encoding="utf-8")
-    except OSError as err:
-        raise FramesError(f"{path}: {err.strerror}") from None
     names = []
-    for number, raw in enumerate(text.splitlines(), 1):
-        words = raw.split("#", 1)[0].split()
-        if len(words) < 1 or words[0] != "frame":
+    for number, words in scenario_lines(path):
+        if words[0] != "frame":
             continue
         if len(words) != 2 or not NAME_RE.match(words[1]):
             raise FramesError(f"{path}:{number}: a frame name is 1 to 8 characters of a-z, 0-9 and -")
@@ -596,6 +601,466 @@ def cmd_inject(args):
         lines += [f"wait shell: ready {name}", f"screendump {{out}}/{name}.ppm", "sendkey spc"]
     sys.stdout.write("\n".join(lines) + "\n")
     return 0
+
+
+# Live scenarios ---------------------------------------------------------------------------------------------------------------------
+#
+# A live scenario is a .scn file whose steps before the first `frame` are the first window's set-up (the platform's live mode performs
+# them itself) and whose first frame is mark 00. Every later `frame` is a mark: the injector presses F12 and the guest prints
+# `shell: mark NN ...`. docs/LIVE-INPUT.md ("Live scenarios") is the design.
+
+# KeyCode name -> (QEMU `sendkey` name, DOSBox Staging AUTOTYPE name, xdotool keysym). QEMU's are its QKeyCode names; AUTOTYPE's are the
+# mapper names `autotype -list` prints in DOSBox Staging 0.83 (None where it has no such key); xdotool's are X keysyms. A modifier's
+# xdotool name is the alias xdotool accepts for the left key ("alt") or the keysym for the right one.
+def _keys():
+    t = {}
+    for c in "abcdefghijklmnopqrstuvwxyz":
+        t[c.upper()] = (c, c, c)
+    for d in "0123456789":
+        t["Num" + d] = (d, d, d)
+        t["Kp" + d] = ("kp_" + d, "kp_" + d, "KP_" + d)
+    for n in range(1, 13):
+        t[f"F{n}"] = (f"f{n}", f"f{n}", f"F{n}")
+    t.update(
+        {
+            "Escape": ("esc", "esc", "Escape"),
+            "Backspace": ("backspace", "bspace", "BackSpace"),
+            "Tab": ("tab", "tab", "Tab"),
+            "Enter": ("ret", "enter", "Return"),
+            "Space": ("spc", "space", "space"),
+            "Minus": ("minus", "minus", "minus"),
+            "Equals": ("equal", "equals", "equal"),
+            "LeftBracket": ("bracket_left", "lbracket", "bracketleft"),
+            "RightBracket": ("bracket_right", "rbracket", "bracketright"),
+            "Backslash": ("backslash", "backslash", "backslash"),
+            "Semicolon": ("semicolon", "semicolon", "semicolon"),
+            "Apostrophe": ("apostrophe", "quote", "apostrophe"),
+            "Grave": ("grave_accent", "grave", "grave"),
+            "Comma": ("comma", "comma", "comma"),
+            "Period": ("dot", "period", "period"),
+            "Slash": ("slash", "slash", "slash"),
+            "IntlBackslash": ("less", "oem102", "less"),
+            "CapsLock": ("caps_lock", "capslock", "Caps_Lock"),
+            "NumLock": ("num_lock", "numlock", "Num_Lock"),
+            "ScrollLock": ("scroll_lock", "scrolllock", "Scroll_Lock"),
+            "LeftShift": ("shift", "lshift", "shift"),
+            "RightShift": ("shift_r", "rshift", "Shift_R"),
+            "LeftCtrl": ("ctrl", "lctrl", "ctrl"),
+            "RightCtrl": ("ctrl_r", "rctrl", "Control_R"),
+            "LeftAlt": ("alt", "lalt", "alt"),
+            "RightAlt": ("alt_r", "ralt", "Alt_R"),
+            "LeftGui": ("meta_l", "lgui", "super"),
+            "RightGui": ("meta_r", "rgui", "Super_R"),
+            "Menu": ("menu", None, "Menu"),
+            "Up": ("up", "up", "Up"),
+            "Down": ("down", "down", "Down"),
+            "Left": ("left", "left", "Left"),
+            "Right": ("right", "right", "Right"),
+            "Insert": ("insert", "insert", "Insert"),
+            "Delete": ("delete", "delete", "Delete"),
+            "Home": ("home", "home", "Home"),
+            "End": ("end", "end", "End"),
+            "PageUp": ("pgup", "pageup", "Prior"),
+            "PageDown": ("pgdn", "pagedown", "Next"),
+            "PrintScreen": ("print", "printscreen", "Print"),
+            "SysRq": ("sysrq", None, "Sys_Req"),
+            "Pause": ("pause", "pause", "Pause"),
+            "KpPeriod": ("kp_decimal", "kp_period", "KP_Decimal"),
+            "KpPlus": ("kp_add", "kp_plus", "KP_Add"),
+            "KpMinus": ("kp_subtract", "kp_minus", "KP_Subtract"),
+            "KpStar": ("kp_multiply", "kp_multiply", "KP_Multiply"),
+            "KpSlash": ("kp_divide", "kp_divide", "KP_Divide"),
+            "KpEnter": ("kp_enter", "kp_enter", "KP_Enter"),
+        }
+    )
+    return t
+
+
+KEY_NAMES = _keys()
+MODIFIERS = {"LeftShift", "RightShift", "LeftCtrl", "RightCtrl", "LeftAlt", "RightAlt", "LeftGui", "RightGui"}
+EMULATORS = {"qemu": 0, "autotype": 1, "xdotool": 2}
+
+# The character a US-layout key types: unshifted, then shifted.
+_SHIFTED = {c: ("Num" + d) for c, d in zip("!@#$%^&*()", "1234567890")}
+_SHIFTED.update({"_": "Minus", "+": "Equals", "{": "LeftBracket", "}": "RightBracket", "|": "Backslash", ":": "Semicolon",
+                 '"': "Apostrophe", "~": "Grave", "<": "Comma", ">": "Period", "?": "Slash"})
+_PLAIN = {" ": "Space", "-": "Minus", "=": "Equals", "[": "LeftBracket", "]": "RightBracket", "\\": "Backslash", ";": "Semicolon",
+          "'": "Apostrophe", "`": "Grave", ",": "Comma", ".": "Period", "/": "Slash"}
+
+
+def key_for_char(c):
+    """(KeyCode name, shifted) that types `c` on a US layout, or None."""
+    if "a" <= c <= "z" or c.isdigit() and c.isascii():
+        return (c.upper() if c.isalpha() else "Num" + c), False
+    if "A" <= c <= "Z":
+        return c, True
+    if c in _PLAIN:
+        return _PLAIN[c], False
+    if c in _SHIFTED:
+        return _SHIFTED[c], True
+    return None
+
+
+MOUSE_PAUSE = "0.1"  # after each mouse command: QEMU folds a press and release that arrive before the guest reads the last packet
+SWITCH_PAUSE = "0.3"  # between a mouse step and a key step either way round, and before an F12: each ring is drained before the next device speaks
+XDOTOOL_FRAME_PAUSE = "0.5"
+XDOTOOL_BUTTON_PAUSE = "0.3"
+MOVE_CHUNK = 100  # the most one `mouse_move` carries
+MAX_MARKS = 100
+
+
+def tokenize(text, where):
+    """The words of one scenario line: `#` starts a comment outside a string; a quoted string is one word (with its quotes kept)."""
+    words, cur, i, quoted = [], "", 0, False
+    while i < len(text):
+        c = text[i]
+        if quoted:
+            cur += c
+            if c == "\\" and i + 1 < len(text):
+                i += 1
+                cur += text[i]
+            elif c == '"':
+                quoted = False
+        elif c == '"':
+            quoted, cur = True, cur + c
+        elif c == "#":
+            break
+        elif c.isspace():
+            if cur:
+                words.append(cur)
+                cur = ""
+        else:
+            cur += c
+        i += 1
+    if quoted:
+        raise FramesError(f"{where}: an unterminated string")
+    if cur:
+        words.append(cur)
+    return words
+
+
+def unquote(word, where):
+    if len(word) < 2 or word[0] != '"' or word[-1] != '"':
+        raise FramesError(f"{where}: expected a quoted string")
+    out, i, body = "", 0, word[1:-1]
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            i += 1
+        out += body[i]
+        i += 1
+    return out
+
+
+def scenario_lines(path):
+    """[(line number, words)] of the scenario's non-blank, non-comment lines."""
+    try:
+        text = slurp(path, "r", encoding="utf-8")
+    except OSError as err:
+        raise FramesError(f"{path}: {err.strerror}") from None
+    out = []
+    for number, raw in enumerate(text.splitlines(), 1):
+        words = tokenize(raw, f"{path}:{number}")
+        if words:
+            out.append((number, words))
+    return out
+
+
+class Live:
+    """A parsed live scenario: its screen, its frames and its input actions after the first frame, with the pointer tracked."""
+
+    def __init__(self, path, emulator, first_window=None):
+        self.path, self.emulator = path, emulator
+        lines = scenario_lines(path)
+        first = next((i for i, (_, w) in enumerate(lines) if w[0] == "frame"), None)
+        if first is None:
+            raise FramesError(f"{path}: no frame steps")
+        reference = first_window or os.path.join(os.path.dirname(os.path.abspath(path)), "first-window.scn")
+        ref = scenario_lines(reference)
+        ref_first = next((i for i, (_, w) in enumerate(ref) if w[0] == "frame"), None)
+        want = [w for _, w in ref[:ref_first]] if ref_first is not None else None
+        got = [w for _, w in lines[:first]]
+        if want != got:
+            at = next((n for (n, w), v in zip(lines, want or []) if w != v), lines[min(first, len(lines) - 1)][0])
+            raise FramesError(f"{path}:{at}: the steps before the first frame are not the first window's set-up ({os.path.basename(reference)})")
+        self.screen, self.pointer = (640, 480), None
+        for _, w in lines[:first]:
+            if w[0] == "screen":
+                self.screen = (int(w[1]), int(w[2]))
+            elif w[0] == "pointer":
+                self.pointer = (int(w[1]), int(w[2]))
+        if self.pointer is None:
+            self.pointer = (self.screen[0] // 2, self.screen[1] // 2)
+        self._arity(lines[first:])
+        self.frames = [lines[first][1][1]]
+        self.actions = []
+        self._steps(lines[first + 1 :])
+        if len(self.frames) > MAX_MARKS:
+            raise FramesError(f"{path}: {len(self.frames)} frames, but a session prints at most {MAX_MARKS} marks")
+
+    def _arity(self, lines):
+        """Refuses, with its line, a step with the wrong number of words, a number that is not one, or an unknown key state."""
+        arity = {"move": 3, "pointer": 3, "press": 2, "release": 2, "type": 2, "key": 3, "frame": 2}
+        for number, w in lines:
+            if w[0] in arity and len(w) != arity[w[0]]:
+                self.refuse(number, f"{w[0]} takes {arity[w[0]] - 1} argument{'s' if arity[w[0]] > 2 else ''}")
+            if w[0] in ("move", "pointer") and not all(re.fullmatch(r"-?\d+", v) for v in w[1:]):
+                self.refuse(number, f"{w[0]} takes whole numbers")
+            if w[0] == "key" and w[2] not in ("down", "up"):
+                self.refuse(number, f"a key state is down or up, not {w[2]}")
+            if w[0] == "frame" and not NAME_RE.match(w[1]):
+                self.refuse(number, "a frame name is 1 to 8 characters of a-z, 0-9 and -")
+
+    def refuse(self, number, why):
+        raise FramesError(f"{self.path}:{number}: {why}")
+
+    def _clamp(self, x, y):
+        return max(0, min(self.screen[0] - 1, x)), max(0, min(self.screen[1] - 1, y))
+
+    def _key_name(self, number, name):
+        if name not in KEY_NAMES:
+            self.refuse(number, f"{name} is not a key a live scenario can send")
+        if KEY_NAMES[name][EMULATORS[self.emulator]] is None:
+            self.refuse(number, f"{self.emulator} has no key for {name}")
+        return name
+
+    def _steps(self, lines):
+        held = []  # [(modifier name, line number, keys pressed under it)]
+        pressed_at = None  # the line of a left press with no release yet
+        i = 0
+        while i < len(lines):
+            number, w = lines[i]
+            cmd = w[0]
+            if held and cmd not in ("key",):
+                self.refuse(number, f"{cmd} while {held[-1][0]} is held; a modifier is released before anything else")
+            if cmd == "move":
+                dx, dy = int(w[1]), int(w[2])
+                if self.emulator == "autotype":
+                    self.refuse(number, "AUTOTYPE cannot move the mouse")
+                self.pointer = self._clamp(self.pointer[0] + dx, self.pointer[1] + dy)
+                self.actions.append(("move", dx, dy))
+            elif cmd == "pointer":
+                if self.emulator == "autotype":
+                    self.refuse(number, "AUTOTYPE cannot move the mouse")
+                x, y = self._clamp(int(w[1]), int(w[2]))
+                dx, dy = x - self.pointer[0], y - self.pointer[1]
+                self.pointer = (x, y)
+                if dx or dy:
+                    self.actions.append(("move", dx, dy))
+            elif cmd in ("press", "release"):
+                if w[1:] != ["left"]:
+                    self.refuse(number, f"only the left button can be injected, not {' '.join(w[1:])}")
+                if self.emulator == "autotype":
+                    self.refuse(number, "AUTOTYPE cannot press a mouse button")
+                if cmd == "press":
+                    if pressed_at is not None:
+                        self.refuse(number, "press left while the button is already down")
+                    pressed_at = number
+                else:
+                    if pressed_at is None:
+                        self.refuse(number, "release left while the button is up")
+                    pressed_at = None
+                self.actions.append(("button", cmd == "press"))
+            elif cmd == "type":
+                for c in unquote(w[1], f"{self.path}:{number}"):
+                    k = key_for_char(c)
+                    if k is None:
+                        self.refuse(number, f"no key types {c!r}")
+                    name, shifted = k
+                    self._key_name(number, name)
+                    if shifted:
+                        self._key_name(number, "LeftShift")
+                        if self.emulator == "autotype":
+                            self.refuse(number, f"AUTOTYPE has no chords, so it cannot type {c!r}")
+                    self.actions.append(("press", ["LeftShift"] if shifted else [], name))
+            elif cmd == "key":
+                name, state = w[1], w[2]
+                self._key_name(number, name)
+                nxt = lines[i + 1][1] if i + 1 < len(lines) else None
+                if state == "down":
+                    adjacent_up = nxt == ["key", name, "up"]
+                    if name in MODIFIERS and not adjacent_up:
+                        if any(h[0] == name for h in held):
+                            self.refuse(number, f"key {name} down while it is already held")
+                        held.append([name, number, 0])
+                    elif adjacent_up:
+                        self._press(number, [h[0] for h in held], name)
+                        for h in held:
+                            h[2] += 1
+                        i += 1
+                    else:
+                        self.refuse(number, f"key {name} down is never released straight away; a lone key down cannot be injected")
+                else:
+                    if not held or held[-1][0] != name:
+                        self.refuse(number, f"key {name} up without its down (modifiers are released in reverse order)")
+                    mod = held.pop()
+                    if mod[2] == 0:
+                        self.refuse(mod[1], f"{name} is held with no key pressed under it")
+            elif cmd == "frame":
+                self.frames.append(w[1])
+                self.actions.append(("frame", w[1], len(self.frames) - 1))
+            elif cmd == "expect-damage":
+                pass
+            else:
+                self.refuse(number, f"{cmd} cannot be injected: a live scenario's steps after its first frame are move, pointer, press, release, type, key and frame")
+            i += 1
+        if held:
+            self.refuse(held[-1][1], f"key {held[-1][0]} down is never released")
+        if pressed_at is not None:
+            self.refuse(pressed_at, "press left is never released")
+
+    def _press(self, number, mods, name):
+        if mods and self.emulator == "autotype":
+            self.refuse(number, "AUTOTYPE has no chords, so it cannot press " + "+".join(mods + [name]))
+        self.actions.append(("press", list(mods), name))
+
+    def names(self, which):
+        return lambda n: KEY_NAMES[n][EMULATORS[which]]
+
+
+def _switches(actions):
+    """The actions with the device they use: 'mouse' for motion and buttons, 'key' for keys, None for a frame."""
+    for a in actions:
+        yield a, ("mouse" if a[0] in ("move", "button", "click") else "key" if a[0] == "press" else None)
+
+
+def live_qemu(lv):
+    """The monitor script for tools/native-inject.py: wait for mark 00, then each step and a mark for each frame, ending with Escape."""
+    k = lv.names("qemu")
+    out = [f"# {os.path.basename(lv.path)} as input for a running QEMU (frames.py live --qemu)", "wait shell: mark 00",
+           f"screendump {{out}}/{lv.frames[0]}.ppm"]
+    last = None
+    for a, dev in _switches(lv.actions):
+        if dev and last and dev != last:
+            out.append(f"sleep {SWITCH_PAUSE}")
+        if dev:
+            last = dev
+        if a[0] == "move":
+            dx, dy = a[1], a[2]
+            while dx or dy:
+                sx, sy = max(-MOVE_CHUNK, min(MOVE_CHUNK, dx)), max(-MOVE_CHUNK, min(MOVE_CHUNK, dy))
+                out += [f"mouse_move {sx} {sy}", f"sleep {MOUSE_PAUSE}"]
+                dx, dy = dx - sx, dy - sy
+        elif a[0] == "button":
+            out += [f"mouse_button {1 if a[1] else 0}", f"sleep {MOUSE_PAUSE}"]
+        elif a[0] == "press":
+            out.append("sendkey " + "-".join(k(m) for m in a[1] + [a[2]]))
+        else:
+            out += [f"sleep {SWITCH_PAUSE}", "sendkey f12", f"wait shell: mark {a[2]:02d}", f"screendump {{out}}/{a[1]}.ppm"]
+            last = None
+    out += [f"sleep {SWITCH_PAUSE}", "sendkey esc"]
+    return "\n".join(out) + "\n"
+
+
+def live_autotype(lv, wait, pace):
+    """The arguments for DOSBox's AUTOTYPE: each key by name, F12 at each frame after the first, Escape at the end."""
+    k = lv.names("autotype")
+    keys = []
+    for a in lv.actions:
+        if a[0] == "press":
+            keys.append(k(a[2]))
+        elif a[0] == "frame":
+            keys.append("f12")
+    keys.append("esc")
+    return " ".join(["-w", str(wait), "-p", str(pace)] + keys) + "\n"
+
+
+def live_xdotool(lv, quick):
+    """The lines for tools/xvfb-dos.sh, each the arguments of one `xdotool` command (`#` lines are comments)."""
+    k = lv.names("xdotool")
+    actions = []
+    for a in lv.actions:
+        if quick and a == ("button", False) and actions and actions[-1] == ("button", True):
+            actions[-1] = ("click",)
+        else:
+            actions.append(a)
+    out = [f"# {os.path.basename(lv.path)} as input for DOSBox's window under Xvfb (frames.py live --xdotool{' --quick' if quick else ''})"]
+    last = None
+    for a, dev in _switches(actions):
+        if dev and last and dev != last:
+            out.append(f"sleep {SWITCH_PAUSE}")
+        if dev:
+            last = dev
+        if a[0] == "move":
+            out.append(f"mousemove_relative -- {a[1]} {a[2]}")
+        elif a[0] == "button":
+            out += [f"{'mousedown' if a[1] else 'mouseup'} 1", f"sleep {XDOTOOL_BUTTON_PAUSE}"]
+        elif a[0] == "click":
+            out += ["click 1", f"sleep {XDOTOOL_BUTTON_PAUSE}"]
+        elif a[0] == "press":
+            out.append("key " + "+".join(k(m) for m in a[1] + [a[2]]))
+        else:
+            out += [f"sleep {SWITCH_PAUSE}", "key F12", f"sleep {XDOTOOL_FRAME_PAUSE}"]
+            last = None
+    out += [f"sleep {SWITCH_PAUSE}", "key Escape"]
+    return "\n".join(out) + "\n"
+
+
+def cmd_live(args):
+    emulator = "qemu" if args.qemu else "autotype" if args.autotype else "xdotool"
+    if args.quick and emulator != "xdotool":
+        raise UsageError("--quick is for --xdotool")
+    lv = Live(args.scenario, emulator)
+    if emulator == "qemu":
+        sys.stdout.write(live_qemu(lv))
+    elif emulator == "autotype":
+        sys.stdout.write(live_autotype(lv, args.wait, args.pace))
+    else:
+        sys.stdout.write(live_xdotool(lv, args.quick))
+    return 0
+
+
+MARK_RE = re.compile(r"^shell: mark (\d{2}) (\d+) (\d+)x(\d+) ([0-9a-fA-F]{8}|\.{8}) ([0-9a-fA-F]{8}|\.{8})\s*$", re.M)
+
+
+def cmd_marks(args):
+    names = scenario_frames(args.scenario)
+    sums = {s.name.lower(): s for s in read_sums(args.sums) if s.depth == args.depth}
+    if not sums:
+        raise FramesError(f"{args.sums}: no frames at depth {args.depth}")
+    try:
+        text = slurp(args.transcript, "r", encoding="utf-8", errors="replace").replace("\r", "")
+    except OSError as err:
+        raise FramesError(f"{args.transcript}: {err.strerror}") from None
+    marks = MARK_RE.findall(text)
+    ok = True
+    for k, name in enumerate(names):
+        want = sums.get(name.lower())
+        if want is None:
+            raise FramesError(f"{args.sums}: no line for frame {name} at depth {args.depth}")
+        if k >= len(marks):
+            print(f"FAIL {name}: mark {k:02d} is missing from the transcript")
+            ok = False
+            continue
+        n, depth, w, h, index, colour = marks[k]
+        if int(n) != k:
+            print(f"FAIL {name}: expected mark {k:02d}, the transcript has {n} in its place")
+            ok = False
+            continue
+        got = (int(depth), int(w), int(h), index.lower(), colour.lower())
+        exp = (want.depth, want.width, want.height, f"{want.index:08x}", f"{want.colour:08x}")
+        if got != exp:
+            print(f"FAIL {name}: mark {n} has depth {depth} {w}x{h} {got[3]} {got[4]}, expected {exp[0]} {want.digest_text()}")
+            ok = False
+    for extra in marks[len(names) :]:
+        print(f"FAIL mark {extra[0]}: an extra mark, the scenario has {len(names)} frames")
+        ok = False
+    if args.dumps:
+        files = lookup(args.dumps)
+        moves, complete = [], True
+        for k, name in enumerate(names):
+            for ext in ("RAW", "PAL"):
+                src = files.get(f"m{k:02d}.{ext.lower()}")
+                if src is None:
+                    print(f"FAIL {name}: no dump M{k:02d}.{ext} in {args.dumps}")
+                    ok = complete = False
+                else:
+                    moves.append((src, os.path.join(args.dumps, f"{name.upper()}.{ext}")))
+        if complete:  # rename only a complete set (matching or not, so `check` can show what differs), never half of one
+            for src, dst in moves:
+                os.replace(src, dst)
+    if ok:
+        print(f"ok: {len(names)} marks in {args.transcript} carry the digests of {args.sums} at depth {args.depth}")
+    return 0 if ok else 1
 
 
 class UsageError(Exception):
@@ -626,6 +1091,16 @@ def build_parser():
     s.add_argument("--size", default="640x480", metavar="WxH")
     add("diff", cmd_diff, ("a", str), ("b", str), ("out", str))
     add("inject", cmd_inject, ("scenario", str))
+    s = add("live", cmd_live, ("scenario", str))
+    group = s.add_mutually_exclusive_group(required=True)
+    group.add_argument("--qemu", action="store_true")
+    group.add_argument("--autotype", action="store_true")
+    group.add_argument("--xdotool", action="store_true")
+    s.add_argument("--quick", action="store_true")
+    s.add_argument("--wait", type=int, default=3, help="--autotype: seconds before the first key (AUTOTYPE -w)")
+    s.add_argument("--pace", type=float, default=0.3, help="--autotype: seconds between keys (AUTOTYPE -p)")
+    s = add("marks", cmd_marks, ("sums", str), ("scenario", str), ("depth", int), ("transcript", str))
+    s.add_argument("--dumps", metavar="DIR")
     return p
 
 

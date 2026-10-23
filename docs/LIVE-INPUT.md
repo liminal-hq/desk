@@ -286,6 +286,8 @@ frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]
                                                 the frame names so `frames.py check` can compare them with the goldens
 ```
 
+`--autotype` takes `--wait N` and `--pace S` (the `-w` and `-p` of `AUTOTYPE`, 3 and 0.3 by default). The `--xdotool` output is a list of lines, each the arguments of one `xdotool` command (`#` lines are comments), which `tools/xvfb-dos.sh` runs in order. The key-name table in `frames.py` holds, for each `KeyCode` name, QEMU's `sendkey` name, the name `AUTOTYPE` takes (the mapper names `autotype -list` prints in DOSBox Staging 0.83) and the X keysym; a key an emulator has no name for is refused with its line. A frame after the first is `F12` and a wait for the mark, so a scenario may have at most 100 frames.
+
 `marks` fails on a missing mark, an extra mark, a digest that differs (printing the frame's name and both digests), or a dump that is missing; exit statuses as the other commands. `tools/test_frames.py` covers each translation, each refusal, the set-up rule and each failure of `marks`.
 
 ### Native: through the QEMU monitor

@@ -1,0 +1,45 @@
+# The first window played with real input: a click and a drag with the mouse, Alt+Tab, typing and Alt+F4 with the keyboard, and a click on a close box. The steps before the first frame are the first window's set-up, which a live session performs itself; the first frame is its first mark.
+desk-scenario 1
+screen 640 480
+depths 8 4
+open notes 60 60 300 180 "Notes"
+label notes 12 12 "The first window."
+open welcome 220 150 340 200 "Welcome to Desk"
+label welcome 12 12 "Type something:"
+field welcome 12 36 300
+pointer 320 240
+frame start
+# A click on Notes' title bar focuses and raises it.
+pointer 120 70
+press left
+release left
+frame focus
+# A drag of its title bar by (40, 30), in two moves.
+press left
+move 20 15
+move 20 15
+release left
+frame dragged
+# Alt+Tab picks Welcome on release.
+key LeftAlt down
+key Tab down
+key Tab up
+key LeftAlt up
+frame switched
+# Welcome's field takes the typing.
+type "live"
+frame typed
+# Alt+F4 closes Welcome and focuses Notes.
+key LeftAlt down
+key F4 down
+key F4 up
+key LeftAlt up
+frame closed
+# A click on Notes' close box (it is now at (100, 90), so the box is at x 374..392, y 92..110) leaves the empty desktop.
+pointer 383 101
+press left
+release left
+frame clicked
+# One more move, so the cursor is not where it started.
+move 50 60
+frame move

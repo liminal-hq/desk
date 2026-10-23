@@ -12,6 +12,8 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 | `elf2go32.py` | Packs a linked 32-bit ELF into a DJGPP go32 `.EXE` (used by the d0-rust-dos and e-std-stubs spikes, whose `build.sh` scripts and checks run through `dosrun.sh`) |
 | `dosrun.sh` | Runs a DOS command in headless DOSBox Staging; prints its output and returns its exit status. `DOS_AUTOTYPE` types keys into the program with DOSBox's `AUTOTYPE`, `DOS_CONF` appends configuration, `DOS_X11=1` uses a real display; `DOS_MACHINE` picks the emulated card for one run (default `svga_s3`; `vgaonly` has no VBE) |
 | `docker/Dockerfile.dos-xvfb` | Xvfb and `xdotool` for driving DOSBox's SDL window with a pointer; `spikes/b-dos-input/check-xvfb.sh` builds it once as `desk-dos-xvfb:1` |
+| `frames.py`, `test_frames.py` | The shell's frame tools: PNG and digest reading, `check`, `transcript`, `goldens`, `same` and `diff` for captures, `inject` for the scripted native run, and, for live input (`../docs/LIVE-INPUT.md`), `live` (a live scenario as QEMU monitor commands, DOSBox `AUTOTYPE` arguments or `xdotool` lines) and `marks` (a live run's `shell: mark NN` lines against the scenario's sums, renaming DOS dumps); `test_frames.py` holds the tests |
+| `shell-goldens.sh` | Re-records every `tests/shell/*.scn`'s sums and golden PNGs from the host test |
 | `raw2png.py` | Turns a frame buffer dump and a DAC dump into an indexed PNG (`docs/A-VGA-VBE.md`) |
 | `check-jsdos.sh` | Opt-in (`JSDOS=1 tools/check.sh`): fetches js-dos, builds the s5 bundles and runs every DOS program in headless Chromium, comparing text, screenshots and sound with the expectations; needs the network, Node 22 and a Chromium |
 | `check-headers.sh` | Checks the licence header on source and script files |
