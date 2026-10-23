@@ -1,0 +1,47 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: font: 8x16 copied from the BIOS
+stage2: vbe: not requested, the screen stays in text mode
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+bios: real-mode trampoline at 0x10000, bounce buffer 0x11000 (8192 bytes), stack 0x13000
+heap: 4096 KiB at {HEX}
+video: boot info version 1
+video: 8x16 font, 4096 bytes at 0x2000
+video: the loader did not try VBE (the screen is in text mode)
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+shell: live, depth 4
+shell: no linear frame buffer from the loader, mode 12h by registers
+shell: mark 00 4 640x480 08f41a46 216c6cb6
+shell: mark 01 4 640x480 76a34cbd 4239a1ae
+shell: mark 02 4 640x480 41b5b8d5 2c6aaaf5
+shell: mark 03 4 640x480 e90fe6e3 83440590
+shell: mark 04 4 640x480 226703cd ec227094
+shell: mark 05 4 640x480 f5e25d5e c31f4c12
+shell: mark 06 4 640x480 097773f2 7a2e1350
+shell: mark 07 4 640x480 cdcdf379 a628a076
+shell: live ended by Escape: {N:26..40} keys, {N:6..40} pointer reports, {N:8..60} frames, {N:50000..3000000} pixels presented, 8 marks
+shell: done
+gfx: text mode restored: registers, palette and the 8x16 font reloaded
+boot complete

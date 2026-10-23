@@ -643,7 +643,7 @@ DOSBox headless has no screenshot command that a script can use, so the hosted c
 
 ### Native: the kernel's `shell` test mode in QEMU
 
-- **The test mode.** `tools/native-image.sh --test-mode shell` (code 13) and `shell-corrupt` (code 14). `kernel/src/shell.rs` runs after input is set up, as `gfx` does.
+- **The test mode.** `tools/native-image.sh --test-mode shell` (code 13), `shell-corrupt` (code 14) and `shell-live` (code 15, the first window on live input: [`LIVE-INPUT.md`](LIVE-INPUT.md)). `kernel/src/shell.rs` runs after input is set up, as `gfx` does.
 - **Mode.** With a loader-set linear frame buffer (`--video vbe`, `video.lfb`), depth 8 over `gfx::lfb_region`; otherwise `desk_vga::set_mode_12h` by registers and depth 4 over the VGA window. The palette goes through `desk_vga::dac::set_palette`.
 - **Fonts and scenario**: `include_bytes!("../../fonts/generated/ui.dfn")` and `title.dfn`, `include_str!("../../tests/shell/first-window.scn")`.
 - **Capture.** At each frame it prints `shell: frame NAME DEPTH WIDTHxHEIGHT INDEX COLOUR`, then `shell: ready NAME`, and waits for a key (the rendezvous `gfx.rs` uses); the QEMU monitor script takes `screendump {out}/NAME.ppm` and sends the key. `frames.py inject` writes that script from the scenario's `frame` lines, so it cannot drift. At the end it prints `shell: done` and restores text mode as the `gfx` tour does.
@@ -692,7 +692,7 @@ Each has a default the plan follows unless the owner says otherwise.
 - **Damage merging overdraws.** Bounding-box merges write more than strictly changed; the accounting tests bound it for the cases that matter.
 - **The 8.3 limit** on capture names is enforced by the scenario parser, not discovered in DOSBox.
 - **Depending on a spike's runtime.** `shell/dos` uses `spikes/d0-rust-dos/rt` by path, as spikes A and B do; when `rt` moves, the path changes in one place.
-- **Test-mode numbers.** The kernel's test modes are a small integer space shared by branches; 13 and 14 must not collide with another open branch.
+- **Test-mode numbers.** The kernel's test modes are a small integer space shared by branches; 13, 14 and 15 must not collide with another open branch.
 - **The cursor's shape is duplicated**: `desk_vga::cursor` keeps its arrow for the spikes, and `desk-gfx` has `ARROW` for the shell. A host test in `desk-gfx` compares the two through a public accessor added to `desk-vga`.
 - **Nothing here runs on real hardware.** QEMU and DOSBox model the VGA well enough for these pictures; real cards, monitors and timing are untested, as in spikes A and D.
 
