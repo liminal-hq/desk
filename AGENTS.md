@@ -22,7 +22,7 @@
 
 ## Project Status
 
-Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is an operating system, written in Rust, for old hardware: a calm graphical system for 486-class PCs, with windows, files and small apps. It is built on two tracks in parallel (decided 2026-10-22; see `docs/DIRECTION.md`): a **hosted track**, Desk running on top of DOS (DJGPP, CWSDPMI, DOSBox), which is what the repository has built so far, and a **native track**, a bootable Rust kernel tested in QEMU, 86Box and Bochs. Both share an OS-independent core behind a small hardware abstraction layer (HAL). DOS programs on the native OS are planned to run by bundling FreeDOS. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: there is a toolchain skeleton and fonts and emoji work, nothing boots yet, no native code exists, and the documents in `docs/` are targets, not measurements.
+Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is an operating system, written in Rust, for old hardware: a calm graphical system for 486-class PCs, with windows, files and small apps. It is built on two tracks in parallel (decided 2026-10-22; see `docs/DIRECTION.md`): a **hosted track**, Desk running on top of DOS (DJGPP, CWSDPMI, DOSBox), which is what the repository has built so far, and a **native track**, a bootable Rust kernel tested in QEMU, 86Box and Bochs. Both share an OS-independent core behind a small hardware abstraction layer (HAL). DOS programs on the native OS are planned to run by bundling FreeDOS. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: the code is the hosted walking skeleton (a small Rust and C program that proves the DOS toolchain), the native boot skeleton (a NASM boot sector and a Rust kernel that boots in QEMU; `docs/NATIVE-BOOT.md`), and the fonts and emoji work. The documents in `docs/` are targets, not measurements.
 
 ## Source of Truth
 
@@ -125,10 +125,13 @@ Add labels to every PR when it is created and keep them accurate as scope change
 
 ## Local Tooling
 
-The stack will be **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **QEMU** (`-cpu 486`), 86Box and Bochs. None of that is installed or scripted yet: the toolchain scripts are written, for this project, with the first spike that needs them. Do not install system packages to get a build working without asking.
+The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **NASM** and **QEMU** (`-cpu 486`), with 86Box and Bochs to follow. `docs/TOOLCHAIN.md` describes the hosted pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
 
 ```bash
-tools/check.sh                           # everything the CI runs
+tools/setup.sh                           # once: Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI in vendor/
+tools/check.sh                           # everything the CI runs: checks, build, headless run
+tools/build.sh                           # dist/DESK.EXE and dist/CWSDPMI.EXE
+tools/dosrun.sh dist DESK.EXE            # run a DOS program headless; prints its output, returns its exit status
 tools/check-headers.sh                   # licence headers on source, script and workflow files
 python3 -I tools/check-docs.py           # markdown style and links
 python3 -I tools/build-hero.py [name] > assets/hero.svg    # rebuild the README banner
@@ -148,7 +151,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 ## Testing
 
 - Verify relevant changes before considering work complete, and state exactly what was and was not run.
-- `tools/check.sh` is the pre-PR gate and what the CI runs. DOS builds, headless DOSBox runs and frame checksums join it as the code that needs them arrives.
+- `tools/check.sh` is the pre-PR gate and what the CI runs. It already builds `DESK.EXE` and runs it headless; frame checksums join it as the code that needs them arrives.
 - Fix a bug with a check that fails before the fix.
 - Say plainly what could not be verified: nothing here has run on real hardware, and audio cannot be checked headless.
 
@@ -162,17 +165,19 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 
 - `docs/` — the working design (direction, spec, SDK, formats, handoff, palette, app guidelines, open questions, naming)
 - `design/` — boards and prototypes from the design brainstorm, reference only
-- `core/` — the OS-independent shell in Rust (`no_std`)
-- `c/` — the hosted track's hardware layer in C for DJGPP
+- `core/` — the OS-independent shell in Rust (`no_std`), with the DOS target specification `dos.json`; today the skeleton's one function
+- `c/` — the hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit
 - `launcher/` — `DESK.COM`, the hosted track's real-mode launcher
 - `sdk/` — the app interface: the C header and a Rust wrapper
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
-- `tools/` — repository checks and scripts
+- `tools/` — repository checks, the DOS build pipeline (`setup`, `fetch-tools`, `build`, `coff2go32`, `dosrun`) and scripts
+- `fonts/` — the four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), the emoji (`fonts/src/emoji/`, `docs/EMOJI.md`), and the Bun build that writes them as OTF, TTF, `.DFN` and `.DEM` files (`docs/FONTS.md`)
+- `vendor/` and `dist/` — the downloaded DOS tools and the build output; neither is committed
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for the native track (kernel, boot, native HAL), apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
+Directories for the native HAL, apps, the installer and the icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
 
 ## Licence and Copyright
 

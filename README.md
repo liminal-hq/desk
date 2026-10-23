@@ -14,7 +14,7 @@ A calm graphical operating system in Rust for old hardware, from Liminal HQ: win
 
 It is the spiritual successor to [Lieutenant Fizz for DOS](https://github.com/ScottMorris/lieutenant-fizz-dos), which proved that Rust can drive a real DOS machine. This project starts from scratch with what that port taught us, and its toolchain is written fresh for this project rather than copied.
 
-> **Status:** design, a toolchain skeleton, and fonts and emoji work. Nothing boots yet and no native code exists. [`docs/SPEC.md`](docs/SPEC.md) is the working design of the hosted track and the OS-independent parts, written before any code, so its numbers and formats are targets until a spike confirms them; the native track is described in [`docs/DIRECTION.md`](docs/DIRECTION.md). "Desk" is a working name; [`docs/NAMING.md`](docs/NAMING.md) has the candidates.
+> **Status:** design, a hosted DOS walking skeleton, a native boot skeleton (a NASM boot sector and a Rust kernel in QEMU), and fonts and emoji work. [`docs/SPEC.md`](docs/SPEC.md) is the working design of the hosted track and the OS-independent parts, written before any code, so its numbers and formats are targets until a spike confirms them; the native track is described in [`docs/DIRECTION.md`](docs/DIRECTION.md). "Desk" is a working name; [`docs/NAMING.md`](docs/NAMING.md) has the candidates.
 
 ## What it will be
 
@@ -49,22 +49,24 @@ The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one 
 |---|---|
 | `docs` | The working design: direction, spec (the hosted track's), SDK, file formats, handoff, palette, app guidelines, open questions, naming |
 | `design` | Boards and prototypes from the design brainstorm, kept as reference only |
-| `core` | The OS-independent shell in Rust (empty until the spikes land) |
-| `c` | The hosted track's hardware layer in C for DJGPP (empty until a spike needs it) |
+| `core` | The OS-independent shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
+| `c` | The hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit |
 | `launcher` | `DESK.COM`, the hosted track's real-mode launcher (empty until the handoff spike) |
 | `sdk` | The app interface (empty until the first spike settles how apps load) |
 | `spikes` | Experiments that decide the architecture |
 | `tests/dos` | Test programs of our own for the headless DOS runs |
-| `tools` | Repository checks and the banner builder; the DOS toolchain scripts arrive with the first spike |
+| `fonts` | The four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), the emoji, and their build into OTF, TTF, `.DFN` and `.DEM` files ([`docs/FONTS.md`](docs/FONTS.md), [`docs/EMOJI.md`](docs/EMOJI.md)); the fonts are under the SIL Open Font License 1.1 |
+| `tools` | Repository checks, the DOS build pipeline (setup, fetch, build, object converter, headless DOSBox runner) and the banner builder |
 
 ## Working on it
 
 ```bash
-tools/check.sh    # licence headers, markdown style and links: everything the CI runs today
+tools/setup.sh    # once: the pinned Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI into vendor/
+tools/check.sh    # everything the CI runs: checks, then build dist/DESK.EXE and run it in headless DOSBox
 python3 -I tools/build-hero.py > assets/hero.svg    # rebuild the banner
 ```
 
-[`AGENTS.md`](AGENTS.md) has the conventions: Canadian English, unwrapped markdown, Conventional Commits, merge commits only.
+[`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) explains the build pipeline and what it was checked against. [`AGENTS.md`](AGENTS.md) has the conventions: Canadian English, unwrapped markdown, Conventional Commits, merge commits only.
 
 ## Licence
 

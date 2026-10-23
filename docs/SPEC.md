@@ -61,6 +61,8 @@ Both looks are themes over the same widgets; an app never draws its own chrome. 
 
 Four bitmap faces (`.DFN`), each with ASCII, Latin-1 and CP437 box drawing: 8×16 fixed for Terminal, code and paths; an 11 px proportional UI face; a 12 px bold title face; a 6×8 small face for status bars. Specimen on board 4e.
 
+The faces are bitmaps; reading real `.TTF` files so any font can be used is a later possibility (`OPEN-QUESTIONS.md`, "Reading TrueType fonts").
+
 ## Memory and files
 
 - When memory runs short the Desk lets CWSDPMI swap to `CWSDPMI.SWP` and carries on, slower. The focused app's status bar says "Using disk for memory"; nothing else interrupts.

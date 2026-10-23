@@ -1,0 +1,23 @@
+[package]
+name = "desk-kernel"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+# A standalone crate: it builds for its own target and must not join a workspace for the hosted track.
+[workspace]
+
+[features]
+default = []
+
+[profile.dev]
+panic = "abort"
+opt-level = 1
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+debug = "line-tables-only"
+lto = true
+codegen-units = 1

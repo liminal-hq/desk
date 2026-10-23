@@ -10,12 +10,14 @@ See `AGENTS.md` for the authoritative contributor conventions — most important
 
 ## State of the repository
 
-Design and spikes only: nothing boots, no native code exists, and there is no DOS toolchain script on `main` yet. `docs/` holds the working design, written before any code, so treat its numbers and formats as targets. `design/` is reference only (do not port its code). When a spike produces a result, record it in `docs/` and let the design follow.
+Design and spikes, with two walking skeletons: the hosted DOS program built by `tools/build.sh` and run headless in DOSBox, and the native boot sector and Rust kernel run in QEMU by `tools/native-test.sh`. `docs/` holds the working design, written before any code, so treat its numbers and formats as targets. `design/` is reference only (do not port its code). When a spike produces a result, record it in `docs/` and let the design follow.
 
 ## Commands
 
 ```bash
+tools/setup.sh                           # once: the DOS tools into vendor/
 tools/check.sh                           # everything the CI runs
+tools/build.sh                           # dist/DESK.EXE
 tools/check-headers.sh                   # licence headers
 python3 -I tools/check-docs.py           # markdown style and links
 python3 -I tools/build-hero.py [name] > assets/hero.svg    # rebuild the README banner
