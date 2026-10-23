@@ -14,6 +14,7 @@
 #   --escape   also types Escape through AUTOTYPE after this many seconds, as a fallback for a program that waits for it
 #   --start-wait   seconds between DOSBox's window appearing and the first line of SCRIPT (default 6: the program prints nothing until it ends)
 #   --step-wait    seconds after each line of SCRIPT (default 0.15)
+#   DOS_TIMEOUT (environment) is the hard limit on DOSBox in seconds (default 60); a program's own timeout=N must be under it
 #
 # DOSBox has no scripted pointer, so the run is in a container (tools/docker/Dockerfile.dos-xvfb, built once as desk-dos-xvfb:1) that holds
 # Xvfb and xdotool. DOSBox captures the pointer at start (`mouse_capture = onstart`) and SDL reports relative motion, which xdotool
@@ -49,7 +50,7 @@ if [ "${XVFB_DOS_INSIDE:-}" != 1 ]; then
   # them anywhere); the container sees them at the same path so the links resolve there too.
   tools="$(dirname "$(readlink -f vendor/dosbox)")"
   exec docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e XVFB_DOS_INSIDE=1 -e MOUSE_DRIVER="$mouse" \
-    ${escape:+-e AUTOTYPE_ESCAPE="$escape"} ${start_wait:+-e START_WAIT="$start_wait"} ${step_wait:+-e STEP_WAIT="$step_wait"} \
+    ${escape:+-e AUTOTYPE_ESCAPE="$escape"} ${DOS_TIMEOUT:+-e DOS_TIMEOUT="$DOS_TIMEOUT"} ${start_wait:+-e START_WAIT="$start_wait"} ${step_wait:+-e STEP_WAIT="$step_wait"} \
     -v "$PWD":/work -v "$tools":"$tools":ro desk-dos-xvfb:1 /work/tools/xvfb-dos.sh "$@"
 fi
 
