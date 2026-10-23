@@ -2,7 +2,7 @@
 
 A plan for a second group of pages in the Desk Progress Report: a technical manual and textbook of what has been built, beside the running log. The log ([`tools/progress-report/chapters/`](../tools/progress-report/chapters/)) tells the story in the order it happened; the anatomy pages draw one picture each of how a program stands on the system; the manual explains each layer on its own terms, from the processor upward, and says how it works, why it is this way, where the code is and what has been verified.
 
-> **Status.** A plan, written on 2026-10-23 against `main` at `44f0265`, and since built: the generator, all 22 chapters and the four appendices, and the nine explainers exist in a stack of pull requests, and the "Build notes" below say where the build departs from the plan. It records decisions with defaults (see [Questions for the owner](#questions-for-the-owner)); a builder may change a detail when the code shows a better one, and says so in the pull request and in this document in the same branch.
+> **Status.** A plan, written on 2026-10-23 against `main` at `44f0265`, and since built: the generator, all 22 chapters and the four appendices, and the nine explainers exist in a stack of pull requests, and the "Build notes" below say where the build departs from the plan; [`MANUAL-STATUS.md`](MANUAL-STATUS.md) is the handoff. It records decisions with defaults (see [Questions for the owner](#questions-for-the-owner)); a builder may change a detail when the code shows a better one, and says so in the pull request and in this document in the same branch.
 
 ## Contents
 
