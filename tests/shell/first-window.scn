@@ -1,0 +1,37 @@
+# The first window: two overlapping windows, a focus change by a click, a drag, typing into a field and a close.
+desk-scenario 1
+screen 640 480
+depths 8 4
+open notes 60 60 300 180 "Notes"
+label notes 12 12 "The first window."
+open welcome 220 150 340 200 "Welcome to Desk"
+label welcome 12 12 "Type something:"
+field welcome 12 36 300
+pointer 320 240
+frame open
+# Moving the pointer repaints nothing: two 12 x 19 cursor rectangles, widened to 8-pixel columns at depth 4.
+move 100 60
+frame moved
+expect-damage 8 456 2
+expect-damage 4 608 2
+# A click on Notes' title bar focuses and raises it.
+pointer 120 70
+press left
+release left
+frame focus
+# A drag of its title bar moves it by (40, 30).
+press left
+move 40 30
+release left
+frame dragged
+# A click in Welcome's content focuses it again, and the field takes the typing.
+pointer 400 300
+press left
+release left
+type "desk"
+frame typed
+# A click on Welcome's close box closes it and focuses Notes.
+pointer 543 161
+press left
+release left
+frame closed

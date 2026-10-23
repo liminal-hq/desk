@@ -1,0 +1,16 @@
+[package]
+name = "desk-ui"
+description = "The shell's look: theme roles and palettes, text drawing, the window chrome with its stepped halo, and the label and text-field widgets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+desk-gfx = { path = "../gfx" }
+desk-font = { path = "../font" }
+desk-kbd = { path = "../../hal/drivers/kbd" }
+
+[features]
+std = ["desk-hal/std", "desk-gfx/std", "desk-kbd/std"]

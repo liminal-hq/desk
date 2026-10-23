@@ -74,7 +74,10 @@ describe('manifest', () => {
 describe('palette', () => {
   test('is the 16-colour set of docs/PALETTE.md, slot for slot', () => {
     const doc = readFileSync(join(import.meta.dir, '..', '..', 'docs', 'PALETTE.md'), 'utf8');
-    const section = doc.slice(doc.indexOf('## The 16-colour set'));
+    // Only this section: later sections hold other slot tables (the slots the first window uses).
+    const start = doc.indexOf('## The 16-colour set');
+    const end = doc.indexOf('\n## ', start + 1);
+    const section = doc.slice(start, end === -1 ? undefined : end);
     const rows = [...section.matchAll(/^\| (\d+) \| `(#[0-9a-f]{6})` \|/gm)].map((m) => [Number(m[1]), m[2]]);
     expect(rows).toEqual(SLOTS.map((s) => [s.slot, s.hex]));
   });

@@ -14,7 +14,7 @@ pub const ARROW_WIDTH: usize = 12;
 pub const ARROW_HEIGHT: usize = 19;
 
 /// The arrow: `X` the outline, `o` the fill, `.` transparent.
-const ARROW: [&[u8; ARROW_WIDTH]; ARROW_HEIGHT] = [
+pub const ARROW_ROWS: [&[u8; ARROW_WIDTH]; ARROW_HEIGHT] = [
     b"X...........",
     b"XX..........",
     b"XoX.........",
@@ -98,7 +98,7 @@ impl SoftCursor {
         self.hide(canvas);
         self.x = x;
         self.y = y;
-        for (row, line) in ARROW.iter().enumerate() {
+        for (row, line) in ARROW_ROWS.iter().enumerate() {
             for (col, &shape) in line.iter().enumerate() {
                 let i = row * ARROW_WIDTH + col;
                 let (px, py) = (x.wrapping_add(col as i32), y.wrapping_add(row as i32));
