@@ -49,14 +49,14 @@ Twenty-two chapters in eight parts, and four appendices. The numbers are M-numbe
 |---|---|---|---|---|---|---|---|
 | M1 | `m-map` | The map | The two tracks, the four kinds of code (HAL, driver, platform, core), which directory is which layer, what is built and what is not, how to read state tags | `docs/DIRECTION.md`, `docs/HAL.md` ("The four kinds of code"), `docs/FIRST-WINDOW.md` ("Where it sits"), the two anatomy pages | `pivot`, `hal`, `firstwindow` | all layers of `desk:` | 1,500 |
 | M2 | `m-cpu` | The processor: real mode, protected mode and the A20 gate | Segments and offsets, the 1 MiB limit and its wrap-around, the A20 gate and its three switches, descriptors and selectors, the GDT, CR0.PE and the far jump, privilege levels (and that the kernel uses only ring 0), interrupts and exceptions in both modes, the x87 and the CR0 bits that govern it, what a 486 lacks (CMOV, CPUID use, SSE) | `docs/NATIVE-BOOT.md` (boot flow, FPU, the kernel target), `boot/stage2.asm`, `kernel/src/gdt.rs`, `kernel/src/fpu.rs`, `docs/N3-BIOS-PATH.md` ("The switching sequence") | `boot`, `bios` | `desk:boot`, `desk:kernel` | 3,000 |
-| M3 | `m-devices` | The devices of a 486 PC | The ISA bus and port I/O, the two 8259 PICs and IRQ lines, the 8254 PIT, the 8042 controller and PS/2 keyboard and mouse, the 16550 UART, VGA (text mode, mode 13h, planar mode 12h, the DAC), VBE 2.0 and the linear frame buffer, the floppy controller and DMA (as the BIOS sees them), the BIOS services the project calls (INT 10h, 13h, 15h, 1Ah, 33h) and what E820 is | `docs/HAL.md` ("The surfaces"), `docs/C-INPUT.md` ("The 8042 controller"), `docs/A-VGA-VBE.md`, `docs/D-NATIVE-VGA.md`, `docs/N3-BIOS-PATH.md` | `input`, `pixels`, `bios` | `desk:emu`, `dos:vga`, `dos:lfb`, `dos:kbd` | 3,000 |
+| M3 | `m-devices` | The devices of a 486 PC | The ISA bus and port I/O, the two 8259 PICs and IRQ lines, the 8254 PIT, the 8042 controller and PS/2 keyboard and mouse, the 16550 UART, VGA (text mode, mode 13h, planar mode 12h, the DAC), VBE 2.0 and the linear frame buffer, the floppy controller and DMA (as the BIOS sees them), the BIOS services the project calls (INT 10h, 12h, 13h, 15h, 1Ah) and what E820 is, and on DOS the mouse driver's INT 33h, which is not a BIOS service | `docs/HAL.md` ("The surfaces"), `docs/C-INPUT.md` ("The 8042 controller"), `docs/A-VGA-VBE.md`, `docs/D-NATIVE-VGA.md`, `docs/N3-BIOS-PATH.md` | `input`, `pixels`, `bios` | `desk:emu`, `dos:vga`, `dos:lfb`, `dos:kbd` | 3,000 |
 
 ### Part II. Booting
 
 | No. | Id | Title | Covers | Primary sources | Log | Anatomy | Size |
 |---|---|---|---|---|---|---|---|
 | M4 | `m-loader` | The boot sector and the loader | The 1.44 MB image and its layout, the 512-byte boot sector and its signature, CHS reads by track, the 64 KiB DMA boundary and the retries, stage 2's serial and screen output, the A20 test and its fallbacks, E820 then E801 then AH=88, the boot information block, the VBE request byte, the three-entry GDT and the switch, the copy to 1 MiB, the values patched in after the build | `boot/stage1.asm`, `boot/stage2.asm`, `boot/README.md`, `tools/native-image.sh`, `docs/NATIVE-BOOT.md` ("Boot flow", "Image layout"), `docs/D-NATIVE-VGA.md` ("The boot information block"), `docs/NATIVE-EMULATORS.md` (the loader bug) | `boot`, `pixels`, `emulators` | `desk:boot` | 3,000 |
-| M5 | `m-boot` | The boot, end to end | Power-on to `boot complete`, one transcript line at a time: the BIOS, stage 1, stage 2, `_start` and `.bss`, `kmain` and its order (serial, screen, GDT, IDT, PIC, PIT, memory, heap, x87, BIOS path, input), the test-mode byte and every test mode, how a run ends through `isa-debug-exit` and what the exit statuses mean, the watchdog, and what each negative check makes the kernel print | `kernel/src/main.rs`, `kernel/src/exit.rs`, `tests/native/expected*.txt`, `tools/native-run.sh`, `tools/native-check.py`, `tools/progress-report/media/native-serial.txt`, `docs/NATIVE-BOOT.md` ("The checks", "Running it and the CPU model") | `boot`, `emulators` | `desk:boot`, `desk:kernel`, `desk:emu` | 2,500 |
+| M5 | `m-boot` | The boot, end to end | Power-on to `boot complete`, one transcript line at a time: the BIOS, stage 1, stage 2, `_start` and `.bss`, `kmain` and its order (serial, screen, GDT, IDT, PIC, PIT, memory, BIOS path, heap, video, x87, input), the test-mode byte and every test mode, how a run ends through `isa-debug-exit` and what the exit statuses mean, the watchdog, and what each negative check makes the kernel print | `kernel/src/main.rs`, `kernel/src/exit.rs`, `tests/native/expected*.txt`, `tools/native-run.sh`, `tools/native-check.py`, `tools/progress-report/media/native-serial.txt`, `docs/NATIVE-BOOT.md` ("The checks", "Running it and the CPU model") | `boot`, `emulators` | `desk:boot`, `desk:kernel`, `desk:emu` | 2,500 |
 
 ### Part III. The native kernel
 
@@ -72,8 +72,8 @@ Twenty-two chapters in eight parts, and four appendices. The numbers are M-numbe
 |---|---|---|---|---|---|---|---|
 | M9 | `m-hal` | The HAL | The contract crate `desk-hal`: port I/O and why the `unsafe` sits on holding the bus, memory-mapped regions, interrupts and the ring, time, video and input types, errors, `no_std` and features, the alternatives rejected, the mock platform and host tests, the migration steps done and not done | `hal/hal/src/*.rs`, `hal/platform/mock/src/*.rs`, `hal/README.md`, `docs/HAL.md` | `hal` | `desk:hal`, `dos:rthal` | 3,000 |
 | M10 | `m-sysdrivers` | Drivers I: serial, interrupt controllers and the timer | `desk-serial` (the 16550), `desk-pic` (two 8259s), `desk-pit` (the 8254 and `PitClock`): their register sequences, their tests against the mock bus, and how the kernel and the DOS runtime each use them | `hal/drivers/serial`, `hal/drivers/pic`, `hal/drivers/pit`, `docs/HAL.md` | `hal` | `desk:drivers` | 2,000 |
-| M11 | `m-input` | Drivers II: keyboard and mouse | The 8042 and its set-up sequences, scancode set 1 and the decoder, the PS/2 mouse packet, the event contract shared by both tracks, the interrupt hand-off through lock-free rings, the kernel's `input.rs`, the DOS side (a protected-mode IRQ 1 handler and INT 33h), the injection tests, and what real hardware may do differently | `hal/drivers/i8042`, `hal/drivers/kbd`, `hal/drivers/int33`, `hal/hal/src/input.rs`, `hal/hal/src/ring.rs`, `kernel/src/input.rs`, `docs/C-INPUT.md`, `docs/B-DOS-INPUT.md` | `input`, `oneevent` | `desk:drivers`, `desk:live`, `dos:kbd`, `dos:mouse` | 3,000 |
-| M12 | `m-graphics` | Drivers III: VGA and VBE | `desk-vga`: registers, mode 13h and 12h by register programming, planes, the DAC and fades, text mode and the way back to it, the VBE layer over the `Bios` trait, the linear frame buffer and its mapping on each track, the software cursor, the kernel's `video.rs` checks and `gfx` tour, what QEMU hides compared with real cards | `hal/drivers/vga/src/*.rs`, `kernel/src/video.rs`, `kernel/src/gfx.rs`, `kernel/src/vga.rs`, `docs/A-VGA-VBE.md`, `docs/D-NATIVE-VGA.md`, `docs/S5-JSDOS.md` (VBE in the browser) | `pixels`, `browser`, `bios` | `desk:drivers`, `dos:vga`, `dos:lfb` | 3,000 |
+| M11 | `m-input` | Drivers II: keyboard and mouse | The 8042 and its set-up sequences, scancode set 1 and the decoder, the PS/2 mouse packet, the event contract shared by both tracks, the interrupt hand-off through lock-free rings, the kernel's `input.rs`, the DOS side (a protected-mode IRQ 1 handler and INT 33h), the injection tests, and what real hardware may do differently | `hal/drivers/i8042`, `hal/drivers/kbd`, `hal/drivers/int33`, `hal/hal/src/input.rs`, `hal/hal/src/ring.rs`, `kernel/src/input.rs`, `docs/C-INPUT.md`, `docs/B-DOS-INPUT.md` | `input`, `oneevent` | `desk:drivers`, `desk:live`, `dos:drivers`, `dos:kbd`, `dos:mouse` | 3,000 |
+| M12 | `m-graphics` | Drivers III: VGA and VBE | `desk-vga`: registers, mode 13h and 12h by register programming, planes, the DAC and fades, text mode and the way back to it, the VBE layer over the `Bios` trait, the linear frame buffer and its mapping on each track, the software cursor, the kernel's `video.rs` checks and `gfx` tour, what QEMU hides compared with real cards | `hal/drivers/vga/src/*.rs`, `kernel/src/video.rs`, `kernel/src/gfx.rs`, `kernel/src/vga.rs`, `docs/A-VGA-VBE.md`, `docs/D-NATIVE-VGA.md`, `docs/S5-JSDOS.md` (VBE in the browser) | `pixels`, `browser`, `bios` | `desk:drivers`, `dos:drivers`, `dos:vga`, `dos:lfb` | 3,000 |
 
 ### Part V. The shared core
 
@@ -81,14 +81,14 @@ Twenty-two chapters in eight parts, and four appendices. The numbers are M-numbe
 |---|---|---|---|---|---|---|---|
 | M13 | `m-pixels` | The core I: surfaces, damage and presenting | The 8-bit back buffer and the pixel model, `Rect`, `Surface`, `Sprite`, dirty rectangles and how damage merges, the `Present` trait and the compositor, frame digests, `desk-present`'s linear and planar presenters and the read-back for captures | `shell/gfx/src/*.rs`, `shell/present/src/*.rs`, `docs/FIRST-WINDOW.md` ("The pixel model", "desk-gfx", "desk-present") | `firstwindow` | `desk:gfx`, `desk:present`, `dos:gfx`, `dos:present` | 3,000 |
 | M14 | `m-text` | The core II: text, themes and window chrome | `.DFN` reading in `desk-font`, glyph lookup and measuring, `desk-ui`'s roles, slots and palettes, text drawing, the window chrome and its stepped halo, icons, the first widgets | `shell/font/src/lib.rs`, `shell/ui/src/*.rs`, `docs/FIRST-WINDOW.md` ("desk-font", "desk-ui"), `docs/PALETTE.md`, `docs/HIG.md` | `firstwindow`, `faces` | `desk:ui`, `dos:ui` | 2,500 |
-| M15 | `m-shell` | The core III: windows, events and scenarios | `desk-wm` (windows, z-order, focus, hit testing, dragging, the damage each change makes), `desk-shell` (`Shell::handle` and `Shell::frame`, the cursor, the frame loop), the scenario format and runner, and the seam the platforms call | `shell/wm/src/*.rs`, `shell/shell/src/*.rs`, `tests/shell/first-window.scn`, `docs/FIRST-WINDOW.md` ("desk-wm", "desk-shell", "The scenario format") | `firstwindow` | `desk:wm`, `desk:shell`, `desk:seam` | 3,000 |
+| M15 | `m-shell` | The core III: windows, events and scenarios | `desk-wm` (windows, z-order, focus, hit testing, dragging, the damage each change makes), `desk-shell` (`Shell::handle` and `Shell::frame`, the cursor, the frame loop), the scenario format and runner, and the seam the platforms call | `shell/wm/src/*.rs`, `shell/shell/src/*.rs`, `tests/shell/first-window.scn`, `docs/FIRST-WINDOW.md` ("desk-wm", "desk-shell", "The scenario format") | `firstwindow` | `desk:wm`, `desk:shell`, `desk:seam`, `dos:wm`, `dos:shell` | 3,000 |
 
 ### Part VI. The platforms
 
 | No. | Id | Title | Covers | Primary sources | Log | Anatomy | Size |
 |---|---|---|---|---|---|---|---|
 | M16 | `m-platforms` | Two platforms, one core | What a platform is, side by side: who owns the loop, how a display and input are opened, how damage reaches the screen, how a run ends; the native `shell` test mode and `SHELL.EXE` compared line for line; why there is no `Platform` trait yet | `kernel/src/shell.rs`, `kernel/src/hal.rs`, `shell/dos/src/main.rs`, `docs/FIRST-WINDOW.md` ("The platform wirings"), `docs/HAL.md` ("The platforms", "A platform as one value") | `firstwindow`, `oneevent` | `desk:native`, `desk:dos`, `desk:seam`, `dos:main` | 2,500 |
-| M17 | `m-rt` | The hosted runtime and the build to SHELL.EXE | What a DOS extender and a DPMI host are, the runtime contract, `rt`'s `_start`, panic handler and clean-up list, the heap over DPMI 0501h, INT 21h and the 32 KiB transfer buffer, the IRQ stubs, `DosBios` and `DosDisplay`; then the build: `dos-elf.json`, `-Zbuild-std`, `rust-lld` and `link.ld`, `elf2go32.py`, the stub from `stubify -g`, CWSDPMI beside it; and, as legacy, the first hosted skeleton (`core/`, `c/`, `coff2go32.py`) and the DXE3 module result | `spikes/d0-rust-dos/rt/src/*.rs`, `spikes/d0-rust-dos/dos-elf.json`, `spikes/d0-rust-dos/link.ld`, `tools/elf2go32.py`, `shell/dos/build.sh`, `shell/dos/check.sh`, `docs/D0-RUST-DOS.md`, `docs/TOOLCHAIN.md`, `docs/S1-DXE3.md` | `wheels`, `module`, `purerust`, `firstwindow` | `dos:start`, `dos:heap`, `dos:dosw`, `dos:dpmi`, `dos:irq`, `dos:rthal`, `dos:target`, `dos:lld`, `dos:pack`, `dos:stubf`, `dos:exe`, `dos:cws` | 3,500 |
+| M17 | `m-rt` | The hosted runtime and the build to SHELL.EXE | What a DOS extender and a DPMI host are, the runtime contract, `rt`'s `_start`, panic handler and clean-up list, the heap over DPMI 0501h, INT 21h and the 32 KiB transfer buffer, the IRQ stubs, `DosBios` and `DosDisplay`; then the build: `dos-elf.json`, `-Zbuild-std`, `rust-lld` and `link.ld`, `elf2go32.py`, the stub from `stubify -g`, CWSDPMI beside it; and, as legacy, the first hosted skeleton (`core/`, `c/`, `coff2go32.py`) and the DXE3 module result | `spikes/d0-rust-dos/rt/src/*.rs`, `spikes/d0-rust-dos/dos-elf.json`, `spikes/d0-rust-dos/link.ld`, `tools/elf2go32.py`, `shell/dos/build.sh`, `shell/dos/check.sh`, `docs/D0-RUST-DOS.md`, `docs/TOOLCHAIN.md`, `docs/S1-DXE3.md` | `wheels`, `module`, `purerust`, `firstwindow` | `dos:stubr`, `dos:start`, `dos:heap`, `dos:dosw`, `dos:dpmi`, `dos:irq`, `dos:rthal`, `dos:exit`, `dos:target`, `dos:lld`, `dos:pack`, `dos:stubf`, `dos:exe`, `dos:cws` | 3,500 |
 
 ### Part VII. Making and checking
 
@@ -154,14 +154,14 @@ Keeping a chapter's status, glossary terms, try commands and figures inside its 
 - `load_chapters` reads `manual/` as well as `chapters/`, sets `section: manual` on every manual page, and refuses an id used in both. The log keeps its order, numbers and pager; manual pages get a pager in textbook order.
 - The contents page gains a section "The manual" after "The chapters": a table by part with each chapter's M-number, title, summary, a summary of its state rows (for example "9 verified, 2 not verified, 1 planned") and a "may be out of date" pill when it applies. Chapters listed in `plan.json` and not yet written show as "coming" rows, as `pages/coming.json` does for the log.
 - The site header gains "Manual", linking to `manual.html`: the two paths, the task index, the parts, and links to the appendices.
-- Manual pages do not have the three shelves and are left out of the front page's shelf counts, so nothing is counted twice; their honesty lives in the state table.
+- Manual pages do not have the three shelves and are left out of the front page's shelf counts, so nothing is counted twice; their honesty lives in the state table. The existing test that every real chapter has all three shelves is narrowed to `section: journey` pages, or it would refuse every manual chapter.
 - The gallery tiles of manual figures carry a "Manual" group, and a figure reused from the log (below) gets no second tile.
 
 ### Cross-links in both directions
 
 - **Manual to log.** The `log` front-matter list renders "Proved in the log". The existing `chapter:ID` links work across both groups.
 - **Log to manual.** Every log chapter named in some manual chapter's `log` list gets an "In the manual" aside after its evidence table, computed at build time. No log chapter file changes.
-- **Manual and anatomy.** The `anatomy` list (`desk:kernel`, `dos:rt` and so on) renders "On the anatomy pages" with links to the boxes; the anatomy pages' text tables gain a "Manual" column computed from the same lists. Box ids are anchors on the anatomy pages.
+- **Manual and anatomy.** The `anatomy` list (`desk:kernel`, `dos:rthal` and so on) renders "On the anatomy pages" with links to the boxes; the anatomy pages' text tables gain a "Manual" column computed from the same lists. Box ids are anchors on the anatomy pages.
 - **Glossary.** A `term:ID` link scheme points to the glossary entry; the first use of a term in a chapter may link it.
 
 ### State that stays current
@@ -175,7 +175,7 @@ state: built-verified
 evidence: pr:6, test:tests/native/expected.txt::heap, sym:kernel/src/heap.rs::Heap
 ```
 
-- `state` is `built-verified`, `built-unverified` or `planned`, plus `external` for what is not ours (SeaBIOS, CWSDPMI, DOS). The words match the anatomy pages' `verified`, `unverified` and `planned`, and the manual displays them the same way.
+- `state` is `built-verified`, `built-unverified` or `planned`, plus `external` for what is not ours (SeaBIOS, CWSDPMI, DOS). The words match the anatomy pages' `verified`, `unverified` and `planned`, and the manual displays them the same way, but the rule is stricter: an anatomy box is `verified` with any evidence (`repo:` alone will do), while a manual record is `built-verified` only with run evidence (below). A box such as `desk:emu`, whose only evidence is a document, is therefore `built-unverified` in the manual until a record cites a test or a merged pull request with CI passing, and the manual says why.
 - Evidence kinds: `pr:N`, `commit:HASH`, `repo:PATH`, `sym:PATH::NAME` (the name appears in the file), `test:PATH::NAME` (a test function or an expected-transcript line containing NAME), `doc:PATH#ANCHOR` (the heading exists).
 - A `built-*` record must have evidence, and a `built-verified` record must have at least one kind that shows something ran (`pr` merged with CI passing, `test`). As the roadmap already does, the generator shows a `built-verified` record whose pull request is not merged with CI passing as built-unverified, with the reason. A `planned` record must cite where it is planned (`doc:` or `repo:docs/...`).
 - Inline, `{{state.kernel.heap}}` renders the same tag as the table, so the prose cannot claim more than the data.
@@ -192,7 +192,7 @@ New tests in `tests/test_report.py`, each with a negative twin that must fail:
 - Every `repo:` path exists in the tree and every `sym:` name appears in its file; a renamed function fails the test.
 - Every status record has one of the four states, a `built-*` record has evidence, a `built-verified` one has run evidence, and every evidence item resolves.
 - Every `log` id is a log chapter, every `anatomy` reference is a box, every `term:` link is defined, each term is defined once and used at least once.
-- Every command in a `try` block starts with a script that exists in the repository or a known tool (`cargo`, `python3`, `docker`, `bun`).
+- Every command in a `try` block starts with a script that exists in the repository or a known tool (`cargo`, `python3`, `docker`, `bun`); when the tool is `python3` or `bun`, the script it runs must also exist, so `python3 tools/no-such.py` fails.
 - Every id in `plan.json` is unique, every manual file is in it, and both path orders list every written chapter exactly once.
 - A fixture build with one manual chapter: the contents section, the header link, the manual pager, the backlink on a log page, the "Manual" column on an anatomy table, and `check_site` passes.
 - The existing sidebar rules (a source line, five sentences at most) apply unchanged.
@@ -212,26 +212,26 @@ The README of the tool gains a "Updating the manual" section with these steps, b
 
 ### Reused from the log
 
-A manual chapter can draw any existing directive. Its `figures` record says `reuse: FIGURE-ID` instead of describing a new figure, so the gallery keeps one tile and the registry rules still see every drawing claimed.
+A manual chapter can draw any existing directive. Its `figures` record says `reuse: FIGURE-ID` instead of describing a new figure, so the gallery keeps one tile and the registry rules still see every drawing claimed. The table names each directive with its figure id in brackets: the id, not the directive's name, is what `reuse` takes (the `boot` explainer is the figure `boot-stepper`).
 
 | Explainer or figure (log chapter) | Driven by | Used in |
 |---|---|---|
-| `explainer boot` (`boot`) | The QEMU serial transcript and `tests/native/expected.txt` | M5, M4 |
-| `figure qemu` (`boot`) | The captured screen | M5 |
-| `explainer memchain` (`emulators`) | Captured E820 chains | M7, M4 |
-| `explainer biscall` and `figure bios-cost` (`bios`) | The n3 round trip and its measurements | M8 |
-| `explainer pit` (`hal`) | The driver's own test code | M10, M6 |
-| `figure hal-layers` (`hal`) | The HAL design | M9 |
-| `explainer input` (`input`) | A recorded transcript replayed through a replica of the decoder | M11 |
-| `explainer pipelines` (`oneevent`) | Both tracks' input paths | M11, M16 |
-| `explainer vga13`, `figure bootinfo`, the `shots` (`pixels`) | The register writes of mode 13h, the boot information layout, real screendumps | M12, M4 |
-| `explainer vbeattrs` (`browser`) | VBE mode attributes captured in the browser | M12 |
-| `explainer firstwindow`, `figure fw-digests` (`firstwindow`) | The sums, the damage lines and the result table | M13, M15, M21 |
-| `explainer pipeline` (`purerust`) | The sizes in `docs/D0-RUST-DOS.md` | M17 |
-| `explainer modules` (`module`) | The s1-dxe3 transcripts | M17 |
-| `figure std-sizes` (`std`) | The measured sizes | M19 |
-| `figure font-matrix`, `figure emoji-coverage` (`faces`, `pictures`) | The font tables and `.dem` headers | M18 |
-| `figure arch` (`pivot`), `figure anatomy-desk`, `figure anatomy-dos` | `docs/DIRECTION.md` and the anatomy JSON | M1, M16, M22 |
+| `explainer boot` [`boot-stepper`] (`boot`) | The QEMU serial transcript and `tests/native/expected.txt` | M5, M4 |
+| `figure qemu` [`qemu-boot`] (`boot`) | The captured screen | M5 |
+| `explainer memchain` [`memchain`] (`emulators`) | Captured E820 chains | M7, M4 |
+| `explainer biscall` [`biscall`] and `figure bios-cost` [`bios-cost`] (`bios`) | The n3 round trip and its measurements | M8 |
+| `explainer pit` [`pit-test`] (`hal`) | The driver's own test code | M10, M6 |
+| `figure hal-layers` [`hal-layers`] (`hal`) | The HAL design | M9 |
+| `explainer input` [`input-replay`] (`input`) | A recorded transcript replayed through a replica of the decoder | M11 |
+| `explainer pipelines` [`pipelines`] (`oneevent`) | Both tracks' input paths | M11, M16 |
+| `explainer vga13` [`vga13`], `figure bootinfo` [`boot-info`], the `shots` [`shot-d-*`, `shot-a-mode13h`] (`pixels`) | The register writes of mode 13h, the boot information layout, real screendumps | M12, M4 |
+| `explainer vbeattrs` [`vbe-attrs`] (`browser`) | VBE mode attributes captured in the browser | M12 |
+| `explainer firstwindow` [`first-window-steps`], `figure fw-digests` [`first-window-digests`] (`firstwindow`) | The sums, the damage lines and the result table | M13, M15, M21 |
+| `explainer pipeline` [`link-and-pack`] (`purerust`) | The sizes in `docs/D0-RUST-DOS.md` | M17 |
+| `explainer modules` [`modules`] (`module`) | The s1-dxe3 transcripts | M17 |
+| `figure std-sizes` [`std-sizes`] (`std`) | The measured sizes | M19 |
+| `figure font-matrix` [`font-matrix`], `figure emoji-coverage` [`emoji-coverage`] (`faces`, `pictures`) | The font tables and `.dem` headers | M18 |
+| `figure arch` [`architecture`] (`pivot`, `path`), `figure anatomy-desk` [`anatomy-desk`], `figure anatomy-dos` [`anatomy-dos`] | `docs/DIRECTION.md` and the anatomy JSON | M1, M16, M22 |
 
 ### New, in order of value
 
@@ -247,7 +247,7 @@ Each is driven by files in the repository, refuses data that disagrees with the 
 | X6 | **The crate graph.** Every crate in `hal/` and `shell/` and their path dependencies, coloured by kind (HAL, driver, platform, core), each node linked to its chapter | M1, M9, M13 | The `Cargo.toml` files | A cycle, or a core crate that depends on a driver's register-level API or on `desk-present` |
 | X7 | **A glyph out of a `.DFN`.** The header of `fonts/generated/ui.dfn` field by field, then one glyph's bitmap row by row | M14, M18 | The file itself, read with a Python replica of the parser in `shell/font/src/lib.rs` | A header that disagrees with `docs/FORMATS.md` or a glyph count that disagrees with the font tables |
 | X8 | **Three targets compared.** The fields of the three target files side by side, with the differences marked and why | M19 | The JSON files | Nothing to refuse; the table is the files |
-| X9 | **The negative checks.** Every deliberate failure (the `TestMode` values `DivideError`, `GeneralProtection`, `InvalidOpcode`, `Panic`, `Hang`, `NoTick`, `InputMasked` and `ShellCorrupt` in `kernel/src/main.rs`, and the deliberately wrong `tests/native/wrong-expected.txt`) with the test mode that causes it and the lines that must appear | M5, M21 | `tests/native/expected-*.txt` and `tools/native-test.sh` | An expected file with no test mode that runs it |
+| X9 | **The negative checks.** Every deliberate failure (the `TestMode` values `DivideError`, `GeneralProtection`, `InvalidOpcode`, `Panic`, `Hang`, `NoTick`, `InputMasked` and `ShellCorrupt` in `kernel/src/main.rs`, and the deliberately wrong `tests/native/wrong-expected.txt`) with the test mode that causes it and what proves it failed: the lines that must appear where there is an expected file, and for `Hang` (no expected file; the watchdog ends it with exit 124) and `ShellCorrupt` (no expected file; the screendump check rejects it) the check `tools/native-test.sh` makes instead | M5, M21 | `tests/native/expected-*.txt` and `tools/native-test.sh` | An expected file with no test mode that runs it, or a negative mode that `tools/native-test.sh` does not run |
 
 X1 to X5 serve the textbook path most and come first. A wish list, not planned: a v86 boot of the real image in the page, which would need a large dependency and a decision about hosting a disk image.
 
@@ -281,14 +281,14 @@ Each task is one pull request into `main` (the archive's chapters land the same 
 
 - **Files.** `tools/progress-report/manual.py` (new), `build.py`, `mdlite.py` (the `sym:` and `term:` schemes, the `{{state.ID}}` placeholders, the `status`, `glossary` and `try` blocks), `figures.py` (`reuse`), `templates/site.css` and `site.js` (the state tags, the "Where next" box, the pill), `manual/plan.json` (all 22 chapters and four appendices, both orders, the task index), `manual/explainers/__init__.py` (discovery), `tests/test_report.py` and `tests/fixture/` (a manual chapter), `README.md` ("Updating the manual"), and the "How this archive is made" chapter (one paragraph on the manual).
 - **Builds.** Everything in [How it plugs into the generator](#how-it-plugs-into-the-generator): loading, the contents section with coming rows, the header link, `manual.html`, the glossary, maps, commands and sources pages as generated shells (empty until chapters exist), the manual pager, the backlinks on log and anatomy pages, the state tables and downgrades, staleness and `--manual-report`.
-- **Acceptance.** All the tests listed under [Tests](#tests) pass, and each negative twin fails for the stated reason; the real site builds with `--check` and shows 26 "coming" rows; no log page changes except the computed "In the manual" aside (none yet, as no chapter is written); `tools/check.sh`'s generator step passes.
+- **Acceptance.** All the tests listed under [Tests](#tests) pass, and each negative twin fails for the stated reason; the real site builds with `--check` and shows 26 "coming" rows; no log page changes except the computed "In the manual" aside (none yet, as no chapter is written) and the one paragraph added by hand to "How this archive is made"; `tools/check.sh`'s generator step passes.
 - **Read.** `tools/progress-report/README.md`, `build.py`, `mdlite.py`, `figures.py`, `explainers_fw.py` (the anatomy validation to copy), `tests/test_report.py`.
 
 ### W2. M1 The map, and M2 The processor
 
 - **Files.** `manual/M01-map.md`, `manual/M02-cpu.md`.
 - **Read.** `docs/DIRECTION.md`, `docs/HAL.md` ("Decisions", "The four kinds of code"), `docs/FIRST-WINDOW.md` ("Where it sits"), both anatomy chapters and their JSON; `docs/NATIVE-BOOT.md`, `boot/stage2.asm`, `kernel/src/gdt.rs`, `kernel/src/fpu.rs`, `docs/N3-BIOS-PATH.md` ("The switching sequence"); for sidebars, a primary or encyclopaedic source on the 8086 wrap-around and the AT's A20 gate.
-- **Acceptance.** The common checks; M1's status block covers every layer of `anatomy-desk.json` with the same state; M2's worked example uses the loader's own A20 test addresses; each glossary term M2 introduces (segment, offset, linear address, A20, descriptor, selector, GDT, CR0, protected mode, real mode, ring) is in its glossary block.
+- **Acceptance.** The common checks; M1's status block covers every layer of `anatomy-desk.json` with the same state, except where the manual's stricter rule for `built-verified` lowers a box to `built-unverified`, which the record explains; M2's worked example uses the loader's own A20 test addresses; each glossary term M2 introduces (segment, offset, linear address, A20, descriptor, selector, GDT, CR0, protected mode, real mode, ring) is in its glossary block.
 
 ### W3. M4 The boot sector and loader, and M5 The boot end to end
 
@@ -383,14 +383,14 @@ Each task is one pull request into `main` (the archive's chapters land the same 
 - **Technical accuracy.** Writers summarising documents can be wrong in small ways that read convincingly. Mitigations: every mechanism names the file that implements it, writers read the code, the worked examples use values that tests or transcripts contain, and the review of each pull request checks claims against code. The exemplar wave (W3) is reviewed by the owner before the rest are written.
 - **Accuracy of history.** Sidebars are where invented detail creeps in. The rules: the writer fetches and reads the source, cites it, states nothing the source does not, hedges or drops what is uncertain, and keeps sidebars apart from evidence. The tests check form, not truth; the review checks truth.
 - **Duplication with `docs/`.** The manual could become a second copy of the design documents that drifts from them. It teaches and links; it does not copy tables, and where it summarises a result it names the document section.
-- **Size.** About 26 pages and 60,000 words, plus new figures. The publish limits are 255 files and 64 MB per publish; the report has about 50 media files and 25 pages now, so the manual fits in one publish but the margin narrows. The README already allows a larger set to go up over several publishes to the same address. Each page stays under 16 MB easily.
+- **Size.** About 26 pages and 60,000 words, plus new figures. The publish limits are 255 files and 64 MB per publish; an offline build of `main` at `44f0265` publishes 80 files (25 chapter pages, 50 media files and the rest), about 3.3 MB, so the manual fits in one publish but the margin narrows. The Artifact tool lets a larger set go up over several publishes to the same address; the README's publishing recipe does not cover that yet and would gain the step if the set outgrows one publish. Each page stays under 16 MB easily.
 - **Writer consistency.** Twelve writing tasks by different agents could produce twelve styles. The template, the exemplar pair and the editorial pass hold it together.
 - **Voice.** A textbook in the archivist's first person would read oddly; a manual with none of his care would lose what makes the archive trustworthy. The default splits them (see the questions).
 
 ## Out of scope
 
 - Claims about real hardware. Nothing has run on a real PC, and the manual says so wherever it matters.
-- Rewriting or restructuring `docs/`; changing log chapters by hand (their manual asides are computed).
+- Rewriting or restructuring `docs/`; changing log chapters by hand (their manual asides are computed), apart from W1's one paragraph on the manual in "How this archive is made".
 - API reference generated from the code (`rustdoc`); the manual links to sources instead.
 - A manual for apps or the SDK, which do not exist; M22 says what is planned.
 - A separate site, search, print or PDF output, translations.
