@@ -7,8 +7,16 @@ name = "desk-gfx"
 version = "0.0.0"
 dependencies = [
  "desk-hal",
+ "desk-vga",
 ]
 
 [[package]]
 name = "desk-hal"
 version = "0.0.0"
+
+[[package]]
+name = "desk-vga"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]

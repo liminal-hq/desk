@@ -11,3 +11,6 @@ desk-hal.workspace = true
 
 [features]
 std = ["desk-hal/std"]
+
+[dev-dependencies]
+desk-vga = { path = "../../hal/drivers/vga" }
