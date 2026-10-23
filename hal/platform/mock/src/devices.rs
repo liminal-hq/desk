@@ -100,7 +100,8 @@ pub struct PitChannel {
     read_high_next: bool,
 }
 
-/// An 8254 at 0x40..=0x43. Counters do not run: a latch command (or a read) returns `count`, which a test sets.
+/// An 8254 at 0x40..=0x43. Counters do not run: a latch command (or a read) returns `count`, which a test sets. The low/high read
+/// sequence is reset only by a control word, as on the chip.
 #[derive(Debug, Default)]
 pub struct Pit8254 {
     pub channels: [PitChannel; 3],
@@ -139,8 +140,11 @@ impl Device for Pit8254 {
             }
             let ch = &mut self.channels[sel];
             if access == 0 {
-                ch.latched = Some(self.count);
-                ch.read_high_next = false;
+                // As on the chip: a latch while a latched value is still unread is ignored, and only a control word resets the
+                // low/high read sequence, so a driver that reads one byte too few stays out of step here too.
+                if ch.latched.is_none() {
+                    ch.latched = Some(self.count);
+                }
             } else {
                 *ch = PitChannel {
                     access,
@@ -160,5 +164,40 @@ impl Device for Pit8254 {
                 Some(lo) => (ch.reload, ch.loaded) = (u16::from(lo) | (u16::from(v) << 8), true),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_8254_read_sequence_survives_a_latch() {
+        let mut pit = Pit8254 {
+            count: 0x1234,
+            ..Pit8254::default()
+        };
+        let latch = |pit: &mut Pit8254| pit.write(0x43, Width::Byte, 0x00);
+        pit.write(0x43, Width::Byte, 0x34); // channel 0, low then high
+        latch(&mut pit);
+        assert_eq!(pit.read(0x40, Width::Byte), 0x34, "low byte first");
+        pit.count = 0x5678;
+        latch(&mut pit); // ignored: the latched value is not fully read
+        assert_eq!(pit.read(0x40, Width::Byte), 0x12, "then the high byte of the first latch");
+
+        // A driver that reads one byte too few stays out of step: after its next latch, its "low" read is a high byte.
+        latch(&mut pit);
+        assert_eq!(pit.read(0x40, Width::Byte), 0x78);
+        latch(&mut pit);
+        assert_eq!(
+            pit.read(0x40, Width::Byte),
+            0x56,
+            "the second latch was ignored and the sequence did not restart"
+        );
+
+        pit.write(0x43, Width::Byte, 0x34); // a control word resets the sequence
+        pit.count = 0x9ABC;
+        latch(&mut pit);
+        assert_eq!((pit.read(0x40, Width::Byte), pit.read(0x40, Width::Byte)), (0xBC, 0x9A));
     }
 }

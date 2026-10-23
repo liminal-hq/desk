@@ -41,7 +41,11 @@ pub const fn divisor_for(hz: u32) -> Result<u32, HalError> {
     if hz == 0 {
         return Err(HalError::InvalidArgument);
     }
-    let divisor = (INPUT_HZ + hz / 2) / hz;
+    check_divisor((INPUT_HZ + hz / 2) / hz)
+}
+
+/// The divisor if the chip can count it in mode 2 (2..=65,536), `InvalidArgument` otherwise. The one copy of the range rule.
+pub const fn check_divisor(divisor: u32) -> Result<u32, HalError> {
     if divisor < MIN_DIVISOR || divisor > MAX_DIVISOR {
         return Err(HalError::InvalidArgument);
     }
@@ -70,10 +74,7 @@ impl<P: PortIo> Pit<P> {
 
     /// Programs channel 0 as a rate generator for the divisor (2..=65,536; 65,536 is written as 0).
     pub fn program_divisor(&self, divisor: u32) -> Result<(), HalError> {
-        if !(MIN_DIVISOR..=MAX_DIVISOR).contains(&divisor) {
-            return Err(HalError::InvalidArgument);
-        }
-        let reload = (divisor % MAX_DIVISOR) as u16;
+        let reload = (check_divisor(divisor)? % MAX_DIVISOR) as u16;
         self.ports.outb(COMMAND, CMD_CH0_LOHI_RATE);
         self.ports.outb(CHANNEL0, reload as u8);
         self.ports.outb(CHANNEL0, (reload >> 8) as u8);
@@ -84,6 +85,14 @@ impl<P: PortIo> Pit<P> {
     pub fn program_periodic(&self, hz: u32) -> Result<u32, HalError> {
         let divisor = divisor_for(hz)?;
         self.program_divisor(divisor)?;
+        Ok(divisor)
+    }
+
+    /// Programs channel 0 for about `hz` and records the divisor in `clock` in the same step, so the clock's rate cannot be
+    /// forgotten or drift from the chip's. Returns the divisor. Writes and records nothing if `hz` is out of range.
+    pub fn program_clock(&self, clock: &PitClock, hz: u32) -> Result<u32, HalError> {
+        let divisor = self.program_periodic(hz)?;
+        clock.set_divisor(divisor)?;
         Ok(divisor)
     }
 
@@ -132,10 +141,8 @@ impl PitClock {
     /// Records the divisor channel 0 was programmed with (the BIOS rate is `MAX_DIVISOR`), so the clock reports the real rate.
     /// Call before registering the handler. `InvalidArgument`, and nothing recorded, outside `MIN_DIVISOR..=MAX_DIVISOR`.
     pub fn set_divisor(&self, divisor: u32) -> Result<(), HalError> {
-        if !(MIN_DIVISOR..=MAX_DIVISOR).contains(&divisor) {
-            return Err(HalError::InvalidArgument);
-        }
-        self.millihertz.store(actual_millihertz(divisor), Ordering::Relaxed);
+        self.millihertz
+            .store(actual_millihertz(check_divisor(divisor)?), Ordering::Relaxed);
         Ok(())
     }
 }
@@ -247,8 +254,10 @@ mod tests {
         static CLOCK: PitClock = PitClock::new();
         let bus = MockPortBus::new();
         let irq = MockIrq::new();
-        let divisor = Pit::new(&bus).program_periodic(100).unwrap();
-        CLOCK.set_divisor(divisor).unwrap();
+        assert_eq!(CLOCK.millihertz(), 0, "not running yet");
+        assert_eq!(Pit::new(&bus).program_clock(&CLOCK, 18), Err(HalError::InvalidArgument));
+        assert_eq!(CLOCK.millihertz(), 0, "a refused rate records nothing");
+        assert_eq!(Pit::new(&bus).program_clock(&CLOCK, 100), Ok(11_932));
         assert_eq!(CLOCK.millihertz(), 99_998);
         irq.register(Irq::TIMER, IrqHandler::from_shared(CLOCK.counter()), Chain::None)
             .unwrap();
