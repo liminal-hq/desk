@@ -1,0 +1,19 @@
+# The shared core's first piece: the shell's crates (graphics, fonts, presenters, widgets, window manager and the shell itself), as one workspace.
+#
+# Every library crate here is `no_std` + `alloc` and builds for three places: the host, where `cargo test` runs the host tests and the
+# goldens; the native kernel's target (`kernel/i486-desk-none.json`); and the pure-Rust DOS target (`spikes/d0-rust-dos/dos-elf.json`).
+# The cross builds take `--target` and `-Zbuild-std` on the command line (see `tools/check.sh`), so the default target stays the host's.
+# `dos/` is the hosted program and has its own workspace. See `docs/FIRST-WINDOW.md`.
+[workspace]
+members = ["gfx"]
+exclude = ["dos"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[workspace.dependencies]
+desk-hal = { path = "../hal/hal" }
