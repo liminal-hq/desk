@@ -700,6 +700,13 @@ class ManualCheckTests(unittest.TestCase):
         self.assertRefused(lambda t: t.replace("pr:1, repo:AGENTS.md", "pr:99, repo:AGENTS.md"), "not among the pull requests")
         self.assertRefused(lambda t: t.replace("id: fix.unrun", "id: fix.heap"), "duplicate id")
 
+    def test_evidence_with_spaces_in_the_name_renders_as_a_link_and_the_name(self):
+        ctx = mdlite.Ctx()
+        html = mdlite.inline(manual.evidence_md([("test", "tests/native/expected.txt::boot complete"), ("sym", "boot/stage1.asm::read_sectors")], FAKE_DATA), ctx)
+        self.assertNotIn("](", html)
+        self.assertIn("<code>boot complete</code>", html)
+        self.assertIn('href="https://github.com/liminal-hq/desk/blob/main/tests/native/expected.txt"', html)
+
     def test_a_verified_claim_without_a_passing_merged_pull_request_is_shown_as_unverified(self):
         d, plan, chapters = manual_copy()
         recs = {r["id"]: r for r in chapters[0]["status"]}
@@ -882,6 +889,19 @@ class ManualSiteTests(unittest.TestCase):
         gallery = rd(os.path.join(site_dir, "gallery.html"))
         self.assertEqual(gallery.count('class="tile"'), 1, "a reused figure gets no second tile")
         self.assertIn('id="fig-m1-arch"', rd(os.path.join(site_dir, "m-one.html")))
+
+    def test_a_manual_figure_of_its_own_gets_a_gallery_tile_with_a_preview_and_the_group_filter(self):
+        out, ch = broken_site(GOOD)
+        own = lambda t: t.replace("## Worked example\n", "## Worked example\n\n<!-- figure arch -->\n") + (
+            "\n```figures\nid: m1-own\nkind: diagram\ntrack: native\ntitle: The manual's own diagram\nalt: A layered diagram drawn for the manual from the architecture data.\ncaption: Drawn for the manual.\nat: figure arch\nthumb: svg\n```\n")
+        site_dir, chapters, site = self.build_site(own, chapters_dir=ch)
+        self.assertEqual(build.check_site(site_dir, [c["id"] for c in chapters]), [])
+        gallery = rd(os.path.join(site_dir, "gallery.html"))
+        self.assertEqual(gallery.count('<li class="tile"'), 2)
+        self.assertIn('data-section="manual"', gallery)
+        self.assertIn('id="section-manual"', gallery)
+        self.assertIn("Manual M1", gallery)
+        self.assertIn("<svg", gallery.split('data-section="manual"')[1].split("</li>")[0], "the preview is drawn from the rendered figure")
 
     def test_a_reuse_that_names_nothing_or_draws_something_else_is_refused(self):
         out, ch = broken_site(GOOD)
