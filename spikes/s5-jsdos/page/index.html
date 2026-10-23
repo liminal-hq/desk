@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk s5 js-dos</title>
+<link rel="stylesheet" href="vendor/js-dos/js-dos.css">
+<style>
+  :root { color-scheme: light dark; --bg: #f4f1ea; --fg: #1d1b16; --rule: #c9c3b4; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17160f; --fg: #ece8da; --rule: #4a463a; } }
+  body { margin: 0; padding: 0 16px 24px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 52rem; margin: 0 auto; }
+  h1 { font-size: 1.25rem; }
+  #dos { width: 100%; max-width: 640px; aspect-ratio: 4 / 3; border: 1px solid var(--rule); }
+  pre { white-space: pre-wrap; border: 1px solid var(--rule); padding: 8px; min-height: 4rem; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Desk s5: DOS programs under js-dos</h1>
+  <p>Pick a bundle: <span id="list"></span>. Add <code>?backend=dosboxX</code> for the DOSBox-X build. js-dos is GPL-2.0 and is served from <a href="vendor/js-dos/PROVENANCE.txt">vendor/js-dos</a> with its licence beside it.</p>
+  <div id="dos"></div>
+  <pre id="log">Idle.</pre>
+</main>
+<script src="vendor/js-dos/emulators/emulators.js"></script>
+<script src="vendor/js-dos/js-dos.js"></script>
+<script src="harness.js"></script>
+</body>
+</html>

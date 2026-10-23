@@ -1,6 +1,7 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
-# and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
+# and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, the s5-jsdos probe lints, then the
+# native boot test under QEMU. JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -72,7 +73,17 @@ spikes/s1-dxe3/run.sh
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
 spikes/d0-rust-dos/check.sh
 
+step "Spike s5-jsdos: Rust format and lints for the probes"
+(cd spikes/s5-jsdos/probes && cargo fmt --check)
+(cd spikes/s5-jsdos/probes && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
+
+# Opt-in: needs the network, Node and a Chromium, none of which the CI image carries. See docs/S5-JSDOS.md.
+if [ "${JSDOS:-}" = 1 ]; then
+  step "Spike s5-jsdos: the DOS programs in js-dos, in headless Chromium"
+  tools/check-jsdos.sh
+fi
 
 printf '\nAll checks passed.\n'
