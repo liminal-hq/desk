@@ -25,6 +25,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md) | Spike n3: a real BIOS path for the native kernel — the options (real-mode trampoline, V86, an x86 emulator, the loader), the low-memory map, the exact mode-switch sequence with its descriptors, the PIC, timer, keyboard and NMI handling, the API and its contract, VBE and the way back to text on three QEMU cards (which closes spike D's Cirrus finding), INT 13h, E820 and the RTC through the BIOS, what paging and V86 would need, and the results on QEMU and Bochs |
 | [`B-DOS-INPUT.md`](B-DOS-INPUT.md) | Spike B result: the keyboard on a protected-mode IRQ 1 handler and the mouse on INT 33h from Rust on the DOS runtime, the shared event contract with the native kernel, the DOSBox `AUTOTYPE` and Xvfb tests, what the BIOS handler and real drivers may do differently, and HAL feedback |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
+| [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) | Spike G: the native image in Bochs (a 486 build, three BIOS images) and 86Box (an AMIBIOS 486 board), how to run them in Docker, the results table, the loader bug they found and what is not verified |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
 

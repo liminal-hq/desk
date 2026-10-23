@@ -34,6 +34,7 @@ pub fn source_name(source: u32) -> &'static str {
     match source {
         1 => "E820",
         2 => "E801",
+        3 => "INT 15h AH=88",
         _ => "nothing",
     }
 }

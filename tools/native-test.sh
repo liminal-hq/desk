@@ -7,8 +7,8 @@
 #
 # usage: tools/native-test.sh
 #
-# Positive: the normal boot, plus three loader variants (A20 through the fast gate, A20 through the keyboard controller, and the
-# E801 memory map fallback) that exercise code a normal QEMU boot would skip. Negative: a wrong expected transcript must be
+# Positive: the normal boot, plus four loader variants (A20 through the fast gate, A20 through the keyboard controller, and the
+# E801 and AH=88 memory map fallbacks) that exercise code a normal QEMU boot would skip. Negative: a wrong expected transcript must be
 # rejected; a divide error, a general protection fault, an invalid opcode, a panic and a masked timer must each end the run with
 # a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Keyboard and mouse: input injected through
 # the QEMU monitor must appear decoded in the transcript, and the negative variants (a missing event, a masked IRQ 1, a kernel
@@ -17,11 +17,20 @@
 # monitor are checked against reference checksums; a wrong reference, a cursor that did not move, a movement outside the cursor's
 # rectangle and a loader that succeeded where it was told to fail must each be rejected. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
+#
+# DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
+# take the same arguments and return the same exit statuses as tools/native-run.sh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if ! command -v qemu-system-i386 > /dev/null && ! command -v docker > /dev/null; then
-  echo "native: SKIPPED — neither qemu-system-i386 nor docker is installed, so the image cannot be booted"
+runner=${DESK_NATIVE_RUNNER:-tools/native-run.sh}
+if [ "$runner" = tools/native-run.sh ]; then
+  if ! command -v qemu-system-i386 > /dev/null && ! command -v docker > /dev/null; then
+    echo "native: SKIPPED — neither qemu-system-i386 nor docker is installed, so the image cannot be booted"
+    exit 0
+  fi
+elif ! command -v docker > /dev/null; then
+  echo "native: SKIPPED — docker is not installed, so $runner cannot run its emulator"
   exit 0
 fi
 
@@ -32,7 +41,7 @@ fail() { echo "native: FAILED — $*" >&2; exit 1; }
 # run NAME IMAGE EXPECTED_EXIT EXPECTED_TRANSCRIPT [TIMEOUT]: boots, checks the exit status and compares the transcript.
 run() {
   local name=$1 image=$2 want=$3 expected=$4 timeout=${5:-20} got=0
-  tools/native-run.sh --timeout "$timeout" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  "$runner" --timeout "$timeout" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
   [ "$got" = "$want" ] || { cat "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected $want"; }
   if [ -n "$expected" ]; then
     python3 -I tools/native-check.py "$expected" "$work/$name.txt" || fail "$name: transcript differs"
@@ -56,7 +65,12 @@ tools/native-image.sh --out dist/native-e801.img > /dev/null
 sed -e 's|memory map from E820, entries: {N:1..32}|memory map from E801, entries: {N:2..3}|' \
   -e 's|memory map from E820 ({N:1..32} entries)|memory map from E801 ({N:2..3} entries)|' tests/native/expected.txt > "$work/expected-e801.txt"
 run e801 dist/native-e801.img 0 "$work/expected-e801.txt"
-rm -f dist/native-a20-fast.img dist/native-a20-keyboard.img dist/native-e801.img
+tools/native-build.sh --nasm-flags "-DNO_E820 -DNO_E801"
+tools/native-image.sh --out dist/native-e88.img > /dev/null
+sed -e 's|memory map from E820, entries: {N:1..32}|memory map from INT 15h AH=88, entries: 2|' \
+  -e 's|memory map from E820 ({N:1..32} entries)|memory map from INT 15h AH=88 (2 entries)|' tests/native/expected.txt > "$work/expected-e88.txt"
+run e88 dist/native-e88.img 0 "$work/expected-e88.txt"
+rm -f dist/native-a20-fast.img dist/native-a20-keyboard.img dist/native-e801.img dist/native-e88.img
 
 echo "== Normal boot"
 tools/native-build.sh
