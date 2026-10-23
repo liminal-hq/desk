@@ -21,6 +21,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`HAL.md`](HAL.md) | Spike H: the hardware abstraction layer and the shared drivers, the platforms, the concurrency and `unsafe` rules, the migration plan and the contracts for the next spikes; the reference crates are in `hal/` |
 | [`A-VGA-VBE.md`](A-VGA-VBE.md) | Spike A result: VGA mode 13h and 12h by register programming, the DAC and fades, VBE 2.0 through a `Bios` trait, the DOS platform and the program that proves them in DOSBox, with screenshots, register tables and what native must implement |
 | [`C-INPUT.md`](C-INPUT.md) | Spike C: the keyboard and PS/2 mouse in the native kernel, the 8042 tables and set-up sequences, the event contracts, the interrupt hand-off, the QEMU input tests and what real hardware may do differently |
+| [`B-DOS-INPUT.md`](B-DOS-INPUT.md) | Spike B result: the keyboard on a protected-mode IRQ 1 handler and the mouse on INT 33h from Rust on the DOS runtime, the shared event contract with the native kernel, the DOSBox `AUTOTYPE` and Xvfb tests, what the BIOS handler and real drivers may do differently, and HAL feedback |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
