@@ -1,0 +1,11 @@
+[
+ {"what": "Real hardware.", "why": "Nothing in the archive has run on a real 486 or any other physical PC. Every boot and every program ran in QEMU (`-cpu 486`) or headless DOSBox Staging."},
+ {"what": "86Box and Bochs.", "why": "The native track names them as test targets in `docs/DIRECTION.md`; neither has booted the image."},
+ {"what": "Other BIOSes and boot media.", "why": "Only QEMU's SeaBIOS and a floppy image were tried. IDE and hard-disk boot were not (PR #6)."},
+ {"what": "Other DPMI hosts and memory managers.", "why": "Only CWSDPMI under DOSBox's own DOS. EMM386, QEMM and a Windows 9x DOS box were not tried (PRs #3, #4 and #7)."},
+ {"what": "Windows 3.1 and friends.", "why": "The fonts follow the era's TrueType rules, but Windows 3.1, 95, NT and OS/2 were not run. Neither were GDI, DirectWrite, macOS, Safari or Firefox (PR #1)."},
+ {"what": "The fonts on a DOS screen.", "why": "The `.DFN` and `.DEM` files were checked against FreeType and a decoder in the tests; no DOS program has drawn them yet."},
+ {"what": "Sound.", "why": "Audio cannot be checked headless, and nothing here makes any."},
+ {"what": "Stack overflow in a module.", "why": "CWSDPMI aborts the whole program before any signal handler runs, so it is not recoverable (PR #4). A null write was recovered only under QEMU with FreeDOS (by hand, not in CI)."},
+ {"what": "The published site's own clicks.", "why": "The generator was tested by serving the files locally. Publishing needs the owner's sign-in, so the live page's controls have not been clicked by the author."}
+]

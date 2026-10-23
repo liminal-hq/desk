@@ -1,0 +1,11 @@
+[package]
+name = "desk-hal"
+description = "Desk's hardware abstraction layer: the traits and types drivers are written against"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Only for host builds (tests, a bench, host tools): adds `std::error::Error` for the error types. Never on for a DOS or kernel build.
+std = []

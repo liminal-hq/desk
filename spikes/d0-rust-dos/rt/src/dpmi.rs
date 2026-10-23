@@ -280,3 +280,15 @@ pub fn simulate_int(int: u8, regs: &mut RealRegs) -> Result<(), Error> {
     let p = regs as *mut RealRegs as usize as u32;
     call(0x0300, int as u32, 0, 0, 0, p).map(|_| ())
 }
+
+/// DPMI 0800h: maps `size` bytes of device memory at the physical address `phys` (above 1 MiB: a VBE linear frame buffer) and
+/// returns the linear address to reach it at. Reach it with `linear_to_ptr`.
+pub fn map_physical(phys: u32, size: u32) -> Result<u32, Error> {
+    let r = call(0x0800, phys >> 16, phys & 0xFFFF, 0, size >> 16, size & 0xFFFF)?;
+    Ok((r.ebx << 16) | (r.ecx & 0xFFFF))
+}
+
+/// DPMI 0801h: releases a mapping made by `map_physical`, by its linear address.
+pub fn unmap_physical(linear: u32) -> Result<(), Error> {
+    call(0x0801, linear >> 16, linear & 0xFFFF, 0, 0, 0).map(|_| ())
+}

@@ -1,0 +1,16 @@
+# Compare-and-swap is not allowed in the shared crates. DOSBox with `cputype = 486` rejects `CMPXCHG` (docs/D0-RUST-DOS.md), and
+# the read-modify-write operations below compile to a `CMPXCHG` loop on x86 when their result is used. Allowed: load, store, swap
+# (`xchg`) and fetch_add/fetch_sub (`lock xadd`). See docs/HAL.md, "Concurrency". `Atomic` is the generic type behind `AtomicBool`,
+# `AtomicU32`, `AtomicUsize` and `AtomicPtr`, so one entry per method covers them all.
+disallowed-methods = [
+  { path = "core::sync::atomic::Atomic::compare_exchange", reason = "CMPXCHG, which DOSBox's cputype = 486 rejects" },
+  { path = "core::sync::atomic::Atomic::compare_exchange_weak", reason = "CMPXCHG, which DOSBox's cputype = 486 rejects" },
+  { path = "core::sync::atomic::Atomic::fetch_update", reason = "a CMPXCHG loop" },
+  { path = "core::sync::atomic::Atomic::fetch_and", reason = "a CMPXCHG loop when the result is used" },
+  { path = "core::sync::atomic::Atomic::fetch_or", reason = "a CMPXCHG loop when the result is used" },
+  { path = "core::sync::atomic::Atomic::fetch_xor", reason = "a CMPXCHG loop when the result is used" },
+  { path = "core::sync::atomic::Atomic::fetch_nand", reason = "a CMPXCHG loop" },
+  { path = "core::sync::atomic::Atomic::fetch_not", reason = "a CMPXCHG loop when the result is used" },
+  { path = "core::sync::atomic::Atomic::fetch_max", reason = "a CMPXCHG loop" },
+  { path = "core::sync::atomic::Atomic::fetch_min", reason = "a CMPXCHG loop" },
+]

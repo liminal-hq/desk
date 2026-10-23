@@ -1,0 +1,16 @@
+[package]
+name = "vgavbe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike A: VGA mode 13h and 12h and VBE 2.0 from Rust on the pure-Rust DOS runtime, through desk-vga"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt" }
+desk-hal = { path = "../../../hal/hal" }
+desk-vga = { path = "../../../hal/drivers/vga" }
+
+[[bin]]
+name = "vgavbe"
+path = "src/main.rs"

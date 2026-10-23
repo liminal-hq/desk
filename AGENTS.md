@@ -125,7 +125,7 @@ Add labels to every PR when it is created and keep them accurate as scope change
 
 ## Local Tooling
 
-The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **NASM** and **QEMU** (`-cpu 486`), with 86Box and Bochs to follow. `docs/TOOLCHAIN.md` describes the hosted pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
+The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **NASM** and **QEMU** (`-cpu 486`), with Bochs and 86Box as opt-in Docker runs (`docs/NATIVE-EMULATORS.md`). `docs/TOOLCHAIN.md` describes the hosted pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
 
 ```bash
 tools/setup.sh                           # once: Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI in vendor/
@@ -145,7 +145,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - **C (`c/`, `launcher/`):** C99 for DJGPP, one concern per file, `volatile` for anything an interrupt handler touches, no allocation in an interrupt handler.
 - **DOS limits (hosted track):** file names are 8.3; every hooked interrupt vector (IRQ 0, IRQ 1, the mouse callback) is restored on exit and before a handoff; the screen goes back to text mode before a handoff.
 - **Rendering:** the Desk owns the palette. Fades and dims go through the DAC, never through the frame buffer; per-pixel work stays free of floating point.
-- **The HAL:** the OS-independent core must not call DOS or DJGPP APIs directly. It reaches the machine only through the hardware abstraction layer, and each track implements that layer. DOS, BIOS and DJGPP calls belong to the hosted track's code (`c/`, `launcher/`).
+- **The HAL:** the OS-independent core must not call DOS or DJGPP APIs directly. It reaches the machine only through the hardware abstraction layer, and each track implements that layer. DOS, BIOS and DJGPP calls belong to the hosted track's code (`c/`, `launcher/`, the DOS runtime). Drivers in `hal/drivers/` are written once against the HAL's traits, contain no `unsafe`, and never use compare-and-swap (`hal/clippy.toml`; `docs/HAL.md`).
 - No speculative scaffolding: a directory, crate or abstraction arrives with the code that needs it.
 
 ## Testing
@@ -169,6 +169,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `c/` — the hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit
 - `launcher/` — `DESK.COM`, the hosted track's real-mode launcher
 - `sdk/` — the app interface: the C header and a Rust wrapper
+- `hal/` — the shared hardware abstraction layer: one Cargo workspace of `no_std` crates (the traits, drivers written once against them, and the mock platform their host tests use), built for both tracks' targets (`docs/HAL.md`)
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
 - `tools/` — repository checks, the DOS build pipeline (`setup`, `fetch-tools`, `build`, `coff2go32`, `dosrun`) and scripts
@@ -177,7 +178,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for the native HAL, apps, the installer and the icons are created when their milestone starts. Spike 1 settled the layout of `apps/`: one Cargo workspace for the DOS target with a crate per app, built into `.DXE` modules by a script in `tools/` that is still to be written (`docs/S1-DXE3.md`).
+Directories for apps, the installer and the icons are created when their milestone starts; the real platform implementations of the HAL live with their environment (`rt` for DOS, `kernel/` natively); `hal/` holds only what builds for every target, including the test platform `hal/platform/mock`. Spike 1 settled the layout of `apps/`: one Cargo workspace for the DOS target with a crate per app, built into `.DXE` modules by a script in `tools/` that is still to be written (`docs/S1-DXE3.md`).
 
 ## Licence and Copyright
 

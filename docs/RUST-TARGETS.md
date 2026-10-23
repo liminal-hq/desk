@@ -1,6 +1,6 @@
 # Rust targets and std across the application spaces
 
-> **Status:** a tracking document, started 2026-10-22. Only the hosted DOS target specification (PR #3) and the native kernel target specification (PR #6) exist, and both are on branches. Everything else here is planned, and every claim marked "to be confirmed" is a target until an experiment says otherwise.
+> **Status:** a tracking document, started 2026-10-22. The hosted DOS target specification (PR #3), the native kernel target specification (PR #6) and the d0 freestanding DOS target (PR #7) exist and are merged; the shared HAL crates (spike H) build for the last two. Everything else here is planned, and every claim marked "to be confirmed" is a target until an experiment says otherwise.
 
 ## Purpose and how to update it
 
@@ -53,6 +53,7 @@ The native kernel specification (`kernel/i486-desk-none.json`, PR #6) differs: E
 | (f) Lt. Fizz, Episode 2 for DOS | A new game | Planned: the shared DOS target | Program | `core`, `alloc` (maybe a thin std-like crate) | Rust-only link and a CWSDPMI packer | The shared runtime and drivers | DOSBox | planned |
 | (g) Lt. Fizz on the web | The existing wasm build, in `liminal-hq/lieutenant-fizz` | `wasm32` | Library for the browser | Reference only | Browser | Browser | Reference only | exists elsewhere; reference only |
 | (h) Host tools | The font build (Bun and TypeScript), and any Rust host tools such as a packer | The host target | Ordinary crates | `std` | Host toolchain | The host OS | Host test runs, for example a native 32-bit bench as Fizz DOS has | planned for Rust tools; the font build exists |
+| (i) Shared HAL and drivers | The HAL traits, the drivers written once against them, and the mock platform (`hal/`, [`HAL.md`](HAL.md)) | The host for tests; `kernel/i486-desk-none.json` and `spikes/d0-rust-dos/dos-elf.json` for the cross builds | `rlib` | `core` (the mock adds `alloc`); a `std` feature for host builds only | Linked into the kernel or a DOS program by their own builds | The platform: `rt` under DOS, the kernel natively, `desk-hal-mock` in tests | `cargo test` on the host, `cargo check` and `clippy` for both targets with `-Zbuild-std` | in a PR (PR #8, spike H): traits, 16550, 8254 and 8259 drivers; no binary uses them yet |
 
 ## The std question
 
@@ -78,7 +79,7 @@ Costs to weigh:
 - The choice of linker per target.
 - Reproducible builds and the toolchain pinning policy.
 - The licence of any `std` fork.
-- What the shared hardware-driver crates need from each target: the port-I/O and IRQ abstraction described in `DIRECTION.md`.
+- What the shared hardware-driver crates need from each target: the port-I/O and IRQ abstraction, designed in [`HAL.md`](HAL.md) (space (i)).
 
 ## Spikes and experiments
 
@@ -88,7 +89,13 @@ Costs to weigh:
 | s1-dxe3 | Hosted | Scott Morris | PR #4 (on PR #3) | done: Rust modules as DXE3 files, yes with limits (`docs/S1-DXE3.md`) |
 | native walking skeleton | Native | Scott Morris | PR #6 | done: NASM boot sector and a Rust kernel in QEMU with a 486 CPU (`docs/NATIVE-BOOT.md`) |
 | d0-rust-dos | Hosted | Scott Morris | PR #7 (on PR #3) | done: yes, a pure Rust DOS program with no gcc, libc or crt0 (a `rust-lld` link, a 139-line packer and a roughly 1,600-line runtime, `docs/D0-RUST-DOS.md`); next: a freestanding ELF target, `rt` as a top-level crate, Rust drivers |
-| e-std-stubs | Any | Scott Morris | PR (spike/e-std-stubs) | done: the stubs alone do not build; a patched platform layer over `rt` does and runs in DOSBox (`docs/E-STD-STUBS.md`); next: `fn main` through `lang_start`, a DOS-backed `std::fs`, a CI job that applies the patch to the next toolchain |
+| g-boot-emulators | Native | Scott Morris | PR #16 | done: the native image boots in Bochs as a 486 (three BIOS images) and in 86Box on an AMIBIOS 486; the 86Box run found a loader bug (no E820 or E801), fixed with an AH=88 fallback (`docs/NATIVE-EMULATORS.md`) |
+| H: HAL design | Shared crates | Scott Morris | PR #8 | done: the design ([`HAL.md`](HAL.md)) and `hal/` with host-tested 16550, 8254 and 8259 drivers, built for both targets |
+| A: VGA and VBE (s2-vbe) | Hosted, shared driver | Scott Morris | PR #11 (on PR #8) | done in DOSBox: the `desk-vga` driver (mode 13h and 12h by registers, DAC, VBE 2.0 over a `Bios` trait) and `rt::hal::DosDisplay`, run by `spikes/a-vga-vbe` (`docs/A-VGA-VBE.md`); not run on hardware |
+| B: DOS input (s3-mouse) | Hosted, shared drivers | Scott Morris | PR #15 | done in DOSBox: `rt::irq` (a stub per IRQ line, locked stack, EOI through `desk-pic`), the `desk-int33` driver over `Bios`, `DosInput` handing the core the native kernel's `KeyEvent` and `MouseEvent`, run by `spikes/b-dos-input` with `AUTOTYPE` and, opt-in, `xdotool` under Xvfb (`docs/B-DOS-INPUT.md`); not run on hardware |
+| D: native graphics (n2) | Native, shared driver | Scott Morris | on PR #10 and PR #11 | done in QEMU: VBE asked in the loader, `desk-vga` modes 13h and 12h by registers and a VBE linear frame buffer from the kernel, a software cursor and a window, text restore, screenshot tests (`docs/D-NATIVE-VGA.md`); not run on hardware |
+| n3: a real BIOS path (native) | Native, shared driver | Scott Morris | PR #17 (on PR #14) | done in QEMU and Bochs: a real-mode trampoline (one NASM page, `kernel/bios16.asm`, embedded in the kernel by `tools/native-build.sh`) and the Rust around it (`kernel/src/bios.rs`) give the kernel `INT 10h`, `13h`, `15h` and `1Ah` after boot, the HAL's `Bios` trait natively, and a way back to text on every QEMU card (`docs/N3-BIOS-PATH.md`); not run on hardware |
+| e-std-stubs | Any | Scott Morris | PR #12 | done: the stubs alone do not build; a patched platform layer over `rt` does and runs in DOSBox (`docs/E-STD-STUBS.md`); next: `fn main` through `lang_start`, a DOS-backed `std::fs`, a CI job that applies the patch to the next toolchain |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |
 | native-app-target | Desk apps | Not assigned | None | planned |

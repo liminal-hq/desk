@@ -1,0 +1,4 @@
+avga: in mode 0x13, now panicking
+avga: after the clean-up list the video mode is 0x03
+RT PANIC: panicked at prog/src/main.rs:L:C:
+panic in graphics mode
