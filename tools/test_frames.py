@@ -651,12 +651,12 @@ class Live(unittest.TestCase):
              "sleep 0.3", "key F12", "sleep 0.5", "sleep 0.3", "key Escape"],
         )
 
-    def test_quick_makes_an_adjacent_press_and_release_one_click(self):
+    def test_quick_makes_an_adjacent_press_and_release_one_five_millisecond_click(self):
         got = self.lines("press left\nrelease left\npress left\nmove 1 1\nrelease left\n", "--xdotool", "--quick")
-        self.assertEqual(got[:2], ["click 1", "sleep 0.3"])
+        self.assertEqual(got[:2], ["mousedown 1 sleep 0.005 mouseup 1", "sleep 0.3"])
         self.assertIn("mousedown 1", got)
-        self.assertEqual(got.count("click 1"), 1, "a press and release with motion between them stay apart")
-        self.assertEqual(self.lines("press left\nrelease left\n", "--xdotool").count("click 1"), 0)
+        self.assertEqual(got.count("mousedown 1 sleep 0.005 mouseup 1"), 1, "a press and release with motion between them stay apart")
+        self.assertEqual(self.lines("press left\nrelease left\n", "--xdotool")[:2], ["mousedown 1", "sleep 0.3"])
 
     def test_quick_is_for_xdotool_only(self):
         status, _, err = live_status("live", self.scn("move 1 1\n"), "--qemu", "--quick")

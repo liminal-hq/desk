@@ -279,7 +279,7 @@ Between a mouse step and a key step, either way round, the QEMU script sleeps 0.
 ```text
 frames.py live SCENARIO --qemu > FILE          the monitor script for native-inject.py, starting with `wait shell: mark 00` and the first frame's screendump, ending with `sendkey esc`
 frames.py live SCENARIO --autotype             the arguments for DOS_AUTOTYPE (`-w 3 -p 0.3 ... f12 ... esc`)
-frames.py live SCENARIO --xdotool [--quick] > FILE    the script for xvfb-dos.sh; --quick makes each adjacent press and release one `click 1`
+frames.py live SCENARIO --xdotool [--quick] > FILE    the script for xvfb-dos.sh; --quick makes each adjacent press and release one 5 ms click (`mousedown 1 sleep 0.005 mouseup 1`)
 frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]
                                                 the transcript's mark lines, in order, carry the digests of the scenario's frames
                                                 at DEPTH (mark k is the k-th frame); with --dumps, renames DIR/Mkk.RAW and .PAL to
@@ -302,7 +302,7 @@ A section in `tools/native-test.sh` after the scripted shell checks, at both dep
 ### Hosted: `AUTOTYPE` in CI, `xdotool` opt-in
 
 - **Always on**, in `shell/dos/check.sh`, replacing the interactive step's written-in digest: `DOS_AUTOTYPE="$(frames.py live tests/shell/live-keys.scn --autotype)" tools/dosrun.sh dist/shell SHELL.EXE depth8 marks timeout=60`; status 0; `frames.py marks --dumps` and `frames.py check` against `live-keys.sums`; the same at depth 4; and once with `builtin_dos_mouse_driver = off`, which must give the same frames (keyboard only).
-- **Opt-in** (`INPUT_EXTRA=1`, with Docker), `shell/dos/check-xvfb.sh`: `tools/xvfb-dos.sh` (spike B's `xvfb-inner.sh`, generalised to any program, arguments and script, in the `desk-dos-xvfb:1` image) runs `SHELL.EXE depth8 marks` with `frames.py live tests/shell/live.scn --xdotool`, then `marks --dumps` and `check` against `live.sums`; then again with `--quick`, which only passes with the press and release counters. The counters' task (L4) comes before this check exists, so its failing-first evidence is spike B's `xdotool click` row; the `--quick` run arrives with the Xvfb check (L8), on top of the counters.
+- **Opt-in** (`INPUT_EXTRA=1`, with Docker), `shell/dos/check-xvfb.sh`: `tools/xvfb-dos.sh` (spike B's `xvfb-inner.sh`, generalised to any program, arguments and script, in the `desk-dos-xvfb:1` image) runs `SHELL.EXE depth8 marks` with `frames.py live tests/shell/live.scn --xdotool`, then `marks --dumps` and `check` against `live.sums`; then again with `--quick`, whose clicks last 5 ms. A press and release with no gap at all (`xdotool click`) never reach DOSBox's driver, so the quick form uses a 5 ms gap, which does. Whether the counters matter for `SHELL.EXE` depends on how long its polls are: the Xvfb check of spike B (`INPUT.EXE slowpoll`, six 5 ms clicks) is the evidence that they work in DOSBox, and the failing-first evidence of L4.
 
 `marks` on DOS: at each F12 (and at mark 00) the program reads the frame buffer and the DAC back, as `dump` does, prints the mark line and writes `M00.RAW` and `M00.PAL` and so on, then prints `shell: readback ... equal` as the scripted run does. Without `marks` F12 prints the mark line only.
 

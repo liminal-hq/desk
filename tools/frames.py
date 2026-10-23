@@ -24,7 +24,7 @@
 #                                                                   emulator: the monitor script for native-inject.py (--qemu), the arguments
 #   python3 -I tools/frames.py live SCENARIO --autotype             for DOSBox's AUTOTYPE (--autotype), or the xdotool lines for
 #   python3 -I tools/frames.py live SCENARIO --xdotool [--quick]    tools/xvfb-dos.sh (--xdotool; --quick makes an adjacent press and
-#                                                                   release one click). A step the emulator cannot express is refused
+#                                                                   release one 5 ms click). A step the emulator cannot express is refused
 #                                                                   with its line number
 #   python3 -I tools/frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]
 #                                                                   the transcript's `shell: mark NN ...` lines, in order, carry the digests
@@ -705,6 +705,7 @@ MOUSE_PAUSE = "0.1"  # after each mouse command: QEMU folds a press and release 
 SWITCH_PAUSE = "0.3"  # between a mouse step and a key step either way round, and before an F12: each ring is drained before the next device speaks
 XDOTOOL_FRAME_PAUSE = "0.5"
 XDOTOOL_BUTTON_PAUSE = "0.3"
+QUICK_CLICK_GAP = "0.005"  # a quick click: DOSBox never sees a press and release with no gap at all (`xdotool click`), but sees 1 ms
 MOVE_CHUNK = 100  # the most one `mouse_move` carries
 MAX_MARKS = 100
 
@@ -985,7 +986,7 @@ def live_xdotool(lv, quick):
         elif a[0] == "button":
             out += [f"{'mousedown' if a[1] else 'mouseup'} 1", f"sleep {XDOTOOL_BUTTON_PAUSE}"]
         elif a[0] == "click":
-            out += ["click 1", f"sleep {XDOTOOL_BUTTON_PAUSE}"]
+            out += [f"mousedown 1 sleep {QUICK_CLICK_GAP} mouseup 1", f"sleep {XDOTOOL_BUTTON_PAUSE}"]
         elif a[0] == "press":
             out.append("key " + "+".join(k(m) for m in a[1] + [a[2]]))
         else:
