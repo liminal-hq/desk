@@ -18,7 +18,9 @@
 # rectangle and a loader that succeeded where it was told to fail must each be rejected. Shell: the first window's scripted scenario
 # (tests/shell/first-window.scn) is run by the kernel at depth 8 (VBE) and depth 4 (mode 12h), and QEMU's screendumps at every frame must
 # equal the goldens' six-bit colours (tools/frames.py check); a screen with one wrong pixel, altered sums and the other depth's sums must be
-# rejected. Skips (exit 0, with a message) only
+# rejected. Shell live: the same scenario's live form (tests/shell/live.scn and live-keys.scn) is played into the kernel's `shell-live` mode
+# through the QEMU monitor (mouse_move, mouse_button, sendkey), and the marks it prints and QEMU's screendumps at each mark must equal the
+# goldens; the same input with the mouse, a key or Alt+Tab left out, altered sums and the wrong depth must be rejected. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 #
 # DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
@@ -255,6 +257,65 @@ must_fail "the depth 8 transcript as the depth 4 one" python3 -I tools/native-ch
 finish_shell dist/shell-native-8
 finish_shell dist/shell-native-4
 rm -f dist/native-shell-8.img dist/native-shell-4.img dist/native-shell-corrupt-8.img dist/native-shell-corrupt-4.img
+
+echo "== Shell: live input (docs/LIVE-INPUT.md)"
+# The kernel's `shell-live` test mode runs the first window on the PS/2 keyboard and mouse until Escape. The run script is the live
+# scenario's steps turned into QEMU monitor commands (tools/frames.py live --qemu): mouse_move and mouse_button for the pointer, sendkey
+# for the keys, and at each frame an F12, which the kernel answers with a `shell: mark NN` line once it has handled everything sent
+# before it. The script waits for that line, then takes the screendump. Each run's marks must carry the scenario's digests in order
+# (frames.py marks), its screendumps must equal the goldens (frames.py check), and its transcript must be the expected one (the event
+# counts are ranges, since they depend on how QEMU delivers the input; the digests are exact). live.scn runs at both depths and
+# live-keys.scn at depth 8, so both live scenarios run on the native path. Kept as PNGs in dist/shell-live-native-DEPTH/.
+# play_live NAME IMAGE CARD INJECT DIR: boots the image with the input script; the run must succeed. The transcript is $work/NAME.txt.
+play_live() {
+  local name=$1 image=$2 card=$3 inject=$4 dir=$5 got=0
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 60 --vga "$card" --inject "$inject" --shots "$dir" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+}
+# run_live NAME IMAGE CARD DEPTH SCENARIO SUMS EXPECTED DIR: play_live, then every positive check.
+run_live() {
+  local name=$1 image=$2 card=$3 depth=$4 scn=$5 sums=$6 expected=$7 dir=$8
+  frames live "$scn" --qemu > "$work/$name.inject" || fail "$name: $scn does not translate for QEMU"
+  play_live "$name" "$image" "$card" "$work/$name.inject" "$dir"
+  python3 -I tools/native-check.py "$expected" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  frames marks "$sums" "$scn" "$depth" "$work/$name.txt" > "$work/$name.marks" || { cat "$work/$name.marks" >&2; fail "$name: a mark differs from the sums"; }
+  frames check "$sums" "$depth" "$dir" > "$work/$name.check" || { cat "$work/$name.check" >&2; fail "$name: a screendump differs from the goldens"; }
+  echo "native: ok — $name: $(cat "$work/$name.marks"); $(cat "$work/$name.check")"
+}
+live_sums=tests/shell/live.sums
+tools/native-image.sh --test-mode shell-live --video vbe --out dist/native-shell-live-8.img > /dev/null
+tools/native-image.sh --test-mode shell-live --video text --out dist/native-shell-live-4.img > /dev/null
+run_live shell-live-8 dist/native-shell-live-8.img std 8 tests/shell/live.scn "$live_sums" tests/native/expected-shell-live-8.txt dist/shell-live-native-8
+run_live shell-live-4 dist/native-shell-live-4.img cirrus 4 tests/shell/live.scn "$live_sums" tests/native/expected-shell-live-4.txt dist/shell-live-native-4
+run_live shell-live-keys-8 dist/native-shell-live-8.img std 8 tests/shell/live-keys.scn tests/shell/live-keys.sums tests/native/expected-shell-live-keys-8.txt dist/shell-live-keys-native-8
+# Negative: each of these must fail, and the check says so when one does not. A guest that is sent the wrong input still runs to the
+# end (the script finishes with Escape), so the marks and the screendumps are what must notice.
+broken() { # NAME FILTER...: the live script with the lines matching FILTER removed, played at depth 8, as NAME
+  local name=$1
+  shift
+  grep -v "$@" "$work/shell-live-8.inject" > "$work/$name.inject"
+  cmp -s "$work/shell-live-8.inject" "$work/$name.inject" && fail "$name: nothing was removed from the script"
+  play_live "$name" dist/native-shell-live-8.img std "$work/$name.inject" "dist/shell-live-native-$name"
+}
+broken live-nomouse -e '^mouse_move '
+must_fail "a live run whose mouse_move lines were removed (the marks, from the dragged frame)" frames marks "$live_sums" tests/shell/live.scn 8 "$work/live-nomouse.txt"
+must_fail "the same run's screendumps" frames check "$live_sums" 8 dist/shell-live-native-live-nomouse
+broken live-notype -e '^sendkey v$'
+must_fail "a live run with one key missing from typing \"live\" (the marks)" frames marks "$live_sums" tests/shell/live.scn 8 "$work/live-notype.txt"
+must_fail "the same run's screendumps" frames check "$live_sums" 8 dist/shell-live-native-live-notype
+broken live-noalttab -e '^sendkey alt-tab$'
+must_fail "a live run with the alt-tab line removed (the marks, from the switched frame)" frames marks "$live_sums" tests/shell/live.scn 8 "$work/live-noalttab.txt"
+must_fail "the depth 8 live screendumps checked against the depth 4 sums" frames check "$live_sums" 4 dist/shell-live-native-8
+awk '$1 == "dragged" && $2 == 8 { d = substr($5, 8, 1); $5 = substr($5, 1, 7) (d == "0" ? "1" : "0") } { print }' "$live_sums" > "$work/wrong-live.sums"
+cmp -s "$live_sums" "$work/wrong-live.sums" && fail "the altered live sums were not altered"
+must_fail "live marks checked against sums with one digest changed" frames marks "$work/wrong-live.sums" tests/shell/live.scn 8 "$work/shell-live-8.txt"
+grep -v '^shell: mark 03 ' "$work/shell-live-8.txt" > "$work/live-onemark.txt"
+must_fail "a live transcript with one mark line removed" frames marks "$live_sums" tests/shell/live.scn 8 "$work/live-onemark.txt"
+must_fail "the live transcript as the scripted one" python3 -I tools/native-check.py tests/native/expected-shell-8.txt "$work/shell-live-8.txt"
+for d in dist/shell-live-native-8 dist/shell-live-native-4 dist/shell-live-keys-native-8; do finish_shell "$d"; done
+rm -rf dist/shell-live-native-live-nomouse dist/shell-live-native-live-notype dist/shell-live-native-live-noalttab
+rm -f dist/native-shell-live-8.img dist/native-shell-live-4.img
 
 echo "== BIOS calls from the kernel (docs/N3-BIOS-PATH.md)"
 # The kernel returns to real mode for each call (kernel/bios16.asm): memory, clock, disk, errors, a key sent during a call, 1,000
