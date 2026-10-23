@@ -12,7 +12,7 @@
 use crate::hal::PORTS;
 use crate::scene::{self, Depth};
 use crate::video::{Lfb, Video, FONT_BYTES};
-use crate::{input, pit, println, sync, vga::Vga};
+use crate::{input, pit, println, vga::Vga};
 use alloc::string::String;
 use alloc::vec;
 use core::arch::asm;
@@ -181,8 +181,8 @@ fn for_a_second(mut f: impl FnMut(u32)) -> (u32, u32) {
 }
 
 fn rate(n: u32, ticks: u32) -> (u32, u32) {
-    let x10 = n * SECOND * 10 / ticks.max(1);
-    (x10 / 10, x10 % 10)
+    let x10 = u64::from(n) * u64::from(SECOND) * 10 / u64::from(ticks.max(1));
+    ((x10 / 10) as u32, (x10 % 10) as u32)
 }
 
 fn perf<C: Canvas>(c: &mut C, label: &str, cursor_colours: (u8, u8)) {
@@ -400,18 +400,6 @@ fn draw_echo<C: Canvas>(c: &mut C, font: Option<&[u8; FONT_BYTES]>, win: &Window
 
 // ---- Waiting for input
 
-/// One idle step: the work is done, so sleep until an interrupt brings an event or a tick. The rings are checked with interrupts
-/// off so an interrupt cannot slip in between the check and the `hlt`.
-fn idle(ps2: &Ps2Input) {
-    sync::without_interrupts(|| {
-        if ps2.is_empty() {
-            // `sti` takes effect after the next instruction, so an interrupt that arrives now wakes the `hlt`.
-            // SAFETY: waits for the next interrupt; the timer guarantees one.
-            unsafe { asm!("sti", "hlt", "cli") };
-        }
-    });
-}
-
 /// Prints the marker the run script waits for, then waits for a key press (any key) as the acknowledgement that the screenshot is
 /// taken. Mouse events that arrive meanwhile are dropped.
 fn rendezvous(ps2: &mut Ps2Input, name: &str) {
@@ -427,7 +415,7 @@ fn rendezvous(ps2: &mut Ps2Input, name: &str) {
         if pit::ticks().wrapping_sub(start) > ACK_TIMEOUT {
             panic!("gfx: no key to acknowledge {} within {} ticks", name, ACK_TIMEOUT);
         }
-        idle(ps2);
+        input::idle(ps2);
     }
 }
 
@@ -455,13 +443,16 @@ fn window_session<C: Canvas>(c: &mut C, ps2: &mut Ps2Input, looks: &Looks, font:
         while let Some(k) = ps2.poll_key() {
             input::print_key(k);
             if k.pressed {
-                if let Some(ch) = desk_kbd::char_for(k.code, k.modifiers) {
+                // Backspace has a character of its own (`\u{8}`), so it is tested before `char_for` is asked.
+                if k.code == KeyCode::Backspace {
+                    if typed.pop().is_some() {
+                        redraw = true;
+                    }
+                } else if let Some(ch) = desk_kbd::char_for(k.code, k.modifiers) {
                     if (' '..='~').contains(&ch) && typed.len() < 40 {
                         typed.push(ch);
                         redraw = true;
                     }
-                } else if k.code == KeyCode::Backspace && typed.pop().is_some() {
-                    redraw = true;
                 }
             } else if k.code == KeyCode::Escape {
                 done = true;
@@ -488,7 +479,7 @@ fn window_session<C: Canvas>(c: &mut C, ps2: &mut Ps2Input, looks: &Looks, font:
         if pit::ticks().wrapping_sub(start) > INTERACTIVE_TIMEOUT {
             panic!("gfx: no Escape within {} ticks", INTERACTIVE_TIMEOUT);
         }
-        idle(ps2);
+        input::idle(ps2);
     }
 }
 

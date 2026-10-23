@@ -87,7 +87,7 @@ pub fn init(info: &BootInfo) -> Video {
     } else {
         println!("video: no 8x16 font from the loader, text mode cannot be restored");
     }
-    if info.video == 0 || info.video + core::mem::size_of::<VideoBlock>() as u32 > LOW_LIMIT {
+    if info.video == 0 || u64::from(info.video) + core::mem::size_of::<VideoBlock>() as u64 > u64::from(LOW_LIMIT) {
         println!("video: no video block");
         return video;
     }

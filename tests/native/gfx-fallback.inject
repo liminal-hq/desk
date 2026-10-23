@@ -20,6 +20,12 @@ sendkey s
 sleep 0.2
 sendkey k
 wait gfx: echo "desk"
+sleep 0.2
+sendkey x
+wait gfx: echo "deskx"
+sleep 0.2
+sendkey backspace
+sleep 0.5
 screendump {out}/window-c.ppm
 sendkey esc
 wait gfx: ready text
