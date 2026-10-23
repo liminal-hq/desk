@@ -9,16 +9,16 @@ pub const FRAME_SIZE: u32 = 4096;
 /// The bitmap covers this much physical memory; RAM above it is ignored for now.
 const MAX_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_FRAMES: usize = (MAX_BYTES / FRAME_SIZE as u64) as usize;
-const KIND_USABLE: u32 = 1;
+pub const KIND_USABLE: u32 = 1;
 
 /// One entry of the map, in the layout of the E820 call (the loader converts an E801 answer to the same shape).
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct Region {
-    base: u64,
-    len: u64,
-    kind: u32,
-    acpi: u32,
+pub struct Region {
+    pub base: u64,
+    pub len: u64,
+    pub kind: u32,
+    pub acpi: u32,
 }
 
 extern "C" {
@@ -38,7 +38,8 @@ pub fn source_name(source: u32) -> &'static str {
     }
 }
 
-fn regions(info: &BootInfo) -> &[Region] {
+/// The map the loader left.
+pub fn regions(info: &BootInfo) -> &[Region] {
     // SAFETY: the loader stores `map_count` entries of 24 bytes straight after the 32-byte header.
     unsafe {
         let first = (info as *const BootInfo as *const u8).add(32) as *const Region;

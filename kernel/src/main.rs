@@ -8,6 +8,8 @@
 
 extern crate alloc;
 
+mod bios;
+mod biostest;
 mod console;
 mod exit;
 mod fpu;
@@ -98,6 +100,7 @@ enum TestMode {
     InputMasked = 8,
     InputIdle = 9,
     Gfx = 10,
+    Bios = 11,
 }
 
 impl TestMode {
@@ -113,6 +116,7 @@ impl TestMode {
             8 => TestMode::InputMasked,
             9 => TestMode::InputIdle,
             10 => TestMode::Gfx,
+            11 => TestMode::Bios,
             _ => TestMode::Normal,
         }
     }
@@ -150,6 +154,14 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     memory::free_frame(b);
     assert_eq!(memory::free_frames(), free_before);
     println!("frames: alloc and free of two frames ok");
+    bios::init().expect("the BIOS trampoline");
+    println!(
+        "bios: real-mode trampoline at {:#x}, bounce buffer {:#x} ({} bytes), stack {:#x}",
+        bios::LOW_BASE,
+        bios::BOUNCE_BASE,
+        bios::BOUNCE_LEN,
+        bios::stack_base()
+    );
     heap::init();
     let video = video::init(info);
 
@@ -174,7 +186,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     fpu::demo();
 
     run_test_mode(mode);
-    input_section(mode, &video);
+    input_section(mode, &video, info);
     println!("boot complete");
     exit::success()
 }
@@ -204,7 +216,7 @@ fn timer_demo() {
 /// then wait for events that the run script injects (`docs/C-INPUT.md`): `Input` waits for Escape, `InputMasked` leaves IRQ 1
 /// masked so the wait must fail, and `InputIdle` waits long enough that the run script's watchdog ends the run. `Gfx` hands the
 /// devices to the graphics tour.
-fn input_section(mode: TestMode, video: &video::Video) {
+fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
     let fault = if mode == TestMode::InputMasked { input::Fault::KeyboardMasked } else { input::Fault::None };
     let Some(mut ps2) = input::init(fault) else {
         if mode == TestMode::Normal {
@@ -212,6 +224,11 @@ fn input_section(mode: TestMode, video: &video::Video) {
         }
         panic!("input: no keyboard controller, so the input test cannot run");
     };
+    if mode == TestMode::Bios {
+        println!("input: ready");
+        biostest::run(info, video, ps2);
+        return;
+    }
     if mode == TestMode::Gfx {
         // The graphics tour (`gfx.rs`, `docs/D-NATIVE-VGA.md`) needs the keyboard and mouse for the window and for the run script's
         // acknowledgements of its screenshots.
@@ -232,7 +249,7 @@ fn input_section(mode: TestMode, video: &video::Video) {
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

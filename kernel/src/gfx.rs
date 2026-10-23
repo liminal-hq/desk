@@ -25,7 +25,7 @@ use desk_vga::{checksum, regs, text, Canvas, Linear8, Planar16};
 /// produce the same bytes from the same driver and the same scene.
 const HOSTED_13H: u32 = 0x5c0f_1f16;
 const HOSTED_12H: u32 = 0xfaf8_b758;
-const HOSTED_VBE_640X480: u32 = 0x5bc6_5936;
+pub(crate) const HOSTED_VBE_640X480: u32 = 0x5bc6_5936;
 
 /// A tick is 10 ms (`pit::HZ`).
 const SECOND: u32 = pit::HZ;
@@ -38,7 +38,7 @@ fn vga_window() -> MmioRegion {
     unsafe { MmioRegion::new(0xA0000 as *mut u8, 0x10000) }
 }
 
-fn lfb_region(l: &Lfb) -> MmioRegion {
+pub(crate) fn lfb_region(l: &Lfb) -> MmioRegion {
     // SAFETY: `video::init` checked that the frame buffer overlaps no RAM, the first megabyte or the kernel and reserved its
     // frames; the loader's mode set maps `pitch * height` bytes of it, and with no paging the physical address is the pointer.
     unsafe { MmioRegion::new(l.phys as *mut u8, l.bytes() as usize) }
@@ -46,7 +46,7 @@ fn lfb_region(l: &Lfb) -> MmioRegion {
 
 // ---- Drawing the same picture in memory, for the reference checksum
 
-fn reference(w: u32, h: u32, depth: Depth) -> u32 {
+pub(crate) fn reference(w: u32, h: u32, depth: Depth) -> u32 {
     let mut buf = vec![0u8; (w * h) as usize];
     // SAFETY: the Vec outlives the region and nothing else touches it while the region is in use.
     let mut region = unsafe { MmioRegion::new(buf.as_mut_ptr(), buf.len()) };
@@ -89,7 +89,7 @@ fn leave_vbe() {
     }
 }
 
-fn palette_of(colours: &[Rgb6]) -> [Rgb6; ENTRIES] {
+pub(crate) fn palette_of(colours: &[Rgb6]) -> [Rgb6; ENTRIES] {
     let mut p = [Rgb6::BLACK; ENTRIES];
     p[..colours.len()].copy_from_slice(colours);
     p

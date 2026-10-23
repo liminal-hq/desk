@@ -1,0 +1,95 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: font: 8x16 copied from the BIOS
+stage2: vbe: not requested, the screen stays in text mode
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+bios: real-mode trampoline at 0x10000, bounce buffer 0x11000 (8192 bytes), stack 0x13000
+heap: 4096 KiB at {HEX}
+video: boot info version 1
+video: 8x16 font, 4096 bytes at 0x2000
+video: the loader did not try VBE (the screen is in text mode)
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+bios: scenarios start
+bios: INT 12h: {N:500..640} KiB of conventional memory
+bios: INT 15h AX=E820 after boot: {N:1..32} entries, the loader's map had {N:1..32}, identical: true
+bios: INT 15h AH=88h: {N:1024..65535} KiB above 1 MiB; AX=E801: {N:1024..15360} KiB below 16 MiB, {N:0..4096} blocks of 64 KiB above; the map says {N:1024..65535} KiB contiguous
+bios: the legacy memory calls agree with the E820 map to within 256 KiB: true
+bios: INT 1Ah time and date are valid BCD in range: true
+bios: INT 1Ah agrees with the RTC read directly through the CMOS ports to within 2 s: true
+bios: INT 1Ah AH=00h answers without error: true
+bios: INT 15h AH=FFh (no such function): carry 1, AH={HEX}
+bios: INT 13h read of drive 0x77 (no such drive): carry 1, status {HEX}
+bios: interrupt 0xf0 with an empty vector table entry: Err(NoHandler(240))
+bios: a second call while one is in progress is refused as busy: true
+bios: a call made from the timer interrupt handler is refused as in-interrupt: true
+bios: the next call after the refusals works: true
+bios: two calls in a row both work, and read the same second or the next: true
+bios: five calls from the idle loop (halt, then call) with interrupts on all work, and the interrupt flag survives: true
+bios: the kernel's CPU state is the same after the calls: true
+bios: INT 13h AH=08h drive 0x00: 80 cylinders, 2 heads, 18 sectors per track
+bios: INT 13h AH=41h extensions (LBA reads with AH=42h) on drive 0x00: not available
+bios: sector 0 through INT 13h has the boot signature 0x55AA: true
+bios: sector 0 equals the copy of stage 1 still in memory at 0x7C00 (outside its five variables): true
+bios: 16 sectors from LBA 18 (the kernel) equal the first 8 KiB of the running kernel: true
+bios: a read past the end of the disk fails with the BIOS's status: true
+bios: INT 13h drive 0x80: not present
+bios: keyboard: waiting one second inside INT 15h AH=86h
+bios: keyboard: the call returned, {N:1..2} byte(s) were waiting in the controller and were handed to the driver
+bios: the one-second wait took {N:98..102} kernel ticks (the BIOS timer handler counted {N:95..102}, undelivered ticks recovered {N:0..2})
+key: A down mods=- char='a'
+key: A up mods=-
+bios: stress: 1000 INT 1Ah calls with the timer running, the stack, GDT, IDT, segments, CR0 and PIC masks identical after every one: true
+bios: stress: the 1000 calls took {N:0..2000} kernel ticks, about {N:0..2000000} microseconds each (emulated speed, not real hardware)
+bios: stress: kernel ticks between three RTC seconds while calling INT 1Ah every tick: {N:98..102}, {N:98..102} and {N:98..102}
+bios: stress: the tick count kept one hundred ticks to the RTC second: true
+bios: VBE 4F00h: version {N:2..3}.{N:0..2}, {N:16..1024} x 64 KiB of video memory, {N:5..400} modes listed, OEM "{ANY}"
+bios: VBE 4F01h mode 0x0101: 640x480x8 attributes {HEX} linear true
+bios: VBE 4F01h mode 0x0103: 800x600x8 attributes {HEX} linear true
+bios: VBE 4F01h mode 0x0105: 1024x768x8 attributes {HEX} linear true
+bios: VBE round 1
+bios: VBE mode 0x0101 set with the linear frame buffer, 4F03h reports 0x4101
+bios: 640x480x8 picture: frame buffer checksum 0x5bc65936, picture in memory 0x5bc65936, equal: true
+bios: 640x480x8 picture: spike A's DOSBox checksum 0x5bc65936, equal: true
+bios: ready vbe-640
+bios: VBE mode 0x0103 set with the linear frame buffer, 4F03h reports 0x4103
+bios: 800x600x8 picture: frame buffer checksum 0x108ad044, picture in memory 0x108ad044, equal: true
+bios: ready vbe-800
+bios: INT 10h AX=0003h: the BIOS data area says video mode 0x03, 4F03h says 0x0003
+bios: text mode is back after round 1
+bios: ready text
+bios: VBE round 2
+bios: VBE mode 0x0101 set with the linear frame buffer, 4F03h reports 0x4101
+bios: 640x480x8 picture: frame buffer checksum 0x5bc65936, picture in memory 0x5bc65936, equal: true
+bios: VBE mode 0x0103 set with the linear frame buffer, 4F03h reports 0x4103
+bios: 800x600x8 picture: frame buffer checksum 0x108ad044, picture in memory 0x108ad044, equal: true
+bios: INT 10h AX=0003h: the BIOS data area says video mode 0x03, 4F03h says 0x0003
+bios: text mode is back after round 2
+bios: VBE set, draw and return to text worked twice
+bios: ready keys
+key: K down mods=- char='k'
+key: K up mods=-
+bios: the kernel's keyboard works after {N:1100..4000} calls: true
+bios: scenarios complete
+boot complete

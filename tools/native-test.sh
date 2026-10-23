@@ -169,4 +169,56 @@ finish_gfx gfx-vbefail
 rm -f dist/native-gfx-vbe.img dist/native-gfx-text.img dist/native-gfx-fail.img
 tools/native-build.sh > /dev/null
 
+echo "== BIOS calls from the kernel (docs/N3-BIOS-PATH.md)"
+# The kernel returns to real mode for each call (kernel/bios16.asm): memory, clock, disk, errors, a key sent during a call, 1,000
+# calls, and VBE set after boot with the way back to text mode, on each of QEMU's three cards. The screenshots must match their
+# references and the last one must be a text screen. A second run has an IDE disk for the LBA extensions.
+run_bios() {
+  local name=$1 card=$2 expected=$3 script=$4 hd=${5:-} got=0 dir="dist/gfx-$1"
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 90 --vga "$card" ${hd:+--hd "$hd"} --inject "$script" --shots "$dir" dist/native-bios.img > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+  python3 -I tools/native-check.py "$expected" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  shot check tests/native/bios.sums "$dir" > "$work/$name.shots" || { cat "$work/$name.shots" >&2; fail "$name: a screenshot differs from its reference"; }
+  shot has-text "$dir/text.ppm" > /dev/null || fail "$name: the last screenshot is not a text-mode screen"
+  echo "native: ok — $name ($card card, $(grep -c matches "$work/$name.shots") screenshots match their references)"
+}
+tools/native-image.sh --test-mode bios --out dist/native-bios.img > /dev/null
+for card in std cirrus vmware; do
+  run_bios "bios-$card" "$card" tests/native/expected-bios.txt tests/native/bios.inject
+done
+# A disk with known text at the start of sectors 0 and 1, on IDE, so INT 13h AH=41h and AH=42h (LBA) have something to answer.
+python3 -I -c "
+d = bytearray(8 * 1024 * 1024)
+d[0:16] = b'DESK-HD-SECTOR-0'
+d[512:528] = b'DESK-HD-SECTOR-1'
+open('dist/native-hd.img', 'wb').write(d)"
+cat > "$work/hd-lines.txt" <<'LINES'
+bios: INT 13h drive 0x80: present, CHS {N:1..1024} cylinders, {N:1..255} heads, {N:1..63} sectors per track
+bios: INT 13h AH=41h on drive 0x80: extensions available, interface bits {HEX}
+bios: INT 13h AH=42h read two sectors by LBA and they hold the test disk's known text: true
+bios: INT 13h AH=42h reports 2 sectors transferred
+bios: INT 13h AH=42h beyond the end of the disk fails: true
+LINES
+sed -e "/^bios: INT 13h drive 0x80: not present\$/{r $work/hd-lines.txt" -e "d}" tests/native/expected-bios.txt > "$work/expected-bios-hd.txt"
+cmp -s tests/native/expected-bios.txt "$work/expected-bios-hd.txt" && fail "the hard-disk transcript was not adjusted"
+run_bios bios-hd std "$work/expected-bios-hd.txt" tests/native/bios.inject dist/native-hd.img
+must_fail "the floppy-only transcript as the hard-disk run's" python3 -I tools/native-check.py tests/native/expected-bios.txt "$work/bios-hd.txt"
+rm -f dist/native-hd.img
+# Negative: a wrong line in the expected transcript, a wrong screenshot reference, and a key that never arrives during the call (the
+# kernel must notice that the byte was lost, and the run must fail).
+sed 's/^bios: stress: the tick count kept one hundred ticks to the RTC second: true$/bios: stress: the tick count kept one hundred ticks to the RTC second: false/' tests/native/expected-bios.txt > "$work/wrong-bios.txt"
+must_fail "a transcript with a wrong line" python3 -I tools/native-check.py "$work/wrong-bios.txt" "$work/bios-std.txt"
+sed 's/^vbe-800 \(.*\) .*$/vbe-800 \1 00000000/' tests/native/bios.sums > "$work/wrong-bios.sums"
+must_fail "a wrong BIOS screenshot reference" python3 -I tools/native-shot.py check "$work/wrong-bios.sums" dist/gfx-bios-std
+must_fail "a VBE screenshot as the restored text screen" python3 -I tools/native-shot.py has-text dist/gfx-bios-std/vbe-640.ppm
+grep -v 'sendkey a' tests/native/bios.inject > "$work/bios-nokey.inject"
+got=0
+tools/native-run.sh --timeout 40 --vga std --inject "$work/bios-nokey.inject" dist/native-bios.img > "$work/bios-nokey.txt" 2> "$work/bios-nokey.err" || got=$?
+[ "$got" = 1 ] || { tail -n 20 "$work/bios-nokey.txt" >&2; fail "bios-nokey: exit status $got, expected 1"; }
+grep -q 'the key sent during the call was lost' "$work/bios-nokey.txt" || fail "bios-nokey: the lost key was not reported"
+echo "native: ok — a run in which no key arrives during the call fails and says the key was lost"
+for run in bios-std bios-cirrus bios-vmware bios-hd; do finish_gfx "$run"; done
+rm -f dist/native-bios.img
+
 printf 'native: all checks passed\n'

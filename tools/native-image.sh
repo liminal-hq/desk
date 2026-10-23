@@ -10,7 +10,8 @@
 # (1,474,560 bytes). Bytes patched in: the kernel's length in sectors into stage 1 (offset 3), the test mode into stage 2 (offset 3)
 # and the video request into stage 2 (offset 4: `text` keeps the BIOS text screen, `vbe` makes the loader try a VBE linear mode).
 # Test modes make the kernel misbehave on purpose for the negative checks: none, div0, gp, ud, panic, hang, notick, input, input-masked, input-idle (the last three wait for keyboard and mouse events that tools/native-run.sh --inject sends),
-# gfx (the graphics tour: modes, palette, a window and a cursor; docs/D-NATIVE-VGA.md).
+# gfx (the graphics tour: modes, palette, a window and a cursor; docs/D-NATIVE-VGA.md), bios (BIOS calls from the kernel through the
+# real-mode trampoline: VBE, disk, memory, time and the stress run; docs/N3-BIOS-PATH.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -27,7 +28,7 @@ while [ $# -gt 0 ]; do
 done
 case "$mode" in
   none) code=0 ;; div0) code=1 ;; gp) code=2 ;; ud) code=3 ;; panic) code=4 ;; hang) code=5 ;; notick) code=6 ;;
-  input) code=7 ;; input-masked) code=8 ;; input-idle) code=9 ;; gfx) code=10 ;;
+  input) code=7 ;; input-masked) code=8 ;; input-idle) code=9 ;; gfx) code=10 ;; bios) code=11 ;;
   *) echo "unknown test mode: $mode" >&2; exit 2 ;;
 esac
 

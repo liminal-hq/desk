@@ -17,6 +17,7 @@ memory: usable RAM {N:14000..16384} KiB
 memory: kernel image {HEX}-{HEX}
 memory: {N:3000..4096} frames of 4 KiB free after reservations
 frames: alloc and free of two frames ok
+bios: real-mode trampoline at 0x10000, bounce buffer 0x11000 (8192 bytes), stack 0x13000
 heap: 4096 KiB at {HEX}
 video: boot info version 1
 video: 8x16 font, 4096 bytes at 0x2000
