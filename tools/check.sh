@@ -3,7 +3,7 @@
 # and lints, the HAL's and the shell's host tests and cross builds, the frame tools' tests, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
 # checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, the shell on DOS, then the native boot test under QEMU, then the comparison of the two tracks' frames.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
-# JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
+# INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -137,6 +137,13 @@ fi
 
 step "Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens"
 shell/dos/check.sh
+
+# Opt-in like the spike B mouse run: the live scenario's pointer, drag, Alt+Tab, typing and Alt+F4 through DOSBox's window under Xvfb in
+# Docker, held to the goldens, with quick clicks and a negative run. Without Docker it says it was skipped.
+if [ -n "${INPUT_EXTRA:-}" ]; then
+  step "Shell on DOS (opt-in, INPUT_EXTRA=1): the live scenario's mouse and keys through DOSBox's window under Xvfb"
+  shell/dos/check-xvfb.sh
+fi
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
