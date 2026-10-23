@@ -223,7 +223,9 @@ pub trait DebugOut { fn write_bytes(&self, bytes: &[u8]); }   // never fails, ne
 - Implemented by `Serial16550` (both platforms), by a VGA text console (`desk-vgatext`, the kernel's `vga.rs` moved over an `MmioRegion` at `B8000h`), and under DOS by standard output through `rt::dos::write`. The kernel's `println!` writes to serial and VGA; the panic handlers of both platforms use `DebugOut` because it cannot fail or allocate.
 - Serial under DOS: COM1 may belong to a mouse driver or a terminal program. The hosted platform uses serial only when asked (a `DESK.INI` setting or a command-line flag); DOSBox's headless runs capture standard output instead.
 
-### Video (sketch; spike A builds it)
+### Video (sketch; spike A built it)
+
+Spike A built these types, the `desk-vga` driver and the DOS `Display`; what changed from this sketch (a `Bios` trait, fallible palette calls) is in [`A-VGA-VBE.md`](A-VGA-VBE.md#hal-feedback).
 
 ```rust
 pub struct Rgb6 { pub r: u8, pub g: u8, pub b: u8 }           // 0..=63, the VGA DAC's range
