@@ -74,9 +74,11 @@ def main(socket_path, serial_path, script_path):
             reply = read_prompt(sock)
             # The monitor echoes the command; anything else it prints is an error message worth showing.
             text = ANSI.sub("", reply.replace(PROMPT, b"").decode(errors="replace")).replace("\r", "")
+            # The monitor's line editor echoes the command as it is typed, so a long one comes back as its own prefixes run together
+            # (once its cursor movements are stripped); anything else in the reply is worth showing, an error for example.
+            echoes = {line, "".join(line[:i] for i in range(1, len(line) + 1))}
             for e in text.strip().splitlines():
-                # The monitor's line editor echoes the command, in pieces when it is long; anything else is worth showing.
-                if e.strip() and not e.strip().endswith(line.split()[-1]):
+                if e.strip() and e.strip() not in echoes:
                     print("monitor: " + e.strip(), file=sys.stderr)
     sock.close()
 
