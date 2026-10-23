@@ -39,8 +39,8 @@ shell: mark 02 4 640x480 41b5b8d5 2c6aaaf5
 shell: mark 03 4 640x480 e90fe6e3 83440590
 shell: mark 04 4 640x480 226703cd ec227094
 shell: mark 05 4 640x480 f5e25d5e c31f4c12
-shell: mark 06 4 640x480 097773f2 7a2e1350
-shell: mark 07 4 640x480 cdcdf379 a628a076
+shell: mark 06 4 640x480 c1cba286 dea3fc34
+shell: mark 07 4 640x480 b992278b 5817064b
 shell: live ended by Escape: {N:26..40} keys, {N:6..40} pointer reports, {N:8..60} frames, {N:50000..3000000} pixels presented, 8 marks
 shell: done
 gfx: text mode restored: registers, palette and the 8x16 font reloaded
