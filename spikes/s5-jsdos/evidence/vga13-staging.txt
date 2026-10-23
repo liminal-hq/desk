@@ -1,0 +1,3 @@
+S5-VGA13 start
+mode 0x13, checksum 0x49fd8cc5, expected 0x49fd8cc5, match true
+S5-VGA13 done

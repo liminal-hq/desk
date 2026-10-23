@@ -7,7 +7,7 @@ What was open before scaffolding `liminal-hq/desk`, and what was decided. The re
 | Question | Decision | Changes |
 |---|---|---|
 | Rust code as DXE3 modules (`coff2go32` → `dxe3gen` → `dlopen`, with calls back into the core) | **Yes, with limits (spike `s1-dxe3`, `S1-DXE3.md`).** Optional apps are `.DXE` modules that import `desk_*` by name from a table the core registers with `dlregsym` (route a). Function-pointer tables passed to `app_start` (route b) work too and stay the fallback. LTO is required; one file is one instance; a stack overflow in an app is not recoverable. The core's own apps may be linked in instead of loaded (a milestone 4 choice). Not needed: apps built into the core, C apps only, separate EXEs. | `apps/` is one Cargo workspace with a crate per app; `sdk/` holds the app-side crate (allocator, panic handler, `desk_app!`) and `desk.h`; `tools/build-app.sh` (to be added) generalises the spike's build. `SDK.md` and `FORMATS.md` corrected. |
-| js-dos and the VESA linear frame buffer | **Ship DOSBox-only until it works.** The browser build waits; nothing is forked or patched yet. | Release artefacts: no `.jsdos` bundle in 0.1 unless the spike shows the LFB working. |
+| js-dos and the VESA linear frame buffer | **It works (spike `s5-jsdos`, `S5-JSDOS.md`).** js-dos 8.5.3 runs the repository's DOS programs unchanged, and VBE 2.0 640×480×8 with the linear frame buffer (DPMI 0800h) draws a pixel-exact picture in headless Chromium, as does the banked path. The browser build uses the same mode as DOSBox; mode 12h is not needed for it. | Release artefacts: a `.jsdos` bundle in 0.1, with js-dos served as a separate GPL-2.0 program. The video code reads the LFB address from `4F01h` and does not assume more than 2 MiB of video memory or a particular mode list. Only Chromium was tried; Firefox, Safari, audio you can hear, mobile and slow devices are not verified. |
 | Games that need EMS | **DESK.COM loads an EMS driver for that program, as its `.DIF` asks.** `[needs] ems=yes` makes DESK.COM run `JEMMEX` before the program and unload it after. | `.DIF` gains `ems=`; HANDOFF gains a step; `JEMMEX.EXE` (GPL, separate binary) ships beside DESK.COM. |
 
 ## Design gaps
@@ -52,7 +52,7 @@ The first spike, `s1-dxe3`, is done: Rust runs as a DXE3 module that calls back 
 Hosted track:
 
 - Whether the page-fault recovery (`SIGSEGV` from a null write in an app) and the unrecoverable stack overflow behave on real hardware and on DPMI hosts other than CWSDPMI r7; DOSBox Staging cannot run them and QEMU was used (after the spike).
-- Whether the browser build uses mode 12h or waits for the LFB (after the js-dos spike).
+- Whether the browser build behaves the same in Firefox and Safari, on a phone and on a slow device, and whether the OPL music sounds right in js-dos (the spike measured pitch from the emulator's samples in Chromium only; see `S5-JSDOS.md`).
 - Whether the four bitmap faces drafted in `fonts/` (see `FONTS.md`) are the ones that ship: they have not been seen on a DOS screen yet, and the 6×8 face is the one to check first.
 - Whether Desk reads real TrueType files so any font can be used, and how (the section below).
 - Whether JEMMEX loads and unloads cleanly from the command line on FreeDOS and MS-DOS 6.22 for each program (part of the handoff spike); if not, EMS games need a boot menu entry instead.
@@ -64,7 +64,7 @@ Native track and the shared core (details in `DIRECTION.md#open-questions`):
 - Filesystem: FAT12 and FAT16 for floppies, and perhaps one of our own.
 - Boot media, and whether the loader is ours.
 - Early disk access: the BIOS or our own floppy and IDE drivers.
-- Switching to real mode or V86 to call the BIOS, and whether it is worth it.
+- Switching to real mode or V86 to call the BIOS, and whether it is worth it. A real-mode trampoline is built and works in QEMU and Bochs (spike n3, `N3-BIOS-PATH.md`); V86 is the later upgrade.
 - Graphics driver strategy: VBE through the BIOS before switching, V86 calls, or native drivers for specific cards.
 - Sound hardware detection without DOS or `BLASTER`.
 - Input: our own PS/2 keyboard and mouse drivers.

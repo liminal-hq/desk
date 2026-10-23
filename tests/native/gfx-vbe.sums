@@ -1,0 +1,9 @@
+# Reference checksums of the screenshots of the graphics tour on QEMU's std VGA with a VBE linear frame buffer (tests/native/gfx-vbe.inject).
+# NAME WIDTHxHEIGHT CRC-32 of the RGB bytes of the PPM that the monitor's screendump writes. tools/native-shot.py check compares them.
+vbe-picture 640x480 9c399476
+vbe-fade-half 640x480 7e7723f7
+vbe-window-a 640x480 bd590d75
+vbe-window-b 640x480 83be067f
+vbe-window-c 640x480 1f104e82
+mode-13h 640x400 22f676d7
+text 720x400 23a1daee

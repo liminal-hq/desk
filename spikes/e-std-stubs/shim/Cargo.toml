@@ -1,0 +1,16 @@
+[package]
+name = "shim"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike E: the symbols a borrowed or patched std platform layer needs, over the d0 runtime"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt", default-features = false }
+
+[features]
+# The libc-style symbols the `trusty` platform layer of unmodified std expects (malloc and friends, writev, the random seed)
+trusty = []
+# The `desk_*` interface of the patched platform layer (patch/overlay/library/std/src/sys/pal/desk/abi.rs)
+desk = []

@@ -1,0 +1,39 @@
+DOSBox-X version jsdos (SDL2). Reported DOS version 5.00.
+Bad command or filename - "mem"
+svga_s3
+16
+auto
+auto
+max
+fast
+
+--- dosbox.conf as js-dos holds it ---
+[sdl]
+fullscreen = false
+
+[dosbox]
+machine = svga_s3
+memsize = 16
+
+[cpu]
+core = auto
+cputype = auto
+cycles = max
+
+[sblaster]
+sbtype = sb2
+sbbase = 220
+irq = 7
+dma = 1
+oplmode = opl2
+oplemu = fast
+
+[mixer]
+rate = 44100
+blocksize = 1024
+prebuffer = 0
+
+[autoexec]
+mount c .
+c:
+call s5run.bat

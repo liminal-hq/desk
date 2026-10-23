@@ -1,0 +1,13 @@
+[package]
+name = "desk-hal-mock"
+description = "The host platform for driver tests: a port bus that records and replays I/O, device models, an interrupt controller"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+
+[features]
+std = ["desk-hal/std"]

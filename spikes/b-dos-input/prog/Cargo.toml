@@ -1,0 +1,18 @@
+[package]
+name = "dosinput"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike B: the keyboard (IRQ 1) and the mouse (INT 33h) on the pure-Rust DOS runtime, through the shared HAL drivers"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt" }
+desk-hal = { path = "../../../hal/hal" }
+desk-i8042 = { path = "../../../hal/drivers/i8042" }
+desk-int33 = { path = "../../../hal/drivers/int33" }
+desk-vga = { path = "../../../hal/drivers/vga" }
+
+[[bin]]
+name = "dosinput"
+path = "src/main.rs"

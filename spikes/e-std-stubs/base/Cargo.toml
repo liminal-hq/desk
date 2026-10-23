@@ -1,0 +1,10 @@
+[package]
+name = "base"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike E: the no_std plus alloc baseline for the size comparison"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../d0-rust-dos/rt" }
