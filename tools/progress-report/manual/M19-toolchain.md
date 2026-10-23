@@ -90,7 +90,7 @@ The two tools are the same idea at different heights, and neither is a linker. `
 
 ### NASM, and the machines that do not have it
 
-The boot sectors are not Rust. `tools/native-build.sh` assembles `boot/stage1.asm`, `kernel/bios16.asm` and `boot/stage2.asm` with `nasm -f bin -Werror`, with `bios16` first because the kernel embeds it, and only then runs cargo. NASM comes from the host, or, when only Docker is available, from the image `desk-native-qemu:1`; with neither the script stops with status 3.
+The boot sectors are not Rust. `tools/native-build.sh` assembles `boot/stage1.asm`, `kernel/bios16.asm` and `boot/stage2.asm` with `nasm -f bin -Werror`, in that order, before it runs cargo, because the kernel embeds the assembled `bios16`. NASM comes from the host, or, when only Docker is available, from the image `desk-native-qemu:1`; with neither the script stops with status 3.
 
 ### The Docker images, and what each is for
 
