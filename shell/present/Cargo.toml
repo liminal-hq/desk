@@ -15,4 +15,5 @@ desk-vga = { path = "../../hal/drivers/vga" }
 std = ["desk-gfx/std", "desk-hal/std", "desk-vga/std"]
 
 [dev-dependencies]
-desk-hal-mock = { path = "../../hal/platform/mock" }
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { path = "../../hal/platform/mock", features = ["std"] }

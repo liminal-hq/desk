@@ -7,8 +7,6 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::float_arithmetic)]
 
-extern crate alloc;
-
 mod linear;
 mod planar;
 mod readback;

@@ -169,8 +169,15 @@ impl<S: PlaneSink> Present for PlanarPresent<S> {
         }
         let offset = y as usize * self.pitch as usize + (x / 8) as usize;
         for p in 0..4u8 {
-            self.sink.select(p)?;
-            self.sink.write(offset, &self.planes[p as usize][..n])?;
+            let done = self
+                .sink
+                .select(p)
+                .and_then(|()| self.sink.write(offset, &self.planes[p as usize][..n]));
+            if let Err(e) = done {
+                // Leave the map mask on all four planes even though the frame is abandoned.
+                let _ = self.sink.end();
+                return Err(e);
+            }
         }
         Ok(())
     }
