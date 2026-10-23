@@ -5,8 +5,9 @@
 #
 # Nothing in the table is typed here except which constant to read and the value the chapter's prose relies on. The explainer reads each
 # `const NAME: u16 = VALUE;` from the source file that defines it and refuses a constant that is missing or whose value differs from the
-# one expected, and it reads the IRQ lines from `hal/hal/src/irq.rs` and the vector bases from `hal/drivers/pic/src/lib.rs`, refusing a
-# line that is out of range or a base that is not a multiple of eight (a controller can only be based on one).
+# one expected, and it reads the IRQ lines from `hal/hal/src/irq.rs` (refusing one that is missing, numbered differently or past 15) and
+# the vector bases from `hal/drivers/pic/src/lib.rs`, refusing a base that differs from the one the chapter states or is not a multiple
+# of eight (a controller can only be based on one).
 import os
 import re
 
@@ -44,6 +45,9 @@ PORTS = [
     ("Bochs VBE", "data (QEMU's standard card)", "kernel/src/gfx.rs", "DISPI_DATA", 0x1CF),
     ("QEMU", "isa-debug-exit", "kernel/src/exit.rs", "DEBUG_EXIT", 0xF4),
 ]
+
+# The vector bases the chapter's prose and worked examples state: (BIOS_BASES, REMAPPED_BASES).
+BASES = {"BIOS_BASES": (0x08, 0x70), "REMAPPED_BASES": (0x20, 0x28)}
 
 # The IRQ lines the HAL names, with what sits on each on a PC (the second column is the constant's name in `irq.rs`).
 LINES = [(0, "TIMER", "PIT channel 0"), (1, "KEYBOARD", "8042, keyboard"), (2, "CASCADE", "the slave 8259"), (3, "COM2", "second serial port"),
@@ -92,7 +96,9 @@ def check(ports=PORTS, lines=LINES, files=None, irq_text=None, pic_text=None):
             problems.append("%s defines %s as %#x, but the chapter says %#x" % (path, name, got, want))
     found = read_lines(irq_text if irq_text is not None else src("hal/hal/src/irq.rs"))
     for line, name, _ in lines:
-        if name not in found:
+        if not 0 <= line <= 15:
+            problems.append("IRQ %d (%s) is out of range: the PC has lines 0 to 15" % (line, name))
+        elif name not in found:
             problems.append("hal/hal/src/irq.rs has no Irq constant %s" % name)
         elif found[name] != line:
             problems.append("hal/hal/src/irq.rs numbers %s as %d, but the chapter says %d" % (name, found[name], line))
@@ -100,8 +106,12 @@ def check(ports=PORTS, lines=LINES, files=None, irq_text=None, pic_text=None):
     for n, b in bases.items():
         if b is None:
             problems.append("hal/drivers/pic/src/lib.rs has no %s" % n)
-        elif b[0] % 8 or b[1] % 8 or b[1] != b[0] + 8 and n == "REMAPPED_BASES":
+        elif b[0] % 8 or b[1] % 8:
             problems.append("%s %r is not a pair of multiples of eight" % (n, b))
+        elif n == "REMAPPED_BASES" and b[1] != b[0] + 8:
+            problems.append("%s %r puts the slave's vectors somewhere other than just after the master's eight" % (n, b))
+        elif b != BASES[n]:
+            problems.append("hal/drivers/pic/src/lib.rs defines %s as %r, but the chapter says %r" % (n, b, BASES[n]))
     return problems
 
 
