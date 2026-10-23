@@ -4,11 +4,11 @@ n:
 kicker: Decisions and risks
 title: Decisions and risks
 date: 2026-10-23
-summary: What has been decided, what is waiting for the owner, what could go wrong, and, since merge day, the order in which eight open pull requests could be merged and what the work taught about how it is being done.
+summary: What has been decided, what is waiting for the owner, what could go wrong, and, since merge day, the order in which the spike pull requests were merged and what the work taught about how it is being done.
 prs: [5, 8, 10, 11, 12, 13, 14, 15, 16, 17]
 section: reference
 ---
-An archive that only lists successes is a brochure. Here are the decisions on record, the questions still open, and the risks that `docs/DIRECTION.md` names for itself. The first three tables are lifted from `docs/OPEN-QUESTIONS.md`, `docs/DIRECTION.md` and the roadmap, and say where. The sections after them are mine: they are about the open pull requests and the way the work is being done, and each says what it rests on.
+An archive that only lists successes is a brochure. Here are the decisions on record, the questions still open, and the risks that `docs/DIRECTION.md` names for itself. The first three tables are lifted from `docs/OPEN-QUESTIONS.md`, `docs/DIRECTION.md` and the roadmap, and say where. The sections after them are mine: they are about how the spike pull requests were merged and the way the work is being done, and each says what it rests on.
 
 ## Decided
 
@@ -21,7 +21,7 @@ An archive that only lists successes is a brochure. Here are the decisions on re
 | Licence | Apache-2.0 OR MIT | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md) |
 | Merging | Merge commits only, never squash, never rebase-merge | [`AGENTS.md`](repo:AGENTS.md) |
 | The CI image | `ci-dos`, pinned by digest | [`AGENTS.md`](repo:AGENTS.md) |
-| Browser build | Ship DOSBox-only until the linear frame buffer works in js-dos. The condition is now met by spike s5, in a pull request that is open, not merged (chapter 14) | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md), [`docs/S5-JSDOS.md`](repo:docs/S5-JSDOS.md) on its branch |
+| Browser build | Ship DOSBox-only until the linear frame buffer works in js-dos. The condition is now met by spike s5, in pull request #13, which is {{pr13.state}} (chapter 14) | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md), [`docs/S5-JSDOS.md`](repo:docs/S5-JSDOS.md) on its branch |
 
 ## Waiting for a decision
 
@@ -32,30 +32,22 @@ An archive that only lists successes is a brochure. Here are the decisions on re
 | Scheduling: cooperative or preemptive | Shapes the app ABI and the core's event loop | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | Memory protection and app isolation | Decides what a crashed app can damage | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | Filesystem, boot media, early disk access | What the kernel can read and how it is started | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
-| The shape of the HAL | Without it the two tracks drift apart. A design is proposed in pull request #8 and is waiting for review (chapter 10) | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md), [`docs/HAL.md`](repo:docs/HAL.md) on its branch |
+| The shape of the HAL | Without it the two tracks drift apart. A first design came in pull request #8, which is {{pr8.state}}, and it has consumers in #10, #11, #14, #15 and #17, and it is still a design that only emulators and host tests have met (chapter 10) | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md), [`docs/HAL.md`](repo:docs/HAL.md) on its branch |
 | Licensing of FreeDOS components | Must be checked before a release carries them | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | The product name | Names the image, the disk label and the repository; blocks nothing | [`docs/NAMING.md`](repo:docs/NAMING.md) |
 | The 4 bitmap faces | They have not been seen on a DOS screen, and the 6 by 8 face is the one to check first | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md) |
 
-## The open pull requests: order and stacking
+## The spike pull requests: how they were merged
 
-Since merge day only {{merged.since}} has merged, which is the generator of this report; {{m.prsOpen}} other pull requests are open ({{open.numbers}}), with CI green on the head of {{m.openCi}} of them, and {{m.prsMergeDay}} merged on merge day. The generator reads how they sit on each other, drawn here, and the order below is my reading of that, not a decision.
+Nine spike pull requests were open at once, and all nine are merged now (#8, #10, #11, #12, #13, #14, #15, #16 and #17), each with a merge commit and, on the merge commit, CI passing. `git log --first-parent main` gives the order they landed in: #8, #10, #11, #14, #15, #17, #16, #12 and #13, in about an hour, then #18, the first edition of this report, after them. What follows is the shape they had while they waited, kept as history. The graph that drew it, and the trial-merge table of pairs that would conflict, needed open branches to draw, so they are retired with this edition.
 
-<!-- figure pr-stack -->
-
-And the pairs that would conflict if both were merged, found by trial merges of every pair of open branches where neither contains the other:
-
-<!-- figure open-conflicts -->
-
-
-- **#8, the HAL, goes first.** It is based on `main`, and #10 and #11 are based on its branch. Every other hardware pull request contains it.
-- **#10 and #11 come next, in either order.** The keyboard and mouse spike (#10) and the VGA and VBE spike (#11) are each based on #8 and do not depend on each other.
-- **#14 and #15 come after their parents.** #14 (native graphics) is based on #10 and contains #11 through a merge commit; #15 (DOS input) is based on #11 and contains #10 the same way. Merging #10 and #11 first leaves each of them with only its own work. The pull request pages show the lines of their base branches, which is why their numbers are large.
-- **#17 is based on #14.** Spike n3, the BIOS path, is stacked on the native graphics spike, so it waits for #14 and its parents.
-- **#12, #13 and #16 are independent of the stack.** The `std` experiment (#12), js-dos (#13) and spike G (#16) are based on `main`. #12 does change the runtime that #11, #14 and #15 also edit (`spikes/d0-rust-dos/rt`), so it should expect to be reconciled with them.
-- **Spike G's loader fix and the loader changes of #14 and #17 will conflict.** #16 adds the INT 15h AH=88h fallback to `boot/stage2.asm`, and #14 (and so #17) add the VBE step and the boot information block to the same file. A trial merge reports a conflict in `boot/stage2.asm` for {{conflicts.boot}}, and in the native-boot document and the shared readmes. Whichever is merged second has to carry the other's lines, and the 86Box result of chapter 16 and the BIOS path of chapter 17 are then needed together.
-- **The shared files will conflict again.** Of the nine pull requests open when this was written, `tools/check.sh` and `tools/README.md` are edited by all nine, `docs/README.md` and `spikes/README.md` by eight, and `AGENTS.md` by six. Merge day had the same pattern, and its remedy was to keep every step: merge `main` into the branch, resolve, then merge the pull request with a merge commit (chapter 9).
-- **This report's chapters and gallery** are in a pull request of their own, based on `main` after #9 (the generator) merged. It touches only `tools/progress-report` and can go in at any point, but the report describes the others as open, so it will read differently once they merge.
+- **#8, the HAL, went first.** It was based on `main`, and #10 and #11 were based on its branch.
+- **#10 and #11 came next.** The keyboard and mouse spike (#10) and the VGA and VBE spike (#11) were each based on #8 and did not depend on each other.
+- **#14 and #15 came after their parents.** #14 (native graphics) was based on #10 and contained #11 through a merge commit; #15 (DOS input) was based on #11 and contained #10 the same way, so their pull request pages showed the lines of their base branches.
+- **#17 was based on #14.** Spike n3, the BIOS path, was stacked on the native graphics spike, and it landed after #14 and #15 and before #16.
+- **#12, #13 and #16 were independent of the stack.** The `std` experiment (#12), js-dos (#13) and spike G (#16) were based on `main`; they merged last.
+- **The shared files conflicted again, as on merge day.** The merge commits that the authors made on the branches before merging ("Merge main into ...", `git log --merges main`) list the conflicts: the index rows in `docs/README.md` and `spikes/README.md`, the `check.sh` row of `tools/README.md` and the member list of `hal/Cargo.toml`, each resolved by keeping every side's lines; and in `boot/stage2.asm` the AH=88h fallback of #16 was combined with the VBE step and boot information block that #14 had added. It is the merge-day remedy over again: keep every step (chapter 9).
+- **This report's chapters and gallery** (#18) merged after the others. It touched only `tools/progress-report`, and its own merge into `main` before landing reported no conflicts.
 
 ## What the work taught about how it is done
 
@@ -72,36 +64,23 @@ And the pairs that would conflict if both were merged, found by trial merges of 
 | No real hardware in the loop | Emulators will pass things real machines reject, and the reverse |
 | Emulator accuracy | QEMU, 86Box and Bochs disagree with each other and with real parts; a result in one is not a claim about hardware |
 | Scope | An operating system is much more than a shell; two tracks split the effort |
-| Divergence | If the HAL is wrong, the two tracks drift apart. A first design now exists and has two consumers in open pull requests, but none is merged |
+| Divergence | If the HAL is wrong, the two tracks drift apart. A first design now exists and is merged with its consumers (the input, graphics and BIOS spikes), but every consumer ran only in an emulator, so whether the design is right is still open |
 
 Source for the risks: [`docs/DIRECTION.md`](repo:docs/DIRECTION.md), section "Risks".
 
 ## The shelves
 
 ### Catalogued
-- The "Decided" rows are recorded in the cited documents on `main`, each merged with CI green, except the browser row, whose spike is in an open pull request.
-- The stacking in the open-pull-request section is read from `git` and `gh`: base branches, which open branches contain which, and the files each touches.
+- The "Decided" rows are recorded in the cited documents on `main`, each merged with CI green; the browser row's spike, #13, is merged too.
+- The merge order in the spike section is read from `git log --first-parent main`, and the conflicts from the bodies of the "Merge main into" commits.
 - The review-tool finding is quoted from the comments on pull requests #8, #9 and #12.
 
 ### Uncatalogued
 - The "Decided" rows are decisions, not measurements: none has been tested beyond the spikes in the findings table, and `docs/DIRECTION.md` says its numbers are targets.
 - The risks have not been assessed: I have copied them, and nothing here measures how likely they are.
-- The merge order is my reading of the stacking. The conflicts below were found with trial merges (`git merge-tree`, which writes no working tree) of every independent pair, and no real merge was made.
+- The stacking described in the spike section is from the first edition's reading of the base branches and what each contained; the branches are gone from the open list and I did not re-derive it.
 - The disk figure is a reading of one machine on one day.
 
 ### Wish list
 - An answer to every row under "Waiting for a decision", in the owner's time.
-- A merge, in the order above, of the pull requests that earn it.
 - A way for the review tool to take its target as an argument it cannot ignore.
-
-```figures
-id: pr-stack
-kind: diagram
-track: shared
-title: The stack of open pull requests
-alt: A graph of the open pull requests, each box pointing to the branch it is based on, with dashed lines to other open branches it contains.
-caption: What is based on what, from gh and git.
-at: figure pr-stack
-thumb: svg
-state: none
-```

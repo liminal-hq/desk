@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: The native kernel learns to read a keyboard and a mouse by talking to the 8042 controller itself, decoding what it hears and handing it to the main loop through a ring that no lock guards.
 prs: [10]
 ---
-A kernel with no BIOS cannot call `INT 16h` and ask for a key. It has to do what the BIOS did: talk to the keyboard controller, a small Intel 8042 on two ports, `0x60` for data and `0x64` for status and commands. Pull request #10 (branch `spike/c-kernel-input`, stacked on the HAL of chapter 10) writes that as shared drivers, `desk-i8042` and `desk-kbd`, plus a model of the controller for host tests, and then puts them in the kernel and checks the result in QEMU by typing at it.
+A kernel with no BIOS cannot call `INT 16h` and ask for a key. It has to do what the BIOS did: talk to the keyboard controller, a small Intel 8042 on two ports, `0x60` for data and `0x64` for status and commands. Pull request #10 (branch `spike/c-kernel-input`, written on top of the HAL of chapter 10, {{pr10.state}}) writes that as shared drivers, `desk-i8042` and `desk-kbd`, plus a model of the controller for host tests, and then puts them in the kernel and checks the result in QEMU by typing at it.
 
 **The handshake.** The controller will not take a byte while its input buffer is full, and it will not give one until its output buffer says it has one, so every exchange is a bounded wait on a status bit. The set-up sequence disables both ports, flushes stray bytes, reads and rewrites the configuration byte (interrupts off, translation on), runs the controller's self-test and expects `0x55`, tests each port, and enables them. Interrupts are switched on last, after the handlers exist. Every wait has a bound (100,000 status reads for an ordinary reply, a million for a keyboard's self-test), and a floating bus that reads all ones makes the first command time out instead of hanging. The keyboard is then stopped, reset, expected to answer `FA` then `AA`, and started; the mouse goes through the same dance behind a `D4` prefix.
 
@@ -30,7 +30,7 @@ What QEMU is not is a real keyboard. The pull request lists what a real machine 
 ## The shelves
 
 ### Catalogued
-- A headless QEMU run (`-cpu 486`) that injects `a`, `Shift+A`, `1`, `Shift+1`, Enter, keypad Enter, Up, Ctrl+Alt+Delete and Escape and eight mouse movements and clicks prints 26 key events and 8 mouse events that equal `tests/native/expected-input.txt`, with nothing dropped. CI is green on `{{pr10.head}}` of the open pull request. Not merged yet.
+- A headless QEMU run (`-cpu 486`) that injects `a`, `Shift+A`, `1`, `Shift+1`, Enter, keypad Enter, Up, Ctrl+Alt+Delete and Escape and eight mouse movements and clicks prints 26 key events and 8 mouse events that equal `tests/native/expected-input.txt`, with nothing dropped. CI passed on the merge commit `{{pr10.head}}` of pull request #10, which is {{pr10.state}}.
 - The 46 host tests of the controller driver and the 22 of the decoder cover the wire sequences, every timeout path, packet decoding, the whole interrupt-to-ring path, and a masked IRQ 1 delivering nothing; the three negative runs (a removed key, a masked line, an idle input) behave as described.
 - The replay above refuses to build unless a model of the decoder turns the derived bytes back into exactly the recorded lines.
 

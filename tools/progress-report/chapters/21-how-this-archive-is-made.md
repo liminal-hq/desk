@@ -12,9 +12,9 @@ This site is not hand-built. It is generated from the repository by Python in `t
 
 **The data.** `gather.py` reads the history of `main` with `git log` (never from branches that have since been deleted), reads counts from the tree of `main` (`git ls-tree`, file contents with `git show`), and reads pull request and CI data from `gh pr list` and `gh run list`. For the open pull requests it also reads their branches: the commits a branch has that its base and the other open branches it contains do not, the test and transcript counts of each tree, and the state tag of each pull request (merged, in review, in progress), which comes from `gh` and from nothing I typed. If `gh` is missing or signed out it falls back to a committed snapshot, `snapshots/gh.json`, which also keeps what the branches held when it was taken, and the footer of every page says which it used. A few numbers cannot be recomputed from a tree, such as the size of a built kernel; those live in `snapshots/measured.json` with the command that produced them. Every headline number on the front page carries a "how measured" note, and the numbers about open work are kept apart from the numbers about `main`.
 
-**Captures.** The explainers of the hardware chapters replay files that live on other branches. `media/captures.json` lists each one (the branch, the path, and, for a table or a transcript inside a document, where to find it), `gather.py --update-captures` copies them, and every build compares each copy with its branch and says when one differs or could not be checked. A figure that is derived, not recorded, says so in its caption, and the build refuses to render it unless the derivation reproduces the recorded lines. The branches read for this edition, with their head commits:
+**Captures.** The explainers of the hardware chapters replay files that live on other branches. `media/captures.json` lists each one (the branch, the path, and, for a table or a transcript inside a document, where to find it), `gather.py --update-captures` copies them, and every build compares each copy with its branch and says when one differs or could not be checked. A figure that is derived, not recorded, says so in its caption, and the build refuses to render it unless the derivation reproduces the recorded lines. The branches the first edition read, with the commit each now has on `main` (the merge commit, now that every one of them is merged):
 
-| Pull request | Branch | Head | State |
+| Pull request | Branch | Merge commit | State |
 |---|---|---|---|
 | #8 | `feat/hal-design` | `{{pr8.head}}` | {{pr8.state}} |
 | #10 | `spike/c-kernel-input` | `{{pr10.head}}` | {{pr10.state}} |
@@ -26,7 +26,7 @@ This site is not hand-built. It is generated from the repository by Python in `t
 | #16 | `spike/g-boot-bochs-86box` | `{{pr16.head}}` | {{pr16.state}} |
 | #17 | `spike/n3-native-bios` | `{{pr17.head}}` | {{pr17.state}} |
 
-The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). The pull request that carries this report (#18) is counted among the open ones and has no row of its own.
+The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). The pull request that carried the first edition of this report (#18) is merged too and has no row of its own.
 
 **The counts of tests are counts of declarations.** The generator counts `test(` and `it(` calls in `fonts/test/`, `#[test]` attributes in `hal/` on the open branches, and the expected transcripts under `tests/native/` and `spikes/`. That is not an official total and not a runner's tally, and the page says so wherever it uses the number. Where a pull request's own document states a test count, the generator's count agrees with it, which is how I checked the counter.
 

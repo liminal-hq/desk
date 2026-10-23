@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: Spike G booted the native image in Bochs and in 86Box, asked a 1993 BIOS for its memory and found that it had never heard of the calls the loader used, and caught QEMU being too kind to a 486.
 prs: [16]
 ---
-Every native boot in this archive so far was in QEMU, with QEMU's own BIOS and QEMU's idea of a 486. That is one opinion, repeated. Spike G (pull request #16, branch `spike/g-boot-bochs-86box`, built on `main`) asks the cheapest useful question: if the same floppy image meets a different emulator and a different BIOS, does it still boot? The answer is that it boots unchanged under Bochs 2.7 built as a 486, with three different BIOS images, and under 86Box 6.0 emulating a 33 MHz 486DX board with an AMIBIOS dated 8 August 1993, after one boot bug that only the second of those could find.
+Every native boot in this archive so far was in QEMU, with QEMU's own BIOS and QEMU's idea of a 486. That is one opinion, repeated. Spike G (pull request #16, {{pr16.state}}, branch `spike/g-boot-bochs-86box`, built on `main`) asks the cheapest useful question: if the same floppy image meets a different emulator and a different BIOS, does it still boot? The answer is that it boots unchanged under Bochs 2.7 built as a 486, with three different BIOS images, and under 86Box 6.0 emulating a 33 MHz 486DX board with an AMIBIOS dated 8 August 1993, after one boot bug that only the second of those could find.
 
 <!-- table g-results.md -->
 
@@ -45,7 +45,7 @@ thumb: steps
 ## The shelves
 
 ### Catalogued
-- The native image boots to `boot complete` in Bochs 2.7 built as a 486 with `BIOS-bochs-legacy`, `BIOS-bochs-latest` and SeaBIOS 1.13, running the whole native test including the loader variants, the faults and the hang, in about 20 seconds; and in 86Box 6.0 on an `ami471` board with an AMIBIOS of 1993, running a normal boot and a divide error. The transcript is compared with `tests/native/expected.txt`, which accepts BIOS-dependent lines. CI is `{{pr16.ci}}` on `{{pr16.head}}` of the open pull request #16, though CI itself does not run these emulator tests. Not merged yet.
+- The native image boots to `boot complete` in Bochs 2.7 built as a 486 with `BIOS-bochs-legacy`, `BIOS-bochs-latest` and SeaBIOS 1.13, running the whole native test including the loader variants, the faults and the hang, in about 20 seconds; and in 86Box 6.0 on an `ami471` board with an AMIBIOS of 1993, running a normal boot and a divide error. The transcript is compared with `tests/native/expected.txt`, which accepts BIOS-dependent lines. CI is `{{pr16.ci}}` on the merge commit `{{pr16.head}}` of pull request #16, which is {{pr16.state}}, though CI itself does not run these emulator tests.
 - The `e88` loader variant, built with `-DNO_E820 -DNO_E801`, boots under QEMU and Bochs and checks a rewritten transcript, so the AH=88 path is tested without 86Box.
 - A probe shows which instructions QEMU's `-cpu 486` and Bochs's 486 reject; the Bochs test requires an invalid-opcode fault for `rdtsc`, `rdmsr`, `emms` and a read of `CR4`.
 

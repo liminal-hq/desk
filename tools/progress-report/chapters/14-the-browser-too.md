@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: Spike s5 ran every DOS program the repository builds inside js-dos 8 in a browser, and asked the one question the spec had left open: does the VBE linear frame buffer work there?
 prs: [13]
 ---
-The hosted track has a second ambition besides old PCs: a demo that anyone can open from a link. `docs/OPEN-QUESTIONS.md` had set a condition on it: ship the browser build with DOSBox only, unless a spike showed the VESA linear frame buffer working in js-dos. Pull request #13 (branch `spike/s5-jsdos`, built on `main`) is that spike, run in headless Chromium 154 on Linux against js-dos 8.5.3 and compared line by line with DOSBox Staging 0.83 running the same programs.
+The hosted track has a second ambition besides old PCs: a demo that anyone can open from a link. `docs/OPEN-QUESTIONS.md` had set a condition on it: ship the browser build with DOSBox only, unless a spike showed the VESA linear frame buffer working in js-dos. Pull request #13 ({{pr13.state}}, branch `spike/s5-jsdos`, built on `main`) is that spike, run in headless Chromium 154 on Linux against js-dos 8.5.3 and compared line by line with DOSBox Staging 0.83 running the same programs.
 
 The answer is **yes**, and it is a stronger yes than the question needed. Every program the repository builds for DOS runs unchanged in the browser with `CWSDPMI.EXE` beside it (or the self-contained stub build): the hosted skeleton, the d0 programs, and the s1 module demo including its recovered panic and caught divide fault. Their transcripts are byte for byte the ones the native harness expects. Each row passed in all three of three full runs of 18 scenarios, about 44 seconds for the suite, with a cold browser profile each time.
 
@@ -30,7 +30,7 @@ What the browser build is, then: DOSBox with CWSDPMI running inside the emulated
 ## The shelves
 
 ### Catalogued
-- The 18 scenarios pass in headless Chromium 154 with js-dos 8.5.3, three clean runs, and the DOSBox-X backend once (it passed all but one scenario, which did not repeat); transcripts equal the native ones and the 640 by 480 by 8 pictures equal a computed reference exactly, through the linear frame buffer and through the bank window. CI is green on `{{pr13.head}}` of the open pull request. Not merged yet.
+- The 18 scenarios pass in headless Chromium 154 with js-dos 8.5.3, three clean runs, and the DOSBox-X backend once (it passed all but one scenario, which did not repeat); transcripts equal the native ones and the 640 by 480 by 8 pictures equal a computed reference exactly, through the linear frame buffer and through the bank window. CI passed on the merge commit `{{pr13.head}}` of pull request #13, which is {{pr13.state}}.
 - With `vesa_nolfb` set, no mode has the linear bit and the base address is zero; the probe says so and stops.
 - Pitch measurements of the OPL2, the Sound Blaster and the PC speaker, from the emulator's own sample stream.
 

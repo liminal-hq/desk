@@ -6,7 +6,7 @@ date: 2026-10-23
 summary: Spike E asked whether Rust's standard library can be built for an operating system whose name we invent. It cannot, until four missing pieces exist, and then a very small patch makes it work.
 prs: [12]
 ---
-Everything the archive has built so far is `no_std`: the kernel, the runtime, the drivers. That is right for code that has to be small and close to the hardware, and wrong for the apps that will one day run on the Desk, which would like `println!`, `HashMap` and `Instant`, and the crates that assume them. Since the project writes its own target specifications, spike E (pull request #12, branch `spike/e-std-stubs`, built on the pure-Rust runtime of chapter 8) asked a cheap question first: if the target's `os` is a name we make up, what does Rust's `std` give us?
+Everything the archive has built so far is `no_std`: the kernel, the runtime, the drivers. That is right for code that has to be small and close to the hardware, and wrong for the apps that will one day run on the Desk, which would like `println!`, `HashMap` and `Instant`, and the crates that assume them. Since the project writes its own target specifications, spike E (pull request #12, {{pr12.state}}, branch `spike/e-std-stubs`, built on the pure-Rust runtime of chapter 8) asked a cheap question first: if the target's `os` is a name we make up, what does Rust's `std` give us?
 
 **It does not build.** The expectation was that an unknown operating system falls back to the "unsupported" platform in full. In Rust 1.98.0 it does not: `std` fails with 21 errors for `none`, `desk` and `dos` alike, because four pieces have no fallback arm. Other names fare differently, and the table is the spike's.
 
@@ -42,7 +42,7 @@ The review found one real bug worth telling: the BIOS tick count restarts at mid
 ## The shelves
 
 ### Catalogued
-- With the patched layer, every API in the table's last column marked as working was run in headless DOSBox Staging 0.83 with CWSDPMI, from `spikes/e-std-stubs/check.sh`, which is a step of `tools/check.sh`; CI is green on `{{pr12.head}}` of the open pull request. Not merged yet.
+- With the patched layer, every API in the table's last column marked as working was run in headless DOSBox Staging 0.83 with CWSDPMI, from `spikes/e-std-stubs/check.sh`, which is a step of `tools/check.sh`; CI passed on the merge commit `{{pr12.head}}` of pull request #12, which is {{pr12.state}}.
 - Building `std` for an invented OS name without the patch fails with 21 errors, as the first table says, and `check.sh` includes negative builds that expect the unpatched layers to fail.
 - The sizes in the chart are measured from builds under the pinned toolchain, and the figures are the document's.
 
