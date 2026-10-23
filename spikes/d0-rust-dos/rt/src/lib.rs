@@ -13,7 +13,7 @@
 // - `fpu`      the x87: initial state and the maths `core` does not have
 // - `io`       `print!`, `println!` and a `core::fmt` writer over standard output
 // - `mem`      memcpy and friends for the COFF (stage 1) build only; the ELF build gets them from compiler_builtins
-// - `panic`    the panic handler: report, run the clean-up list, exit with status 3
+// - `panic`    the panic handler: report, run the clean-up list, exit with status 3 (the `panic-handler` feature, on by default)
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof)
 // - `vga`      mode 13h and the frame buffer (hardware proof)
@@ -32,6 +32,7 @@ pub mod heap;
 pub mod io;
 #[cfg(target_os = "windows")]
 mod mem;
+#[cfg(feature = "panic-handler")]
 mod panic;
 pub mod start;
 pub mod timer;
