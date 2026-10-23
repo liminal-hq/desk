@@ -445,11 +445,19 @@ pub enum Event { Pointer(MouseEvent), PointerTo(i32, i32), Key(KeyEvent) }   // 
 
 pub struct Shell<'f> { /* compositor: Compositor, wm: Wm, theme: Theme, fonts: Fonts<'f>, pointer: (i32, i32), buttons: u8 */ }
 impl<'f> Shell<'f> {
-    pub fn new(width: u32, height: u32, depth: Depth, fonts: Fonts<'f>) -> Shell<'f>;   // cursor at the centre
+    pub fn new(width: u32, height: u32, depth: Depth, fonts: Fonts<'f>) -> Result<Shell<'f>, HalError>;   // cursor at the centre; InvalidArgument for a size the compositor refuses
     pub fn handle(&mut self, e: Event);
     pub fn frame<P: Present>(&mut self, out: &mut P) -> Result<FrameStats, HalError>;
     pub fn digest(&self) -> FrameDigest;
-    pub fn wm(&mut self) -> &mut Wm;
+    pub fn wm(&mut self) -> &mut Wm;                       // for looking: a change made through it is not damaged
+    // Changes that report their damage to the compositor, by window name (the bool is false when there is no such window):
+    pub fn open(&mut self, name: &str, outer: Rect, title: &str) -> WindowId;
+    pub fn close(&mut self, name: &str) -> bool;
+    pub fn focus(&mut self, name: &str) -> bool;
+    pub fn label(&mut self, window: &str, x: i32, y: i32, text: &str) -> bool;
+    pub fn field(&mut self, window: &str, x: i32, y: i32, width: u32) -> bool;   // also the window's focused widget
+    pub fn damage_all(&mut self);                          // the next frame repaints and presents the whole screen
+    pub fn back(&self) -> &Surface;  pub fn pointer(&self) -> (i32, i32);  pub fn depth(&self) -> Depth;
 }
 
 pub mod scenario {
@@ -466,6 +474,9 @@ pub mod scenario {
     /// Runs every step; after each Frame step's frame has been presented, calls `capture(name, &shell, stats)`.
     pub fn run<P: Present>(sc: &Scenario, depth: Depth, shell: &mut Shell, out: &mut P,
                            capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>) -> Result<(), RunError>;
+    /// One step's effect on the shell, everything but presenting (`Frame` and `ExpectDamage` do nothing): what `run` applies, and what the incremental-versus-full test steps through.
+    pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError>;
+    pub enum RunError { UnknownWindow(String), Untypable(char), Present(HalError), DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
 }
 ```
 
@@ -473,7 +484,7 @@ pub mod scenario {
 - **The pointer**: `Pointer` events add the motion (`dy` positive is down, as the HAL says), clamp to the screen, and move the cursor; `PointerTo` sets it (scenarios use it for clarity). Button changes go to `Wm::pointer`.
 - **What the parser checks.** Besides the line's own shape, `parse` refuses: a first line other than `desk-scenario 1`; `screen` or `depths` twice or after a step (a step with no `screen` before it is `MissingScreen`, and a file with no `depths` line runs at both depths); a name that is not 1 to 8 characters of `a-z`, `0-9` and `-`; a frame name used twice or that is a prefix of another; a window name that is used before it is opened, after it is closed or opened twice; a key name that is not a `KeyCode` variant's name (case matters); a `type` string with a character outside printable ASCII; and `move` offsets outside `i16`. The error carries the line number, counted from 1. `ParseError`'s `Display` prints `line N: KIND`.
 - **What a step becomes.** The parser keeps the button state and the modifier state, so `press` and `release` give `Pointer` events whose `buttons` are the state afterwards, `move` keeps them, and `key` events carry the modifiers after the event, as the HAL reports them. `type_events` expands each character into a key down and a key up with `desk_kbd::char_for` as the oracle, preferring the unshifted key; a capital or a shifted symbol is wrapped in Left Shift down and up (so `type "aB"` is six events). `Step::Type` keeps the string, and `run` expands it with `type_events`.
-- **Scenario frames**: `run` calls `frame` after every step that can change the picture, so a `Frame` step captures exactly what is on the screen, and an `ExpectDamage` step checks the stats of the frame just presented (host only; the platforms skip it).
+- **Scenario frames**: `run` presents one frame at each `Frame` step, not after every step, and then calls `capture`; the damage of every step since the previous frame is still pending, so the frame shows exactly what the steps lead to, and an `ExpectDamage` step checks the stats of the last frame presented, which therefore covers everything since the frame before it (host only; the platforms skip it). An `ExpectDamage` step with no frame before it is `RunError::NoFrame`.
 
 ## The scenario format
 
@@ -581,7 +592,7 @@ All in `cargo test` in `shell/`, so `tools/check.sh` runs them:
   - the first frame writes exactly `width × height` pixels; a frame with no events writes none;
   - a cursor move writes at most the area of the old and new 12 × 19 sprite rectangles (456 pixels when they are apart, their bounding box when they overlap), and repaints nothing into the back buffer;
   - at depth 4 the same move writes at most the rectangles widened to 8-pixel columns;
-  - a focus change that raises a window writes at most the raised window's `extent` plus the previously focused window's title bar and ring areas (`extent` minus `content`), as the damage table says;
+  - a focus change that raises a window writes the raised window's `extent` plus the previously focused window's `extent` (their bounding box when they overlap), as the damage table says: the previous window's title bar and four rings touch, so `Damage` merges them into its whole `extent` and the content is written with them;
   - a drag writes at most the union of the old and new extents, plus the cursor;
   - a key into a field writes at most the field's bounds;
   - `Damage`'s invariants (inside the bounds, disjoint, at most 16, covering) hold over 10,000 random adds from a fixed-seed generator.
