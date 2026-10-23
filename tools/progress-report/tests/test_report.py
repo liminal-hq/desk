@@ -583,5 +583,61 @@ class HardwareExplainerTests(unittest.TestCase):
             self.assertIn("<svg", fn(D))
 
 
+class FirstWindowTests(unittest.TestCase):
+    """The first window's explainer and the anatomy diagrams are read from files, and refuse data that disagrees with them."""
+
+    def test_the_anatomy_files_are_valid(self):
+        import explainers_fw as fw
+        for name in ("dos", "desk"):
+            self.assertEqual(fw.validate_anatomy(fw.load_anatomy(name)), [], name)
+
+    def test_every_desk_box_has_one_of_three_statuses_and_a_built_box_cites_evidence(self):
+        import explainers_fw as fw
+        data = fw.load_anatomy("desk")
+        self.assertEqual(data["statuses"], ["verified", "unverified", "planned"])
+        for b in data["boxes"]:
+            self.assertIn(b["status"], data["statuses"])
+            if b["status"] != "planned":
+                self.assertTrue(b["evidence"], b["id"])
+        planned = {b["id"] for b in data["boxes"] if b["status"] == "planned"}
+        for need in ("appmodel", "syscalls", "loader", "winown"):
+            self.assertIn(need, planned, "the app model, system calls, loader and window ownership must stay planned until built")
+
+    def test_a_bad_box_is_refused(self):
+        import copy
+        import explainers_fw as fw
+        data = fw.load_anatomy("desk")
+        bad = copy.deepcopy(data)
+        bad["boxes"][6]["status"] = "done"
+        self.assertTrue(fw.validate_anatomy(bad))
+        bad = copy.deepcopy(data)
+        bad["boxes"][6]["evidence"] = []
+        self.assertTrue(any("evidence" in p for p in fw.validate_anatomy(bad)))
+        bad = copy.deepcopy(data)
+        bad["boxes"][6]["evidence"] = ["repo:docs/NO-SUCH-FILE.md"]
+        self.assertTrue(any("does not exist" in p for p in fw.validate_anatomy(bad)))
+        bad = copy.deepcopy(data)
+        bad["boxes"][7]["col"] = bad["boxes"][6]["col"]
+        self.assertTrue(any("overlap" in p for p in fw.validate_anatomy(bad)))
+
+    def test_the_frames_explainer_has_six_steps_with_the_digests_of_the_sums(self):
+        import explainers_fw as fw
+        html = fw.frames({}, mdlite.Ctx())
+        self.assertEqual(html.count('class="x-step"'), 6)
+        for f, (d8, d4) in fw.result_table().items():
+            self.assertIn(d8, html)
+            self.assertIn(d4, html)
+
+    def test_the_frames_explainer_refuses_a_digest_that_disagrees_with_the_result_table(self):
+        import explainers_fw as fw
+        real = fw.result_table
+        try:
+            fw.result_table = lambda: {k: ("00000000", v[1]) for k, v in real().items()}
+            with self.assertRaises(ValueError):
+                fw.frames({}, mdlite.Ctx())
+        finally:
+            fw.result_table = real
+
+
 if __name__ == "__main__":
     unittest.main()
