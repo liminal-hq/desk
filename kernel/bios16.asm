@@ -138,9 +138,12 @@ rm_entry:
         shl bx, 2
         mov eax, [es:bx]
         mov [target], eax
-        ; Load the registers. The flags image goes on the stack first (the handler's IRET pops it), and DS goes last, because the
-        ; block is addressed through DS until then.
+        ; Load the registers. The flags are set first (the moves below do not change them) and a copy goes on the stack for the
+        ; handler's IRET, so the handler starts with the caller's carry, direction flag and the rest, as it would after an INT. DS goes
+        ; last, because the block is addressed through DS until then.
         push word [CTL_FLAGS_IN]
+        popf
+        pushf
         mov es, [R_ES]
         mov fs, [R_FS]
         mov gs, [R_GS]
