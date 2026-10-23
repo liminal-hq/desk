@@ -2,7 +2,7 @@
 
 Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mode IRQ 1 handler under DPMI and the mouse through the DOS mouse driver's INT 33h, from Rust on the pure-Rust DOS runtime (`spikes/d0-rust-dos/rt`), built from the shared HAL drivers so that the hosted platform hands the Desk core the same `KeyEvent` and `MouseEvent` types, from the same decoder, as the native kernel does (spike C, [`C-INPUT.md`](C-INPUT.md)).
 
-> **Status.** *Built and verified:* the INT 33h driver crate `desk-int33` and its model, 16 host tests including the whole DOS input path (mock 8042, IRQ 1 service, ring, shared decoder) against the transcript the DOS run is also checked against; `INPUT.EXE` in DOSBox Staging 0.83 with keys typed in by `AUTOTYPE` (VBE 640×480×8, mode 13h, text mode, chained and replaced BIOS handler, ring overflow, no mouse driver, a panic, a missing key, no Escape); the mouse moved, clicked and scrolled by `xdotool` over DOSBox's SDL window under Xvfb in Docker (opt-in). *Not verified:* real hardware, any mouse driver but DOSBox's built-in one, a real BIOS keyboard handler, 86Box, QEMU or Bochs, DPMI hosts other than CWSDPMI, Windows DOS boxes, the real-mode callback (function 000Ch).
+> **Status.** *Built and verified:* the INT 33h driver crate `desk-int33` and its model, 27 host tests (the counters of 0005h and 0006h among them, added later) including the whole DOS input path (mock 8042, IRQ 1 service, ring, shared decoder) against the transcript the DOS run is also checked against; `INPUT.EXE` in DOSBox Staging 0.83 with keys typed in by `AUTOTYPE` (VBE 640×480×8, mode 13h, text mode, chained and replaced BIOS handler, ring overflow, no mouse driver, a panic, a missing key, no Escape); the mouse moved, clicked and scrolled by `xdotool` over DOSBox's SDL window under Xvfb in Docker (opt-in). *Not verified:* real hardware, any mouse driver but DOSBox's built-in one, a real BIOS keyboard handler, 86Box, QEMU or Bochs, DPMI hosts other than CWSDPMI, Windows DOS boxes, the real-mode callback (function 000Ch).
 
 ## Contents
 
@@ -110,7 +110,7 @@ The functions that need a buffer (0009h set the cursor shape, 000Ch install a us
 The consequences of polling are the difference from the PS/2 path:
 
 - One event per poll with the summed motion, not one per packet. A core that integrates deltas cannot tell. The host test (`motion between polls is summed`) shows two moves reported as one.
-- A button pressed and released between two polls is not seen. The Xvfb run found it at once: `xdotool click` (a release milliseconds after the press) produced no button event in DOSBox, a press held for 0.3 s produced one. At a frame rate of tens of hertz a human click lasts several frames, so this is a limit of the spike's tight loop test more than of the design, but the fix is known: the driver's press and release counters (functions 0005h and 0006h, per button) catch them, at three more calls per poll for each of the two, or the callback.
+- A button pressed and released between two polls was not seen by the first build, and the left button's is now: `MouseInput` reads the press and release counters (functions 0005h and 0006h) on every poll and reports the missing edge, as a press event then a release event. The first diagnosis was incomplete: the Xvfb run found that `xdotool click` (a release at the same X timestamp as the press) produced no button event in DOSBox, but the driver's counters do not hold it either, so that click never reaches the driver (X delivers both events; SDL or DOSBox drops the pair). A press and release 1 to 5 ms apart does arrive, and a program that polls every few milliseconds sees it by state; the case the counters fix is a poll that is slow, so `INPUT.EXE slowpoll` waits 165 ms between polls and the Xvfb check clicks six times with a 5 ms gap: without the counters none of the six clicks is seen, with them all six are.
 
 **Wheel.** With the wheel API (function 0011h answers 574Dh) the wheel counter is in BH of function 0003h, cleared by the read. DOSBox's `builtin_dos_mouse_driver_model = wheel` provides it; the sign is positive for a scroll down (X button 5), which is the convention of `MouseEvent::wheel` (positive towards the user). The sign convention of other drivers was not checked and the CuteMouse documentation should be consulted before relying on it. A two or three button model reports `wheel API no` and the program never reports a wheel.
 
@@ -224,7 +224,8 @@ Totals 55 and 50 (the script moved 40 + 40 − 25 right and 30 + 30 − 10 down)
 | No Escape | status 4 after the timeout, everything put back |
 | A panic with everything taken over | status 3; the report line `IRQ 1 handler is the original one: true, ours installed: false, video mode 0x03` comes before `RT PANIC` |
 | Mouse, Xvfb | motion exactly as scripted, one mickey to the pixel; buttons `-,L,-,R,-,M,-,L`; wheel +1 and −1; the keys through the X keyboard; five runs in a row the same |
-| A quick click (`xdotool click`) | no event: press and release inside one poll |
+| `xdotool click 1` with no gap | no event, with or without the counters: it never reaches DOSBox's driver |
+| Six 5 ms clicks (`mousedown`, `sleep 0.005`, `mouseup`) with `slowpoll` | before the counters: no event (states empty); with them: `L,-` six times |
 
 ## What DOSBox models and what real hardware may do differently
 
@@ -261,7 +262,7 @@ Recommendations, not changes:
 - **`StaticCell`.** Spike C asked for it; `rt::irq::Slot` is it, written for DPMI because it must be in the locked image. It has nothing DOS-specific and could move to `desk-hal`.
 - **The cleanup list has eight slots.** The program uses five (the report, the mouse, the BIOS keyboard state, the IRQ vector and the display); a program that also hooks IRQ 0 and the PIT rate is at seven.
 - **Where `HAL.md` said the DOS stub "switches to a locked interrupt stack", it is built and works, but it was not shown to be necessary.** The test would be a handler that dereferences a pointer to a local with the host's stack in use; not tried.
-- **Press and release counters (0005h, 0006h) or the callback (000Ch)** if a click shorter than a poll matters. The `MouseEvent` has the state, not the changes, so a press and release inside one poll cannot be represented without synthesising two events.
+- **The callback (000Ch)** if more than the left button's clicks shorter than a poll matter. The press and release counters (0005h, 0006h) are built for the left button: `MouseInput` synthesises the missing edge as two events, at most one press and release pair per poll, and the right and middle buttons keep the state-only reading (four more calls per poll for buttons the shell does not use).
 - **`MouseEvent` from a poll sums deltas.** If the core ever wants per-packet events (gesture recognition, say), the DOS platform cannot give them without the callback.
 
 ## Commands

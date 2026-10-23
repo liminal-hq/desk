@@ -1,0 +1,14 @@
+mousemove 320 240
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+mousedown 1 sleep 0.005 mouseup 1
+sleep 0.4
+key Escape
