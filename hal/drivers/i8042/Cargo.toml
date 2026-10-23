@@ -1,0 +1,20 @@
+[package]
+name = "desk-i8042"
+description = "The 8042 keyboard controller, the PS/2 keyboard and mouse, and their interrupt services, written once against the HAL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+desk-kbd.workspace = true
+
+[features]
+# Only for host builds; see `desk-hal`.
+std = ["desk-hal/std", "desk-kbd/std"]
+
+[dev-dependencies]
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { workspace = true, features = ["std"] }
+desk-kbd = { workspace = true, features = ["std"] }
