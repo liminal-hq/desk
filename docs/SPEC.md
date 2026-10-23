@@ -2,7 +2,9 @@
 
 > **Status:** a working design, derived from a design-agent brainstorm before any code existed. Nothing here has been built or measured. Numbers, versions and file formats are targets until a spike confirms them; when code and this document disagree, the code wins and this document is updated in the same branch. "Desk" is a working name (see `NAMING.md`).
 
-Desk is a graphical shell for MS-DOS: the thing you install after DOS that gives the machine windows, icons, menus and a mouse pointer, and lets you run programs without typing at a prompt. It follows the layering Lieutenant Fizz for DOS proved (C for the hardware, Rust for everything else, DJGPP and CWSDPMI underneath) and builds in CI on `ghcr.io/liminal-hq/ci-dos`.
+> **Scope:** Desk is now an operating system in Rust for old hardware, built as a hosted track on DOS and a native track in parallel (`DIRECTION.md`, decided 2026-10-22). This document is the detailed spec of the **hosted track** and of the **OS-independent parts** (the look, the palette, fonts, widgets, apps, the SDK's shape and the interaction design). Anything here about DOS, DJGPP, CWSDPMI, `DESK.COM`, `DESK.RUN`, the handoff, DXE3 modules, 8.3 names or INT 33h applies to the hosted track only. The native track's kernel, boot, drivers and filesystem are specified in `DIRECTION.md` until a native spec exists.
+
+The hosted track is the part of Desk that runs on top of DOS: the thing you install after DOS that gives the machine windows, icons, menus and a mouse pointer, and lets you run programs without typing at a prompt. It follows the layering Lieutenant Fizz for DOS proved (C for the hardware, Rust for everything else, DJGPP and CWSDPMI underneath) and builds in CI on `ghcr.io/liminal-hq/ci-dos`.
 
 The design boards are in `design/Afterglow Desk.dc.html`: the looks (1a Void, 1b 1993, 1c Dusk, 1d the chosen mix), the architecture (2a) and the app anatomy (3a). The working prototype is `design/Afterglow Desk Prototype v4.dc.html`. This file is the reference; `docs/` has the detail, and `docs/HIG.md` is the design language every app follows.
 

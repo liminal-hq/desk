@@ -23,6 +23,15 @@ What was open before scaffolding `liminal-hq/desk`, and what was decided. The re
 | Long file names | **Read them when DOSLFN is loaded.** Files shows the long name; Properties shows the 8.3 name beside it. Without DOSLFN nothing changes. Renaming to a long name needs DOSLFN and says so if it isn't there. | — |
 | First run and installation | **Both**: a text-mode `INSTALL.EXE` that works on any PC, and a graphical installer when VESA works. Both copy to `C:\DESK`, read `BLASTER` and test the sound, detect the mouse (keyboard-only if there is none), and ask whether to start the Desk at boot. They edit `AUTOEXEC.BAT` only after asking, and keep `AUTOEXEC.BAK`. | 4d |
 
+## Direction (2026-10-22)
+
+| Question | Decision | Changes |
+|---|---|---|
+| What is Desk | **An operating system, written in Rust, for old hardware** (486-class PCs: VGA and VBE graphics, Sound Blaster and OPL sound, PS/2 keyboard and mouse, floppy and IDE storage), graphical and calm. Not only a shell for MS-DOS. | Every document's framing; `DIRECTION.md` is the new reference. |
+| Hosted or native | **Both, in parallel.** The hosted track runs Desk on DOS (DJGPP, CWSDPMI, DOSBox, js-dos later) for fast iteration; the native track is a bootable Rust kernel tested in QEMU, 86Box and Bochs (and v86 in the browser). They share an OS-independent core behind a small hardware abstraction layer. | The core must not call DOS or DJGPP directly. `SPEC.md` is the hosted track's spec until a native spec exists. |
+| DOS programs on the native OS | **Bundle FreeDOS**, booting into it or running it in a V86 task (design later), rather than reimplementing DOS. A later milestone. | `HANDOFF.md` stays as designed for the hosted track and is reinterpreted for the native track. |
+| Emulators | DOSBox and js-dos emulate DOS, not PC hardware, so they run only the hosted track. The native track needs QEMU, 86Box or Bochs. | `DIRECTION.md` has the test matrix. |
+
 ## Repo and process
 
 | Question | Decision |
@@ -40,11 +49,28 @@ The next spike is `s1-dxe3` (milestone 1): can Rust code run as a DXE3 module th
 
 ## Still open
 
+Hosted track:
+
 - Which Rust/DXE route wins (after the spike).
 - Whether the browser build uses mode 12h or waits for the LFB (after the js-dos spike).
 - Whether the four bitmap faces drafted in `fonts/` (see `FONTS.md`) are the ones that ship: they have not been seen on a DOS screen yet, and the 6×8 face is the one to check first.
 - Whether Desk reads real TrueType files so any font can be used, and how (the section below).
 - Whether JEMMEX loads and unloads cleanly from the command line on FreeDOS and MS-DOS 6.22 for each program (part of the handoff spike); if not, EMS games need a boot menu entry instead.
+
+Native track and the shared core (details in `DIRECTION.md#open-questions`):
+
+- Scheduling: cooperative in a single address space, or preemptive processes.
+- Memory protection and how apps are isolated.
+- Filesystem: FAT12 and FAT16 for floppies, and perhaps one of our own.
+- Boot media, and whether the loader is ours.
+- Early disk access: the BIOS or our own floppy and IDE drivers.
+- Switching to real mode or V86 to call the BIOS, and whether it is worth it.
+- Graphics driver strategy: VBE through the BIOS before switching, V86 calls, or native drivers for specific cards.
+- Sound hardware detection without DOS or `BLASTER`.
+- Input: our own PS/2 keyboard and mouse drivers.
+- How DOS programs and FreeDOS are launched, and how Desk state is saved around them.
+- Licensing of the bundled FreeDOS components.
+- The shape of the hardware abstraction layer, and whether the module format becomes our own.
 
 ## Reading TrueType fonts
 
