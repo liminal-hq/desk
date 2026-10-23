@@ -95,7 +95,7 @@ impl Adler32 {
 
 /// The Adler-32 of the surface as read back, row by row, one byte per pixel: the number `hw` prints for mode 13h, now for any
 /// surface, so a linear 8-bit frame buffer and a planar one that show the same picture have the same checksum.
-pub fn checksum<C: Canvas + ?Sized>(canvas: &mut C) -> Result<u32, HalError> {
+pub fn checksum<C: Canvas>(canvas: &mut C) -> Result<u32, HalError> {
     let width = canvas.width() as usize;
     if width > MAX_ROW {
         return Err(HalError::InvalidArgument);
