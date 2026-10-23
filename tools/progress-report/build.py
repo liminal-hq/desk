@@ -33,8 +33,8 @@ from mdlite import Ctx, esc, inline  # noqa: E402
 
 ARTIFACT_URL = "https://claude.ai/artifact/UiyueA93UpACK4UnMMh5as"
 TITLE = "Desk Progress Report"
-DESCRIPTION = ("The archive of the Desk project, chapter by chapter: what is catalogued, what is built but unverified, and what is only a wish, "
-               "with the evidence for each. There is no operating system yet.")
+DESCRIPTION = ("The archive of the Desk project, chapter by chapter and figure by figure: what is catalogued, what is built but unverified, and what is only a wish, "
+               "with the evidence and a state tag from gh for each. A work in progress. There is no operating system yet.")
 FONTS = ["desk-title", "desk-ui", "desk-small", "desk-fixed", "desk-sans", "desk-sans-bold", "desk-sans-italic", "desk-serif",
          "desk-serif-italic", "desk-mono", "desk-mono-bold"]
 SHOTS = [("01-v4-800.jpg", "01-v4-800.jpg"), ("02-v4-16.jpg", "02-v4-16.jpg"), ("v4-menu.jpg", "v4-menu.jpg"), ("files-resize.png", "files-resize.jpg")]
