@@ -58,3 +58,13 @@ version = "0.0.0"
 dependencies = [
  "desk-hal",
 ]
+
+[[package]]
+name = "desk-wm"
+version = "0.0.0"
+dependencies = [
+ "desk-font",
+ "desk-gfx",
+ "desk-hal",
+ "desk-ui",
+]
