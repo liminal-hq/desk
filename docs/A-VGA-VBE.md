@@ -139,7 +139,7 @@ To reuse `desk-vga` in the kernel:
 2. An `MmioRegion` over `A0000h` (identity mapped; a 64 KiB window), and for VBE an `MmioRegion` over the linear frame buffer's physical address, identity mapped or mapped uncached once there is paging. The platform's `phys` goes into `FrameBuffer`.
 3. Mode 13h and 12h: `desk_vga::set_mode_13h` and `set_mode_12h` need nothing else (no BIOS), load a palette and clear the screen afterwards.
 4. VBE: a `Bios` implementation, which in protected mode means a V86 monitor or a real-mode trampoline (and a buffer below 1 MiB), or no VBE and a register-level driver per card. The `Vbe` type is unchanged either way.
-5. Returning to text mode: there is no BIOS, so the kernel must reprogram the text registers and reload a font into plane 2 (or keep a real-mode call for it); this spike did not need it, because `rt` uses INT 10h.
+5. Returning to text mode: there is no BIOS, so the kernel must reprogram the text registers and reload a font into plane 2 (or keep a real-mode call for it); this spike did not need it, because `rt` uses INT 10h. Spike D did it for the kernel (`regs::MODE_03H`, `text::load_font`) and found that leaving a VBE mode is card-specific: [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md).
 
 ## HAL feedback
 
