@@ -6,6 +6,8 @@ The faces are original drawings in the spirit of the type the design boards used
 
 Beside the pixel faces there is a modern family of outline faces, Desk Sans, Desk Mono and Desk Serif, each Regular, Bold, Italic and Bold Italic, for larger sizes and modern systems (see [Modern outline faces](#modern-outline-faces)). The pixel faces are the Desk's own text at its native sizes on DOS; the outline faces are for Notes and Paint text, documents, the web, Windows and Linux, and a later TrueType reader in the Desk.
 
+The OpenType files of the pixel faces also carry the Desk pixel emoji as monochrome glyphs, and those of Desk Sans, Mono and Serif the vector emoji; the TrueType files carry none. See [`EMOJI.md`](EMOJI.md).
+
 ## Faces
 
 | Face | For | Cell | Em | Cap / x-height | Advance | Files |
@@ -123,9 +125,15 @@ At the native size Round renders exactly like Square in monochrome (every pixel 
 1. Draw it in the face's file in `fonts/src/faces/`, keyed by the character. For Desk Title, draw the one-pixel skeleton in `glyphs`, or, when emboldening goes wrong, the final bold form in `boldFixes`.
 2. For an accented letter, add a row to `ACCENTS` in `fonts/src/face.ts` instead of drawing it, unless the composed form looks wrong.
 3. For a character every face must have, add it to `fonts/src/charset.ts`.
-4. Run `bun build.ts` and `bun test` in `fonts/`, look at the specimen, and commit the source with the regenerated files in `fonts/generated/`.
+4. Run `bun build.ts` and `bun test` in `fonts/`, look at the specimen site, and commit the source with the regenerated files in `fonts/generated/`.
 
-The specimen page (`bun build.ts --specimen <file>`) renders each face with its built OTF file at 1×, 2× and 3×, charts every glyph from the build's own grids, and has a pixel editor that produces the source line for a changed glyph.
+### The specimen site
+
+`bun build.ts --site <dir>` (in `fonts/`) writes the specimen site, Desk Type Specimens, to a folder: five pages with a shared header. **Overview** (`index.html`) says what each family is for, which file to use on which system, what has and has not been checked, and how the fonts are built. **Pixel faces** (`pixel.html`) renders each face with its built OTF file at 1×, 2× and 3×, charts every glyph from the build's own grids, shows Desk Fixed DOS, and has a pixel editor that produces the source line for a changed glyph. **Outline faces** (`outline.html`) has Desk Sans, Mono and Serif with their italics, the features and a type tester with italic, feature and emoji switches. **Emoji** (`emoji.html`) is the emoji reference described in [`EMOJI.md`](EMOJI.md#the-specimen-site). **Downloads** (`downloads.html`) links every built file by family and format with its size.
+
+The fonts are served as real files under `fonts/` beside the pages (the same paths as in `fonts/generated/`) and loaded by `@font-face` with relative URLs, so the pages carry no base64. Artifacts serve only web file types, so the `.dfn` and `.dem` files are not published on their own: `downloads.json` lists every entry of `desk-fonts.zip` with either its published path or its bytes in base64, and the pages build the zip in the browser, byte for byte the zip the build's `zip()` writes, and offer it through the viewer's `downloads` capability. The Emoji page carries the `.dem` files in its data for its own emoji zip. Shared styles and scripts are separate files: `site.css` (the base reset and the header), `specimen.css`, `fonts.css`, `site.js` (saving files through the viewer's `downloads` capability where it is available), `specimen.js`, `emoji.js` and `emoji-data.js`. The sources are in `fonts/src/site/` and `fonts/src/specimen.ts`.
+
+The folder also gets `manifest.json`, which is the mapping for publishing it as a multi-file artifact: `file_path` is `index.html` (the main page, written without a document skeleton because the viewer adds one), `files` maps every other published path to its file in the folder with its media type (`font/otf`, `font/ttf`, `image/png` and so on), and `capabilities` is `{"downloads": {}}`. To publish, run `bun build.ts --site <dir>` and give the Artifact tool `file_path: <dir>/index.html`, `root: <dir>` and the manifest's `files`; a later publish to the same artifact replaces the files it names. The generated folder is not committed.
 
 ## Modern outline faces
 
@@ -201,7 +209,7 @@ cd fonts
 bun install                            # opentype.js 2.0.0 and clipper-lib 6.4.2, pinned exactly
 bun build.ts                           # write generated/*.otf, *.ttf and *.dfn
 bun build.ts --check                   # rebuild in memory; fail if generated/ is stale
-bun build.ts --specimen specimen.html  # also write the specimen page
+bun build.ts --site site               # also write the specimen site to site/ (not committed)
 bun test                               # coverage, cell and advance rules, traced area = ink, clean outlines, round trips
 ```
 
@@ -209,7 +217,7 @@ The generated files are committed so the Desk build and anyone using the fonts n
 
 The tests also check the TrueType structure (the required tables, tag order, alignment, checksums, `maxp`, `loca`, `glyf` and `hmtx` agreeing, no composites, the cmap formats with every 1252 character mapped, and the name records) and that each `.ttf` glyph has the same advance and area as the `.otf` one. For Round, they check that contours alternate correctly and keep their winding, never leave the inked pixels (sampled along every curve and supersampled inside the cell), lose no pixel centre, and keep between 80 and 100 % of the square ink.
 
-For the layout tables, `test/layout.test.ts` reads the built files back with a small shaper of its own (`test/shaper.ts`, single, ligature and chaining substitutions, pair kerning and the `kern` table), so the checks run without Docker: the `kern` table's header and order, the same pairs in GPOS and `kern`, values between −160 and +120, the pairs that must tighten and the ones that must not move, every ligature and feature substitution in both formats, the code ligatures with every advance at 600 and plain when switched off or next to another operator, and that no unencoded glyph is reached through the cmap. `test/specimen.test.ts` checks that the specimen page declares each outline family's four styles apart.
+For the layout tables, `test/layout.test.ts` reads the built files back with a small shaper of its own (`test/shaper.ts`, single, ligature and chaining substitutions, pair kerning and the `kern` table), so the checks run without Docker: the `kern` table's header and order, the same pairs in GPOS and `kern`, values between −160 and +120, the pairs that must tighten and the ones that must not move, every ligature and feature substitution in both formats, the code ligatures with every advance at 600 and plain when switched off or next to another operator, and that no unencoded glyph is reached through the cmap. `test/site.test.ts` checks that the site declares each outline family's four styles apart, serves every built file unchanged or carries it in `downloads.json`, publishes only types an artifact serves, links only to files it publishes, and that its manifest names every published path with its media type.
 
 For the outline faces, the tests check coverage, clean contours (closed, wound correctly, no crossings, no slivers, points at extrema), that every glyph stays within the line, tabular figures and the Mono advance, the spacing classes, that each glyph's advance and area agree between the `.otf` and `.ttf` files, and that the build is reproducible.
 

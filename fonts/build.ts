@@ -6,19 +6,22 @@
 //
 // usage: bun build.ts                      write every face to generated/
 //        bun build.ts --check              rebuild in memory and fail if generated/ is stale
-//        bun build.ts --specimen <file>    also write the specimen page (glyph charts, samples, editor)
+//        bun build.ts --site <dir>         also write the specimen site and its publishing manifest to <dir>
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { encodeDfn } from './src/dfn';
 import { dosGlyphs } from './src/dos';
+import { buildEmoji } from './src/emoji/build';
+import { pixelOtfWithEmoji } from './src/emoji/faces';
+import { modernOtfWithEmoji } from './src/emoji/vector/font';
 import { assemble } from './src/face';
 import { FACES } from './src/faces';
 import { namesOf } from './src/names';
 import { buildOtf } from './src/otf';
 import { assembleModern } from './src/modern/assemble';
 import { layoutOf } from './src/modern/features';
-import { buildModernOtf, buildModernTtf } from './src/modern/files';
+import { buildModernTtf } from './src/modern/files';
 import { STYLES } from './src/modern/kit';
 import { buildTtf } from './src/ttf';
 
@@ -26,7 +29,7 @@ const OUT = join(import.meta.dir, 'generated');
 
 /** Every generated file: its name in `generated/` and its bytes. */
 export function buildAll(): { name: string; data: Uint8Array }[] {
-  return [...buildPixel(), ...buildModern()];
+  return [...buildPixel(), ...buildModern(), ...buildEmoji()];
 }
 
 /** The outline faces: Desk Sans, Desk Mono and Desk Serif, each Regular and Bold, as OTF and TTF. */
@@ -35,7 +38,8 @@ export function buildModern(): { name: string; data: Uint8Array }[] {
     const glyphs = assembleModern(s);
     const layout = layoutOf(s, glyphs);
     return [
-      { name: `${s.file}.otf`, data: buildModernOtf(s, glyphs, layout) },
+      // The OpenType files also carry the monochrome vector emoji (src/emoji/vector/font.ts); the TrueType files do not.
+      { name: `${s.file}.otf`, data: modernOtfWithEmoji(s, glyphs, undefined, layout) },
       { name: `${s.file}.ttf`, data: buildModernTtf(s, glyphs, layout) },
     ];
   });
@@ -49,7 +53,8 @@ export function buildPixel(): { name: string; data: Uint8Array }[] {
       ...(['square', 'round'] as const).flatMap((style) => {
         const file = namesOf(face, style).file;
         return [
-          { name: `${file}.otf`, data: buildOtf(face, glyphs, style) },
+          // The OpenType files also carry the monochrome emoji (src/emoji/faces.ts); the TrueType files do not.
+          { name: `${file}.otf`, data: pixelOtfWithEmoji(face, glyphs, style) },
           { name: `${file}.ttf`, data: buildTtf(face, glyphs, style) },
         ];
       }),
@@ -87,15 +92,24 @@ if (import.meta.main) {
     }
     console.log(`fonts: ${files.length} generated files are up to date`);
   } else {
-    for (const f of files) writeFileSync(join(OUT, f.name), f.data);
+    for (const f of files) {
+      mkdirSync(dirname(join(OUT, f.name)), { recursive: true });
+      writeFileSync(join(OUT, f.name), f.data);
+    }
     console.log(`fonts: wrote ${files.map((f) => f.name).join(', ')}`);
   }
-  const at = args.indexOf('--specimen');
+  const at = args.indexOf('--site');
   if (at >= 0) {
     const target = args[at + 1];
-    if (!target) throw new Error('--specimen needs a file name');
-    const { specimen } = await import('./src/specimen');
-    writeFileSync(target, specimen(files));
-    console.log(`fonts: wrote the specimen to ${target}`);
+    if (!target) throw new Error('--site needs a directory');
+    const { manifest, site } = await import('./src/site/build');
+    const pages = site(files);
+    for (const f of pages) {
+      mkdirSync(dirname(join(target, f.path)), { recursive: true });
+      writeFileSync(join(target, f.path), f.data);
+    }
+    writeFileSync(join(target, 'manifest.json'), `${JSON.stringify(manifest(pages), null, 2)}\n`);
+    const total = pages.reduce((n, f) => n + f.data.length, 0);
+    console.log(`fonts: wrote the site to ${target}: ${pages.length} files, ${(total / 1048576).toFixed(1)} MB, and manifest.json`);
   }
 }

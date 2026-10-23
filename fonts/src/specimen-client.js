@@ -1,13 +1,13 @@
-// The specimen page's script: glyph charts drawn from the build's own grids, scale switches, and a pixel editor
-// that exports source lines for the face files.
+// The script of the Desk Fonts pages: glyph charts drawn from the build's own grids, scale switches, a pixel editor
+// that exports source lines for the face files, and the type tester. Each part runs only on the page that has it.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 (() => {
-  const DATA = JSON.parse(document.getElementById('font-data').textContent);
-  const ZIP = document.getElementById('zip-data').textContent.trim();
   const $ = (sel, root = document) => root.querySelector(sel);
+  const dataEl = document.getElementById('font-data');
+  const DATA = dataEl ? JSON.parse(dataEl.textContent) : { faces: [] };
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const hex = (cp) => 'U+' + cp.toString(16).toUpperCase().padStart(4, '0');
   const parse = (s) => s.split('/').map((r) => Array.from(r, (c) => (c === '#' ? 1 : 0)));
@@ -197,6 +197,7 @@
     listEdits();
   }
 
+  if (dlg) {
   $('#ed-wider').addEventListener('click', () => {
     cur.rows.forEach((r) => r.push(0));
     changed();
@@ -214,6 +215,7 @@
   });
   $('#ed-close').addEventListener('click', () => dlg.close());
   dlg.addEventListener('close', () => cur && cur.face.render());
+  }
 
   async function copy(text, btn) {
     const old = btn.textContent;
@@ -229,7 +231,7 @@
     }
     setTimeout(() => (btn.textContent = old), 1600);
   }
-  $('#ed-copy').addEventListener('click', (e) => copy(sourceLine(cur.face, cur.g.ch, cur.rows), e.currentTarget));
+  if (dlg) $('#ed-copy').addEventListener('click', (e) => copy(sourceLine(cur.face, cur.g.ch, cur.rows), e.currentTarget));
 
   function editsText() {
     const out = [];
@@ -245,27 +247,25 @@
   }
 
   function listEdits() {
+    if (!$('#edits-count')) return;
     const n = Object.values(edits).reduce((a, m) => a + Object.keys(m).length, 0);
     $('#edits-count').textContent = n === 1 ? '1 edited glyph' : `${n} edited glyphs`;
     $('#edits-text').textContent = n ? editsText() : 'No edits yet. Click any drawn glyph in a chart to edit it.';
     for (const id of ['edits-copy', 'edits-clear']) $('#' + id).disabled = !n;
     $('#edits-save').disabled = !n;
   }
-  $('#edits-copy').addEventListener('click', (e) => copy(editsText(), e.currentTarget));
-  $('#edits-clear').addEventListener('click', () => {
-    edits = {};
-    store.set('desk-font-edits', edits);
-    listEdits();
-    for (const f of DATA.faces) f.render();
-  });
+  if ($('#edits-copy')) {
+    $('#edits-copy').addEventListener('click', (e) => copy(editsText(), e.currentTarget));
+    $('#edits-clear').addEventListener('click', () => {
+      edits = {};
+      store.set('desk-font-edits', edits);
+      listEdits();
+      for (const f of DATA.faces) f.render();
+    });
+  }
 
-  // ---- files: the zip of OTF, DFN and the licence, and the edits as text ----
-  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  // ---- the edits as text (the published files are offered by site.js) ----
   let downloads = null;
-  const showSave = () => {
-    for (const el of document.querySelectorAll('[data-needs-downloads]')) el.hidden = !downloads;
-    $('#no-downloads').hidden = !!downloads;
-  };
   async function save(filename, data, btn) {
     const old = btn.textContent;
     try {
@@ -276,15 +276,8 @@
     }
     setTimeout(() => (btn.textContent = old), 2000);
   }
-  $('#zip-save').addEventListener('click', (e) => save('desk-fonts.zip', b64(ZIP), e.currentTarget));
-  $('#edits-save').addEventListener('click', (e) => save('desk-font-edits.txt', editsText(), e.currentTarget));
-  showSave();
-  if (window.claude && window.claude.use) {
-    window.claude.use('downloads').then((d) => {
-      downloads = d;
-      showSave();
-    }, () => showSave());
-  }
+  if ($('#edits-save')) $('#edits-save').addEventListener('click', (e) => save('desk-font-edits.txt', editsText(), e.currentTarget));
+  if (window.claude && window.claude.use) window.claude.use('downloads').then((d) => (downloads = d), () => {});
 
   // ---- the type tester ----
   const tt = { text: $('#tt-text'), face: $('#tt-face'), size: $('#tt-size'), italic: $('#tt-italic'), out: $('#tt-out') };
@@ -292,7 +285,10 @@
     const feats = [...document.querySelectorAll('[data-feature]')];
     const show = () => {
       const [family, weight] = tt.face.value.split('|');
-      tt.out.style.fontFamily = `'${family}'`;
+      tt.out.style.fontFamily = family
+        .split(',')
+        .map((f) => `'${f.trim()}'`)
+        .join(', ');
       tt.out.style.fontWeight = weight;
       tt.out.style.fontStyle = tt.italic && tt.italic.checked ? 'italic' : 'normal';
       tt.out.style.fontSize = `${tt.size.value}px`;

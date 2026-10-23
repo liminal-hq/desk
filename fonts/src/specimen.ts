@@ -1,11 +1,10 @@
-// Writes the specimen page: every face rendered with its built OpenType file, a chart of every glyph drawn from the
-// same grids the build uses, a pixel editor, and the built files as a zip.
+// The Desk Fonts pages of the specimen site: every face rendered with its built OpenType file, a chart of every glyph
+// drawn from the same grids the build uses, a pixel editor, the outline faces with their tester and features, and the
+// zip of the built files.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { assemble, type FaceDef, type Glyph } from './face';
 import { FACES } from './faces';
 import { format } from './grid';
@@ -76,9 +75,8 @@ export function zip(files: { name: string; data: Uint8Array }[]): Uint8Array {
   return out;
 }
 
-const esc = (s: string): string =>
+export const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const b64 = (d: Uint8Array): string => Buffer.from(d).toString('base64');
 
 const FRENCH = 'Ébauche, à côté, déjà vu, crème brûlée. L’œuvre naît à Québec — « Ça va ? » Où est le Noël ?';
 const ALL_LATIN = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß àáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ŒœŸ';
@@ -322,21 +320,23 @@ function modernSection(): string {
   <h3>Type tester</h3>
   <div class="tester">
     <label class="label" for="tt-text">Text</label>
-    <input id="tt-text" type="text" value="The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y" aria-label="Text to render">
+    <input id="tt-text" type="text" value="The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y 💾 📁 🙂 ✔" aria-label="Text to render">
     <label class="label" for="tt-face">Face</label>
     <select id="tt-face">
       ${['Desk Sans', 'Desk Mono', 'Desk Serif'].flatMap((f) => [`<option value="${f}|400">${f}</option>`, `<option value="${f}|700">${f} Bold</option>`]).join('')}
       <option value="Desk UI|400">Desk UI (pixel)</option><option value="Desk Title|700">Desk Title (pixel)</option><option value="Desk Fixed|400">Desk Fixed (pixel)</option><option value="Desk Small|400">Desk Small (pixel)</option>
       <option value="Desk UI Round|400">Desk UI Round</option><option value="Desk Fixed DOS|400">Desk Fixed DOS</option>
+      <option value="Desk Emoji, Desk Emoji Pixel, Desk Sans|400">Desk Emoji (colour) with Desk Sans</option><option value="Desk Emoji Pixel, Desk UI|400">Desk Emoji Pixel (colour) with Desk UI</option>
     </select>
     <label class="label" for="tt-size">Size</label>
     <select id="tt-size">${[8, 11, 12, 14, 16, 18, 24, 32, 48, 72].map((z) => `<option value="${z}"${z === 24 ? ' selected' : ''}>${z} px</option>`).join('')}</select>
   </div>
+  <p class="hint">Desk Sans, Mono and Serif carry the vector emoji in monochrome and the pixel faces the pixel emoji; the two Desk Emoji choices set colour emoji in front of a text face.</p>
   <div class="tt-feats" role="group" aria-label="Style and OpenType features">
     <label><input type="checkbox" id="tt-italic"> Italic</label>
     ${TESTER_FEATURES.map(([id, label, on]) => `<label><input type="checkbox" id="tt-f-${id}" data-feature="${id}"${on ? ' checked' : ''}> ${esc(label)}</label>`).join('\n    ')}
   </div>
-  <div class="screen-wrap"><div id="tt-out" class="tt-out" style="font-family:'Desk Sans';font-size:24px">The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y</div></div>
+  <div class="screen-wrap"><div id="tt-out" class="tt-out" style="font-family:'Desk Sans';font-size:24px">The office at Yarrow Ave. — déjà vu, 1/2 off, x -&gt; y 💾 📁 🙂 ✔</div></div>
   <h3>Kerning, ligatures and features</h3>
   <p class="hint">Each row shows the feature off, then on. Browsers kern and set <code>liga</code> and <code>calt</code> by default; the others are asked for with <code>font-feature-settings</code> or <code>font-variant-*</code>. Windows 3.1 reads only the old <code>kern</code> table.</p>
   <div class="screen-wrap"><div class="feat-rows">
@@ -349,37 +349,8 @@ function modernSection(): string {
 </section>`;
 }
 
-/** The whole specimen page, ready to publish. */
-export function specimen(files: { name: string; data: Uint8Array }[]): string {
-  const byName = new Map(files.map((f) => [f.name, f.data]));
-  const faces = FACES.map((face) => ({ face, glyphs: assemble(face) }));
-  const ofl = new Uint8Array(readFileSync(join(import.meta.dir, '..', 'generated', 'OFL.txt')));
-  const bundle = zip([...files.map((f) => ({ name: `desk-fonts/${f.name}`, data: f.data })), { name: 'desk-fonts/OFL.txt', data: ofl }]);
-  const fontFaces = faces
-    .flatMap(({ face }) =>
-      (['', '-round'] as const).map((suffix) => {
-        const data = byName.get(`${face.file}${suffix}.otf`) as Uint8Array;
-        const family = suffix ? `${face.family} Round` : face.family;
-        return `@font-face{font-family:'${family}';src:url(data:font/otf;base64,${b64(data)}) format('opentype');font-weight:${face.style === 'Bold' ? 700 : 400};font-display:block}`;
-      }),
-    )
-    .join('\n') +
-    `\n@font-face{font-family:'Desk Fixed DOS';src:url(data:font/otf;base64,${b64(byName.get('desk-fixed-dos.otf') as Uint8Array)}) format('opentype');font-display:block}` +
-    STYLES.map(
-      (st) =>
-        `\n@font-face{font-family:'${st.family}';src:url(data:font/otf;base64,${b64(byName.get(`${st.file}.otf`) as Uint8Array)}) format('opentype');font-weight:${st.bold ? 700 : 400};font-style:${st.italic ? 'italic' : 'normal'};font-display:block}`,
-    ).join('');
-  const data = JSON.stringify({ faces: faces.map(({ face, glyphs }) => faceData(face, glyphs)) }).replace(/</g, '\\u003c');
-  const client = readFileSync(join(import.meta.dir, 'specimen-client.js'), 'utf8');
-  const total = faces.reduce((n, f) => n + f.glyphs.length, 0);
-  return `<title>Desk Fonts</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<style>
-${fontFaces}
-/* Layout: one long column per face, each a screen panel of real rendering over a chart of the raw grids. */
+/** The styles of the Desk Fonts pages (Overview, Pixel faces, Outline faces and Downloads). */
+export const SPECIMEN_CSS = `/* Layout: one long column per face, each a screen panel of real rendering over a chart of the raw grids. */
 :root{
   --bg:#f4f4f8; --surface:#ffffff; --line:#d9dce5; --fg:#12121a; --muted:#5a6273; --accent:#a5560b;
   --tile:#eceef3; --ink:#12121a; --baseline:#e0a35a;
@@ -497,24 +468,44 @@ table.cp437 th{font:11px var(--font-mono);color:var(--muted);padding:2px 6px;fon
 table.cp437 td{border:1px solid var(--line);padding:0;width:24px;text-align:center}
 table.cp437 .dos{font-family:'Desk Fixed DOS';font-size:16px;line-height:16px;display:block;-webkit-font-smoothing:none}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
-</style>
-<main>
+`;
+
+/** One @font-face rule per face the pages set text in, each loading its built file from `dir`. */
+export function fontFacesCss(dir: string): string {
+  const rule = (family: string, file: string, extra = ''): string =>
+    `@font-face{font-family:'${family}';src:url(${dir}/${file}) format('${file.endsWith('.ttf') ? 'truetype' : 'opentype'}');${extra}font-display:block}`;
+  return [
+    ...FACES.flatMap((face) =>
+      (['', '-round'] as const).map((suffix) =>
+        rule(suffix ? `${face.family} Round` : face.family, `${face.file}${suffix}.otf`, `font-weight:${face.style === 'Bold' ? 700 : 400};`),
+      ),
+    ),
+    rule('Desk Fixed DOS', 'desk-fixed-dos.otf'),
+    ...STYLES.map((st) => rule(st.family, `${st.file}.otf`, `font-weight:${st.bold ? 700 : 400};font-style:${st.italic ? 'italic' : 'normal'};`)),
+    rule('Desk Emoji Pixel', 'emoji/desk-emoji-pixel.ttf'),
+    rule('Desk Emoji', 'emoji/desk-emoji.ttf'),
+  ].join('\n');
+}
+
+/** The page script's data: every pixel face with its glyph grids. */
+export function fontData(): string {
+  return JSON.stringify({ faces: FACES.map((face) => faceData(face, assemble(face))) }).replace(/</g, '\\u003c');
+}
+
+/** The pixel faces: the four faces with their charts, Desk Fixed DOS, the edits list and the editor. */
+export function pixelBody(): string {
+  const faces = FACES.map((face) => ({ face, glyphs: assemble(face) }));
+  const total = faces.reduce((n, f) => n + f.glyphs.length, 0);
+  return `
   <section class="intro" aria-labelledby="top">
     <span class="label">Liminal HQ · Desk · bitmap faces</span>
-    <h1 id="top">Desk Fonts</h1>
+    <h1 id="top">Pixel faces</h1>
     <p class="lede">Four pixel faces for Desk, the graphical shell for MS-DOS. Each glyph is a grid of pixels written once in <code>fonts/src/faces/*.ts</code>. The build traces those grids into OpenType outlines at 100 units a pixel and writes the same pixels as <code>.DFN</code> files for the DOS side.</p>
     <div class="facts"><span>${total} glyphs in 4 faces</span><span>ASCII · code page 1252 · Latin-1 · French Œ œ Ÿ · code page 437 box drawing and blocks</span><span>Square and Round · OTF and TrueType</span><span>SIL Open Font License 1.1</span></div>
-    <p class="status">Everything on this page is generated from the build's own data: the samples use the built OTF files, and the charts draw the grids the build traced. FreeType renders the TrueType and OTF files pixel-exact at the native sizes. Not yet checked: the faces have not been seen in the Desk itself, in DOSBox or on a real VGA screen, no DOS program reads the <code>.DFN</code> files yet, and the TrueType files have not been installed on Windows 3.1 or OS/2.</p>
-    <nav class="toc" aria-label="Faces">${faces.map(({ face }) => `<a href="#${face.id}" style="font-family:'${face.family}';font-size:${face.size * 2}px;line-height:${face.height * 2}px">${esc(face.family)}</a>`).join('')}<a href="#dos" style="font-family:'Desk Fixed';font-size:32px;line-height:32px">Desk Fixed DOS</a><a href="#modern" style="font-family:'Desk Sans';font-size:24px;line-height:32px">Modern</a></nav>
-    <div class="actions">
-      <button type="button" class="primary" id="zip-save" data-needs-downloads hidden>Save desk-fonts.zip</button>
-      <span class="hint" id="no-downloads">The OTF and .DFN files are in <code>fonts/generated/</code> in the repository; this view cannot save files.</span>
-      <span class="hint" data-needs-downloads hidden>${files.filter((f) => f.name.endsWith('.otf')).length} OTF and ${files.filter((f) => f.name.endsWith('.ttf')).length} TrueType files (the pixel faces Square and Round with Desk Fixed DOS, and Desk Sans, Mono and Serif in four styles each), ${files.filter((f) => f.name.endsWith('.dfn')).length} .DFN files and the licence, ${Math.round(bundle.length / 1024)} KB.</span>
-    </div>
+    <nav class="toc" aria-label="Faces">${faces.map(({ face }) => `<a href="#${face.id}" style="font-family:'${face.family}';font-size:${face.size * 2}px;line-height:${face.height * 2}px">${esc(face.family)}</a>`).join('')}<a href="#dos" style="font-family:'Desk Fixed';font-size:32px;line-height:32px">Desk Fixed DOS</a></nav>
   </section>
 ${faces.map(({ face, glyphs }) => faceSection(face, glyphs)).join('\n')}
 ${dosSection()}
-${modernSection()}
   <section class="notes" aria-labelledby="h-edits">
     <h3 id="h-edits">Your edits</h3>
     <p>Edits stay in this browser only. Paste the lines into the named face file, replacing the glyph's existing line, then rebuild.</p>
@@ -524,12 +515,35 @@ ${modernSection()}
       <button type="button" id="edits-clear">Discard all</button></div>
     <pre id="edits-text" class="mono"></pre>
   </section>
-  <section class="notes" aria-labelledby="h-build">
+`;
+}
+
+/** The glyph editor's dialog, on the pixel faces page. */
+export const EDITOR = `<dialog id="editor" aria-labelledby="ed-title">
+  <div class="ed-top"><div><span id="ed-char"></span><h3 id="ed-title"></h3><p class="hint" id="ed-meta"></p></div><button type="button" id="ed-close">Close</button></div>
+  <p id="ed-where"></p>
+  <div class="ed-body">
+    <div class="ed-grid-wrap"><div id="ed-grid"></div></div>
+    <div class="ed-side">
+      <span class="label">Result at 1×, 2× and 3×</span>
+      <div class="previews"><canvas id="ed-prev-1"></canvas><canvas id="ed-prev-2"></canvas><canvas id="ed-prev-3"></canvas></div>
+      <div class="actions"><button type="button" id="ed-narrower">− column</button><button type="button" id="ed-wider">+ column</button><button type="button" id="ed-reset">Reset</button><button type="button" id="ed-copy" class="primary">Copy source line</button></div>
+      <pre id="ed-source" class="mono"></pre>
+    </div>
+  </div>
+</dialog>`;
+
+/** The outline faces: the Modern section with its tester and features. */
+export const outlineBody = (): string => modernSection();
+
+/** The building notes and the .DFN layout, on the overview. */
+export const BUILDING = `  <section class="notes" aria-labelledby="h-build">
     <h3 id="h-build">Building</h3>
     <pre class="cmd">cd fonts
 bun install                 # opentype.js 2.0.0, pinned
 bun build.ts                # write generated/*.otf and generated/*.dfn
 bun build.ts --check        # fail if generated/ is stale (tools/check.sh runs this)
+bun build.ts --site site    # write this site to site/, with manifest.json for publishing
 ./validate.sh               # optional: fc-scan, otfinfo, then fontTools, OTS and FreeType in Docker
 bun test                    # coverage, cell rules, traced area = ink, round trips</pre>
     <ul>
@@ -546,25 +560,4 @@ bun test                    # coverage, cell rules, traced area = ink, round tri
       <tr><td>Glyph count</td><td>2</td><td>little-endian; glyphs follow in code-point order</td></tr>
       <tr><td>Per glyph</td><td>4 + 1 + rows</td><td>code point (little-endian), width (the advance, gap included), then <em>height</em> rows of ⌈width ÷ 8⌉ bytes, leftmost pixel in the highest bit</td></tr>
     </table></div>
-  </section>
-</main>
-<dialog id="editor" aria-labelledby="ed-title">
-  <div class="ed-top"><div><span id="ed-char"></span><h3 id="ed-title"></h3><p class="hint" id="ed-meta"></p></div><button type="button" id="ed-close">Close</button></div>
-  <p id="ed-where"></p>
-  <div class="ed-body">
-    <div class="ed-grid-wrap"><div id="ed-grid"></div></div>
-    <div class="ed-side">
-      <span class="label">Result at 1×, 2× and 3×</span>
-      <div class="previews"><canvas id="ed-prev-1"></canvas><canvas id="ed-prev-2"></canvas><canvas id="ed-prev-3"></canvas></div>
-      <div class="actions"><button type="button" id="ed-narrower">− column</button><button type="button" id="ed-wider">+ column</button><button type="button" id="ed-reset">Reset</button><button type="button" id="ed-copy" class="primary">Copy source line</button></div>
-      <pre id="ed-source" class="mono"></pre>
-    </div>
-  </div>
-</dialog>
-<script type="application/json" id="font-data">${data}</script>
-<script type="text/plain" id="zip-data">${b64(bundle)}</script>
-<script>
-${client}
-</script>
-`;
-}
+  </section>`;

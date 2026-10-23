@@ -7,7 +7,7 @@
   "scripts": {
     "build": "bun build.ts",
     "check": "bun build.ts --check",
-    "specimen": "bun build.ts --specimen",
+    "site": "bun build.ts --site site",
     "test": "bun test"
   },
   "devDependencies": {

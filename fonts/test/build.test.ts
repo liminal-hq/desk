@@ -107,7 +107,7 @@ describe('generated/', () => {
         throw new Error(`generated/${f.name} is stale`);
       }
     }
-    // A whole build takes a few seconds, more on a slow runner.
+    // A whole build, the emoji included, takes several seconds, more on a slow runner.
   }, 60_000);
 
   test('the licence sits beside the fonts', () => {

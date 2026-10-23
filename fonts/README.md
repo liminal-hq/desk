@@ -1,6 +1,6 @@
 # fonts
 
-The four Desk bitmap faces as pixel grids, the modern outline faces (Desk Sans, Desk Mono and Desk Serif), and the build that writes them as OpenType (CFF), TrueType and `.DFN` files. [`docs/FONTS.md`](../docs/FONTS.md) is the reference: faces, metrics, grid conventions, adding a glyph.
+The four Desk bitmap faces as pixel grids, the modern outline faces (Desk Sans, Desk Mono and Desk Serif), the emoji, and the build that writes them as OpenType (CFF), TrueType, `.DFN` and `.DEM` files. [`docs/FONTS.md`](../docs/FONTS.md) is the reference for the faces: metrics, grid conventions, adding a glyph; [`docs/EMOJI.md`](../docs/EMOJI.md) for the emoji.
 
 | Path | What it holds |
 |---|---|
@@ -9,12 +9,13 @@ The four Desk bitmap faces as pixel grids, the modern outline faces (Desk Sans, 
 | `src/boxes.ts`, `src/outline.ts`, `src/grid.ts` | Box drawing and blocks, the pixel-edge tracer, grid helpers |
 | `src/round.ts` | Outlines for both styles, and the Round derivation |
 | `src/otf.ts`, `src/ttf.ts`, `src/dfn.ts`, `src/names.ts` | The OpenType (CFF), TrueType and `.DFN` writers and their shared names |
-| `src/specimen.ts`, `src/specimen-client.js` | The specimen page with glyph charts and the pixel editor |
+| `src/specimen.ts`, `src/specimen-client.js`, `src/site/` | The specimen site (`bun build.ts --site <dir>`): the pixel faces with glyph charts and the pixel editor, the outline faces with the tester, the emoji, and downloads |
 | `build.ts` | The command line |
 | `src/modern/` | The outline faces: the geometry (union, fit, quadratics), the drawing kit and styles, the letters, symbols and marks, the italics, the assembler, the kerning, ligatures and other OpenType features, and the file and layout-table writers |
+| `src/emoji/` | The emoji: the manifest, the requested list and its roadmap (`gboard-list.txt`, `requests.ts`), the palette, the art grids by category (`pixel/`), the 12 × 12 derivation and the monochrome rule, and the writers of the colour font, the faces' emoji glyphs, the `.DEM` files and the contact sheets; `bun src/emoji/proof.ts` writes a proof sheet |
 | `test/` | `bun test` |
-| `validate.sh`, `validate.py` | Optional third-party validation (fontTools, OTS, FreeType, HarfBuzz) in Docker |
-| `generated/` | The built files, committed, with `OFL.txt` |
+| `validate.sh`, `validate.py`, `validate_emoji.py` | Optional third-party validation (fontTools, OTS, FreeType, HarfBuzz) in Docker |
+| `generated/` | The built files, committed, with `OFL.txt`; the emoji files are in `generated/emoji/` |
 
 ```bash
 bun install && bun build.ts && bun test
