@@ -9,7 +9,7 @@
 # Layout (512-byte sectors): LBA 0 stage 1, LBA 1-17 stage 2, LBA 18 onwards the flat kernel, zero padding to 2880 sectors
 # (1,474,560 bytes). Two bytes are patched in: the kernel's length in sectors into stage 1 (offset 3) and the test mode into
 # stage 2 (offset 3). Test modes make the kernel misbehave on purpose for the negative checks: none, div0, gp, ud, panic, hang,
-# notick.
+# notick, input, input-masked, input-idle (the last three wait for keyboard and mouse events that tools/native-run.sh --inject sends).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -24,6 +24,7 @@ while [ $# -gt 0 ]; do
 done
 case "$mode" in
   none) code=0 ;; div0) code=1 ;; gp) code=2 ;; ud) code=3 ;; panic) code=4 ;; hang) code=5 ;; notick) code=6 ;;
+  input) code=7 ;; input-masked) code=8 ;; input-idle) code=9 ;;
   *) echo "unknown test mode: $mode" >&2; exit 2 ;;
 esac
 

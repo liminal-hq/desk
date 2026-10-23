@@ -11,6 +11,7 @@ The native track's walking skeleton: a floppy image whose boot sector loads a pr
 - [The linker script and the flat binary](#the-linker-script-and-the-flat-binary)
 - [Memory](#memory)
 - [Interrupts and the timer](#interrupts-and-the-timer)
+- [Input](#input)
 - [The FPU](#the-fpu)
 - [Running it and the CPU model](#running-it-and-the-cpu-model)
 - [The checks](#the-checks)
@@ -76,13 +77,17 @@ The heap (`kernel/src/heap.rs`) takes 4 MiB of contiguous frames from the frame 
 
 The kernel loads its own GDT (the loader's lives in memory the kernel may overwrite) and an IDT of 256 gates. Vectors 0 to 31 point to small assembly stubs that push a dummy error code where the CPU pushes none, push the vector, save the registers and call one Rust handler, which prints the vector name, the error code, EIP, CS, EFLAGS, the general registers and CR0, CR2 and CR3 to serial and the screen, then ends the run with a failure status. The PIC is remapped to vectors `0x20` and `0x28` (the BIOS default of `0x08` collides with CPU exceptions) and every line but IRQ0 is masked. The PIT runs channel 0 as a rate generator at 100 Hz (divisor 11,932). The IRQ0 handler increments an atomic counter and sends the end-of-interrupt. The kernel waits for the first tick in a bounded spin (`hlt` would wait forever if the timer were broken, and the run would end only by the watchdog), then waits for 10 more ticks with `hlt` and prints the elapsed count.
 
+## Input
+
+The kernel's serial, PIC and PIT code runs on the shared drivers in `hal/`, and `kernel/src/hal.rs` is the native platform: the port bus, the statics for those drivers, and an interrupt registry for IRQ 0 to 15 (one IDT stub per line, the end-of-interrupt sent by the kernel after the handler, spurious IRQ 7 and 15 handled). After the checks above, `kernel/src/input.rs` sets up the 8042, the keyboard and the PS/2 mouse, registers the IRQ 1 and IRQ 12 handlers (which only fill lock-free rings), unmasks the lines and prints four `input:` lines. The test modes `input`, `input-masked` and `input-idle` then drain the rings in a `hlt` loop and print each decoded event until Escape is released; `tools/native-run.sh --inject` sends the keys and mouse motion through the QEMU monitor. The design, the tables and the limits are in [`C-INPUT.md`](C-INPUT.md).
+
 ## The FPU
 
 The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping them), CR0.MP and CR0.NE set (errors report as exception 16 rather than the legacy IRQ 13 wiring) and CR0.TS clear, then `fninit`. The kernel checks the control word is `0x037F`, computes `sqrt(2)` with `fsqrt` and the harmonic sum H(10) in ordinary Rust `f64` (which the compiler turns into x87 code), prints both and asserts them. (Some 486SX machines have no FPU; this kernel assumes one.)
 
 ## Running it and the CPU model
 
-`tools/native-run.sh` runs `qemu-system-i386 -cpu 486 -m 16 -drive if=floppy,format=raw,file=IMAGE -display none -serial file:LOG -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -monitor none` under `timeout`. `-cpu 486` makes QEMU's CPU model reject instructions a 486 lacks (it has no CPUID, TSC, CMOV, MMX or SSE), so a stray newer instruction fails in the run instead of on a real machine. It is an approximation: QEMU's translation is not cycle-accurate and models few of a real 486's quirks. The guest ends the run by writing to the `isa-debug-exit` port, which makes QEMU exit with `(value << 1) | 1`: status 33 for success and 35 for failure. `-no-reboot` turns a triple fault into a QEMU exit instead of a reboot loop. The script maps the statuses to its own exit codes (0 success, 1 guest failure, 2 other exit, 124 timeout, 3 no QEMU or Docker). It uses the host's QEMU, or Docker with an `ubuntu:24.04` image (`tools/docker/Dockerfile.native-qemu`, built once as `desk-native-qemu:1`); set `DESK_NATIVE_BACKEND=docker` to force Docker.
+`tools/native-run.sh` runs `qemu-system-i386 -cpu 486 -m 16 -drive if=floppy,format=raw,file=IMAGE -display none -serial file:LOG -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -monitor none` under `timeout` (with `--inject`, `-monitor unix:SOCKET,server,nowait` instead). `-cpu 486` makes QEMU's CPU model reject instructions a 486 lacks (it has no CPUID, TSC, CMOV, MMX or SSE), so a stray newer instruction fails in the run instead of on a real machine. It is an approximation: QEMU's translation is not cycle-accurate and models few of a real 486's quirks. The guest ends the run by writing to the `isa-debug-exit` port, which makes QEMU exit with `(value << 1) | 1`: status 33 for success and 35 for failure. `-no-reboot` turns a triple fault into a QEMU exit instead of a reboot loop. The script maps the statuses to its own exit codes (0 success, 1 guest failure, 2 other exit, 124 timeout, 3 no QEMU or Docker). It uses the host's QEMU, or Docker with an `ubuntu:24.04` image (`tools/docker/Dockerfile.native-qemu`, built once as `desk-native-qemu:1`); set `DESK_NATIVE_BACKEND=docker` to force Docker.
 
 ## The checks
 
@@ -92,6 +97,7 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 - **Normal boot.** The transcript must match `tests/native/expected.txt` line by line. `tools/native-check.py` allows `{N:lo..hi}` (a number in range, for the memory total and entry counts), `{HEX}`, `{ANY}` and a lone `...` line for any number of lines (the BIOS-dependent memory map).
 - **A wrong expectation fails.** `tests/native/wrong-expected.txt` differs in one number and must be rejected.
 - **Deliberate faults.** Test modes patched into the image make the kernel divide by zero (`div0`), load a bad segment selector (`gp`), execute `ud2` (`ud`), panic (`panic`) or mask the timer (`notick`). Each must end with exit code 1 and the expected exception dump or panic message.
+- **Keyboard and mouse.** In `input` mode keys and mouse motion injected through the QEMU monitor must appear decoded in the transcript; with an event missing from the injected input the comparison must fail; with IRQ 1 masked (`input-masked`) no key arrives and the kernel must report it (exit 1); with nothing injected (`input-idle`) the watchdog must end the run.
 - **A hang.** In `hang` mode the kernel stops with interrupts off; the run must end by the five-second watchdog (exit 124).
 
 ## Debugging
@@ -104,6 +110,8 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 ## What was and was not verified
 
 Verified: the whole chain above, including each negative check and the three loader variants, on the development machine with QEMU 11.1 and NASM 3.02, and again inside the shared CI image `ghcr.io/liminal-hq/ci-dos` (pinned by digest in the workflow) with `qemu-system-x86` and `nasm` added by `apt-get` (Ubuntu 24.04's QEMU). The Docker backend of `tools/native-run.sh` was exercised with an Ubuntu 24.04 image carrying the same two packages; the exact `tools/docker/Dockerfile.native-qemu` image was not built.
+
+The keyboard and mouse checks (spike C) were verified on the host's QEMU only; the CI image's QEMU runs them as part of `tools/native-test.sh`.
 
 Not verified:
 

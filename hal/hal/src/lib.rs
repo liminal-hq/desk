@@ -13,6 +13,7 @@
 // One module per surface:
 //
 // - `port`     port I/O (`inb` to `outl`) and the I/O delay
+// - `input`    key and mouse events, and the trait the core drains them through
 // - `irq`      interrupt lines, the interrupt controller, handler registration as a function pointer and a context pointer
 // - `time`     the monotonic tick source and the calibrated delay
 // - `ring`     the single-producer, single-consumer queue that hands data from an interrupt handler to the core
@@ -28,6 +29,7 @@
 
 pub mod bios;
 pub mod error;
+pub mod input;
 pub mod irq;
 pub mod mmio;
 pub mod port;
@@ -39,6 +41,7 @@ pub mod x86;
 
 pub use bios::{Bios, BiosRegs};
 pub use error::HalError;
+pub use input::{InputSource, KeyCode, KeyEvent, Modifiers, MouseEvent, Scancode};
 pub use irq::{InterruptController, Irq, IrqHandler, IrqRegistry, IrqService, SharedIrqService};
 pub use mmio::MmioRegion;
 pub use port::PortIo;
