@@ -26,7 +26,7 @@ The devices sit on the **[ISA bus](term:isa-bus)**, the expansion bus of the IBM
 
 **[Port I/O](term:port-io)** is not memory. Each access really happens, exactly once and in order, which is why the HAL implements it as `asm!` blocks the compiler may not remove or reorder (`docs/HAL.md`). Old chips are slow to settle between accesses, so the HAL has `io_wait`, a write to port `0x80`, the POST diagnostic port, which takes about a microsecond on the ISA bus by the document's figure and which the 8259 initialisation uses after each word. It is an elapsed-bus-cycle delay, not a time.
 
-The table and drawing below are generated from the drivers' own constants. They list every port this chapter names, each with the file that defines it, and the IRQ lines of the two interrupt controllers with the vectors the kernel and the BIOS give them. The build refuses a port whose constant has changed or an IRQ the HAL no longer names.
+The table and drawing below are generated from the drivers' own constants. They list the ports this chapter relies on (the data port one above each 8259 command port, and COM3 and COM4, are named in the text only), each with the file that defines it, and the IRQ lines of the two interrupt controllers with the vectors the kernel and the BIOS give them. The build refuses a port whose constant has changed or an IRQ the HAL no longer names.
 
 <!-- explainer m-ports -->
 
@@ -84,7 +84,7 @@ The BIOS is firmware that answers software interrupts, and it exists only in rea
 
 | Interrupt and function | What it does | Called by |
 |---|---|---|
-| INT 10h AH=0Eh | Teletype output to the screen | Stage 1 (`Desk boot`) |
+| INT 10h AH=0Eh | Teletype output to the screen | `putc` in `boot/stage1.asm` and in `boot/stage2.asm` |
 | INT 10h AX=1130h BH=06h | Pointer to the 8 by 16 font | `load_font` in `boot/stage2.asm` |
 | INT 10h AX=4F00h, 4F01h, 4F02h | VBE controller information, mode information, set mode | `video_setup` in `boot/stage2.asm` |
 | INT 10h AX=0003h | Set text mode | `leave_vbe` in `kernel/src/gfx.rs`, through the trampoline |
@@ -110,7 +110,7 @@ Under DOS the Desk does not talk to the 8042's mouse channel. A DOS program asks
 - **Every wait is bounded.** A floating bus reads all ones, so a status bit may never change. Waits on the 8042 are counted reads (`POLLS` is 100,000 and `SLOW_POLLS` 1,000,000) and the retrace wait is a million reads per phase (`VRETRACE_POLLS`); on running out, the call returns an error rather than hanging. The document's conversion of those counts to milliseconds assumes about a microsecond per ISA read and is, in its own words, an estimate.
 - **The handlers move bytes and decode nothing.** The IRQ 1 and IRQ 12 handlers read a byte from `0x60` and put it in a lock-free ring; the mouse handler assembles a packet because it cannot wait. They check bit 5 of the status register so each takes only its own device's byte (`docs/C-INPUT.md`, "The interrupt hand-off"; M11).
 - **Register-programmed modes as well as VBE.** The native kernel can set mode 13h or 12h by writing the tables, with no BIOS at all, and can ask VBE only before the switch or through the trampoline. Leaving VBE without the BIOS is card-specific: on QEMU's standard card it takes one write to the Bochs VBE registers (`0x1CE` and `0x1CF`), and on QEMU's Cirrus card the same programming left a garbled screen, which is why the kernel now asks the BIOS for text mode 3 on any card that has no Bochs registers (`docs/D-NATIVE-VGA.md`, "QEMU against real cards"). That is the clearest case in the project of an emulator model hiding a hardware difference.
-- **A software cursor and the DAC owned by the Desk.** The palette is written by the Desk, never through the frame buffer (`docs/PALETTE.md`), because only the DAC can fade the whole screen in 16 writes of 768 values.
+- **The DAC owned by the Desk.** The palette is written by the Desk, never through the frame buffer (`docs/PALETTE.md`), because only the DAC can fade the whole screen in 16 writes of 768 values.
 
 ## The code
 
@@ -139,7 +139,7 @@ For depth: `docs/HAL.md` ([port I/O](doc:docs/HAL.md#port-io-built), [input](doc
 
 **The PIT at 100 Hz.** The kernel asks for 100 Hz. `divisor_for` computes `(1,193,182 + 100 ÷ 2) ÷ 100` in whole numbers, which is 1,193,232 ÷ 100 = 11,932 (the fraction .32 is dropped; adding half the rate first made it round to nearest). In hexadecimal 11,932 is `0x2E9C`. The driver writes three bytes, the sequence the test `programming_100_hz_writes_what_the_kernel_writes` scripts: `0x34` to port `0x43`; then `0x9C` to port `0x40`; then `0x2E` to port `0x40`. The command byte `0x34` is `00 11 010 0` in binary: channel 0, low byte then high byte, mode 2, binary counting. The chip really delivers 1,193,182 ÷ 11,932 = 99.998 Hz, which `actual_millihertz` reports as 99,998 (the driver's own comment says so), so a "tick" is 10.0002 ms and 100 of them are a hair longer than a second. The transcript line `timer: waited for 10 ticks with hlt, elapsed 10 ticks` is that timer working in QEMU.
 
-**A mouse packet.** The driver's test `packets_decode_with_sign_extension_and_a_flipped_y` feeds `decode` the packet `38 FF FE`. The first byte is `0x38`, binary `0011 1000`: buttons none (bits 0 to 2 clear), bit 3 set as it must be, the X sign bit (bit 4) set and the Y sign bit (bit 5) set, no overflow. The X byte `0xFF` is 255, and with the sign bit it is 255 − 256 = −1: one step left. The Y byte `0xFE` is 254, and with its sign bit 254 − 256 = −2, which the device means as two steps *down* (it reports up as positive), and the driver negates it, so the event is `dx = -1, dy = +2`: left one, down two on the Desk's screen. A second test packet, `09 0A 04`, is `0x09` (the left button, bit 3) with dx 10 and device dy 4, which becomes dx +10, dy −4 and `buttons = 1`. The nine-bit extremes the test also checks are −256 (sign bit set and the byte `0x00`) and +255. A byte `0x48` or `0x88` as the first byte has an overflow bit set; the packet is consumed and produces no event.
+**A mouse packet.** The driver's test `packets_decode_with_sign_extension_and_a_flipped_y` feeds `decode` the packet `38 FF FE`. The first byte is `0x38`, binary `0011 1000`: buttons none (bits 0 to 2 clear), bit 3 set as it must be, the X sign bit (bit 4) set and the Y sign bit (bit 5) set, no overflow. The X byte `0xFF` is 255, and with the sign bit it is 255 − 256 = −1: one step left. The Y byte `0xFE` is 254, and with its sign bit 254 − 256 = −2, which the device means as two steps *down* (it reports up as positive), and the driver negates it, so the event is `dx = -1, dy = +2`: left one, down two on the Desk's screen. A second packet, `09 0A 04`, from the test `mouse_packets_become_events_and_the_acknowledgement_covers_the_slave`, is `0x09` (the left button, bit 3) with dx 10 and device dy 4, which becomes dx +10, dy −4 and `buttons = 1`. The nine-bit extremes the test also checks are −256 (sign bit set and the byte `0x00`) and +255. A byte `0x48` or `0x88` as the first byte has an overflow bit set; the packet is consumed and produces no event.
 
 **IRQ 12 to vector 0x2C.** The mouse is IRQ 12, on the slave, line 4 of it (12 − 8). The kernel's slave base is `0x28`, so the vector is `0x28 + 4 = 0x2C`. Under the BIOS's base of `0x70` the same line is `0x74`. The table above has the row. To open it the kernel's registry unmasks IRQ 12 on the slave *and* the cascade, IRQ 2, on the master; the PIC test shows the pair of writes (`0xEF` to port `0xA1`, then `0xFB` to port `0x21`).
 
@@ -161,7 +161,7 @@ evidence: test:tests/native/expected.txt::pic: remapped to 0x20 and 0x28, test:h
 note: QEMU's controllers are an emulation. The document that records the reinitialisation says a chipset with an integrated controller is the thing most likely to differ.
 
 id: devices.pit
-label: The 8254 at 100 Hz with divisor 11,932, and the BIOS rate restored
+label: The 8254 at 100 Hz with divisor 11,932 (restoring the BIOS rate is written and host-tested, but nothing calls it yet)
 state: built-verified
 evidence: test:hal/drivers/pit/src/lib.rs::programming_100_hz_writes_what_the_kernel_writes, test:tests/native/expected.txt::timer: waited for 10 ticks with hlt, sym:hal/drivers/pit/src/lib.rs::INPUT_HZ
 
@@ -203,7 +203,7 @@ note: Verified on QEMU's standard and Cirrus cards and the other emulators in do
 id: devices.bios
 label: The BIOS services the kernel calls: INT 12h, 13h, 15h and 1Ah
 state: built-verified
-evidence: test:tests/native/expected-bios.txt::bios: INT 12h, test:tests/native/expected-bios.txt::bios: INT 1Ah agrees with the RTC read directly through the CMOS ports to within 2 s, sym:kernel/src/biostest.rs::bios::call
+evidence: test:tests/native/expected-bios.txt::bios: INT 12h, test:tests/native/expected-bios.txt::bios: INT 1Ah agrees with the RTC read directly through the CMOS ports to within 2 s, sym:kernel/src/bios.rs::call
 note: SeaBIOS and Bochs's BIOSes, never a real 486 BIOS (docs/N3-BIOS-PATH.md).
 
 id: devices.floppy
@@ -246,9 +246,9 @@ $ cd hal && cargo test -p desk-pic 2>&1 | grep -E "^test "
 test tests::a_slave_line_is_acknowledged_on_both_controllers ... ok
 test tests::a_spurious_irq_15_is_acknowledged_on_the_master_only ... ok
 test tests::masking_reads_modifies_and_writes_one_bit ... ok
-test tests::native_init_matches_the_kernel_with_its_delays ... ok
 test tests::spurious_interrupts_are_told_apart_by_the_in_service_register ... ok
 test tests::the_service_and_request_registers_are_read_through_ocw3 ... ok
+test tests::native_init_matches_the_kernel_with_its_delays ... ok
 $ cd hal && cargo test --workspace 2>&1 | grep -c "test result: ok"
 23
 $ grep -n "pub const CHANNEL0\|pub const COMMAND" hal/drivers/pit/src/lib.rs

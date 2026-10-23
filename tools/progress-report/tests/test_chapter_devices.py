@@ -38,7 +38,9 @@ class DevicesChapterTests(unittest.TestCase):
         cls.ports = explainer_module("ports")
 
     def test_every_port_the_prose_names_is_one_the_code_uses(self):
-        allowed = {v for _, _, _, _, v in self.ports.PORTS} | {0x21, 0xA1, 0x3E8, 0x2E8}
+        serial = rd(os.path.join(gather.ROOT, "hal", "drivers", "serial", "src", "lib.rs"))
+        # the data ports one above each 8259 command port, and COM3 and COM4, which the text names and the table does not
+        allowed = {v for _, _, _, _, v in self.ports.PORTS} | {0x20 + 1, 0xA0 + 1, self.ports.read_const(serial, "COM3"), self.ports.read_const(serial, "COM4")}
         named = set()
         for group in re.findall(r"ports? ((?:`0x[0-9A-Fa-f]+`(?:,? (?:and|to) |, )?)+)", self.text):
             named |= {int(h, 16) for h in re.findall(r"0x[0-9A-Fa-f]+", group)}
@@ -94,3 +96,5 @@ class DevicesChapterTests(unittest.TestCase):
         self.assertTrue(any("numbers MOUSE as 11" in p for p in self.ports.check(irq_text=irq.replace("MOUSE: Irq = Irq(12)", "MOUSE: Irq = Irq(11)"))))
         pic = rd(os.path.join(gather.ROOT, "hal", "drivers", "pic", "src", "lib.rs"))
         self.assertTrue(any("multiples of eight" in p for p in self.ports.check(pic_text=pic.replace("(0x20, 0x28)", "(0x21, 0x28)"))))
+        self.assertTrue(any("just after the master" in p for p in self.ports.check(pic_text=pic.replace("(0x20, 0x28)", "(0x20, 0x20)"))))
+        self.assertTrue(any("but the chapter says" in p for p in self.ports.check(pic_text=pic.replace("(0x20, 0x28)", "(0x30, 0x38)"))))
