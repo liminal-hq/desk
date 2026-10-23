@@ -96,8 +96,17 @@ out="$(DOS_AUTOTYPE='-w 3 -p 0.3 d e s k esc' tools/dosrun.sh $OUT SHELL.EXE dep
 [ "$status" = 0 ] || fail "interactive SHELL.EXE exited with status $status; output: $out"
 case "$out" in *'shell: wrote SCREEN.RAW'*'the video mode is 0x03') ;; *) fail "no screen written, or text mode not restored: $out" ;; esac
 [ "$(wc -c < "$OUT/SCREEN.RAW")" = 307200 ] || fail "SCREEN.RAW is not 640 x 480 bytes"
+# The screen is deterministic: the scenario's two windows, "desk" in the field, the cursor at the centre. A broken key path changes it.
+got="$(frames digest "$OUT/SCREEN.RAW" "$OUT/SCREEN.PAL" 640 480)"
+[ "$got" = "640x480 dc85a936 436a5df4" ] || fail "the interactive screen is $got, not the one with desk typed into the field"
 python3 -I tools/frames.py png "$OUT/SCREEN.RAW" "$OUT/SCREEN.PAL" 640 480 "$OUT/screen.png"
+rm -f "$OUT"/SCREEN.RAW "$OUT"/SCREEN.PAL
 echo "status $status, $OUT/screen.png written"
+
+step "An argument the program does not know is refused"
+run depth8 scenerio
+[ "$status" = 5 ] || fail "SHELL.EXE with a misspelt argument exited with status $status, not 5"
+echo "status $status"
 
 step "Negative: one pixel flipped in the frame buffer fails the read-back and the goldens"
 run depth8 scenario dump corrupt

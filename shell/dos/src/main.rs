@@ -19,7 +19,7 @@
 //
 // Without `scenario` the shell runs on the keyboard (IRQ 1) and the mouse (INT 33h) until Escape. Exit status: 0 success, 1 a
 // read-back differed from the shell's frame or a step failed, 2 the requested video mode was not available, 3 a panic (the
-// runtime's), 4 the interactive timeout.
+// runtime's), 4 the interactive timeout, 5 an argument it does not know.
 #![no_std]
 #![no_main]
 
@@ -62,6 +62,17 @@ static STATS: IrqStats = IrqStats::new();
 static KBD_SERVICE: Slot<KbdIrq<RawPorts>> = Slot::new();
 static ORIGINAL_FLAGS: AtomicU32 = AtomicU32::new(0);
 static MOUSE_IN_USE: AtomicBool = AtomicBool::new(false);
+
+/// BIOS ticks since `start`. The counter at 0040:006C restarts from 0 at midnight (after 0x1800B0 ticks), not at 2^32.
+fn elapsed_ticks(start: u32) -> u32 {
+    const PER_DAY: u32 = 0x18_00B0;
+    let now = timer::bios_ticks();
+    if now >= start {
+        now - start
+    } else {
+        now + PER_DAY - start
+    }
+}
 
 fn bits(depth: Depth) -> u32 {
     if depth == Depth::Bits8 {
@@ -319,15 +330,15 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         .expect("install the IRQ 1 handler");
     let mut input = DosInput::new(rx, locks, mouse);
 
-    // The scenario's two windows, so there is something to move; the same set-up as its first stage.
-    shell.open("notes", desk_gfx::Rect::new(60, 60, 300, 180), "Notes");
-    shell.label("notes", 12, 12, "The first window.");
-    shell.open("welcome", desk_gfx::Rect::new(220, 150, 340, 200), "Welcome to Desk");
-    shell.label("welcome", 12, 12, "Type something:");
-    shell.field("welcome", 12, 36, 300);
+    // The scenario's opening steps (up to its first frame), so there is something to move and a field to type in.
+    if let Ok(sc) = parse(SCENARIO) {
+        for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
+            let _ = apply(shell, step);
+        }
+    }
 
     let start = timer::bios_ticks();
-    let limit = timeout_s.map(|s| s * 19);
+    let limit = timeout_s.map(|s| s.saturating_mul(19));
     loop {
         let mut escape = false;
         while let Some(e) = input.poll_key() {
@@ -344,7 +355,7 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         if escape {
             return 0;
         }
-        if limit.is_some_and(|l| timer::bios_ticks().wrapping_sub(start) > l) {
+        if limit.is_some_and(|l| elapsed_ticks(start) > l) {
             println!("shell: timed out without Escape");
             return 4;
         }
@@ -358,6 +369,15 @@ fn main() -> i32 {
         .iter()
         .find_map(|a| a.strip_prefix("timeout=").and_then(|n| n.parse::<u32>().ok()));
     cleanup::register(report);
+    for a in &args {
+        let known = ["depth8", "depth4", "scenario", "dump", "fontfile", "corrupt"].contains(&a.as_str())
+            || a.strip_prefix("timeout=")
+                .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
+        if !known {
+            println!("shell: unknown argument {a:?}; usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [fontfile] [corrupt] [timeout=N]");
+            return 5;
+        }
+    }
 
     // Both faces are read before the screen changes, so a missing file reports in text mode.
     let files = has("fontfile").then(|| (load("UI.DFN"), load("TITLE.DFN")));
