@@ -474,3 +474,9 @@ tr.m-part th{background:var(--raised);text-align:left;font-family:var(--f-displa
 .m-addrfig .ad-ram{fill:var(--raised);stroke:var(--line-strong)} .m-addrfig .ad-bound{stroke:var(--s-decision);stroke-dasharray:4 3;stroke-width:1.6}
 .m-addrfig .ad-a{stroke:var(--c1);fill:var(--c1)} .m-addrfig .ad-open{stroke:var(--c3);fill:var(--c3)} .m-addrfig .ad-closed{stroke:var(--c2);fill:var(--c2)}
 .m-addrfig .ad-t{fill:var(--text)} .m-addrfig .is-off,.m-gdtfig .is-off{display:none}
+/* manual explainers: frames and the heap, interrupts */
+.m-framesfig .fr-use,.sw.fr-use{fill:var(--s-research);background:var(--s-research)} .m-framesfig .fr-res,.sw.fr-res{fill:var(--s-planned);background:var(--s-planned)}
+.m-framesfig .fr-free,.sw.fr-free{fill:var(--c3);background:var(--c3)} .m-framesfig .fr-kern,.sw.fr-kern{fill:var(--accent);background:var(--accent)} .m-framesfig .fr-heap,.sw.fr-heap{fill:var(--c1);background:var(--c1)}
+.m-framesfig .is-off,.m-irqfig .is-off{display:none}
+.m-irqfig .ir-box{fill:var(--raised);stroke:var(--line-strong)} .m-irqfig .ir-t{fill:var(--text)} .m-irqfig .ir-arrow{stroke:var(--muted);stroke-width:1.6}
+.m-irqfig .ir-cur{stroke:var(--accent)}

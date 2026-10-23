@@ -65,6 +65,8 @@ A controller delivers a line once and then waits for an [EOI](term:eoi) before i
 
 A [spurious interrupt](term:spurious-interrupt) is one the controller reports on its lowest-priority line, 7 on the master and 15 on the slave, when the request that raised it was withdrawn before the processor asked which line it was. There is no real work to do, and there is a real trap: acknowledging it would clear the in-service bit of a different, genuine interrupt. The driver's `is_spurious` reads the in-service register (it writes `0x0B` to the command port and reads it back) and says "spurious" for line 7 or 15 when bit 7 of that controller's register is clear. `irq_dispatch` then runs no handler and calls `eoi_spurious`, which does nothing for IRQ 7 and sends the master an end-of-interrupt for IRQ 15, because the master did see its cascade input and would otherwise hold back lines 3 to 7. The kernel installs a gate only for a line it has registered, so this path is reached for IRQ 7 or 15 only once that line has a handler; a spurious one on an unregistered line would find a missing gate and be reported as an exception. The driver's host tests check both (the tests named in the code table below).
 
+<!-- explainer m-irq -->
+
 ### The PIT at 100 Hz
 
 [`pit::init(100)`](sym:kernel/src/pit.rs::init) programs the [PIT](term:pit) through the shared driver: `Pit::new(PORTS).program_clock(&CLOCK, hz)`. The driver divides its 1,193,182 Hz input by a divisor chosen by `(1,193,182 + hz ÷ 2) ÷ hz` in whole numbers, which for 100 Hz is 11,932, and writes the command `0x34` and the two bytes of the divisor ([M3](chapter:m-devices)). `program_clock` records the divisor in the clock in the same step, so the clock's rate cannot drift from the chip's. `init` then registers the clock's tick counter as the IRQ 0 handler with `IrqHandler::from_shared`: the counter is all atomics, so it can be a plain `static`. Its `on_irq` is one `fetch_add` (`lock xadd`, which a 486 has) and the handler runs with interrupts off. Each interrupt is a [tick](term:tick); `pit::ticks()` reads the count.
@@ -279,6 +281,15 @@ at: explainer pit
 id: m6-gdt
 reuse: m2-gdt
 at: explainer m-gdt
+
+id: m6-irq
+kind: explainer
+track: native
+title: An interrupt from the line to the handler, and an exception to the dump
+alt: A step-through of two paths through the kernel: the timer's IRQ 0 through the PIC, the IDT gate, the stub and the dispatcher to the end-of-interrupt, and a divide error through its stub to the exception dump and the exit.
+caption: IRQ 0 at vector 0x20, and a divide error at vector 0, as the kernel's code and the expected dumps record them.
+at: explainer m-irq
+thumb: svg
 ```
 
 ## Revisions

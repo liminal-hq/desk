@@ -138,6 +138,8 @@ Where the kernel's 245,760 bytes come from, in the build made for this chapter: 
 
 **The heap's place.** The heap asks for 1,024 contiguous frames. The first free frame in the table is 316 (`0x13c000`, the frame after the kernel), the run of free frames from there is 3,748 long, and so the heap is frames 316 to 1,339: `0x13c000` to `0x53c000`, and the transcript prints `heap: 4096 KiB at 0x13c000`. The two frames of the allocator test, taken and given back before the heap exists, were frames 316 and 317. After the heap there are 3,748 − 1,024 = 2,724 free frames; the transcript does not print that number, it is derived.
 
+<!-- explainer m-frames -->
+
 **One allocation.** The demo's first allocation is a `Vec<u32>` of ten elements, 40 bytes with 4-byte alignment. `round` makes the size 40 (already a multiple of 8) and the alignment 8. The list holds one block, 4 MiB at `0x13c000`; the first fit is that block, the aligned start is its start, and the remainder is 4,194,264 bytes, far above the 8-byte minimum, so `alloc` unlinks the block, inserts a remainder block at `0x13c028` of that size and returns `0x13c000`. (The transcript does not print addresses of allocations; this follows the code.) Freeing it inserts a 40-byte block at `0x13c000`: the list is searched for the first node at a higher address, which is `0x13c028`, `0x13c000 + 40` equals it, so the new block absorbs it and the list is one block again. The `alloc: Vec sum 385` line is the test that the arithmetic over this memory is right: 1 + 4 + … + 100 = 385, which is `0x181`, the number in the `format` string.
 
 ## State of this layer
@@ -275,6 +277,15 @@ def: The 80x87 floating-point unit: the instructions and registers for real-numb
 id: m7-memchain
 reuse: memchain
 at: explainer memchain
+
+id: m7-frames
+kind: explainer
+track: native
+title: From the memory map to the frame bitmap and the heap
+alt: A step-through of the kernel's frame bitmap built from the six entries of the recorded memory map: usable regions freed, other regions reserved, the first megabyte and the kernel reserved, then the 4 MiB heap taken by first fit.
+caption: The six map entries replayed through memory::init; 3,748 frames free, the heap at 0x13c000.
+at: explainer m-frames
+thumb: svg
 ```
 
 ## Revisions
