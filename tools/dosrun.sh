@@ -23,6 +23,10 @@
 # `builtin_dos_mouse_driver = off`, which takes the mouse driver away). DOS_X11=1 keeps the environment's DISPLAY and uses SDL's x11
 # driver instead of the dummy one, for a run under a virtual X server (tools/docker/Dockerfile.dos-xvfb).
 #
+# DOS_WINDOW=1 opens DOSBox's window on the desktop instead (tools/run-shell.sh uses it): DISPLAY and WAYLAND_DISPLAY are kept, SDL picks its
+# own video driver, the window is not full screen, and a click captures the pointer (`mouse_capture = onclick`, with raw input so the
+# desktop's pointer acceleration stays out of the counts). DOS_TIMEOUT=0 waits for ever. Without DOS_WINDOW nothing here changes.
+#
 # DOSBox needs no display: SDL_VIDEODRIVER=dummy gives it a video driver that draws nowhere, and SDL_AUDIODRIVER=dummy the same
 # for audio. The environment's DISPLAY and WAYLAND_DISPLAY are removed so a developer's desktop is never used by accident.
 #
@@ -89,10 +93,13 @@ c:
 call d:\\run.bat
 exit
 CONF
+[ -z "${DOS_WINDOW:-}" ] || printf '\n[mouse]\nmouse_capture = onclick\nmouse_raw_input = true\n' >> "$WORK/dosbox.conf"
 [ -z "${DOS_CONF:-}" ] || printf '\n%s\n' "$DOS_CONF" >> "$WORK/dosbox.conf"
 
 status=0
-if [ -n "${DOS_X11:-}" ]; then
+if [ -n "${DOS_WINDOW:-}" ]; then
+  video=(env SDL_AUDIODRIVER=dummy)
+elif [ -n "${DOS_X11:-}" ]; then
   video=(env SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy)
 else
   video=(env -u DISPLAY -u WAYLAND_DISPLAY SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy)

@@ -4,7 +4,7 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [--vga CARD] [--shots DIR] [--hd FILE] [IMAGE]
+# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [--vga CARD] [--shots DIR] [--hd FILE] [--window gtk|sdl] [IMAGE]
 #
 # IMAGE defaults to dist/desk-native.img. With --inject the QEMU monitor listens on a Unix socket and tools/native-inject.py plays
 # SCRIPT into it (keys, mouse motion, waits, screenshots) while the guest runs. --vga picks QEMU's display card (std, cirrus, vmware...;
@@ -16,6 +16,10 @@
 #   124  the watchdog timeout ended the run (a hung boot)
 #   3    neither QEMU nor Docker is available
 # --hd FILE attaches FILE as the first IDE hard disk (BIOS drive 0x80) and keeps the boot order on the floppy.
+# --window gtk|sdl opens QEMU's window on the desktop instead of running headless (tools/run-shell.sh uses it). The serial transcript is
+# shown as it arrives, --timeout 0 means no limit, and status 2 (QEMU ended without a guest exit code: the window was closed, or the guest
+# reset or triple-faulted, which the status cannot tell apart) is reported as a note and is this script's status 0. It needs the host's
+# QEMU: the Docker route has no display. Without --window nothing here changes.
 # QEMU comes from the host if installed, otherwise from the Docker image built from tools/docker/Dockerfile.native-qemu. Set
 # DESK_NATIVE_BACKEND=docker to use Docker even when QEMU is installed.
 set -uo pipefail
@@ -29,6 +33,7 @@ inject=""
 vga=""
 shots=""
 hd=""
+window=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --timeout) timeout_s="$2"; shift 2 ;;
@@ -38,6 +43,7 @@ while [ $# -gt 0 ]; do
     --vga) vga="$2"; shift 2 ;;
     --shots) shots="$2"; shift 2 ;;
     --hd) hd="$2"; shift 2 ;;
+    --window) window="$2"; shift 2 ;;
     *) image="$1"; shift ;;
   esac
 done
@@ -61,7 +67,16 @@ if [ -n "$inject" ]; then
   trap 'rm -rf "$sockdir"; [ -n "${trap_serial:-}" ] && rm -f "$trap_serial"' EXIT
   monitor=(-monitor "unix:$sockdir/monitor,server,nowait")
 fi
-qemu_args=(-cpu 486 -m 16 -drive "if=floppy,format=raw,file=$image" -display none -serial "file:$serial"
+display=(-display none)
+case "$window" in
+  "") ;;
+  # One host pixel per guest pixel, and the pointer is taken only by a click, not by moving across the window.
+  # shellcheck disable=SC2054
+  gtk) display=(-display gtk,zoom-to-fit=off,grab-on-hover=off -name "Desk native first window") ;;
+  sdl) display=(-display sdl -name "Desk native first window") ;;
+  *) echo "native-run: --window is gtk or sdl, not $window" >&2; exit 2 ;;
+esac
+qemu_args=(-cpu 486 -m 16 -drive "if=floppy,format=raw,file=$image" "${display[@]}" -serial "file:$serial"
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot "${monitor[@]}")
 [ -n "$vga" ] && qemu_args+=(-vga "$vga")
 [ -n "$hd" ] && qemu_args+=(-drive "if=ide,index=0,format=raw,file=$hd" -boot order=a)
@@ -78,6 +93,16 @@ start_injector() {
 backend=host
 if [ "${DESK_NATIVE_BACKEND:-}" = docker ] || ! command -v qemu-system-i386 > /dev/null; then
   backend=docker
+fi
+if [ -n "$window" ] && [ "$backend" != host ]; then
+  echo "native-run: --window needs qemu-system-i386 on the host; the Docker route is headless" >&2
+  exit 3
+fi
+# In a window the transcript is shown as it arrives.
+tailer=""
+if [ -n "$window" ]; then
+  tail -n +1 -F "$serial" 2> /dev/null &
+  tailer=$!
 fi
 
 if [ "$backend" = host ]; then
@@ -100,10 +125,24 @@ else
 fi
 
 [ -n "$injector" ] && { kill "$injector" 2> /dev/null; wait "$injector" 2> /dev/null; }
-cat "$serial"
+if [ -n "$tailer" ]; then
+  # Let the tail show the last lines before it stops.
+  sleep 0.3
+  kill "$tailer" 2> /dev/null
+  wait "$tailer" 2> /dev/null
+else
+  cat "$serial"
+fi
 case "$status" in
   33) echo "native-run: guest reported success" >&2; exit 0 ;;
   35) echo "native-run: guest reported failure" >&2; exit 1 ;;
   124) echo "native-run: timed out after ${timeout_s}s" >&2; exit 124 ;;
-  *) echo "native-run: QEMU exited with status $status without a guest exit code" >&2; exit 2 ;;
+  *)
+    if [ -n "$window" ]; then
+      echo "native-run: QEMU ended without a guest exit code (status $status): the window was closed, or the guest reset or triple-faulted; the transcript above says which" >&2
+      exit 0
+    fi
+    echo "native-run: QEMU exited with status $status without a guest exit code" >&2
+    exit 2
+    ;;
 esac
