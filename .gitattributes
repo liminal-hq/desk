@@ -13,5 +13,7 @@
 *.bmp binary
 *.pcx binary
 *.dfn binary
+*.otf binary
+*.ttf binary
 *.ico binary
 *.dap binary

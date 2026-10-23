@@ -1,0 +1,25 @@
+[package]
+name = "desk-core"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The Desk shell in Rust (no_std), linked into DESK.EXE by the C layer"
+license = "Apache-2.0 OR MIT"
+
+# A static library: tools/build.sh links it with the C layer. There is no Rust entry point; C's main calls the exported functions.
+[lib]
+name = "desk_core"
+crate-type = ["staticlib"]
+
+# The DOS crates are their own workspace because .cargo/config.toml makes dos.json the default target for everything below here.
+[workspace]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 0
+
+[profile.dev]
+panic = "abort"

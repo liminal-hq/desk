@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Desk Emoji</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/*FONTS*/
+/* Layout: one long reference page in the Desk's own look; a sticky toolbar drives the sheets and the list together. */
+:root {
+  --bg: #f4f4f8; --surface: #e0e0e0; --raised: #ffffff; --line: #b4bfce; --fg: #1b1e28; --muted: #5a6273;
+  --accent: #b86a00; --accent-fill: #ffaa40; --on-accent: #050507; --tile-dark: #111116; --tile-light: #f4f4f8;
+  --display: "DE Title", "IBM Plex Sans", system-ui, sans-serif;
+  --ui: "DE UI", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111116; --surface: #0c0c10; --raised: #1b1e28; --line: #333847; --fg: #e0e0e0; --muted: #7c8796;
+  --accent: #ffaa40; --accent-fill: #ffaa40; --on-accent: #050507; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111116; --surface: #0c0c10; --raised: #1b1e28; --line: #333847; --fg: #e0e0e0; --muted: #7c8796;
+  --accent: #ffaa40; --accent-fill: #ffaa40; --on-accent: #050507; color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); margin: 0 }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+h1 { font: 36px/1 var(--display); margin: 0; letter-spacing: 0 }
+h2 { font: 24px/1.2 var(--display); margin: 0 0 12px; text-wrap: balance }
+h3 { font: 12px/1.4 var(--ui); margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: .08em }
+p { max-width: 68ch; margin: 0 }
+.lede { color: var(--muted); margin-top: 12px }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 20px; font-variant-numeric: tabular-nums }
+.stats div { display: flex; flex-direction: column }
+.stats b { font: 24px/1 var(--display); color: var(--accent) }
+.stats span { font-size: 13px; color: var(--muted) }
+section { margin-top: 44px; display: flex; flex-direction: column; gap: 14px }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center }
+.group { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.group button { font: 12px/1 var(--ui); padding: 7px 10px; background: var(--raised); color: var(--fg); border: 0; border-right: 1px solid var(--line); cursor: pointer }
+.group button:last-child { border-right: 0 }
+.group button[aria-pressed="true"] { background: var(--accent-fill); color: var(--on-accent) }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.search { flex: 1 1 200px; min-width: 0; font: 14px var(--body); padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg) }
+.count { font: 12px var(--ui); color: var(--muted) }
+.cat { display: flex; flex-direction: column; gap: 8px }
+.tiles { display: flex; flex-wrap: wrap; gap: 6px }
+.tile { padding: 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--tile-dark); cursor: pointer; line-height: 0 }
+.tile.light { background: var(--tile-light) }
+.tile canvas, .detail canvas { image-rendering: pixelated; display: block }
+.tile svg { display: block }
+.tile.none { opacity: .25; cursor: default }
+.legend { font-size: 13px; color: var(--muted) }
+.tester { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px }
+.tester textarea { width: 100%; min-height: 70px; font: 15px var(--body); padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); resize: vertical }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center }
+select { font: 14px var(--body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--fg); max-width: 100% }
+.preview { border: 1px solid var(--line); border-radius: 6px; padding: 18px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; -webkit-font-smoothing: none; font-smooth: never }
+.preview.dark { background: #111116; color: #e0e0e0 } .preview.light { background: #f4f4f8; color: #1b1e28 }
+.note { font-size: 13px; color: var(--muted) }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; max-height: 560px; overflow-y: auto }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap }
+th { position: sticky; top: 0; background: var(--surface); font: 12px var(--ui); color: var(--muted) }
+td.e { font: 24px/1 "DE Pixel", var(--body) } td.cp { font-family: var(--mono); font-size: 13px }
+.pill { font: 12px var(--ui); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line) }
+.pill.core { background: var(--accent-fill); color: var(--on-accent); border-color: transparent }
+.detail { position: fixed; inset: auto max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) auto; z-index: 10; width: min(420px, calc(100vw - 32px)); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); display: flex; flex-direction: column; gap: 12px }
+.detail header { display: flex; justify-content: space-between; gap: 12px; align-items: start }
+.detail h2 { font-size: 24px; margin: 0 }
+.detail .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end }
+.detail .cell { display: flex; flex-direction: column; gap: 4px; font: 12px var(--ui); color: var(--muted) }
+.detail .box { background: #111116; padding: 6px; border-radius: 4px; line-height: 0 } .detail .box.light { background: #f4f4f8 }
+.close { font: 12px var(--ui); background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
+.files { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 24px; font-size: 14px }
+.files div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-block: 4px; min-width: 0 }
+.files code { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere }
+.dl { align-self: start; font: 14px var(--body); font-weight: 600; background: var(--accent-fill); color: var(--on-accent); border: 0; border-radius: 6px; padding: 10px 16px; cursor: pointer }
+ul { margin: 0; padding-left: 20px; max-width: 72ch } li { margin: 4px 0 }
+@media (prefers-reduced-motion: no-preference) { .tile { transition: transform .08s } .tile:hover { transform: translateY(-1px) } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!--NAV-->
+  <header>
+    <h1>Desk Emoji</h1>
+    <p class="lede">The emoji of Desk, the graphical shell for MS-DOS: original pixel art in the 16-colour Desk palette at 16, 12 and 8 pixels, and flat geometric drawings for Desk Sans, Mono and Serif. Every picture below is drawn from the build's own data, branch <code>feat/emoji</code>.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section id="sheets" aria-labelledby="sheets-h">
+    <h2 id="sheets-h">Contact sheets</h2>
+    <div class="bar" role="toolbar" aria-label="Sheet controls">
+      <div class="group" id="style" aria-label="Style">
+        <button type="button" data-v="16" aria-pressed="true">Pixel 16</button><button type="button" data-v="12" aria-pressed="false">Pixel 12</button><button type="button" data-v="8" aria-pressed="false">Pixel 8</button><button type="button" data-v="vector" aria-pressed="false">Vector</button>
+      </div>
+      <div class="group" id="ink" aria-label="Colour or mono">
+        <button type="button" data-v="colour" aria-pressed="true">Colour</button><button type="button" data-v="mono" aria-pressed="false">Mono</button>
+      </div>
+      <div class="group" id="ground" aria-label="Background">
+        <button type="button" data-v="dark" aria-pressed="true">Dark</button><button type="button" data-v="light" aria-pressed="false">Light</button>
+      </div>
+      <div class="group" id="zoom" aria-label="Zoom">
+        <button type="button" data-v="1" aria-pressed="false">1×</button><button type="button" data-v="2" aria-pressed="false">2×</button><button type="button" data-v="3" aria-pressed="true">3×</button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="Search names, code points or categories" aria-label="Search emoji">
+      <span class="count" id="count"></span>
+    </div>
+    <p class="legend" id="legend"></p>
+    <div id="cats" style="display:flex;flex-direction:column;gap:22px"></div>
+  </section>
+
+  <section id="tester" aria-labelledby="tester-h">
+    <h2 id="tester-h">Type tester</h2>
+    <p class="note">Set in the real built fonts, embedded in this page. Pixel faces are exact at whole multiples of their size; the colour fonts render through COLR in browsers that support it.</p>
+    <div class="tester">
+      <textarea id="text" aria-label="Text to set">Saved 💾 to 📁 Projects 🙂 ⚠ Disk full 🔥 ⏰ 9:41 ✔ Done ❌ Cancel 🔒 Locked 🔊 🎵 ⭐ ❤ 👍 🍁 👽 🛸 🥤 ☕ 🎮 ⚡ 🏆</textarea>
+      <div class="controls">
+        <label for="face" class="note">Face</label>
+        <select id="face"></select>
+        <label for="size" class="note">Size</label>
+        <select id="size"></select>
+        <div class="group" id="tground" aria-label="Preview background"><button type="button" data-v="dark" aria-pressed="true">Dark</button><button type="button" data-v="light" aria-pressed="false">Light</button></div>
+      </div>
+      <div class="preview dark" id="preview"></div>
+      <p class="note" id="facenote"></p>
+    </div>
+  </section>
+
+  <section id="list" aria-labelledby="list-h">
+    <h2 id="list-h">The set</h2>
+    <p class="note">Every emoji is one Unicode code point with its CLDR short name. No ZWJ sequences, skin tones, keycaps or flags. The search box above filters this list too.</p>
+    <div class="tablewrap"><table><thead><tr><th>Emoji</th><th>Code point</th><th>Name</th><th>Category</th><th>Tier</th><th>12 × 12</th><th>8 × 8</th><th>Vector</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section>
+
+  <section id="files" aria-labelledby="files-h">
+    <h2 id="files-h">Files</h2>
+    <ul>
+      <li><b>Windows 3.1 to 95, NT 3.5x, OS/2:</b> the <code>.ttf</code> faces, which stay emoji-free and byte-for-byte unchanged. 322 of the emoji are beyond the Basic Multilingual Plane, which those systems cannot reach.</li>
+      <li><b>Windows 10 and 11, Linux, macOS, browsers:</b> the <code>.otf</code> faces for monochrome emoji in Desk text; Desk Emoji Pixel or Desk Emoji for colour, listed before the text face.</li>
+      <li><b>DOS:</b> <code>emoji16.dem</code>, <code>emoji12.dem</code> and <code>emoji8.dem</code>, layered 1-bit bitmaps in the 16 Desk colours.</li>
+    </ul>
+    <div class="files" id="filelist"></div>
+    <button class="dl" id="dl" type="button" hidden>Download the emoji files (.zip)</button>
+    <p class="note" id="dlnote">The zip holds <code>fonts/generated/emoji/</code> and the SIL Open Font License. Downloading needs the claude.ai viewer; elsewhere the files are in the repository.</p>
+  </section>
+</div>
+
+<div class="detail" id="detail" hidden role="dialog" aria-labelledby="d-name"></div>
+<script src="emoji-data.js"></script>
+<script src="emoji.js"></script>
+</body>
+</html>

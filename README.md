@@ -39,22 +39,24 @@ The full list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), and [`docs/OPEN-Q
 |---|---|
 | `docs` | The working design: spec, SDK, file formats, handoff, palette, app guidelines, open questions, naming |
 | `design` | Boards and prototypes from the design brainstorm, kept as reference only |
-| `core` | The shell in Rust (empty until the spikes land) |
-| `c` | The hardware layer in C for DJGPP (empty until a spike needs it) |
+| `core` | The shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
+| `c` | The hardware layer in C for DJGPP; today `main`, result output and the panic exit |
 | `launcher` | `DESK.COM`, the real-mode launcher (empty until the handoff spike) |
 | `sdk` | The app interface (empty until the first spike settles how apps load) |
 | `spikes` | Experiments that decide the architecture |
 | `tests/dos` | Test programs of our own for the headless DOS runs |
-| `tools` | Repository checks and the banner builder; the DOS toolchain scripts arrive with the first spike |
+| `fonts` | The four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), the emoji, and their build into OTF, TTF, `.DFN` and `.DEM` files ([`docs/FONTS.md`](docs/FONTS.md), [`docs/EMOJI.md`](docs/EMOJI.md)); the fonts are under the SIL Open Font License 1.1 |
+| `tools` | Repository checks, the DOS build pipeline (setup, fetch, build, object converter, headless DOSBox runner) and the banner builder |
 
 ## Working on it
 
 ```bash
-tools/check.sh    # licence headers, markdown style and links: everything the CI runs today
+tools/setup.sh    # once: the pinned Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI into vendor/
+tools/check.sh    # everything the CI runs: checks, then build dist/DESK.EXE and run it in headless DOSBox
 python3 -I tools/build-hero.py > assets/hero.svg    # rebuild the banner
 ```
 
-[`AGENTS.md`](AGENTS.md) has the conventions: Canadian English, unwrapped markdown, Conventional Commits, merge commits only.
+[`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) explains the build pipeline and what it was checked against. [`AGENTS.md`](AGENTS.md) has the conventions: Canadian English, unwrapped markdown, Conventional Commits, merge commits only.
 
 ## Licence
 
