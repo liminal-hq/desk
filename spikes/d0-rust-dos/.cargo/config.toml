@@ -1,0 +1,15 @@
+# Rust has no precompiled core or alloc for a DOS target, so build them from rust-src. These options are unstable; build.sh sets
+# RUSTC_BOOTSTRAP=1 so the pinned stable toolchain accepts them. compiler-builtins-mem supplies memcpy, memmove, memset and memcmp,
+# which nothing else provides when there is no C library.
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+json-target-spec = true
+
+[build]
+target = "dos-elf.json"
+
+# rust-lld links the ELF with our script; tools/elf2go32.py then packs the ELF into the go32 image. Run cargo from this directory:
+# the script path is relative.
+[target.dos-elf]
+rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]

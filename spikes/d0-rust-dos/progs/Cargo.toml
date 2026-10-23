@@ -1,0 +1,10 @@
+[package]
+name = "progs"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Test programs for the d0-rust-dos spike"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../rt" }

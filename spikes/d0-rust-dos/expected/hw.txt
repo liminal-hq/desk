@@ -1,0 +1,8 @@
+hw: dpmi 0.90 pic bases 0x08 0x70
+hw: vector 8 moved to our handler: true
+hw: ticks counted in about a second: in range (expected 18 to 20): true
+hw: BIOS tick counter advanced by the same amount (within 1): true
+hw: vector 8 restored: true
+hw: no ticks counted after unhook: true
+hw: mode before 0x03, in mode 0x13, after 0x03
+hw: frame buffer checksum 0x49fd8cc5, pattern in memory 0x49fd8cc5, match true
