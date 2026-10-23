@@ -1,0 +1,342 @@
+# Emoji roadmap
+
+What is still to be drawn and built for the Desk emoji ([`EMOJI.md`](EMOJI.md)), and in what order.
+
+## The request
+
+On 2026-10-22 Scott asked for every emoji in Gboard's "Smileys and emotions" panel, skin-tone variants included, to be in the Desk emoji fonts. His paste is kept verbatim as `fonts/src/emoji/gboard-list.txt`. `fonts/src/emoji/requests.ts` splits it into sequences (a ZWJ joins the next code point to the sequence; VS16 and the skin-tone modifiers attach to the code point before them), drops duplicates, names each from Unicode's `emoji-test.txt` for Emoji 17.0 (`requested-names.ts`) and checks it against the manifest. The table below is generated from that, and `fonts/test/emoji-roadmap.test.ts` fails when it no longer matches the manifest and the art.
+
+## The model
+
+Every requested sequence is one of four kinds:
+
+- **single**: one code point, drawn as one picture (the kind the manifest has always held).
+- **vs16**: a text-default character followed by VS16 (U+FE0F) to ask for emoji presentation, such as ☺️ or ❤️. It shows the base picture: every emoji font maps VS16 to an empty glyph, so the sequence works wherever the base is drawn.
+- **zwj**: a ZWJ sequence such as 😮‍💨, which needs its own picture and a GSUB ligature from the sequence to that glyph.
+- **tone**: an `Emoji_Modifier_Base` code point listed with a skin-tone modifier (U+1F3FB to U+1F3FF). The list shows the light tone; the request is for all five, so each stands for a family of five variants of one base drawing.
+
+## Design for the planned work
+
+These are decided in outline and start the next sessions; the details go into [`EMOJI.md`](EMOJI.md) and [`FORMATS.md`](FORMATS.md) as each lands.
+
+- **Skin tones by palette substitution.** Each tone-capable drawing is drawn once in the neutral amber, with its skin pixels marked by role (skin base, shadow, highlight). Five tone triples (base, shadow, highlight for light, medium-light, medium, medium-dark and dark) are defined in one place and written in `EMOJI.md` as RGB. The colour fonts extend CPAL past the 16 Desk colours with those 15 entries and give every variant its own colour glyph whose skin layers use them; each modifier code point gets a glyph of its own, a plain tone swatch. In the faces' monochrome emoji, base plus modifier shows the base glyph, since tone does not show in mono.
+- **Sequences.** GSUB (`ccmp` for tones, `liga` or `ccmp` for ZWJ sequences, longest first) selects the variant or the sequence's glyph in the colour fonts and in the OTF files of the pixel and outline faces, reusing the GSUB writer of `fonts/src/modern/layout.ts`. The outline faces keep their kerning and ligature features, with the emoji lookups merged in. VS16 and ZWJ stay empty zero-width glyphs, so text with them never shows a box. HarfBuzz in `validate.sh` and a TypeScript table check in `bun test` cover the shaping.
+- **Era files unchanged.** The `.ttf` and `.dfn` files stay emoji-free and byte-for-byte as they are.
+- **`.DEM`.** The format is unreleased, so it is revised in place when tones arrive: each picture keyed by a code point sequence (a length byte and up to four code points), and a role byte on each layer (0 normal, 1 skin base, 2 skin shadow, 3 skin highlight) so a DOS renderer can recolour skin for any tone; the files carry the default tone only.
+
+## Recommended order
+
+1. **Faces and emotions** in the table below, each with a hand-drawn 12 × 12 and a checked monochrome glyph.
+2. **Hearts and symbols.**
+3. **Body parts and hands**, then the tone mechanism, proved end to end on the hands already drawn (👍 👎 👌 ✌ 👋 👏 🙏 💪), then the remaining tone families as their bases are drawn.
+4. **Creatures, sky and objects**: the moon faces, ⛄, 🦠 and the rest.
+5. **ZWJ sequences**: 😶‍🌫️ 🙂‍↔️ 🙂‍↕️ 😮‍💨 😵‍💫 ❤️‍🔥 ❤️‍🩹, each its own drawing composed from its parts, and their ligatures.
+6. **Vector additions** where the geometric kit can draw a face or symbol well.
+
+## Known hard drawings
+
+- Hands at 16 × 16 and especially 12 × 12: 🤌 🫰 🤏 🫵 🤙 🫷 🫸 and the other finger poses depend on one or two pixels of finger.
+- Anatomy: 🫀 🫁 🧠 🦴 🦷 🫆 read as blobs unless the one telling feature is exaggerated.
+- Faces whose meaning is in a small detail: 🫥 (dotted outline), 🫨 (shaking), 🫩 (bags under the eyes), 🥲 (one tear while smiling), 🫤 (diagonal mouth), 🤥 (long nose).
+- 👤 👥 🗣 are silhouettes that need a light edge to read on a dark ground.
+
+## How to add an emoji
+
+Follow [Drawing the pixel emoji](EMOJI.md#drawing-the-pixel-emoji): add the entry to `fonts/src/emoji/manifest.ts`, draw the 16 × 16 in the category file under `fonts/src/emoji/pixel/`, add a hand-drawn 12 × 12 to `FIX12` (or `HAND` for core and essential emoji), check the monochrome glyph on a proof sheet (`bun src/emoji/proof.ts`) and add a `MONO_HAND` grid if the rule fails, then run `bun build.ts`, `bun src/emoji/requests.ts` to refresh this table, and `bun test` in `fonts/`.
+
+## Status
+
+<!-- roadmap:start (generated by `bun src/emoji/requests.ts` in fonts/; do not edit by hand) -->
+
+244 distinct sequences (180 single code points, 9 VS16 forms, 7 ZWJ sequences, 48 tone families of 5 tones each), from 237 distinct first code points.
+
+| Kind | Done | Planned |
+|---|---|---|
+| single | 157 | 23 |
+| vs16 | 7 | 2 |
+| zwj | 0 | 7 |
+| tone | 0 | 48 |
+| All | 164 | 80 |
+
+Still to draw: 54 new base pictures, 7 ZWJ pictures, and 240 tone variants (48 families × 5, generated by palette substitution once their bases are drawn; 19 of those bases are drawn already).
+
+### Faces and emotions
+
+121 done, 0 planned.
+
+| Emoji | Code points | Short name | Kind | Status | Pixel sizes | Vector | Tones (light to dark) | Note |
+|---|---|---|---|---|---|---|---|---|
+| 🫩 | `1FAE9` | face with bags under eyes | single | done | 16, 12 | — | — | — |
+| 🥸 | `1F978` | disguised face | single | done | 16, 12 | — | — | — |
+| 😈 | `1F608` | smiling face with horns | single | done | 16, 12 | — | — | — |
+| 👿 | `1F47F` | angry face with horns | single | done | 16, 12 | — | — | — |
+| 😳 | `1F633` | flushed face | single | done | 16, 12 | — | — | — |
+| 😲 | `1F632` | astonished face | single | done | 16, 12 | — | — | — |
+| 😯 | `1F62F` | hushed face | single | done | 16, 12 | — | — | — |
+| 😮 | `1F62E` | face with open mouth | single | done | 16, 12 | yes | — | — |
+| 😦 | `1F626` | frowning face with open mouth | single | done | 16, 12 | — | — | — |
+| 😧 | `1F627` | anguished face | single | done | 16, 12 | — | — | — |
+| 😨 | `1F628` | fearful face | single | done | 16, 12 | — | — | — |
+| 😰 | `1F630` | anxious face with sweat | single | done | 16, 12 | — | — | — |
+| 🫣 | `1FAE3` | face with peeking eye | single | done | 16, 12 | — | — | — |
+| 🫥 | `1FAE5` | dotted line face | single | done | 16, 12 | — | — | — |
+| 🤪 | `1F92A` | zany face | single | done | 16, 12 | — | — | — |
+| 😀 | `1F600` | grinning face | single | done | 16, 12 | yes | — | — |
+| 😃 | `1F603` | grinning face with big eyes | single | done | 16, 12 | yes | — | — |
+| 😄 | `1F604` | grinning face with smiling eyes | single | done | 16, 12 | yes | — | — |
+| 😁 | `1F601` | beaming face with smiling eyes | single | done | 16, 12 | yes | — | — |
+| 😆 | `1F606` | grinning squinting face | single | done | 16, 12 | — | — | — |
+| 😅 | `1F605` | grinning face with sweat | single | done | 16, 12 | — | — | — |
+| 😂 | `1F602` | face with tears of joy | single | done | 16, 12 | yes | — | — |
+| 🤣 | `1F923` | rolling on the floor laughing | single | done | 16, 12 | — | — | — |
+| 😍 | `1F60D` | smiling face with heart-eyes | single | done | 16, 12 | yes | — | — |
+| 🥰 | `1F970` | smiling face with hearts | single | done | 16, 12 | — | — | — |
+| 😘 | `1F618` | face blowing a kiss | single | done | 16, 12 | yes | — | — |
+| 😚 | `1F61A` | kissing face with closed eyes | single | done | 16, 12 | — | — | — |
+| 😙 | `1F619` | kissing face with smiling eyes | single | done | 16, 12 | — | — | — |
+| 😗 | `1F617` | kissing face | single | done | 16, 12 | — | — | — |
+| 😉 | `1F609` | winking face | single | done | 16, 12 | yes | — | — |
+| 😭 | `1F62D` | loudly crying face | single | done | 16, 12 | yes | — | — |
+| 🤩 | `1F929` | star-struck | single | done | 16, 12 | — | — | — |
+| 🥳 | `1F973` | partying face | single | done | 16, 12 | — | — | — |
+| 🫠 | `1FAE0` | melting face | single | done | 16, 12 | — | — | — |
+| 🙃 | `1F643` | upside-down face | single | done | 16, 12 | yes | — | — |
+| 🙂 | `1F642` | slightly smiling face | single | done | 16, 12, 8 | yes | — | — |
+| 🥲 | `1F972` | smiling face with tear | single | done | 16, 12 | — | — | — |
+| 🥹 | `1F979` | face holding back tears | single | done | 16, 12 | — | — | — |
+| 😊 | `1F60A` | smiling face with smiling eyes | single | done | 16, 12 | yes | — | — |
+| 😛 | `1F61B` | face with tongue | single | done | 16, 12 | yes | — | — |
+| 😋 | `1F60B` | face savoring food | single | done | 16, 12 | — | — | — |
+| 🤤 | `1F924` | drooling face | single | done | 16, 12 | — | — | — |
+| 😏 | `1F60F` | smirking face | single | done | 16, 12 | — | — | — |
+| 😌 | `1F60C` | relieved face | single | done | 16, 12 | yes | — | — |
+| ☺️ | `263A FE0F` | smiling face | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 😝 | `1F61D` | squinting face with tongue | single | done | 16, 12 | — | — | — |
+| 😜 | `1F61C` | winking face with tongue | single | done | 16, 12 | yes | — | — |
+| 🫪 | `1FAEA` | distorted face | single | done | 16, 12 | yes | — | — |
+| 😔 | `1F614` | pensive face | single | done | 16, 12 | — | — | — |
+| 🥺 | `1F97A` | pleading face | single | done | 16, 12 | — | — | — |
+| 😬 | `1F62C` | grimacing face | single | done | 16, 12 | — | — | — |
+| 😑 | `1F611` | expressionless face | single | done | 16, 12 | — | — | — |
+| 🤫 | `1F92B` | shushing face | single | done | 16, 12 | — | — | — |
+| 🤔 | `1F914` | thinking face | single | done | 16, 12 | — | — | — |
+| 🫡 | `1FAE1` | saluting face | single | done | 16, 12 | — | — | — |
+| 🤐 | `1F910` | zipper-mouth face | single | done | 16, 12 | — | — | — |
+| 😶 | `1F636` | face without mouth | single | done | 16, 12 | yes | — | — |
+| 😐 | `1F610` | neutral face | single | done | 16, 12 | yes | — | — |
+| 🫢 | `1FAE2` | face with open eyes and hand over mouth | single | done | 16, 12 | — | — | — |
+| 🤭 | `1F92D` | face with hand over mouth | single | done | 16, 12 | — | — | — |
+| 🥱 | `1F971` | yawning face | single | done | 16, 12 | — | — | — |
+| 🤗 | `1F917` | smiling face with open hands | single | done | 16, 12 | — | — | — |
+| 😱 | `1F631` | face screaming in fear | single | done | 16, 12 | — | — | — |
+| 🤨 | `1F928` | face with raised eyebrow | single | done | 16, 12 | — | — | — |
+| 🧐 | `1F9D0` | face with monocle | single | done | 16, 12 | — | — | — |
+| 😞 | `1F61E` | disappointed face | single | done | 16, 12 | — | — | — |
+| 🤬 | `1F92C` | face with symbols on mouth | single | done | 16, 12 | — | — | — |
+| 😡 | `1F621` | enraged face | single | done | 16, 12 | yes | — | — |
+| 😠 | `1F620` | angry face | single | done | 16, 12 | yes | — | — |
+| 😤 | `1F624` | face with steam from nose | single | done | 16, 12 | — | — | — |
+| 🙄 | `1F644` | face with rolling eyes | single | done | 16, 12 | — | — | — |
+| 😒 | `1F612` | unamused face | single | done | 16, 12 | — | — | — |
+| 😓 | `1F613` | downcast face with sweat | single | done | 16, 12 | — | — | — |
+| 😟 | `1F61F` | worried face | single | done | 16, 12 | — | — | — |
+| 😥 | `1F625` | sad but relieved face | single | done | 16, 12 | — | — | — |
+| 😢 | `1F622` | crying face | single | done | 16, 12 | yes | — | — |
+| ☹️ | `2639 FE0F` | frowning face | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 🙁 | `1F641` | slightly frowning face | single | done | 16, 12 | yes | — | — |
+| 🫤 | `1FAE4` | face with diagonal mouth | single | done | 16, 12 | — | — | — |
+| 😕 | `1F615` | confused face | single | done | 16, 12 | — | — | — |
+| 🤯 | `1F92F` | exploding head | single | done | 16, 12 | — | — | — |
+| 😖 | `1F616` | confounded face | single | done | 16, 12 | — | — | — |
+| 😣 | `1F623` | persevering face | single | done | 16, 12 | — | — | — |
+| 😩 | `1F629` | weary face | single | done | 16, 12 | — | — | — |
+| 😫 | `1F62B` | tired face | single | done | 16, 12 | — | — | — |
+| 😵 | `1F635` | face with crossed-out eyes | single | done | 16, 12 | — | — | — |
+| 🫨 | `1FAE8` | shaking face | single | done | 16, 12 | — | — | — |
+| 😪 | `1F62A` | sleepy face | single | done | 16, 12 | — | — | — |
+| 😴 | `1F634` | sleeping face | single | done | 16, 12 | yes | — | — |
+| 🤮 | `1F92E` | face vomiting | single | done | 16, 12 | — | — | — |
+| 🤢 | `1F922` | nauseated face | single | done | 16, 12 | — | — | — |
+| 🥶 | `1F976` | cold face | single | done | 16, 12 | yes | — | — |
+| 🥵 | `1F975` | hot face | single | done | 16, 12 | yes | — | — |
+| 🥴 | `1F974` | woozy face | single | done | 16, 12 | — | — | — |
+| 🤧 | `1F927` | sneezing face | single | done | 16, 12 | — | — | — |
+| 🤒 | `1F912` | face with thermometer | single | done | 16, 12 | — | — | — |
+| 🤕 | `1F915` | face with head-bandage | single | done | 16, 12 | — | — | — |
+| 😷 | `1F637` | face with medical mask | single | done | 16, 12 | — | — | — |
+| 🤥 | `1F925` | lying face | single | done | 16, 12 | — | — | — |
+| 😇 | `1F607` | smiling face with halo | single | done | 16, 12 | yes | — | — |
+| 🤠 | `1F920` | cowboy hat face | single | done | 16, 12 | — | — | — |
+| 🤑 | `1F911` | money-mouth face | single | done | 16, 12 | — | — | — |
+| 🤓 | `1F913` | nerd face | single | done | 16, 12 | — | — | — |
+| 😎 | `1F60E` | smiling face with sunglasses | single | done | 16, 12 | yes | — | — |
+| 🤡 | `1F921` | clown face | single | done | 16, 12 | — | — | — |
+| 💩 | `1F4A9` | pile of poo | single | done | 16, 12 | — | — | — |
+| 👻 | `1F47B` | ghost | single | done | 16, 12 | — | — | — |
+| 👽 | `1F47D` | alien | single | done | 16, 12 | yes | — | — |
+| 👾 | `1F47E` | alien monster | single | done | 16, 12 | — | — | — |
+| 😺 | `1F63A` | grinning cat | single | done | 16, 12 | — | — | — |
+| 😸 | `1F638` | grinning cat with smiling eyes | single | done | 16, 12 | — | — | — |
+| 😹 | `1F639` | cat with tears of joy | single | done | 16, 12 | — | — | — |
+| 😻 | `1F63B` | smiling cat with heart-eyes | single | done | 16, 12 | — | — | — |
+| 😼 | `1F63C` | cat with wry smile | single | done | 16, 12 | — | — | — |
+| 😽 | `1F63D` | kissing cat | single | done | 16, 12 | — | — | — |
+| 🙀 | `1F640` | weary cat | single | done | 16, 12 | — | — | — |
+| 😿 | `1F63F` | crying cat | single | done | 16, 12 | — | — | — |
+| 😾 | `1F63E` | pouting cat | single | done | 16, 12 | — | — | — |
+| 🙈 | `1F648` | see-no-evil monkey | single | done | 16, 12 | — | — | — |
+| 🙉 | `1F649` | hear-no-evil monkey | single | done | 16, 12 | — | — | — |
+| 🙊 | `1F64A` | speak-no-evil monkey | single | done | 16, 12 | — | — | — |
+
+### Hearts and symbols
+
+32 done, 0 planned.
+
+| Emoji | Code points | Short name | Kind | Status | Pixel sizes | Vector | Tones (light to dark) | Note |
+|---|---|---|---|---|---|---|---|---|
+| 🫯 | `1FAEF` | fight cloud | single | done | 16, 12 | — | — | — |
+| 💫 | `1F4AB` | dizzy | single | done | 16, 12 | — | — | — |
+| 💥 | `1F4A5` | collision | single | done | 16, 12 | yes | — | — |
+| 💯 | `1F4AF` | hundred points | single | done | 16, 12 | yes | — | — |
+| 🕳️ | `1F573 FE0F` | hole | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 💤 | `1F4A4` | ZZZ | single | done | 16, 12 | yes | — | — |
+| 💨 | `1F4A8` | dashing away | single | done | 16, 12 | — | — | — |
+| ❤️ | `2764 FE0F` | red heart | vs16 | done | 16, 12, 8 | yes | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 🧡 | `1F9E1` | orange heart | single | done | 16, 12 | yes | — | — |
+| 💛 | `1F49B` | yellow heart | single | done | 16, 12 | yes | — | — |
+| 💚 | `1F49A` | green heart | single | done | 16, 12 | yes | — | — |
+| 🩵 | `1FA75` | light blue heart | single | done | 16, 12 | — | — | — |
+| 💙 | `1F499` | blue heart | single | done | 16, 12 | yes | — | — |
+| 💜 | `1F49C` | purple heart | single | done | 16, 12 | yes | — | — |
+| 💖 | `1F496` | sparkling heart | single | done | 16, 12 | — | — | — |
+| 💝 | `1F49D` | heart with ribbon | single | done | 16, 12 | — | — | — |
+| 💘 | `1F498` | heart with arrow | single | done | 16, 12 | — | — | — |
+| 🩷 | `1FA77` | pink heart | single | done | 16, 12 | — | — | — |
+| 🤍 | `1F90D` | white heart | single | done | 16, 12 | yes | — | — |
+| 🩶 | `1FA76` | grey heart | single | done | 16, 12 | — | — | — |
+| 🖤 | `1F5A4` | black heart | single | done | 16, 12 | yes | — | — |
+| 🤎 | `1F90E` | brown heart | single | done | 16, 12 | — | — | — |
+| 💗 | `1F497` | growing heart | single | done | 16, 12 | — | — | — |
+| 💓 | `1F493` | beating heart | single | done | 16, 12 | — | — | — |
+| 💞 | `1F49E` | revolving hearts | single | done | 16, 12 | — | — | — |
+| 💕 | `1F495` | two hearts | single | done | 16, 12 | — | — | — |
+| 💌 | `1F48C` | love letter | single | done | 16, 12 | — | — | — |
+| 💟 | `1F49F` | heart decoration | single | done | 16, 12 | — | — | — |
+| ❣️ | `2763 FE0F` | heart exclamation | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 💋 | `1F48B` | kiss mark | single | done | 16, 12 | — | — | — |
+| 💔 | `1F494` | broken heart | single | done | 16, 12 | yes | — | — |
+| 💦 | `1F4A6` | sweat droplets | single | done | 16, 12 | — | — | — |
+
+### Body parts and hands, with their tones
+
+3 done, 64 planned.
+
+| Emoji | Code points | Short name | Kind | Status | Pixel sizes | Vector | Tones (light to dark) | Note |
+|---|---|---|---|---|---|---|---|---|
+| 🗣️ | `1F5E3 FE0F` | speaking head | vs16 | planned | — | — | — | new drawing of the base |
+| 👤 | `1F464` | bust in silhouette | single | planned | — | — | — | new drawing |
+| 👥 | `1F465` | busts in silhouette | single | planned | — | — | — | new drawing |
+| 🫂 | `1FAC2` | people hugging | single | planned | — | — | — | new drawing |
+| 👣 | `1F463` | footprints | single | planned | — | — | — | new drawing |
+| 🫆 | `1FAC6` | fingerprint | single | planned | — | — | — | new drawing |
+| 🧠 | `1F9E0` | brain | single | done | 16, 12 | — | — | — |
+| 🫀 | `1FAC0` | anatomical heart | single | planned | — | — | — | new drawing |
+| 🫁 | `1FAC1` | lungs | single | planned | — | — | — | new drawing |
+| 👃🏻 | `1F443 1F3FB` | nose: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👅 | `1F445` | tongue | single | planned | — | — | — | new drawing |
+| 🫦 | `1FAE6` | biting lip | single | planned | — | — | — | new drawing |
+| 👄 | `1F444` | mouth | single | done | 16, 12 | — | — | — |
+| 👁️ | `1F441 FE0F` | eye | vs16 | planned | — | — | — | new drawing of the base |
+| 👀 | `1F440` | eyes | single | done | 16, 12 | — | — | — |
+| 🦴 | `1F9B4` | bone | single | planned | — | — | — | new drawing |
+| 🦷 | `1F9B7` | tooth | single | planned | — | — | — | new drawing |
+| 👂🏻 | `1F442 1F3FB` | ear: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🦻🏻 | `1F9BB 1F3FB` | ear with hearing aid: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🦶🏻 | `1F9B6 1F3FB` | foot: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🦵🏻 | `1F9B5 1F3FB` | leg: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🦿 | `1F9BF` | mechanical leg | single | planned | — | — | — | new drawing |
+| 🦾 | `1F9BE` | mechanical arm | single | planned | — | — | — | new drawing |
+| 💪🏻 | `1F4AA 1F3FB` | flexed biceps: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 👏🏻 | `1F44F 1F3FB` | clapping hands: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🤛🏻 | `1F91B 1F3FB` | left-facing fist: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤜🏻 | `1F91C 1F3FB` | right-facing fist: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤲🏻 | `1F932 1F3FB` | palms up together: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👐🏻 | `1F450 1F3FB` | open hands: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🙌🏻 | `1F64C 1F3FB` | raising hands: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🫶🏻 | `1FAF6 1F3FB` | heart hands: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👎🏻 | `1F44E 1F3FB` | thumbs down: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 👍🏻 | `1F44D 1F3FB` | thumbs up: light skin tone | tone | planned | 16, 12 | yes | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| ✊🏻 | `270A 1F3FB` | raised fist: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 👊🏻 | `1F44A 1F3FB` | oncoming fist: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🫳🏻 | `1FAF3 1F3FB` | palm down hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🫴🏻 | `1FAF4 1F3FB` | palm up hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🫱🏻 | `1FAF1 1F3FB` | rightwards hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🫲🏻 | `1FAF2 1F3FB` | leftwards hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🫸🏻 | `1FAF8 1F3FB` | rightwards pushing hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🫷🏻 | `1FAF7 1F3FB` | leftwards pushing hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| ✌🏻 | `270C 1F3FB` | victory hand: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🤘🏻 | `1F918 1F3FB` | sign of the horns: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤟🏻 | `1F91F 1F3FB` | love-you gesture: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🖖🏻 | `1F596 1F3FB` | vulcan salute: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| ✋🏻 | `270B 1F3FB` | raised hand: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🖐🏻 | `1F590 1F3FB` | hand with fingers splayed: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤚🏻 | `1F91A 1F3FB` | raised back of hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👋🏻 | `1F44B 1F3FB` | waving hand: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🤞🏻 | `1F91E 1F3FB` | crossed fingers: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🫰🏻 | `1FAF0 1F3FB` | hand with index finger and thumb crossed: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤙🏻 | `1F919 1F3FB` | call me hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤌🏻 | `1F90C 1F3FB` | pinched fingers: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤏🏻 | `1F90F 1F3FB` | pinching hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👌🏻 | `1F44C 1F3FB` | OK hand: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🫵🏻 | `1FAF5 1F3FB` | index pointing at the viewer: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👉🏻 | `1F449 1F3FB` | backhand index pointing right: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🙏🏻 | `1F64F 1F3FB` | folded hands: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 🤳🏻 | `1F933 1F3FB` | selfie: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| ✍🏻 | `270D 1F3FB` | writing hand: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🖕🏻 | `1F595 1F3FB` | middle finger: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 👇🏻 | `1F447 1F3FB` | backhand index pointing down: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 👆🏻 | `1F446 1F3FB` | backhand index pointing up: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| ☝🏻 | `261D 1F3FB` | index pointing up: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 👈🏻 | `1F448 1F3FB` | backhand index pointing left: light skin tone | tone | planned | 16, 12 | — | planned, planned, planned, planned, planned | five tones by palette substitution; base drawn |
+| 💅🏻 | `1F485 1F3FB` | nail polish: light skin tone | tone | planned | — | — | planned, planned, planned, planned, planned | five tones by palette substitution; base not drawn |
+| 🤝 | `1F91D` | handshake | single | planned | — | — | — | new drawing |
+
+### Creatures, sky and objects
+
+8 done, 9 planned.
+
+| Emoji | Code points | Short name | Kind | Status | Pixel sizes | Vector | Tones (light to dark) | Note |
+|---|---|---|---|---|---|---|---|---|
+| ☃️ | `2603 FE0F` | snowman | vs16 | done | 16, 12 | — | — | the base picture; VS16 is an empty glyph in every emoji font |
+| ⛄ | `26C4` | snowman without snow | single | planned | — | — | — | new drawing |
+| 🌚 | `1F31A` | new moon face | single | planned | — | — | — | new drawing |
+| 🌝 | `1F31D` | full moon face | single | planned | — | — | — | new drawing |
+| 🌞 | `1F31E` | sun with face | single | planned | — | — | — | new drawing |
+| 🌛 | `1F31B` | first quarter moon face | single | planned | — | — | — | new drawing |
+| 🌜 | `1F31C` | last quarter moon face | single | planned | — | — | — | new drawing |
+| ⭐ | `2B50` | star | single | done | 16, 12, 8 | yes | — | — |
+| 🌟 | `1F31F` | glowing star | single | done | 16, 12 | yes | — | — |
+| ✨ | `2728` | sparkles | single | done | 16, 12 | yes | — | — |
+| ⚡ | `26A1` | high voltage | single | done | 16, 12, 8 | yes | — | — |
+| 🎉 | `1F389` | party popper | single | done | 16, 12 | — | — | — |
+| 🔥 | `1F525` | fire | single | done | 16, 12, 8 | yes | — | — |
+| 🎊 | `1F38A` | confetti ball | single | planned | — | — | — | new drawing |
+| ♥️ | `2665 FE0F` | heart suit | vs16 | done | 16, 12 | yes | — | the base picture; VS16 is an empty glyph in every emoji font |
+| 🩸 | `1FA78` | drop of blood | single | planned | — | — | — | new drawing |
+| 🦠 | `1F9A0` | microbe | single | planned | — | — | — | new drawing |
+
+### ZWJ sequences
+
+0 done, 7 planned.
+
+| Emoji | Code points | Short name | Kind | Status | Pixel sizes | Vector | Tones (light to dark) | Note |
+|---|---|---|---|---|---|---|---|---|
+| 😶‍🌫️ | `1F636 200D 1F32B FE0F` | face in clouds | zwj | planned | 16, 12 | yes | — | own drawing and a GSUB ligature; base drawn |
+| 🙂‍↔️ | `1F642 200D 2194 FE0F` | head shaking horizontally | zwj | planned | 16, 12, 8 | yes | — | own drawing and a GSUB ligature; base drawn |
+| 🙂‍↕️ | `1F642 200D 2195 FE0F` | head shaking vertically | zwj | planned | 16, 12, 8 | yes | — | own drawing and a GSUB ligature; base drawn |
+| 😮‍💨 | `1F62E 200D 1F4A8` | face exhaling | zwj | planned | 16, 12 | yes | — | own drawing and a GSUB ligature; base drawn |
+| 😵‍💫 | `1F635 200D 1F4AB` | face with spiral eyes | zwj | planned | 16, 12 | — | — | own drawing and a GSUB ligature; base drawn |
+| ❤️‍🔥 | `2764 FE0F 200D 1F525` | heart on fire | zwj | planned | 16, 12, 8 | yes | — | own drawing and a GSUB ligature; base drawn |
+| ❤️‍🩹 | `2764 FE0F 200D 1FA79` | mending heart | zwj | planned | 16, 12, 8 | yes | — | own drawing and a GSUB ligature; base drawn |
+
+<!-- roadmap:end -->

@@ -12,9 +12,9 @@
 import sys
 
 NAME = sys.argv[1] if len(sys.argv) > 1 else "Desk"
-TAGLINE = "A calm graphical shell for MS-DOS"
+TAGLINE = "A calm graphical OS in Rust for old hardware"
 PROMPT = "C:\\&gt; DESK.COM"
-FACTS = "VESA 640×480 · 256 colours · Rust + DJGPP C"
+FACTS = "486 · VGA · Rust, hosted on DOS and native"
 
 # The horizon: seven stepped bands, purple through red to orange, never a smooth gradient (the desktop has no alpha).
 HORIZON = ["#2d2747", "#413764", "#5b1e30", "#7d263b", "#a22d46", "#cb3652", "#d48e39"]
@@ -113,7 +113,7 @@ svg = f"""<!-- Hero banner for the README: a pixel-art desktop beside the projec
 <!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 <svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="hero-title hero-desc">
   <title id="hero-title">{NAME}</title>
-  <desc id="hero-desc">{NAME}: {TAGLINE}. A dark banner showing a pixel-art desktop on a stepped sunset horizon, with a Files window behind a focused Terminal window wearing an orange halo, a launcher bar, and a pointer. Beside it, the name, a DOS prompt and the stack: VESA 640 by 480 in 256 colours, Rust and DJGPP C.</desc>
+  <desc id="hero-desc">{NAME}: {TAGLINE}. A dark banner showing a pixel-art desktop on a stepped sunset horizon, with a Files window behind a focused Terminal window wearing an orange halo, a launcher bar, and a pointer. Beside it, the name, a DOS prompt for the hosted track and the facts: a 486, VGA, and Rust running hosted on DOS and native.</desc>
 
   <style>
     .drift {{ animation: drift 6s ease-in-out infinite; }}
@@ -150,7 +150,7 @@ svg = f"""<!-- Hero banner for the README: a pixel-art desktop beside the projec
   <g transform="translate(50 35)" shape-rendering="crispEdges">{desktop()}</g>
 
   <text x="640" y="140" font-family="{SANS}" font-size="104" font-weight="700" fill="url(#brand)">{NAME}</text>
-  <text x="642" y="186" font-family="{MONO}" font-size="24" fill="#ffffff" fill-opacity="0.85">{TAGLINE}</text>
+  <text x="642" y="186" font-family="{MONO}" font-size="19" fill="#ffffff" fill-opacity="0.85">{TAGLINE}</text>
   <g font-family="{MONO}" font-size="22">
     <text x="642" y="238" fill="#aaaaaa">{PROMPT}</text>
     <rect class="type" x="{642 + 13 * 13.2:.0f}" y="221" width="12" height="22" fill="#ffaa40"/>

@@ -1,0 +1,7 @@
+...
+test: executing ud2
+
+EXCEPTION 0x06: invalid opcode
+error code 0x00000000
+...
+halting with a failure status

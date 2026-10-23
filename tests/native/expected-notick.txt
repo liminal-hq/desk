@@ -1,0 +1,5 @@
+...
+test: timer masked on purpose
+
+KERNEL PANIC: panicked at src/main.rs:{N:1..9999}:{N:1..200}:
+the timer did not tick
