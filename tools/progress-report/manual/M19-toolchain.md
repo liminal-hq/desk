@@ -67,7 +67,7 @@ The table lists every field that appears in at least one of the three files, 26 
 | `dynamic-linking` | `false` | `false` | `false` | Same |
 | `executables` | `true` | `true` | `false` | Differs. The ELF pair build programs that rustc links; `core/dos.json` builds only a library, because DJGPP's `gcc` links the program (`docs/TOOLCHAIN.md`) |
 | `linker` | `rust-lld` | `rust-lld` | — | Differs. The linker that ships with rustc, so no GCC or binutils is needed (`docs/NATIVE-BOOT.md`; `docs/D0-RUST-DOS.md`) |
-| `linker-flavor` | `gnu-lld` | `ld.lld` | — | Differs. Both name the ELF flavour of LLD under different spellings. No document records why they differ, and I did not test whether the spelling changes the command line |
+| `linker-flavor` | `gnu-lld` | `ld.lld` | — | Differs. Both name the ELF flavour of LLD under different spellings. No document records why they differ, and it was not tested whether the spelling changes the command line |
 | `metadata` | a record: description, `host_tools: false`, `std: false`, `tier: 3` | — | — | Differs. Only the kernel's file describes itself; the record is documentation for tools that read specifications |
 
 Eight fields are the same in all three files: `arch`, `cpu`, `max-atomic-width`, `panic-strategy`, `relocation-model`, `target-pointer-width`, `disable-redzone` and `dynamic-linking`. They are the facts about the machine and the policy that do not depend on the output format. Everything else follows from one choice: whether the output is ELF or the MinGW-flavoured COFF. The kernel file and `dos-elf.json` are close relatives, with the same triple, the same data layout and the same linker, and `docs/RUST-TARGETS.md` calls the second simpler than the COFF target "in every way that mattered": no section folding, no relocation patching, no weak-external objects to drop, no `_alloca`. `core/dos.json` is the odd one, and the rest of the toolchain's history is the story of moving off it.
@@ -165,7 +165,7 @@ For depth: [`docs/RUST-TARGETS.md`](doc:docs/RUST-TARGETS.md#the-concept) (the c
 
 The first is `.text` (98,816 bytes), the second `.data` of 512 bytes with a `.bss` tail: 0x42600 − 0x200 = 0x42400, or 271,360 bytes, of which the runtime's stack is 262,144 (`STACK_SIZE` in `rt/src/start.rs`, 256 KiB). `tools/elf2go32.py --info` then reports `stub 2048 + coff 99840 = 101888 bytes` and `block 384 KiB`: 99,840 is the 512-byte header area plus the two sections padded to 512, and 384 KiB is the end of `.bss`, 0x5B800, rounded up to a multiple of 64 KiB. For the kernel the same flag, `executables: true`, gives `kernel/target/i486-desk-none/release/desk-kernel`, an ELF of 795,956 bytes in that build with three loadable segments, which `elf2go32.py` would refuse (it accepts one or two) and `elf2bin.py` accepts: it keeps the file-backed parts and reports `dist/native/kernel.bin: 173968 bytes, load address 0x100000`. The sizes are this build's. The documents record others (`SHELL.EXE` at 102,400 bytes in `docs/FIRST-WINDOW.md`, `kernel.bin` at 173,344 in the same Result section, 174,032 in the log chapter on the first window), which are measurements of earlier trees.
 
-What the example does not show is the effect of a field when it is removed. I did not remove any, so the table's reasons are the documents' and not mine.
+What the example does not show is the effect of a field when it is removed. No field was removed, so the table's reasons are the documents' and not a finding of this chapter.
 
 ## State of this layer
 
@@ -174,31 +174,31 @@ id: toolchain.pin
 label: The pinned stable Rust 1.98.0 with rust-src, and setup.sh's check that rustc matches it
 state: built-verified
 evidence: sym:rust-toolchain.toml::channel, test:tools/setup.sh::rustc is not $channel, test:.github/workflows/ci.yml::tools/setup.sh
-note: Run by me in the CI image on 2026-10-23: setup.sh passed and reported rustc 1.98.0. A newer compiler is untested by design.
+note: Run in the CI image on 2026-10-23: setup.sh passed and reported rustc 1.98.0. A newer compiler is untested by design.
 
 id: toolchain.bootstrap
 label: RUSTC_BOOTSTRAP=1 lets the stable compiler use build-std and json-target-spec
 state: built-verified
 evidence: test:shell/dos/build.sh::RUSTC_BOOTSTRAP=1, test:tools/native-build.sh::RUSTC_BOOTSTRAP=1
-note: Without it cargo 1.98.0 stops with the json-target-spec error quoted above; I ran both ways.
+note: Without it cargo 1.98.0 stops with the json-target-spec error quoted above; both ways were run.
 
 id: toolchain.target-dos-elf
 label: dos-elf.json links with rust-lld and link.ld into a program the stub loads
 state: built-verified
 evidence: sym:spikes/d0-rust-dos/dos-elf.json::i486-unknown-none-elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::PANICKY.EXE
-note: In headless DOSBox in the CI image. I ran shell/dos/check.sh and it passed; I did not rerun the whole d0 check.
+note: In headless DOSBox in the CI image. shell/dos/check.sh was run and passed; the whole d0 check was not rerun.
 
 id: toolchain.target-kernel
 label: i486-desk-none.json builds the kernel that boots in QEMU as a 486
 state: built-verified
 evidence: sym:kernel/i486-desk-none.json::gnu-lld, test:tests/native/expected.txt::boot complete
-note: I built the kernel on the host (tools/native-build.sh) and did not boot it for this chapter; the transcript is the committed one that M5 reruns.
+note: The kernel was built on the host (tools/native-build.sh) and not booted for this chapter; the transcript is the committed one that M5 reruns.
 
 id: toolchain.target-legacy
 label: core/dos.json builds the legacy Rust core that DJGPP's gcc links
 state: built-verified
 evidence: sym:core/dos.json::i486-pc-windows-gnu, test:tools/check.sh::DESK-SKELETON ok
-note: Rests on the committed check in tools/check.sh, which I did not rerun.
+note: Rests on the committed check in tools/check.sh, which was not rerun.
 
 id: toolchain.buildstd
 label: build-std with compiler-builtins-mem supplies core, alloc and the memory functions for both ELF targets
@@ -210,13 +210,13 @@ id: toolchain.elf2bin
 label: elf2bin.py flattens the kernel ELF in place of objcopy
 state: built-verified
 evidence: sym:tools/elf2bin.py::main, test:tests/native/expected.txt::boot complete
-note: I ran it on the host and it printed the size and load address quoted above.
+note: It was run on the host and printed the size and load address quoted above.
 
 id: toolchain.nasm
 label: NASM assembles the loader stages and the BIOS trampoline, from the host or the desk-native-qemu image
 state: built-unverified
 evidence: sym:tools/native-build.sh::run_nasm, repo:tools/docker/Dockerfile.native-qemu
-note: Host NASM ran for me. The Docker fallback was not built here.
+note: Host NASM was run. The Docker fallback was not built here.
 
 id: toolchain.images
 label: The Bochs, 86Box and Xvfb images
@@ -228,13 +228,13 @@ id: toolchain.fetch
 label: fetch-tools.sh downloads DJGPP, DOSBox Staging and CWSDPMI and checks their sums
 state: built-unverified
 evidence: sym:tools/fetch-tools.sh::DJGPP_SHA256, doc:docs/TOOLCHAIN.md#the-pieces
-note: I ran setup.sh by its DOS_TOOLCHAIN path in the CI image, which skips this script. The download path was not run.
+note: setup.sh was run by its DOS_TOOLCHAIN path in the CI image, which skips this script. The download path was not run.
 
 id: toolchain.std
 label: A patched std platform layer over rt, with 15 desk_* functions
 state: built-unverified
 evidence: repo:spikes/e-std-stubs/patch, doc:docs/E-STD-STUBS.md#verdict-and-recommendation
-note: A committed check (spikes/e-std-stubs/check.sh) is a step of tools/check.sh; I did not run it. The sizes in the figure are the document's.
+note: A committed check (spikes/e-std-stubs/check.sh) is a step of tools/check.sh; it was not run. The sizes in the figure are the document's.
 
 id: toolchain.prebuilt
 label: A prebuilt sysroot published from CI, and an app target for Desk programs
@@ -261,7 +261,7 @@ $ cd shell/dos && RUSTC_BOOTSTRAP=1 cargo build --release --locked 2>&1 | tail -
     Finished `release` profile [optimized] target(s) in 7.73s
 ```
 
-(The time includes compiling the standard pieces for the target.) The packer's refusal of anything that is not an ELF, run with the stub standing in as the "ELF", needs the DOS tools in `vendor/`, so it is in M17 and not here; I ran it there.
+(The time includes compiling the standard pieces for the target.) The packer's refusal of anything that is not an ELF, run with the stub standing in as the "ELF", needs the DOS tools in `vendor/`, so it is in M17 and not here, where it was run.
 
 **Exercises.** (1) Without running it, predict which of the 26 fields you could delete from `kernel/i486-desk-none.json` with no change to the kernel's behaviour, and which would make rustc refuse the file; then try one in a scratch branch and say whether the documents agreed. (2) Make `dos-elf.json` use `"linker-flavor": "gnu-lld"` and check whether `SHELL.EXE` changes by a byte (the answer is not recorded anywhere). (3) Work out from the table why `core/dos.json` could not simply gain `"executables": true`: what would be missing at the link?
 

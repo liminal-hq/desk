@@ -191,7 +191,7 @@ This was run on 2026-10-23 in the CI image (`spikes/d0-rust-dos/build.sh`, then 
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
 ```
 
-The pieces add up. 2,048 bytes of stub; 512 of COFF headers (168 used); 98,816 of text; 512 of data; 98,816 + 512 + 512 = 99,840 for the COFF image; 101,888 in all. `.bss` is not in the file, which is why a 256 KiB stack costs nothing in it. The block the stub allocates is the end of `.bss`, `0x19400 + 0x42400 = 0x5B800` (374,784), rounded up to a multiple of 64 KiB: 384 KiB. `CWSDPMI.EXE` beside it is 21,325 bytes, the figure the document records. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes, a measurement of an earlier tree; this build is 512 bytes smaller, and I did not look for the reason. The entry point, `0x1550`, is `_start`; what the linker placed in the 0x550 bytes of text before it I did not examine.
+The pieces add up. 2,048 bytes of stub; 512 of COFF headers (168 used); 98,816 of text; 512 of data; 98,816 + 512 + 512 = 99,840 for the COFF image; 101,888 in all. `.bss` is not in the file, which is why a 256 KiB stack costs nothing in it. The block the stub allocates is the end of `.bss`, `0x19400 + 0x42400 = 0x5B800` (374,784), rounded up to a multiple of 64 KiB: 384 KiB. `CWSDPMI.EXE` beside it is 21,325 bytes, the figure the document records. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes, a measurement of an earlier tree; this build is 512 bytes smaller, and the reason was not looked for. The entry point, `0x1550`, is `_start`; what the linker placed in the 0x550 bytes of text before it was not examined.
 
 ## State of this layer
 
@@ -241,7 +241,7 @@ id: rt.build
 label: dos-elf.json, rust-lld, link.ld, elf2go32.py, the stub and CWSDPMI.EXE make SHELL.EXE
 state: built-verified
 evidence: sym:tools/elf2go32.py::parse_elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::Self-contained executable
-note: I ran shell/dos/check.sh in the CI image on 2026-10-23 and it printed that line.
+note: shell/dos/check.sh was run in the CI image on 2026-10-23 and printed that line.
 
 id: rt.cws
 label: CWSDPMI r7, the DPMI host
@@ -252,13 +252,13 @@ id: rt.legacy
 label: The first hosted skeleton: core, the C layer and coff2go32.py
 state: built-verified
 evidence: sym:tools/coff2go32.py::convert_object, test:tools/check.sh::DESK-SKELETON ok
-note: Rests on the committed check in tools/check.sh, which I did not rerun. Marked legacy; retiring it is an open decision.
+note: Rests on the committed check in tools/check.sh, which was not rerun. Marked legacy; retiring it is an open decision.
 
 id: rt.dxe3
 label: Rust modules as DXE3 files, loaded, run, crashed and unloaded
 state: built-verified
 evidence: repo:spikes/s1-dxe3/expected/life.txt, test:spikes/s1-dxe3/run.sh::leak, doc:docs/S1-DXE3.md#verdict-and-recommendation
-note: Thirteen scenarios in DOSBox; the two faults DOSBox cannot take (null write, stack overflow) are run in QEMU by spikes/s1-dxe3/qemu-faults.sh. I did not rerun any of them; the explainer replays the committed transcripts.
+note: Thirteen scenarios in DOSBox; the two faults DOSBox cannot take (null write, stack overflow) are run in QEMU by spikes/s1-dxe3/qemu-faults.sh. None of them was rerun; the explainer replays the committed transcripts.
 
 id: rt.exceptions
 label: An exception handler (DPMI 0203h) that prints a register dump

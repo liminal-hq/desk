@@ -62,7 +62,7 @@ The screen of a QEMU run, which is the same boot the serial file records, looks 
 | `cmov`, `cmpxchg8b`, `ud2` | `#UD` | `#UD` |
 | `cpuid`, `cmpxchg`, `bswap`, `xadd`, `invlpg`, `wbinvd` | executes | executes |
 
-This table is copied from `docs/NATIVE-EMULATORS.md` ("Bochs", "CPU model effects"). I reran the QEMU column for two of the rows: `rdtsc` prints `probe: executed` and `cmov` prints `probe: #UD`, as the table says (see "Try it yourself"). So QEMU's 486 removes CMOV and CMPXCHG8B but not the time-stamp counter, the model-specific registers, MMX or CR4. A stray Pentium instruction in the kernel would therefore pass the QEMU test. The Bochs test closes the gap, since it requires `#UD` for `rdtsc`, `rdmsr`, `emms` and a read of CR4. A caution from the same document: Bochs's 486 still answers `cpuid` with a 486DX2 signature, while many real 486s have no `cpuid`, so the kernel must keep not using it either.
+This table is copied from `docs/NATIVE-EMULATORS.md` ("Bochs", "CPU model effects"). The QEMU column was rerun here for two of the rows: `rdtsc` prints `probe: executed` and `cmov` prints `probe: #UD`, as the table says (see "Try it yourself"). So QEMU's 486 removes CMOV and CMPXCHG8B but not the time-stamp counter, the model-specific registers, MMX or CR4. A stray Pentium instruction in the kernel would therefore pass the QEMU test. The Bochs test closes the gap, since it requires `#UD` for `rdtsc`, `rdmsr`, `emms` and a read of CR4. A caution from the same document: Bochs's 486 still answers `cpuid` with a 486DX2 signature, while many real 486s have no `cpuid`, so the kernel must keep not using it either.
 
 ### Bochs
 
@@ -229,7 +229,7 @@ QEMU is {{state.emu.qemu}} and DOSBox {{state.emu.dosbox}}, which are the two th
 
 ## Try it yourself
 
-These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-10-23. I did not run `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` or `tools/native-test-86box.sh`: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
+These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-10-23. `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` and `tools/native-test-86box.sh` were not run: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386

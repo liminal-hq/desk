@@ -45,6 +45,7 @@ python3 -m http.server -d dist/progress-report 8000                            #
 | `snapshots/` | `gh.json` (a snapshot of `gh` data for offline runs) and `measured.json` (numbers that need a build to measure, with the command) |
 | `media/` | A captured serial transcript and screenshot of the native boot (how they were made is in `snapshots/measured.json`), and the files copied from other branches, listed in `captures.json` |
 | `manual.py`, `manual/` | The Manual: `plan.json` (parts, chapters, both reading orders, the task index), `MNN-id.md` (one file per chapter), `explainers/*.py` (one module per manual explainer), and the code that loads, checks and draws them |
+| `manual_maps.py` | The tables of appendix B (memory while booting, ports, IRQ lines and vectors, exception vectors, BIOS calls, exit statuses, test modes), read from the files that hold the numbers, each row with a proof that a test checks |
 | `pages/manual-preface.md` | The archivist's preface on `manual.html` |
 | `pages/front.md`, `pages/coming.json` | The text at the top of the front page, and the chapters that are expected and not written, which show as "coming" rows |
 | `templates/site.css`, `templates/site.js` | Shared style and behaviour |
@@ -103,7 +104,7 @@ Each chapter's `reviewed` is the commit of `main` it was last checked against an
 
 The build refuses a chapter with a missing section, a path or symbol that does not exist, a state that its evidence does not support, a command that does not exist, an undefined or unused glossary term, or a `log` or `anatomy` reference that does not resolve. The log pages are unchanged by the manual except for a computed "In the manual" aside on the chapters a manual chapter names, a "Manual" column (and anchors) on the anatomy pages' text tables, and the "Manual" link in the header.
 
-A chapter that needs checks of its own (a number it quotes against a source, a table against the code) keeps them in `tests/test_chapter_NAME.py`, a self-contained `unittest` module that `test_report.py` picks up, so the one test command runs them all.
+Appendix A (glossary), C (commands) and D (sources) are built from the chapters and appendix B from `manual_maps.py`. A chapter that needs checks of its own (a number it quotes against a source, a table against the code) keeps them in `tests/test_chapter_NAME.py`, a self-contained `unittest` module that `test_report.py` picks up, so the one test command runs them all.
 
 ## Updating the manual
 
