@@ -650,7 +650,7 @@ DOSBox headless has no screenshot command that a script can use, so the hosted c
 
 ### Both tracks at once
 
-The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/shell-compare.sh` (called from `tools/check.sh` after both runs, or run alone with `--run`) also states it directly: `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4, and for the DOS run with no VBE against native depth 4) must pass, and it must fail for each of the depths swapped, a pixel changed in the DOS dump, a frame missing and a frame swapped for another. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels.
+The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/shell-compare.sh` (called from `tools/check.sh` after both runs, or run alone with `--run`) also states it directly: `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4, and for the DOS run with no VBE against native depth 4) must pass, and it must fail for each of the depths swapped, a pixel changed in the DOS dump, a frame missing and a frame swapped for another. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels. [`LIVE-INPUT.md`](LIVE-INPUT.md) designs them.
 
 ## Rules carried over
 
