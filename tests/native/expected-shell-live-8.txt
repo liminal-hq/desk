@@ -41,8 +41,8 @@ shell: mark 02 8 640x480 2abd99f3 a8143a01
 shell: mark 03 8 640x480 fa647943 a61b635f
 shell: mark 04 8 640x480 3cf69213 c97d165b
 shell: mark 05 8 640x480 fe3d9ce1 64907bdb
-shell: mark 06 8 640x480 f217ca7b 7a2e1350
-shell: mark 07 8 640x480 77dacc4d a628a076
+shell: mark 06 8 640x480 ef7cbc5d dea3fc34
+shell: mark 07 8 640x480 404d80a6 5817064b
 shell: live ended by Escape: {N:26..40} keys, {N:6..40} pointer reports, {N:8..60} frames, {N:50000..3000000} pixels presented, 8 marks
 gfx: leaving VBE: Bochs VBE registers (id {HEX}) switched off
 shell: done
