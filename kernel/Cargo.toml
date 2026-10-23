@@ -8,6 +8,14 @@ publish = false
 # A standalone crate: it builds for its own target and must not join a workspace for the hosted track.
 [workspace]
 
+[dependencies]
+desk-hal = { path = "../hal/hal" }
+desk-serial = { path = "../hal/drivers/serial" }
+desk-pit = { path = "../hal/drivers/pit" }
+desk-pic = { path = "../hal/drivers/pic" }
+desk-kbd = { path = "../hal/drivers/kbd" }
+desk-i8042 = { path = "../hal/drivers/i8042" }
+
 [features]
 default = []
 

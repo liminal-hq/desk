@@ -3,5 +3,53 @@
 version = 4
 
 [[package]]
+name = "desk-hal"
+version = "0.0.0"
+
+[[package]]
+name = "desk-i8042"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-kbd",
+]
+
+[[package]]
+name = "desk-kbd"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
 name = "desk-kernel"
 version = "0.1.0"
+dependencies = [
+ "desk-hal",
+ "desk-i8042",
+ "desk-kbd",
+ "desk-pic",
+ "desk-pit",
+ "desk-serial",
+]
+
+[[package]]
+name = "desk-pic"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
+name = "desk-pit"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
+name = "desk-serial"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
