@@ -34,7 +34,23 @@ In mode 12h the Desk programs all 16 colour registers itself, so the fallback ke
 | 14 | `#2ec66a` | green: success, Terminal |
 | 15 | `#60a5fa` | blue: links, Notes |
 
-What changes from 256 colours: icon tiles all use slot 3; headings use slot 7, not white; `#262a37` lines become slot 4; the horizon has three bands (slots 10, 9, 8) instead of seven; Paint's 16 colours are these 16. The VGA DAC holds 6 bits per channel, so each colour is rounded to the nearest multiple of 4.
+What changes from 256 colours: icon tiles all use slot 3; headings use slot 7, not white; `#262a37` lines become slot 4; the horizon has three bands (slots 10, 9, 8) instead of seven; Paint's 16 colours are these 16. The VGA DAC holds 6 bits per channel, so each colour is converted to the nearest DAC value (`(v × 63 + 127) / 255` per channel, `Rgb6::from_rgb8`), not rounded to a multiple of 4: `#e0e0e0` is 55, where a multiple of 4 would give 56.
+
+## The slots the first window uses
+
+The first window (`FIRST-WINDOW.md`) draws with these 256-colour slots; every other slot above 15 is black until the ramps have values. The 16-colour set is also in 0–15 at 4 bits, where the surfaces and the cursor use slots 0–10 instead.
+
+| Slots | Colour | Used for |
+|---|---|---|
+| 5–7 | `#7c8796`, `#b4bfce`, `#e0e0e0` | muted, secondary and primary text |
+| 8–10 | `#ffaa40`, `#7d5422`, `#372612` | the halo's three rings; slot 8 is also the caret |
+| 97 | `#050507` | the Void wallpaper |
+| 98 | `#0c0c10` | title bars and control boxes |
+| 99 | `#111116` | window content and the inside of a field |
+| 102 | `#1b1e28` | raised surfaces (hovered control boxes, later) |
+| 103 | `#262a37` | the rule under a title bar and the unfocused hairline |
+| 104 | `#333847` | field outlines |
+| 240–241 | `#050507`, `#e0e0e0` | the cursor's outline and fill |
 
 ## Gradients
 
