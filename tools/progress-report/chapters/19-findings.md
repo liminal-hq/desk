@@ -5,7 +5,7 @@ kicker: Findings
 title: Findings
 date: 2026-10-23
 summary: What the spikes and skeletons actually found, in one table, each with where it was written down. The first rows are merged work; the later ones come from open pull requests and say so.
-prs: [3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15]
+prs: [3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17]
 section: reference
 ---
 A spike ends with a written result, and this is the index to them. Every row says what was found and where the finding lives, and each came from a run in an emulator: none has been tried on a real machine. If a row disagrees with the document it points to, the document wins and the generator's reader should say so.
@@ -36,6 +36,11 @@ A spike ends with a written result, and this is the index to them. Every row say
 | `std`, PR #12 (open) | Does `std` build for an invented OS? | No: 21 errors from four missing pieces. A patch of 55 lines in 12 files plus about 340 new lines makes it work; a hello grows by 9.7 KB (19,456 against 9,728 bytes). | [`docs/E-STD-STUBS.md`](pr:12) |
 | js-dos, PR #13 (open) | Does the VBE linear frame buffer work in a browser? | Yes in js-dos 8.5.3 in headless Chromium: 640 by 480 by 8 with the buffer, zero of 307,200 pixels differ; every repository DOS program runs unchanged. | [`docs/S5-JSDOS.md`](pr:13) |
 | DOS input, PR #15 (open) | Can the DOS runtime hand the core the same events as the native kernel? | Yes: the same decoder and ring for the keyboard, and the mouse by polling `INT 33h`; a quick click between two polls is lost. | [`docs/B-DOS-INPUT.md`](pr:15) |
+| Emulators, PR #16 (open) | Does the native image boot in other emulators and BIOSes? | Yes: Bochs 2.7 as a 486 with three BIOSes, and 86Box 6.0 on a 1993 AMIBIOS board, the latter only after a loader fix. | [`docs/NATIVE-EMULATORS.md`](pr:16) |
+| Emulators, PR #16 (open) | What does a BIOS from 1993 not have? | Neither INT 15h E820 nor E801, so the loader gained an AH=88h fallback and a test variant for it; it also leaves A20 closed. | [`docs/NATIVE-EMULATORS.md`](pr:16) |
+| Emulators, PR #16 (open) | Is QEMU's `-cpu 486` a faithful 486? | No: it runs `rdtsc`, `rdmsr`, MMX and reads of `CR4`, which Bochs's 486 rejects. | [`docs/NATIVE-EMULATORS.md`](pr:16) |
+| BIOS path, PR #17 (open) | Can the protected-mode kernel use the BIOS again? | Yes, in emulators, through a real-mode trampoline: VBE set and left on three QEMU cards, floppy and LBA reads, the memory map and the clock; tens of microseconds a call, emulated. | [`docs/N3-BIOS-PATH.md`](pr:17) |
+| BIOS path, PR #17 (open) | Does that settle leaving VBE? | In emulators, yes: `INT 10h` function 0003h restores text on the Cirrus card that spike D could not. A real card was not tried. | [`docs/N3-BIOS-PATH.md`](pr:17) |
 | Fonts, PR #1 | Do the faces render everywhere? | Not known: Chromium treats `Desk Fixed DOS`'s `.ttf` as a symbol font, and Windows and macOS were not tried. | [`docs/FONTS.md`](repo:docs/FONTS.md) |
 
 ## The shelves

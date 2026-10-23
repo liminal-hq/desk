@@ -1,4 +1,1 @@
-[
- {"id": "g", "branch": "spike/g-boot-bochs-86box", "title": "The native image in Bochs and 86Box", "summary": "Spike G: whether the native floppy boots in the two other emulators the direction names. Its chapter is not written yet, and nothing in this archive depends on its results."},
- {"id": "n3", "branch": "spike/n3-native-bios", "title": "A real BIOS path for the native kernel", "summary": "Spike n3: a way for the native kernel to call the BIOS once it is in protected mode, the problem the graphics chapter ends on. It is running, and its chapter is not written yet."}
-]
+[]

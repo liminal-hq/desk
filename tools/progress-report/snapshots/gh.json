@@ -1,8 +1,261 @@
 {
- "capturedAt": "2026-10-23T02:17:46-04:00",
+ "capturedAt": "2026-10-23T02:28:30-04:00",
  "data": {
   "openWork": {
    "commitsOnBranches": 77,
+   "conflicts": [
+    {
+     "a": 8,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 8,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 8,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 11,
+     "files": [
+      "docs/README.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 16,
+     "files": [
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 14,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 14,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 16,
+     "files": [
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 14,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md",
+      "tools/README.md"
+     ]
+    },
+    {
+     "a": 14,
+     "b": 16,
+     "files": [
+      "boot/stage2.asm",
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 15,
+     "b": 16,
+     "files": [
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 15,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md",
+      "tools/README.md"
+     ]
+    },
+    {
+     "a": 16,
+     "b": 17,
+     "files": [
+      "boot/stage2.asm",
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    }
+   ],
    "prs": [
     {
      "ahead": 17,
@@ -666,7 +919,7 @@
      "ahead": 49,
      "base": "spike/d-native-vga",
      "branch": "spike/n3-native-bios",
-     "ci": "pending",
+     "ci": "passing",
      "commitCount": 9,
      "commits": [
       {
@@ -752,11 +1005,11 @@
      "url": "https://github.com/liminal-hq/desk/pull/17"
     },
     {
-     "ahead": 5,
+     "ahead": 8,
      "base": "main",
      "branch": "docs/progress-report-chapters",
      "ci": "passing",
-     "commitCount": 5,
+     "commitCount": 8,
      "commits": [
       {
        "date": "2026-10-23T02:07:39-04:00",
@@ -787,14 +1040,32 @@
        "hash": "df47e7e",
        "merge": false,
        "subject": "fix: stop state tags clashing with specimen labels and hide unused explainer panels"
+      },
+      {
+       "date": "2026-10-23T02:17:26-04:00",
+       "hash": "8f63d31",
+       "merge": false,
+       "subject": "fix: apply the review of the progress report pull request"
+      },
+      {
+       "date": "2026-10-23T02:17:59-04:00",
+       "hash": "1882f41",
+       "merge": false,
+       "subject": "docs: mark spike n3's pull request and the work-in-progress state in the report"
+      },
+      {
+       "date": "2026-10-23T02:19:07-04:00",
+       "hash": "7dee5ee",
+       "merge": false,
+       "subject": "docs: say in the archive's description that it is a work in progress"
       }
      ],
      "createdAt": "2026-10-23T06:11:49Z",
-     "ghAdditions": 6819,
+     "ghAdditions": 6954,
      "ghChangedFiles": 68,
-     "ghDeletions": 266,
-     "head": "df47e7e",
-     "headFull": "df47e7e9896896ebf365ebf8d3a2ca0f8c36bb18",
+     "ghDeletions": 268,
+     "head": "7dee5ee",
+     "headFull": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
      "isReport": true,
      "labels": [
       "documentation",
@@ -806,7 +1077,7 @@
      "stackedOn": [],
      "state": "in review",
      "title": "Add chapters for the open spikes and a gallery to the progress report",
-     "updatedAt": "2026-10-23T06:11:51Z",
+     "updatedAt": "2026-10-23T06:19:25Z",
      "url": "https://github.com/liminal-hq/desk/pull/18"
     }
    ],
@@ -880,7 +1151,7 @@
   },
   "prs": [
    {
-    "additions": 6819,
+    "additions": 6954,
     "baseRefName": "main",
     "changedFiles": 68,
     "checks": [
@@ -892,9 +1163,9 @@
      }
     ],
     "createdAt": "2026-10-23T06:11:49Z",
-    "deletions": 266,
+    "deletions": 268,
     "headRefName": "docs/progress-report-chapters",
-    "headRefOid": "df47e7e9896896ebf365ebf8d3a2ca0f8c36bb18",
+    "headRefOid": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
     "isDraft": false,
     "labels": [
      {
@@ -926,7 +1197,7 @@
     "number": 18,
     "state": "OPEN",
     "title": "Add chapters for the open spikes and a gallery to the progress report",
-    "updatedAt": "2026-10-23T06:11:51Z",
+    "updatedAt": "2026-10-23T06:19:25Z",
     "url": "https://github.com/liminal-hq/desk/pull/18"
    },
    {
@@ -935,9 +1206,9 @@
     "changedFiles": 31,
     "checks": [
      {
-      "conclusion": "",
+      "conclusion": "SUCCESS",
       "name": "check",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "workflow": "CI"
      }
     ],

@@ -5,7 +5,7 @@ kicker: Decisions and risks
 title: Decisions and risks
 date: 2026-10-23
 summary: What has been decided, what is waiting for the owner, what could go wrong, and, since merge day, the order in which eight open pull requests could be merged and what the work taught about how it is being done.
-prs: [5, 8, 10, 11, 12, 13, 14, 15]
+prs: [5, 8, 10, 11, 12, 13, 14, 15, 16, 17]
 section: reference
 ---
 An archive that only lists successes is a brochure. Here are the decisions on record, the questions still open, and the risks that `docs/DIRECTION.md` names for itself. The first three tables are lifted from `docs/OPEN-QUESTIONS.md`, `docs/DIRECTION.md` and the roadmap, and say where. The sections after them are mine: they are about the open pull requests and the way the work is being done, and each says what it rests on.
@@ -43,12 +43,17 @@ Since merge day only {{merged.since}} has merged, which is the generator of this
 
 <!-- figure pr-stack -->
 
+And the pairs that would conflict if both were merged, found by trial merges of every pair of open branches where neither contains the other:
+
+<!-- figure open-conflicts -->
+
 
 - **#8, the HAL, goes first.** It is based on `main`, and #10 and #11 are based on its branch. Every other hardware pull request contains it.
 - **#10 and #11 come next, in either order.** The keyboard and mouse spike (#10) and the VGA and VBE spike (#11) are each based on #8 and do not depend on each other.
 - **#14 and #15 come after their parents.** #14 (native graphics) is based on #10 and contains #11 through a merge commit; #15 (DOS input) is based on #11 and contains #10 the same way. Merging #10 and #11 first leaves each of them with only its own work. The pull request pages show the lines of their base branches, which is why their numbers are large.
-- **#17 is based on #14.** Spike n3, the BIOS path, is stacked on the native graphics spike; this archive has not read it, so it waits for #14 and its parents.
-- **#12, #13 and #16 are independent of the stack.** The `std` experiment (#12) and js-dos (#13) are based on `main`, and so is spike G (#16), which this archive has not read. #12 does change the runtime that #11, #14 and #15 also edit (`spikes/d0-rust-dos/rt`), so it should expect to be reconciled with them.
+- **#17 is based on #14.** Spike n3, the BIOS path, is stacked on the native graphics spike, so it waits for #14 and its parents.
+- **#12, #13 and #16 are independent of the stack.** The `std` experiment (#12), js-dos (#13) and spike G (#16) are based on `main`. #12 does change the runtime that #11, #14 and #15 also edit (`spikes/d0-rust-dos/rt`), so it should expect to be reconciled with them.
+- **Spike G's loader fix and the loader changes of #14 and #17 will conflict.** #16 adds the INT 15h AH=88h fallback to `boot/stage2.asm`, and #14 (and so #17) add the VBE step and the boot information block to the same file. A trial merge reports a conflict in `boot/stage2.asm` for {{conflicts.boot}}, and in the native-boot document and the shared readmes. Whichever is merged second has to carry the other's lines, and the 86Box result of chapter 16 and the BIOS path of chapter 17 are then needed together.
 - **The shared files will conflict again.** Of the nine pull requests open when this was written, `tools/check.sh` and `tools/README.md` are edited by all nine, `docs/README.md` and `spikes/README.md` by eight, and `AGENTS.md` by six. Merge day had the same pattern, and its remedy was to keep every step: merge `main` into the branch, resolve, then merge the pull request with a merge commit (chapter 9).
 - **This report's chapters and gallery** are in a pull request of their own, based on `main` after #9 (the generator) merged. It touches only `tools/progress-report` and can go in at any point, but the report describes the others as open, so it will read differently once they merge.
 
@@ -81,7 +86,7 @@ Source for the risks: [`docs/DIRECTION.md`](repo:docs/DIRECTION.md), section "Ri
 ### Uncatalogued
 - The "Decided" rows are decisions, not measurements: none has been tested beyond the spikes in the findings table, and `docs/DIRECTION.md` says its numbers are targets.
 - The risks have not been assessed: I have copied them, and nothing here measures how likely they are.
-- The merge order is my reading of the stacking, and has not been tried: no merge was made to see which conflicts actually arise.
+- The merge order is my reading of the stacking. The conflicts below were found with trial merges (`git merge-tree`, which writes no working tree) of every independent pair, and no real merge was made.
 - The disk figure is a reading of one machine on one day.
 
 ### Wish list

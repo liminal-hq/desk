@@ -4,12 +4,16 @@
   "why": "Nothing in the archive has run on a real 486 or any other physical PC, and no real VGA or VBE card, 8042 controller, keyboard, mouse or monitor has been used. Every boot and every program ran in QEMU (`-cpu 486`), headless DOSBox Staging or a browser."
  },
  {
-  "what": "86Box and Bochs.",
-  "why": "Spike G's pull request is {{coming.g.pr}} ({{coming.g.state}}); its results are not in this archive yet, so neither emulator counts as verified here. Until a chapter is written, only QEMU has booted the native image as far as this archive can say."
+  "what": "Emulators beyond the two that ran.",
+  "why": "The native image booted in QEMU, in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on one 1993 AMIBIOS board (chapter 16, PR #16, {{pr16.state}}). Other 86Box machines, chipsets and disks, a hard-disk or CD boot, and v86 in the browser were not tried, the 86Box run is not part of CI, and the picture of it is not in the pull request."
+ },
+ {
+  "what": "The BIOS trampoline on real machines.",
+  "why": "The real-mode round trip, and the 8259 re-initialisation that it depends on, ran only in emulators, on SeaBIOS and two Bochs BIOSes. The kernel of that branch does not start on 86Box until the loader has the AH=88h fallback of PR #16. Paging and V86 mode are design only."
  },
  {
   "what": "VBE on other cards.",
-  "why": "VBE was asked for on QEMU's standard, Cirrus and VMware cards, and on the S3 model of DOSBox Staging and of js-dos. On Cirrus a VBE mode could not be left again without the BIOS and the text screen came back garbled (PR #14). A real card, a banked-only BIOS and a VBE 1.2 BIOS are untried, and a way to leave VBE on any card is the job of spike n3 ({{coming.n3.pr}}), which this archive has not read."
+  "why": "VBE was asked for on QEMU's standard, Cirrus and VMware cards, and on the S3 model of DOSBox Staging and of js-dos. Leaving a VBE mode without the BIOS failed on Cirrus (PR #14), and the BIOS path of spike n3 (chapter 17, PR #17, {{pr17.state}}) returns all three QEMU cards to text through the BIOS. A real card, a real VGA BIOS, a banked-only BIOS and a VBE 1.2 BIOS are untried."
  },
  {
   "what": "Other BIOSes and boot media.",

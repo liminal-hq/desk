@@ -34,7 +34,7 @@ Be exact about what this is. The window is three fills and a rectangle in `kerne
 
 <!-- figure shots img-d-text-restored.png img-d-cirrus.png -->
 
-That is the most important thing the spike found, and the reason this chapter ends on a problem. A VBE mode leaves state in the card's own extended registers, which are chip-specific; on QEMU's standard card, leaving takes one write to the Bochs VBE enable register, and that is a fact about that card only. A kernel that sets VBE therefore has to know each chip in order to leave it, or ask the BIOS again (V86 or a real-mode trampoline), or reboot. Either VBE is a one-way trip, or the native kernel needs a real BIOS path. That is what spike n3, the next thing the archive expects to add, is for.
+That is the most important thing the spike found, and the reason this chapter ends on a problem. A VBE mode leaves state in the card's own extended registers, which are chip-specific; on QEMU's standard card, leaving takes one write to the Bochs VBE enable register, and that is a fact about that card only. A kernel that sets VBE therefore has to know each chip in order to leave it, or ask the BIOS again (V86 or a real-mode trampoline), or reboot. Either VBE is a one-way trip, or the native kernel needs a real BIOS path. That is what spike n3 is for, and chapter 17 is its answer.
 
 Two last facts, both from the spike's own measurements and both about an emulator, not a 486. A full-screen fill at 640 by 480 went from about 650 to about 8,300 a second under QEMU's translation when the driver stored words instead of bytes, and a retrace-synchronised fade finished instantly because QEMU appears to toggle the retrace bit on every read, so the kernel paces its fade with its own timer.
 
@@ -56,7 +56,7 @@ Two last facts, both from the spike's own measurements and both about an emulato
 - BIOSes other than SeaBIOS's VGA BIOS, and the offsets of the VBE mode block, which were checked against what QEMU returns and not against the specification text.
 
 ### Wish list
-- A native BIOS path or a card-specific leave, the question spike n3 is expected to answer.
+- A native BIOS path, which spike n3 builds in an open pull request (chapter 17), or a card-specific leave.
 - A banked 8-bit mode for cards with no linear frame buffer.
 - A fade that takes its pacing from a clock instead of assuming retrace works.
 - A shared palette crate and one VBE mode parser fed the raw block by the loader.

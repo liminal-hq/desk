@@ -35,7 +35,7 @@ And the next move of each branch, with what is in its way.
 
 ### Uncatalogued
 - Every step marked "catalogued in an emulator" or "built, in review" is uncatalogued on real hardware. No step has a real machine behind it, and the "built, in review" steps are not merged.
-- The steps for spikes G and n3 (Bochs and 86Box, and a real BIOS path for the native kernel) are placeholders: this archive has not read them.
+- The steps for spikes G and n3 (Bochs and 86Box, and a real BIOS path for the native kernel) are built in emulators and in open pull requests: neither ran on a real machine, and the n3 kernel does not start on 86Box until the loader fixes meet.
 - The roadmap's dependency edges and the critical path are my reading of `docs/DIRECTION.md`, `docs/SPEC.md` and `docs/RUST-TARGETS.md`; the generator checks the statuses, not the edges.
 
 ### Wish list

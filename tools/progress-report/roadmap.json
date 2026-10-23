@@ -27,8 +27,8 @@
   {
    "id": "native",
    "label": "Native track (own kernel)",
-   "next": "A real BIOS path (spike n3) so graphics can be left on any card, then the shared core on the native HAL.",
-   "blocker": "Leaving VBE without the BIOS fails on QEMU's Cirrus card; scheduling and paging are still open decisions."
+   "next": "Review and merge #14 and #17; then the shared core on the native HAL, and a V86 monitor if FreeDOS or calls that must not stop the kernel need it.",
+   "blocker": "Leaving VBE is solved in emulators by the BIOS trampoline, not on a real card; scheduling and paging are still open decisions."
   },
   {
    "id": "games",
@@ -501,13 +501,13 @@
    "id": "nbios",
    "label": "Native BIOS path (n3)",
    "branch": "native",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "kernel"
    ],
-   "what": "A real BIOS path for the native kernel: a way to call the BIOS after the switch to protected mode, so that a VBE mode can be left again on any card. Spike n3's pull request is open and in review; its results are not in this archive yet, and it has no chapter.",
-   "why": "Spike D found that leaving VBE without the BIOS is card-specific and fails on QEMU's Cirrus card.",
-   "evidence": "PR #17 (open); not read here. docs/D-NATIVE-VGA.md names the problem.",
+   "what": "A real-mode trampoline gives the protected-mode kernel the BIOS back one call at a time: VBE set and left on three QEMU cards, floppy and LBA reads, the memory map and the clock. V86 mode and paging are design only.",
+   "why": "Spike D found that leaving VBE without the BIOS fails on QEMU's Cirrus card.",
+   "evidence": "docs/N3-BIOS-PATH.md; PR #17 (open, based on #14). Emulators only.",
    "prs": [
     17
    ]
@@ -617,13 +617,13 @@
    "id": "emus",
    "label": "Bochs and 86Box (spike G)",
    "branch": "native",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "kernel"
    ],
-   "what": "The native image in two more emulators. Spike G's pull request is open; its results are not in this archive yet, and it has no chapter. v86, the browser emulator, is a later step.",
+   "what": "The native image boots unchanged in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on a 1993 AMIBIOS board, after a loader fix for a BIOS with neither E820 nor E801. v86, the browser emulator, is a later step.",
    "why": "QEMU alone is one opinion.",
-   "evidence": "PR #16 (open); not read here. Until a chapter is written, only QEMU counts for the native track.",
+   "evidence": "docs/NATIVE-EMULATORS.md; PR #16 (open). Not part of CI, which has no Docker. No hardware.",
    "prs": [
     16
    ]
@@ -638,7 +638,7 @@
    ],
    "what": "Boot the floppy on period hardware.",
    "why": "The actual target.",
-   "evidence": "No real hardware available yet"
+   "evidence": "No real hardware available yet; the emulators tried are QEMU, Bochs and 86Box"
   },
   {
    "id": "fizz2",

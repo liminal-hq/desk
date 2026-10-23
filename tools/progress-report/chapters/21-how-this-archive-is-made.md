@@ -23,8 +23,10 @@ This site is not hand-built. It is generated from the repository by Python in `t
 | #13 | `spike/s5-jsdos` | `{{pr13.head}}` | {{pr13.state}} |
 | #14 | `spike/d-native-vga` | `{{pr14.head}}` | {{pr14.state}} |
 | #15 | `spike/b-dos-input` | `{{pr15.head}}` | {{pr15.state}} |
+| #16 | `spike/g-boot-bochs-86box` | `{{pr16.head}}` | {{pr16.state}} |
+| #17 | `spike/n3-native-bios` | `{{pr17.head}}` | {{pr17.state}} |
 
-The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). Spike G's branch (#16, head `{{pr16.head}}`) is counted in the open pull requests and the commit totals, and has not been read. Spike n3's branch (#17, head `{{pr17.head}}`) is counted too and has not been read.
+The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). The pull request that carries this report (#18) is counted among the open ones and has no row of its own.
 
 **The counts of tests are counts of declarations.** The generator counts `test(` and `it(` calls in `fonts/test/`, `#[test]` attributes in `hal/` on the open branches, and the expected transcripts under `tests/native/` and `spikes/`. That is not an official total and not a runner's tally, and the page says so wherever it uses the number. Where a pull request's own document states a test count, the generator's count agrees with it, which is how I checked the counter.
 
@@ -46,7 +48,7 @@ python3 tools/progress-report/build.py --data dist/progress-report-data.json --c
 python3 -I tools/progress-report/tests/test_report.py
 ```
 
-**Adding a chapter.** Write `tools/progress-report/chapters/NN-name.md` with a small front matter (`id`, `n`, `title`, `date`, `summary`, `prs`), the narrative, a `figures` block, the three shelves and a sidebar, run `python3 tools/progress-report/build.py --check`, and publish. The chapter appears in the contents, the pager and the gallery without any other file changing. Chapters for spikes G and n3 are expected to be added that way, with `pages/coming.json` losing their placeholder rows.
+**Adding a chapter.** Write `tools/progress-report/chapters/NN-name.md` with a small front matter (`id`, `n`, `title`, `date`, `summary`, `prs`), the narrative, a `figures` block, the three shelves and a sidebar, run `python3 tools/progress-report/build.py --check`, and publish. The chapter appears in the contents, the pager and the gallery without any other file changing. A chapter that is expected and not yet written can be named in `pages/coming.json` and shows as a "coming" row until its chapter exists; that file is empty now that spikes G and n3 have chapters.
 
 **Publishing is manual.** The site is a multi-page Artifact at a fixed address. The generator writes `dist/progress-report/manifest.json` with the exact file mapping and options for the publish call, and the README of the tool repeats the recipe.
 
@@ -65,6 +67,5 @@ python3 -I tools/progress-report/tests/test_report.py
 - The derived figures, in the cases where the recorded run did not log what they show (the scancode bytes and the ring indices).
 
 ### Wish list
-- Chapters for spikes G and n3, in a second pass.
 - A published copy of the generator's data file next to the pages, so a reader can audit the numbers without the repository.
 - A lightbox for the gallery, if linking to the figure in place turns out to be too far.
