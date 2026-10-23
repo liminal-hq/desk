@@ -23,6 +23,7 @@ import explainers as ex  # noqa: E402
 import explainers_hw as hw  # noqa: E402
 import figures  # noqa: E402
 import gather  # noqa: E402
+import manual  # noqa: E402
 import mdlite  # noqa: E402
 
 ENV = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@example.com", GIT_COMMITTER_NAME="T", GIT_COMMITTER_EMAIL="t@example.com",
@@ -255,10 +256,12 @@ REAL = os.path.join(TOOL, "chapters")
 
 class RealContentTests(unittest.TestCase):
     def test_real_chapters_are_well_formed(self):
-        chapters = build.load_chapters(REAL)
+        chapters = build.load_chapters(REAL, manual.MANUAL_DIR)
         ids = [c["id"] for c in chapters]
         self.assertGreaterEqual(len(chapters), 14)
         for c in chapters:
+            if c["section"] == "manual":
+                continue  # the manual has no shelves and its own template; RealManualTests checks it
             self.assertRegex(c["date"], r"^\d{4}-\d{2}-\d{2}$", c["id"])
             shelves = {mdlite.shelf_of(b) for b in c["blocks"]} - {None}
             self.assertEqual(shelves, {"catalogued", "uncatalogued", "wish"}, c["id"] + " needs all three shelves")
@@ -271,7 +274,7 @@ class RealContentTests(unittest.TestCase):
                 self.assertIn(target, ids, "%s links to a missing chapter" % c["id"])
 
     def test_sidebars_name_a_source_or_hedge(self):
-        for c in build.load_chapters(REAL):
+        for c in build.load_chapters(REAL, manual.MANUAL_DIR):
             for b in c["blocks"]:
                 if b["type"] == "quote" and b["lines"][0].startswith("**From the stacks"):
                     self.assertTrue(any(l.startswith("Source") for l in b["lines"][1:]), c["id"] + " has a sidebar without a source line")
@@ -637,6 +640,295 @@ class FirstWindowTests(unittest.TestCase):
                 fw.frames({}, mdlite.Ctx())
         finally:
             fw.result_table = real
+
+
+FIXTURE_MANUAL = os.path.join(HERE, "fixture", "manual")
+FAKE_DATA = {"prs": [{"number": 1, "ci": "passing"}, {"number": 3, "ci": "failing"}], "open": {"prs": [{"number": 4, "state": "in review", "ci": "passing"}]}}
+BOXES = {"desk:kernel", "dos:main"}
+
+
+def manual_copy(mutate=lambda t: t, plan_mutate=lambda p: p):
+    """The fixture manual copied to a temporary directory with its chapter text (and plan) changed; returns (directory, plan, chapters)."""
+    d = tempfile.mkdtemp()
+    plan = plan_mutate(json.loads(rd(os.path.join(FIXTURE_MANUAL, "plan.json"))))
+    wr(os.path.join(d, "plan.json"), json.dumps(plan))
+    wr(os.path.join(d, "M01-one.md"), mutate(rd(os.path.join(FIXTURE_MANUAL, "M01-one.md"))))
+    return d, plan, manual.load_chapters(plan, d)
+
+
+def manual_problems(mutate=lambda t: t, data=FAKE_DATA):
+    d, plan, chapters = manual_copy(mutate)
+    return manual.check_all(chapters, plan, gather.ROOT, data, ["one", "two"], BOXES)
+
+
+class ManualCheckTests(unittest.TestCase):
+    """Each rule of the manual's checks, with a twin that breaks it and must be refused for the stated reason."""
+
+    def assertRefused(self, mutate, needle, data=FAKE_DATA):
+        problems = manual_problems(mutate, data)
+        self.assertTrue(any(needle in p for p in problems), "%r not in %s" % (needle, problems))
+
+    def test_the_fixture_chapter_is_clean(self):
+        self.assertEqual(manual_problems(), [])
+
+    def test_front_matter_and_sections_are_required(self):
+        self.assertRefused(lambda t: t.replace("reviewed: 44f0265\n", ""), "reviewed must be a commit hash")
+        self.assertRefused(lambda t: t.replace("reviewed: 44f0265", "reviewed: zzzz"), "reviewed must be a commit hash")
+        self.assertRefused(lambda t: t.replace("reviewed: 44f0265", "reviewed: " + "1" * 40), "not a commit of this repository")
+        self.assertRefused(lambda t: t.replace("log: [one]\n", ""), "front matter has no log")
+        self.assertRefused(lambda t: t.replace("## Worked example", "## Another"), "no section 'Worked example'")
+        self.assertRefused(lambda t: t.replace("watches: [tools/progress-report/manual.py]", "watches: [no/such/dir]"), "watches no/such/dir")
+
+    def test_a_pointer_to_a_missing_path_or_symbol_fails(self):
+        self.assertRefused(lambda t: t.replace("(repo:tools/progress-report/manual.py)", "(repo:tools/progress-report/gone.py)"), "gone.py does not exist")
+        self.assertRefused(lambda t: t.replace("manual.py::check_chapter)", "manual.py::check_chapter_renamed)", 1), "check_chapter_renamed")
+        self.assertRefused(lambda t: t.replace("## The code\n\n| File | What it holds |\n|---|---|\n| [`manual.py`](repo:tools/progress-report/manual.py) | the checks |\n| [`check_chapter`](sym:tools/progress-report/manual.py::check_chapter) | one chapter's problems |\n", "## The code\n\nNo table.\n"), "The code needs at least one row")
+
+    def test_log_and_anatomy_references_must_resolve(self):
+        self.assertRefused(lambda t: t.replace("log: [one]", "log: [nowhere]"), "not a log chapter")
+        self.assertRefused(lambda t: t.replace("anatomy: [desk:kernel]", "anatomy: [desk:nothing]"), "not a box")
+
+    def test_state_rules(self):
+        self.assertRefused(lambda t: t.replace("state: built-verified\nevidence: pr:1, test", "state: shipped\nevidence: pr:1, test"), "is not one of")
+        self.assertRefused(lambda t: t.replace("evidence: pr:1, test:tools/progress-report/tests/test_report.py::test_fixture_manual_site", "evidence: repo:AGENTS.md"), "built-verified needs run evidence")
+        self.assertRefused(lambda t: t.replace("evidence: pr:1, repo:AGENTS.md", "evidence: "), "needs evidence")
+        self.assertRefused(lambda t: t.replace("evidence: doc:docs/MANUAL-PLAN.md#the-chapter-template", "evidence: repo:AGENTS.md"), "must cite where it is planned")
+        self.assertRefused(lambda t: t.replace("doc:docs/MANUAL-PLAN.md#the-chapter-template", "doc:docs/MANUAL-PLAN.md#no-such-heading"), "no heading with that anchor")
+        self.assertRefused(lambda t: t.replace("test_fixture_manual_site", "test_zz" + "qq_absent"), "does not appear")
+        self.assertRefused(lambda t: t.replace("pr:1, repo:AGENTS.md", "pr:99, repo:AGENTS.md"), "not among the pull requests")
+        self.assertRefused(lambda t: t.replace("id: fix.unrun", "id: fix.heap"), "duplicate id")
+
+    def test_a_verified_claim_without_a_passing_merged_pull_request_is_shown_as_unverified(self):
+        d, plan, chapters = manual_copy()
+        recs = {r["id"]: r for r in chapters[0]["status"]}
+        self.assertEqual(manual.effective_state(recs["fix.heap"], FAKE_DATA)[0], "built-verified")
+        st, why = manual.effective_state(recs["fix.unrun"], {"prs": [{"number": 1, "ci": "failing"}], "open": {"prs": []}})
+        self.assertEqual(st, "built-unverified")
+        self.assertIn("#1 is not merged with CI passing", why)
+        st, why = manual.effective_state(recs["fix.unrun"], FAKE_DATA)
+        self.assertEqual(st, "built-verified", "a merged pull request with CI passing is run evidence")
+        recs["fix.heap"]["items"] = [("pr", "4")]
+        self.assertEqual(manual.effective_state(recs["fix.heap"], FAKE_DATA)[0], "built-unverified", "an open pull request is not run evidence")
+
+    def test_try_commands_must_exist(self):
+        self.assertRefused(lambda t: t.replace("$ python3 -I tools/progress-report/tests/test_report.py", "$ python3 tools/no-such.py"), "the script tools/no-such.py does not exist")
+        self.assertRefused(lambda t: t.replace("$ python3 -I tools/progress-report/tests/test_report.py", "$ tools/nothing.sh"), "no such script")
+        self.assertRefused(lambda t: t.replace("$ python3 -I tools/progress-report/tests/test_report.py", "$ frobnicate --now"), "not a script in the repository or a known tool")
+        self.assertRefused(lambda t: t.replace("needs: host: python3\n", ""), "must say what it needs")
+        self.assertEqual(manual.check_command("(cd hal && cargo test --locked --quiet)", gather.ROOT), [])
+        self.assertEqual(manual.check_command("tools/native-test.sh | tail -3", gather.ROOT), [])
+        self.assertTrue(manual.check_command("(cd nowhere && cargo test)", gather.ROOT))
+
+    def test_glossary_terms_are_defined_once_and_used(self):
+        self.assertRefused(lambda t: t.replace("[segment](term:segment)", "segment"), "defined and never used")
+        self.assertRefused(lambda t: t.replace("[segment](term:segment)", "[offset](term:offset)"), "no chapter defines")
+        self.assertRefused(lambda t: t.replace("def: A made-up term for the fixture.\n```", "def: A made-up term for the fixture.\n\nterm: Segment\ndef: Again.\n```"), "defined in m-one and in m-one")
+
+    def test_sidebar_rules_apply_to_the_manual(self):
+        self.assertRefused(lambda t: t.replace("> Source: [example](https://example.com)\n", ""), "no Source line")
+        self.assertRefused(lambda t: t.replace("A sidebar of two sentences. It is only here to be rendered.", "One. Two. Three. Four. Five. Six."), "longer than five sentences")
+
+    def test_the_generated_boxes_are_required(self):
+        self.assertRefused(lambda t: t.replace("<!-- manual next -->", ""), "no <!-- manual next -->")
+
+    def test_placeholders_use_the_same_tag_as_the_table(self):
+        d, plan, chapters = manual_copy()
+        vals = manual.state_values(chapters, FAKE_DATA)
+        self.assertEqual(str(vals["state.fix.heap"]), manual.tag_html("built-verified", ""))
+        ctx = mdlite.Ctx(vals)
+        self.assertIn("mt-verified", mdlite.inline("It is {{state.fix.heap}}.", ctx))
+        with self.assertRaises(mdlite.MdError):
+            mdlite.inline("{{state.fix.nothing}}", ctx)
+
+    def test_the_plan_is_checked(self):
+        def plan_problems(f):
+            p = json.loads(rd(os.path.join(FIXTURE_MANUAL, "plan.json")))
+            f(p)
+            return manual.validate_plan(p)
+        self.assertEqual(plan_problems(lambda p: None), [])
+        self.assertTrue(plan_problems(lambda p: p["chapters"].append(dict(p["chapters"][0]))))
+        self.assertTrue(any("exactly once" in x for x in plan_problems(lambda p: p["paths"].__setitem__("learn", ["m-one"]))))
+        self.assertTrue(any("exactly once" in x for x in plan_problems(lambda p: p["paths"].__setitem__("find", ["m-one", "m-one", "m-two"]))))
+        self.assertTrue(any("unknown chapter" in x for x in plan_problems(lambda p: p["tasks"][0]["chapters"].append("m-nope"))))
+        self.assertTrue(any("tools/missing.sh" in x for x in plan_problems(lambda p: p["tasks"][0]["checks"].append("tools/missing.sh"))))
+        d = tempfile.mkdtemp()
+        plan = json.loads(rd(os.path.join(FIXTURE_MANUAL, "plan.json")))
+        plan["chapters"] = plan["chapters"][1:]
+        plan["paths"] = {"learn": ["m-two"], "find": ["m-two"]}
+        plan["tasks"] = []
+        wr(os.path.join(d, "M01-one.md"), rd(os.path.join(FIXTURE_MANUAL, "M01-one.md")))
+        with self.assertRaises(mdlite.MdError):
+            manual.load_chapters(plan, d)
+
+    def test_staleness_reads_the_history_under_the_watched_paths(self):
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            first = git(d, "rev-list", "--max-parents=0", "HEAD").strip()
+            c = {"reviewed": first, "watches": ["docs/"]}
+            self.assertEqual(manual.staleness(c, d)["state"], "stale")
+            self.assertEqual(manual.staleness(dict(c, watches=["nothing/"]), d)["state"], "fresh")
+            self.assertEqual(manual.staleness(dict(c, reviewed="1" * 40), d)["state"], "unknown")
+            sub = git(d, "log", "--format=%s", first + "..HEAD", "--", "docs/").strip()
+            self.assertIn("docs: add x", sub)
+
+
+class ManualSiteTests(unittest.TestCase):
+    """A fixture build with manual chapters: the contents section, the header link, the pager, the backlinks, the reused figures."""
+
+    def build_site(self, mutate=lambda t: t, two=False, chapters_dir=None):
+        d, plan, _ = manual_copy(mutate)
+        if two:
+            text = rd(os.path.join(d, "M01-one.md"))
+            text = text.replace("id: m-one", "id: m-two").replace("n: M1", "n: M2").replace("The first fixture chapter", "The second fixture chapter").replace("fix.", "two.")
+            text = text.replace("[segment](term:segment)", "segment").replace("```glossary\nterm: Segment\ndef: A made-up term for the fixture.\n```\n\n", "").replace("anatomy: [desk:kernel]", "anatomy: [dos:main]")
+            wr(os.path.join(d, "M02-two.md"), text)
+        with tempfile.TemporaryDirectory() as r:
+            make_repo(r)
+            data = gather.gather(r, "main", offline=True)
+        chapters = build.load_chapters(chapters_dir or os.path.join(HERE, "fixture", "chapters"), d)
+        out = os.path.join(tempfile.mkdtemp(), "site")
+        site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), out, assets=False, manual_dir=d)
+        site.write()
+        return out, chapters, site
+
+    def test_fixture_manual_site(self):
+        out, chapters, site = self.build_site()
+        self.assertEqual(build.check_site(out, [c["id"] for c in chapters]), [])
+        index = rd(os.path.join(out, "index.html"))
+        self.assertIn('<h2 id="h-manual">The manual</h2>', index)
+        self.assertIn('href="manual.html">Manual</a>', index)
+        self.assertIn("1 of 2 chapters are written", index)
+        self.assertIn("The second fixture chapter", index)
+        self.assertIn("pill-coming", index)
+        landing = rd(os.path.join(out, "manual.html"))
+        for needle in ("Learn it", "Find it", "The task index", "Run the tests", 'id="row-m-two"', "Preface, from the archivist"):
+            self.assertIn(needle, landing)
+        page = rd(os.path.join(out, "m-one.html"))
+        for needle in ("Manual · M1 · Part I. Foundations", "mt-verified", "mt-unverified", "mt-planned", "Shown as built, not verified", "m-needs", "Terms this chapter defines", "From the stacks",
+                       "On the anatomy pages", "Where next", 'href="manual.html#row-m-two"', "pill-coming", "Tasks that lead here", 'id="state-fix.heap"'):
+            self.assertIn(needle, page, needle)
+        self.assertNotIn("Catalogued", page, "manual pages have no shelves")
+        self.assertEqual(site.shelf_counts, {"catalogued": 1, "uncatalogued": 1, "wish": 1}, "the manual's pages add nothing to the shelf counts")
+        for f in ("m-glossary.html", "m-maps.html", "m-commands.html", "m-sources.html"):
+            self.assertIn("<h1", rd(os.path.join(out, f)))
+        self.assertIn('id="term-segment"', rd(os.path.join(out, "m-glossary.html")))
+        self.assertIn("python3 -I tools/progress-report/tests/test_report.py", rd(os.path.join(out, "m-commands.html")))
+        self.assertIn("https://example.com", rd(os.path.join(out, "m-sources.html")))
+        manifest = json.loads(rd(os.path.join(out, "manifest.json")))
+        for f in ("manual.html", "m-one.html", "m-glossary.html"):
+            self.assertIn(f, manifest["publish"]["files"])
+
+    def test_the_log_page_gains_an_aside_and_nothing_else_changes(self):
+        out, chapters, site = self.build_site()
+        one = rd(os.path.join(out, "one.html"))
+        self.assertIn('<h2 id="in-the-manual">In the manual</h2>', one)
+        self.assertIn('href="m-one.html"', one)
+        self.assertNotIn("In the manual", rd(os.path.join(out, "two.html")), "a log chapter no manual chapter names has no aside")
+        plain = os.path.join(tempfile.mkdtemp(), "plain")
+        build.Site(site.data, build.load_chapters(os.path.join(HERE, "fixture", "chapters")), os.path.join(HERE, "fixture", "pages"), plain, assets=False).write()
+        strip = lambda t: t.replace('<a href="manual.html">Manual</a>', "")
+        self.assertEqual(strip(rd(os.path.join(out, "two.html"))), rd(os.path.join(plain, "two.html")), "no other log page changes")
+
+    def test_the_manual_pager_follows_the_learn_path(self):
+        out, chapters, site = self.build_site(two=True)
+        self.assertEqual(build.check_site(out, [c["id"] for c in chapters]), [])
+        first, second = rd(os.path.join(out, "m-one.html")), rd(os.path.join(out, "m-two.html"))
+        self.assertIn('class="next" href="m-two.html"', first)
+        self.assertIn('class="prev" href="m-one.html"', second)
+        self.assertIn("1 of 2" if False else "2 of 2 chapters are written", rd(os.path.join(out, "index.html")))
+        self.assertNotIn("pill-coming", rd(os.path.join(out, "index.html")).split('id="h-manual"')[1].split("</section>")[0])
+
+    def test_the_anatomy_tables_gain_a_manual_column_from_the_same_lists(self):
+        import explainers_fw as fw
+        out, chapters, site = self.build_site(two=True)
+        html = fw.anatomy("desk", site.ctx, "lead")
+        self.assertIn('<th scope="col">Manual</th>', html)
+        self.assertIn('id="box-desk-kernel"', html)
+        self.assertIn('href="m-one.html"', html)
+        self.assertNotIn('id="box-dos-main"', html)
+        plain = fw.anatomy("desk", mdlite.Ctx(), "lead")
+        self.assertNotIn(">Manual<", plain)
+        self.assertNotIn("box-desk", plain)
+        dos = fw.anatomy("dos", site.ctx, "lead")
+        self.assertIn('id="box-dos-main"', dos)
+        self.assertIn('href="m-two.html"', dos)
+
+    def test_a_figure_the_log_declares_can_be_reused_and_keeps_one_tile(self):
+        out, ch = broken_site(GOOD)
+        manual_extra = lambda t: t.replace("## Worked example\n", "## Worked example\n\n<!-- figure arch -->\n") + "\n```figures\nid: m1-arch\nreuse: arch-test\nat: figure arch\n```\n"
+        site_dir, chapters, site = self.build_site(manual_extra, chapters_dir=ch)
+        self.assertEqual(build.check_site(site_dir, [c["id"] for c in chapters]), [])
+        gallery = rd(os.path.join(site_dir, "gallery.html"))
+        self.assertEqual(gallery.count('class="tile"'), 1, "a reused figure gets no second tile")
+        self.assertIn('id="fig-m1-arch"', rd(os.path.join(site_dir, "m-one.html")))
+
+    def test_a_reuse_that_names_nothing_or_draws_something_else_is_refused(self):
+        out, ch = broken_site(GOOD)
+        base = lambda rid, at: (lambda t: t.replace("## Worked example\n", "## Worked example\n\n<!-- figure arch -->\n") + "\n```figures\nid: m1-arch\nreuse: %s\nat: %s\n```\n" % (rid, at))
+        with self.assertRaises(mdlite.MdError):
+            self.build_site(base("no-such-figure", "figure arch"), chapters_dir=ch)
+        with self.assertRaises(mdlite.MdError):
+            self.build_site(base("arch-test", "figure tree"), chapters_dir=ch)
+
+    def test_a_manual_chapter_cannot_reuse_an_id_of_the_log(self):
+        d, plan, _ = manual_copy()
+        wr(os.path.join(d, "M01-one.md"), rd(os.path.join(d, "M01-one.md")).replace("id: m-one", "id: one"))
+        plan["chapters"][0]["id"] = "one"
+        wr(os.path.join(d, "plan.json"), json.dumps(plan))
+        with self.assertRaises(mdlite.MdError):
+            build.load_chapters(os.path.join(HERE, "fixture", "chapters"), d)
+
+    def test_a_broken_pointer_breaks_the_build(self):
+        with self.assertRaises(mdlite.MdError):
+            self.build_site(lambda t: t.replace("(repo:tools/progress-report/manual.py)", "(repo:tools/progress-report/gone.py)"))
+
+    def test_manual_explainers_are_discovered_and_validate_their_own_data(self):
+        d = tempfile.mkdtemp()
+        wr(os.path.join(d, "demo.py"), "ID = 'demo'\n\n\ndef render(D, ctx):\n    return '<p>demo</p>'\n")
+        self.assertEqual(sorted(manual.explainers(d)), ["demo"])
+        wr(os.path.join(d, "bad.py"), "def render(D, ctx):\n    return ''\n")
+        with self.assertRaises(mdlite.MdError):
+            manual.explainers(d)
+        wr(os.path.join(d, "bad.py"), "ID = 'demo'\n\n\ndef render(D, ctx):\n    return ''\n")
+        with self.assertRaises(mdlite.MdError):
+            manual.explainers(d)
+
+    def test_the_real_plan_is_valid_and_the_sidebars_follow_the_log_rules(self):
+        plan = manual.load_plan()
+        self.assertEqual(len(plan["chapters"]), 22)
+        self.assertEqual(len(plan["appendices"]), 4)
+        self.assertEqual(manual.validate_plan(plan), [])
+
+
+class RealManualTests(unittest.TestCase):
+    """The written chapters of the manual against the repository: every pointer, command and state is checked as the build checks it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = manual.load_plan()
+        cls.chapters = manual.load_chapters(cls.plan)
+        cls.data = gather.gather(offline=True)
+        cls.log_ids = [c["id"] for c in build.load_chapters(REAL)]
+        cls.boxes = {"%s:%s" % (n, b["id"]) for n in ("desk", "dos") for b in __import__("explainers_fw").load_anatomy(n)["boxes"]}
+
+    def test_every_written_chapter_passes_the_checks(self):
+        self.assertEqual(manual.check_all(self.chapters, self.plan, gather.ROOT, self.data, self.log_ids, self.boxes), [])
+
+    def test_both_paths_list_every_chapter_once_and_no_id_is_shared_with_the_log(self):
+        for which in ("learn", "find"):
+            self.assertEqual(sorted(self.plan["paths"][which]), sorted(c["id"] for c in self.plan["chapters"]))
+        ids = [c["id"] for c in self.plan["chapters"]] + [a["id"] for a in self.plan["appendices"]]
+        self.assertFalse(set(ids) & set(self.log_ids))
+
+    def test_the_real_manual_builds_into_a_site_that_checks(self):
+        chapters = build.load_chapters(REAL, manual.MANUAL_DIR)
+        with tempfile.TemporaryDirectory() as out:
+            site = build.Site(self.data, chapters, os.path.join(TOOL, "pages"), os.path.join(out, "site"), assets=True, manual_dir=manual.MANUAL_DIR)
+            site.write()
+            self.assertEqual(build.check_site(os.path.join(out, "site"), [c["id"] for c in chapters]), [])
+            index = rd(os.path.join(out, "site", "index.html"))
+            section = index.split('id="h-manual"')[1].split("</section>")[0]
+            self.assertEqual(section.count("pill-coming"), len(self.plan["chapters"]) - len(self.chapters))
 
 
 if __name__ == "__main__":

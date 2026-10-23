@@ -1,0 +1,15 @@
+{
+ "parts": [{"id": "I", "title": "Foundations"}],
+ "chapters": [
+  {"id": "m-one", "n": "M1", "part": "I", "title": "The first fixture chapter", "summary": "A chapter used only by the generator's test."},
+  {"id": "m-two", "n": "M2", "part": "I", "title": "The second fixture chapter", "summary": "Not written, so it shows as coming."}
+ ],
+ "appendices": [
+  {"id": "m-glossary", "n": "A", "title": "A. Glossary", "summary": "Terms."},
+  {"id": "m-maps", "n": "B", "title": "B. Maps and numbers", "summary": "Tables."},
+  {"id": "m-commands", "n": "C", "title": "C. Commands", "summary": "Commands."},
+  {"id": "m-sources", "n": "D", "title": "D. Sources", "summary": "Sources."}
+ ],
+ "paths": {"learn": ["m-one", "m-two"], "find": ["m-two", "m-one"]},
+ "tasks": [{"task": "Run the tests", "chapters": ["m-one", "m-two"], "checks": ["python3 -I tools/progress-report/tests/test_report.py"]}]
+}

@@ -13,6 +13,7 @@ A plan for a second group of pages in the Desk Progress Report: a technical manu
 - [How it plugs into the generator](#how-it-plugs-into-the-generator)
 - [Diagrams and explainers](#diagrams-and-explainers)
 - [The writing plan](#the-writing-plan)
+- [Build notes](#build-notes)
 - [Risks](#risks)
 - [Out of scope](#out-of-scope)
 - [Questions for the owner](#questions-for-the-owner)
@@ -375,6 +376,17 @@ Each task is one pull request into `main` (the archive's chapters land the same 
 
 - **Files.** `manual/A1-glossary.md` to `A4-sources.md` (short framing prose; the bodies are generated), the generated tables of appendix B and the test that each table's numbers appear in the source it cites, and fixes across chapters for consistency of terms and tags.
 - **Acceptance.** Every glossary term is used; appendix B's exit statuses, test modes and vectors are generated, not typed; every chapter's `reviewed` is the same recent commit of `main`; the whole site builds with `--check`; publishing (the owner's sign-in) follows the recipe.
+
+## Build notes
+
+Where the generator as built differs from the sketch above, so that the plan stays true to the code ([`tools/progress-report/README.md`](../tools/progress-report/README.md#the-manual) has the reference).
+
+- **Explainer discovery** lives in `manual.py` (`manual.explainers()`), which loads `manual/explainers/*.py` by path; there is no `manual/explainers/__init__.py`, because a `manual/` package would shadow the module `manual.py`. Each module declares `ID` and `render(D, ctx)`.
+- **Appendices** are generated pages from the first build (their bodies come from the chapters, so they are short until chapters exist), so the contents show 22 "coming" rows for the chapters, not 26.
+- **The template's generated boxes** are placed by two directives in each chapter, `<!-- manual proved -->` and `<!-- manual next -->`, so the order of the sections stays the author's; "On the anatomy pages" sits under the title.
+- **A `try` block** has `needs:` and `ran:` lines, then `$ command` lines each followed by its output. Commands may start with a known tool (`cargo`, `python3`, `docker`, `bun`, `git` and a few read-only utilities) or a script in the repository.
+- **The preface** on `manual.html` is `pages/manual-preface.md`.
+- **Anatomy backlinks** appear only when a manual chapter names a box of that diagram: the text table then gains a "Manual" column and an anchor per box (`box-desk-kernel`, `box-dos-main`).
 
 ## Risks
 
