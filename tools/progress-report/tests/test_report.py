@@ -700,6 +700,13 @@ class ManualCheckTests(unittest.TestCase):
         self.assertRefused(lambda t: t.replace("pr:1, repo:AGENTS.md", "pr:99, repo:AGENTS.md"), "not among the pull requests")
         self.assertRefused(lambda t: t.replace("id: fix.unrun", "id: fix.heap"), "duplicate id")
 
+    def test_evidence_with_spaces_in_the_name_renders_as_a_link_and_the_name(self):
+        ctx = mdlite.Ctx()
+        html = mdlite.inline(manual.evidence_md([("test", "tests/native/expected.txt::boot complete"), ("sym", "boot/stage1.asm::read_sectors")], FAKE_DATA), ctx)
+        self.assertNotIn("](", html)
+        self.assertIn("<code>boot complete</code>", html)
+        self.assertIn('href="https://github.com/liminal-hq/desk/blob/main/tests/native/expected.txt"', html)
+
     def test_a_verified_claim_without_a_passing_merged_pull_request_is_shown_as_unverified(self):
         d, plan, chapters = manual_copy()
         recs = {r["id"]: r for r in chapters[0]["status"]}

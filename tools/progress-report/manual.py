@@ -600,7 +600,8 @@ def evidence_md(items, data):
             out.append("[`%s`](repo:%s)" % (rest, rest))
         elif kind in ("sym", "test"):
             path, _, name = rest.partition("::")
-            out.append("%s [`%s`](%s:%s) `%s`" % ("test" if kind == "test" else "symbol", path, kind, rest, name))
+            # the link target must not hold the name (it may have spaces, which a markdown link cannot), so it points at the file
+            out.append("%s [`%s`](repo:%s) `%s`" % ("test" if kind == "test" else "symbol", path, path, name))
         elif kind == "doc":
             path, _, anchor = rest.partition("#")
             out.append("[`%s#%s`](doc:%s)" % (path, anchor, rest))
