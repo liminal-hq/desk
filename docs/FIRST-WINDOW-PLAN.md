@@ -264,6 +264,8 @@ Two tasks in the same wave touch shared files: T1 and T2 both edit `shell/Cargo.
 
 ## T12. Live input (optional)
 
+> **Superseded** by [`LIVE-INPUT.md`](LIVE-INPUT.md) and its build plan [`LIVE-INPUT-PLAN.md`](LIVE-INPUT-PLAN.md), which design the live modes, the injected checks and the launchers in full. The sketch below is kept as it was planned.
+
 **Goal.** The interactive modes driven by real input: QEMU's `sendkey` and `mouse_move` against the kernel's interactive shell, and DOSBox's `AUTOTYPE` (keys) against `SHELL.EXE`, ending at a picture that equals a golden.
 
 **Files.** A second scenario (`tests/shell/live.scn`) whose input `frames.py inject --live` turns into monitor commands; the kernel's interactive shell mode (code 15); `tools/native-test.sh` and `shell/dos/check.sh` sections, opt-in at first.
