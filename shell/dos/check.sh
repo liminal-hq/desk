@@ -106,16 +106,25 @@ live() {
   status=0
   out="$(env DOS_AUTOTYPE="$keys" "$@" tools/dosrun.sh $OUT SHELL.EXE depth$depth marks timeout=60 2> /dev/null)" || status=$?
   printf '%s\n' "$out" > "$OUT/$name.txt"
-  keep "$name"
+  # A run that died before its first mark leaves no dumps: keep an empty directory so the caller reports the status and output, not mv's error.
+  if compgen -G "$OUT/*.RAW" > /dev/null; then keep "$name"; else rm -rf "${OUT:?}/$name"; mkdir -p "$OUT/$name"; fi
+}
+# live_checks <depth> <name>: the run's summary counts every mark of the scenario, text mode was restored, no key was dropped, and every
+# mark was read back equal ($out is the run's output)
+live_checks() {
+  local marks readbacks
+  marks="$(awk -v d="$1" '$2 == d' $live_sums | wc -l)"
+  case "$out" in *"shell: live ended by Escape: "*" keys, "*" pointer reports, "*" frames, "*" pixels presented, $marks marks"*'the video mode is 0x03') ;; *) fail "$2: no summary of $marks marks, or text mode not restored: $out" ;; esac
+  case "$out" in *'scancode bytes were dropped'*) fail "$2: the key ring dropped bytes: $out" ;; esac
+  readbacks="$(printf '%s\n' "$out" | grep -c '^shell: readback mark .* equal$' || true)"
+  [ "$readbacks" = "$marks" ] || fail "$2: $readbacks of $marks marks were read back equal"
 }
 live_keys="$(frames live $live_scn --autotype)" || fail "$live_scn does not translate for AUTOTYPE"
 for depth in 8 4; do
   step "Live: $live_scn typed through IRQ 1 at depth $depth, each mark read back and held to the goldens"
   live $depth live-$depth "$live_keys"
   [ "$status" = 0 ] || fail "live SHELL.EXE depth$depth exited with status $status; output: $out"
-  case "$out" in *'shell: live ended by Escape: '*' keys, '*' pointer reports, '*' frames, '*' pixels presented, 4 marks'*'the video mode is 0x03') ;; *) fail "no summary, or text mode not restored: $out" ;; esac
-  readbacks="$(printf '%s\n' "$out" | grep -c '^shell: readback mark .* equal$' || true)"
-  [ "$readbacks" = 4 ] || fail "$readbacks of 4 marks were read back equal"
+  live_checks "$depth" live-$depth
   frames marks $live_sums $live_scn $depth "$OUT/live-$depth.txt" --dumps "$OUT/live-$depth"
   frames check $live_sums $depth "$OUT/live-$depth"
 done
@@ -124,6 +133,7 @@ step "Live without a mouse driver: the same frames, keyboard only"
 live 8 live-nomouse "$live_keys" DOS_CONF=$'[mouse]\nbuiltin_dos_mouse_driver = off'
 [ "$status" = 0 ] || fail "live SHELL.EXE without a mouse exited with status $status; output: $out"
 case "$out" in *'shell: no mouse driver; keyboard only'*) ;; *) fail "the mouse driver was not taken away: $out" ;; esac
+live_checks 8 live-nomouse
 frames marks $live_sums $live_scn 8 "$OUT/live-nomouse.txt" --dumps "$OUT/live-nomouse"
 frames check $live_sums 8 "$OUT/live-nomouse"
 frames same "$OUT/live-8" "$OUT/live-nomouse"
