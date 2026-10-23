@@ -4,7 +4,7 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 
 | Script | What it does |
 |---|---|
-| `check.sh` | Runs every check the CI runs: headers, docs, Rust format and lints, the DOS build, and headless runs of `DESK.EXE` |
+| `check.sh` | Runs every check the CI runs: headers, docs, the font build check in `fonts/` when Bun is set up, Rust format and lints, the DOS build, and headless runs of `DESK.EXE` |
 | `setup.sh` | Checks host tools, installs the pinned Rust pieces, and links `vendor/` to `DOS_TOOLCHAIN` or downloads the tools |
 | `fetch-tools.sh` | Downloads DJGPP, DOSBox Staging and CWSDPMI into `vendor/` with SHA-256 checks, using the versions of the CI image |
 | `build.sh` | Cargo for `core/dos.json`, `coff2go32.py`, DJGPP's gcc for `c/`, then `dist/DESK.EXE` beside `CWSDPMI.EXE` |

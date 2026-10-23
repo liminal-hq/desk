@@ -174,3 +174,5 @@ Date, 24-hour time, done (0 or 1), then the text. A reminder shows one toast at 
 ## .DFN: a bitmap font
 
 Fixed or proportional, 1 bit per pixel, leftmost pixel in the highest bit, as Fizz's `ui_data.rs` font. Header `DFN1`, height, baseline, glyph count, then for each glyph its code point (4), width (1) and rows.
+
+Byte layout, as `fonts/build.ts` writes it (numbers little-endian): `DFN1`; height (1 byte: rows in every glyph, the whole cell); baseline (1 byte: rows above the baseline); glyph count (2 bytes); then the glyphs in code-point order, each a Unicode code point (4 bytes), a width (1 byte: the advance, including the gap after the glyph) and `height` rows of `ceil(width / 8)` bytes, the leftmost pixel in the highest bit of a row's first byte. See [`FONTS.md`](FONTS.md).

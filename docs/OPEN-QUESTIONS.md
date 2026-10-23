@@ -42,5 +42,33 @@ The next spike is `s1-dxe3` (milestone 1): can Rust code run as a DXE3 module th
 
 - Which Rust/DXE route wins (after the spike).
 - Whether the browser build uses mode 12h or waits for the LFB (after the js-dos spike).
-- Who draws the four bitmap faces, and whether Fizz's `export-ui.ts` pipeline becomes the font tool.
+- Whether the four bitmap faces drafted in `fonts/` (see `FONTS.md`) are the ones that ship: they have not been seen on a DOS screen yet, and the 6×8 face is the one to check first.
+- Whether Desk reads real TrueType files so any font can be used, and how (the section below).
 - Whether JEMMEX loads and unloads cleanly from the command line on FreeDOS and MS-DOS 6.22 for each program (part of the handoff spike); if not, EMS games need a boot menu entry instead.
+
+## Reading TrueType fonts
+
+The idea: let Desk load `.TTF` files so apps can use any font, not only the four bitmap faces. This is what the operating systems of the era added (TrueType on System 7 in 1991 and Windows 3.1 in 1992, after Type 1 through Adobe Type Manager on Windows 3.0): a font stores outlines and the system draws them at any size with its own rasteriser. OpenType with CFF outlines (`.otf`) only arrived in 1996–97, so it is not part of that story.
+
+It is not needed for 0.1. The bitmap faces stay the UI default, and the font build also writes `.ttf` files so the same faces install on Windows 3.1-era systems (`FONTS.md`).
+
+**What it would take**
+
+- **Parsing.** `cmap`, `glyf` (simple and composite glyphs), `loca`, `hmtx`, `head`, `hhea` and `maxp`; kerning later, if at all. A `no_std` parser crate (`ttf-parser`) exists, or this is small enough to write.
+- **Rasterising.** Flatten the quadratic curves and fill scanlines in fixed-point integers (as FreeType does), because the SPEC keeps floating point out of pixel loops. Every glyph is cached per size, so a 486 draws each glyph's outline once.
+- **TrueType only at first.** CFF (`.otf`) needs a second parser for Type 2 charstrings, so it waits.
+
+**What makes it hard**
+
+- **Hinting.** Windows 3.1 drew TrueType in plain black and white, and it looked good at small sizes because fonts carry hinting bytecode that snaps outlines to the pixel grid. Without it most fonts look lumpy at 11 px. A bytecode interpreter is a large job.
+- **Smoothing without alpha.** The palette has no alpha (`SPEC.md`, Display). Smooth edges mean a short ramp of in-between shades for each text colour, so text would need a few reserved palette slots per foreground and background pair.
+
+**Options, to decide after a spike**
+
+| Option | What it costs | What it gives |
+|---|---|---|
+| Unhinted outlines with 4–5 step smoothing, for larger sizes only (Notes at 14 px and up, Paint's text tool, previews) | A rasteriser and a few palette slots per colour pair | Any font, at sizes where hinting matters less |
+| Convert a TTF to a `.DFN` at one chosen size when it is installed | The same rasteriser, run once at install time (or off-line on a host machine) | Reuses the bitmap path and the palette as it is; the font is tied to that size |
+| A bytecode interpreter for hinted, black-and-white text | A large piece of work | Period-accurate small text |
+
+Spike `s6-ttf` (in `spikes/README.md`) decides between these. Its question is whether an integer rasteriser draws a real TrueType face at 14 px and 24 px on a 486 within the frame budget, and how it looks next to the bitmap faces.

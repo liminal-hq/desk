@@ -1,0 +1,17 @@
+{
+  "name": "desk-fonts",
+  "private": true,
+  "description": "Builds the Desk bitmap faces from their pixel grids into OpenType and .DFN files",
+  "license": "Apache-2.0 OR MIT",
+  "type": "module",
+  "scripts": {
+    "build": "bun build.ts",
+    "check": "bun build.ts --check",
+    "specimen": "bun build.ts --specimen",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "clipper-lib": "6.4.2",
+    "opentype.js": "2.0.0"
+  }
+}

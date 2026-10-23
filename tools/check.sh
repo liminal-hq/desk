@@ -1,5 +1,6 @@
 #!/bin/bash
-# Everything the CI runs: licence headers, markdown style and links, Rust format and lints, then the DOS build and a headless run.
+# Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
+# and lints, then the DOS build and a headless run.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -15,6 +16,13 @@ tools/check-headers.sh
 
 step "Markdown style and links"
 python3 -I tools/check-docs.py
+
+step "Fonts"
+if command -v bun >/dev/null && [ -d fonts/node_modules ]; then
+  (cd fonts && bun build.ts --check && bun test)
+else
+  echo "skipped: needs bun and \`bun install\` in fonts/"
+fi
 
 step "Rust format and lints"
 (cd core && cargo fmt --check)

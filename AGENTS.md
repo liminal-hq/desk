@@ -171,11 +171,12 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
 - `tools/` — repository checks, the DOS build pipeline (`setup`, `fetch-tools`, `build`, `coff2go32`, `dosrun`) and scripts
+- `fonts/` — the four bitmap faces as pixel grids, the modern outline faces (Desk Sans, Mono and Serif), and the Bun build that writes them as OTF, TTF and `.DFN` files (`docs/FONTS.md`)
 - `vendor/` and `dist/` — the downloaded DOS tools and the build output; neither is committed
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
-Directories for apps, the installer and the fonts and icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
+Directories for apps, the installer and the icons are created when their milestone starts; the layout of `apps/` depends on the first spike.
 
 ## Licence and Copyright
 
