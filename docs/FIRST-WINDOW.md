@@ -476,7 +476,7 @@ pub mod scenario {
                            capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>) -> Result<(), RunError>;
     /// One step's effect on the shell, everything but presenting (`Frame` and `ExpectDamage` do nothing): what `run` applies, and what the incremental-versus-full test steps through.
     pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError>;
-    pub enum RunError { UnknownWindow(String), Untypable(char), Present(HalError), DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
+    pub enum RunError { UnknownWindow(String), Untypable(char), Present(HalError), DepthMismatch, DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
 }
 ```
 

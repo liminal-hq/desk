@@ -425,6 +425,10 @@ fn run_reports_unknown_windows_and_a_misplaced_expect() {
         run(&sc, Depth::Bits8, &mut s, &mut p, |_, _, _| Ok(())),
         Err(RunError::NoFrame)
     );
+    assert_eq!(
+        run(&sc, Depth::Bits4, &mut s, &mut p, |_, _, _| Ok(())),
+        Err(RunError::DepthMismatch)
+    );
     sc.steps = vec![Step::Type("é".into())];
     assert_eq!(
         run(&sc, Depth::Bits8, &mut s, &mut p, |_, _, _| Ok(())),

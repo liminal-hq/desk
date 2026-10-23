@@ -31,6 +31,8 @@ pub enum RunError {
         rects: u8,
         max_rects: Option<u8>,
     },
+    /// `run` was given a depth other than the shell's.
+    DepthMismatch,
     /// An `expect-damage` step came before any frame was presented.
     NoFrame,
     /// The capture callback refused a frame.
@@ -59,6 +61,7 @@ impl fmt::Display for RunError {
                     None => write!(f, " allowed"),
                 }
             }
+            RunError::DepthMismatch => f.write_str("the run's depth is not the shell's"),
             RunError::NoFrame => f.write_str("expect-damage before any frame"),
             RunError::Capture(m) => write!(f, "capture failed: {m}"),
         }
@@ -105,7 +108,7 @@ pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError> {
 
 /// Runs every step of `sc` at `depth`. At each `Frame` step it presents a frame and then calls `capture(name, shell, stats)`; an
 /// `ExpectDamage` step for this depth fails the run when the last frame wrote more pixels or rectangles than it allows (a step for
-/// another depth is skipped). The first error stops the run.
+/// another depth is skipped); `depth` must be the shell's. The first error stops the run.
 pub fn run<P: Present>(
     sc: &Scenario,
     depth: Depth,
@@ -113,6 +116,9 @@ pub fn run<P: Present>(
     out: &mut P,
     mut capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>,
 ) -> Result<(), RunError> {
+    if shell.depth() != depth {
+        return Err(RunError::DepthMismatch);
+    }
     let mut last: Option<FrameStats> = None;
     for step in &sc.steps {
         match step {
