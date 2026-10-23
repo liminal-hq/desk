@@ -1,0 +1,64 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+heap: 4096 KiB at {HEX}
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+mouse: dx=10 dy=-5 buttons=0 wheel=0
+mouse: dx=-20 dy=7 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=1 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=2 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=4 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+key: A down mods=- char='a'
+key: A up mods=-
+key: LeftShift down mods=shift
+key: A down mods=shift char='A'
+key: A up mods=shift
+key: LeftShift up mods=-
+key: Num1 down mods=- char='1'
+key: Num1 up mods=-
+key: LeftShift down mods=shift
+key: Num1 down mods=shift char='!'
+key: Num1 up mods=shift
+key: LeftShift up mods=-
+key: Enter down mods=- char='\n'
+key: Enter up mods=-
+key: KpEnter down mods=- char='\n'
+key: KpEnter up mods=-
+key: Up down mods=-
+key: Up up mods=-
+key: LeftCtrl down mods=ctrl
+key: LeftAlt down mods=ctrl+alt
+key: Delete down mods=ctrl+alt
+key: Delete up mods=ctrl+alt
+key: LeftAlt up mods=ctrl
+key: LeftCtrl up mods=-
+key: Escape down mods=- char='\u{1b}'
+key: Escape up mods=-
+input: escape released after 26 key events and 8 mouse events
+input: dropped keys 0, dropped mouse events 0, mouse resyncs 0
+boot complete

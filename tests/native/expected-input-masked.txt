@@ -1,0 +1,38 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+heap: 4096 KiB at {HEX}
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+mouse: dx=10 dy=-5 buttons=0 wheel=0
+mouse: dx=-20 dy=7 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=1 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=2 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+mouse: dx=0 dy=0 buttons=4 wheel=0
+mouse: dx=0 dy=0 buttons=0 wheel=0
+
+KERNEL PANIC: panicked at src/input.rs:{N:1..9999}:{N:1..200}:
+input: no Escape within 300 ticks (0 key events, 8 mouse events)
