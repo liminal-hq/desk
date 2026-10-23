@@ -30,7 +30,7 @@ play() {
   local name=$1 script=$2
   rm -f "$OUT"/*.RAW "$OUT"/*.PAL
   status=0
-  tools/xvfb-dos.sh --mouse on $OUT "$script" SHELL.EXE depth8 marks timeout=120 > "$OUT/xvfb/$name.txt" 2> "$OUT/xvfb/$name.err" || status=$?
+  DOS_TIMEOUT=130 tools/xvfb-dos.sh --mouse on $OUT "$script" SHELL.EXE depth8 marks timeout=120 > "$OUT/xvfb/$name.txt" 2> "$OUT/xvfb/$name.err" || status=$?
   rm -rf "${OUT:?}/xvfb/$name"
   mkdir -p "$OUT/xvfb/$name"
   mv "$OUT"/M*.RAW "$OUT"/M*.PAL "$OUT/xvfb/$name/" 2> /dev/null || true
