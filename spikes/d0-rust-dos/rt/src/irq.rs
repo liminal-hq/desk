@@ -199,6 +199,13 @@ impl IrqRegistry for DosIrq {
             return Err(HalError::Busy);
         }
         lock_image()?;
+        // The clean-up entry goes first: a full list must refuse the registration, not leave a vector that nothing puts back.
+        if !CLEANUP.load(Ordering::Relaxed) {
+            if !cleanup::register(restore_all) {
+                return Err(HalError::Busy);
+            }
+            CLEANUP.store(true, Ordering::Relaxed);
+        }
         let vector = vector_of(irq);
         let old = dpmi::get_pm_vector(vector).map_err(|e| HalError::Platform(e.0))?;
         let cs: u16;
@@ -220,9 +227,6 @@ impl IrqRegistry for DosIrq {
         }
         // SAFETY: the stub can now run, and it never touches `VECTORS`.
         unsafe { (*addr_of_mut!(VECTORS))[line] = vector };
-        if !CLEANUP.swap(true, Ordering::Relaxed) {
-            cleanup::register(restore_all);
-        }
         // SAFETY: as `rt_irq_dispatch`. The mask register is read and written without turning interrupts off, which a DPMI client
         // cannot do cheaply; the lines Desk takes (keyboard, mouse) are already unmasked by the BIOS, so this normally writes nothing.
         let pic = Pic8259::new(unsafe { RawPorts::new() });
@@ -239,13 +243,15 @@ impl IrqRegistry for DosIrq {
         }
         // SAFETY: only this function and `restore_all` write these, from the program's single thread.
         let (vector, old) = unsafe { ((*addr_of!(VECTORS))[line], (*addr_of!(RT_IRQ_OLD))[line]) };
-        let result = dpmi::set_pm_vector(vector, old[1] as u16, old[0]).map_err(|e| HalError::Platform(e.0));
-        // SAFETY: the vector no longer points at the stub (or the host refused, and the table entry is then harmless to keep).
+        // If the host refuses, the vector still points at the stub, so the line stays registered: the handler keeps running (not an
+        // empty table entry that swallows the interrupt) and `restore_all` can try again.
+        dpmi::set_pm_vector(vector, old[1] as u16, old[0]).map_err(|e| HalError::Platform(e.0))?;
+        // SAFETY: the vector no longer points at the stub.
         unsafe {
             (*addr_of_mut!(VECTORS))[line] = 0;
             (*addr_of_mut!(TABLE))[line] = None;
         }
-        result
+        Ok(())
     }
 }
 
