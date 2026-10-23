@@ -225,7 +225,7 @@ pub trait DebugOut { fn write_bytes(&self, bytes: &[u8]); }   // never fails, ne
 
 ### Video (sketch; spike A built it)
 
-Spike A built these types, the `desk-vga` driver and the DOS `Display`; what changed from this sketch (a `Bios` trait, fallible palette calls) is in [`A-VGA-VBE.md`](A-VGA-VBE.md#hal-feedback). Spike D ran the same driver in the native kernel; its additions (the text restore, `MmioRegion::fill8`) and its recommendations (fades that do not trust the retrace bit, a native `Bios`, one VBE parser) are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#hal-feedback).
+Spike A built these types, the `desk-vga` driver and the DOS `Display`; what changed from this sketch (a `Bios` trait, fallible palette calls) is in [`A-VGA-VBE.md`](A-VGA-VBE.md#hal-feedback). Spike D ran the same driver in the native kernel; its additions (the text restore, `MmioRegion::fill8`) and its recommendations (fades that do not trust the retrace bit, a native `Bios`, one VBE parser) are in [`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#hal-feedback). Spike n3 built the native `Bios` (a real-mode trampoline, `kernel/src/bios.rs`); what it says about the trait (the 512-byte buffer limit, the missing statement on interrupt context, `Pic8259::in_service_mask` and `pending_mask`) is in [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md#hal-feedback).
 
 ```rust
 pub struct Rgb6 { pub r: u8, pub g: u8, pub b: u8 }           // 0..=63, the VGA DAC's range
@@ -484,7 +484,7 @@ Out of scope for C: key repeat and layouts beyond US, the mouse cursor, DOS.
 - **Port I/O permission under DPMI hosts other than CWSDPMI** (Windows 9x's DOS box traps and emulates, HDPMI may differ). Spike A tests CWSDPMI only.
 - **`cli` in a ring-3 DPMI client**: CWSDPMI's IOPL decides whether it traps; the virtual-interrupt calls (0900h/0901h) are the portable route. To be measured when the DOS platform needs a critical section.
 - **The DOS interrupt stack**: one shared locked stack, or one per line; its size; whether nested hardware interrupts (a higher-priority line during a handler) can happen under the host.
-- **VBE natively**: real-mode BIOS calls before entering protected mode (no mode change later), a V86 monitor, or register-level drivers per card; this decides how much of `Display` the native platform can offer (`DIRECTION.md`).
+- **VBE natively**: real-mode BIOS calls before entering protected mode (no mode change later), a V86 monitor, or register-level drivers per card; this decides how much of `Display` the native platform can offer (`DIRECTION.md`). *Spike n3 answered it for now: a real-mode trampoline called from the kernel behind the same `Bios` trait, a V86 monitor later; see [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md#hal-feedback).*
 - **Whether the module loader belongs behind the HAL** (`DIRECTION.md`): this design says no; the loader is part of the core on each track, and only its memory comes from the platform.
 - **Preemption.** If the native track becomes preemptive, the single-consumer side of the rings and the "interrupts off" critical section need revisiting; the rings' single-producer side does not.
 - **Where `rt` and these crates live long-term**: this repository, or `liminal-hq/dos-rs` for the DOS-facing parts.

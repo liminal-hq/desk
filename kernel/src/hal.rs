@@ -73,6 +73,24 @@ impl IrqRegistry for IrqTable {
     }
 }
 
+impl IrqTable {
+    /// Runs the handler of `irq` once, without an end-of-interrupt, for a caller that knows the line has work but could not
+    /// deliver the interrupt (the BIOS call leaves a keyboard byte in the controller with its line masked). `false` if the line
+    /// has no handler. Call with interrupts off, as the interrupt stubs do.
+    pub fn run_handler(&self, irq: Irq) -> bool {
+        // SAFETY: interrupts are off, so no writer and no interrupt is running; the entry is copied out whole.
+        let handler = unsafe { (*self.handlers.get())[usize::from(irq.line())] };
+        match handler {
+            Some(h) => {
+                // SAFETY: as in `irq_dispatch`: registered under the `IrqHandler` contract, and nothing else runs it now.
+                unsafe { h.call() };
+                true
+            }
+            None => false,
+        }
+    }
+}
+
 /// Called by the IDT stub of hardware interrupt `line`, with interrupts off. A spurious IRQ 7 or 15 runs no handler and gets
 /// the acknowledgement `eoi_spurious` says; anything else runs its handler (if any) and then gets the end-of-interrupt.
 #[no_mangle]

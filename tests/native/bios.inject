@@ -1,0 +1,16 @@
+# The BIOS scenarios (docs/N3-BIOS-PATH.md). The key sent while the kernel is inside INT 15h AH=86h arrives with IRQ 1 masked; the
+# screenshots are taken at the `bios: ready NAME` lines and acknowledged with a key; the last key checks the kernel's own keyboard.
+wait input: ready
+wait bios: keyboard: waiting
+sendkey a
+wait bios: ready vbe-640
+screendump {out}/vbe-640.ppm
+sendkey spc
+wait bios: ready vbe-800
+screendump {out}/vbe-800.ppm
+sendkey spc
+wait bios: ready text
+screendump {out}/text.ppm
+sendkey spc
+wait bios: ready keys
+sendkey k

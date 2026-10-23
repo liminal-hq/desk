@@ -26,6 +26,7 @@ const ICW3_SLAVE_ID: u8 = 0x02;
 const ICW4_8086: u8 = 0x01;
 const OCW2_EOI: u8 = 0x20;
 const OCW3_READ_ISR: u8 = 0x0B;
+const OCW3_READ_IRR: u8 = 0x0A;
 
 /// Both controllers, reached through `ports`.
 #[derive(Clone, Copy, Debug)]
@@ -80,6 +81,24 @@ impl<P: PortIo> Pic8259<P> {
     fn in_service(&self, command_port: u16) -> u8 {
         self.ports.outb(command_port, OCW3_READ_ISR);
         self.ports.inb(command_port)
+    }
+
+    fn requested(&self, command_port: u16) -> u8 {
+        self.ports.outb(command_port, OCW3_READ_IRR);
+        self.ports.inb(command_port)
+    }
+
+    /// Both in-service registers at once (bit n: IRQ n is being serviced, its handler has not sent the end-of-interrupt; bits 8-15
+    /// are the slave's). Non-zero in interrupt context, which is how a call that must not run from a handler tells.
+    pub fn in_service_mask(&self) -> u16 {
+        u16::from(self.in_service(MASTER)) | (u16::from(self.in_service(SLAVE)) << 8)
+    }
+
+    /// Both interrupt request registers at once (bit n: IRQ n has been raised and not yet delivered). A line that is masked or
+    /// held back by a disabled CPU shows here; re-initialising the controllers discards it, so a caller about to do that reads
+    /// this first to know what it is throwing away.
+    pub fn pending_mask(&self) -> u16 {
+        u16::from(self.requested(MASTER)) | (u16::from(self.requested(SLAVE)) << 8)
     }
 
     fn line(irq: Irq) -> (u16, u8) {
@@ -209,6 +228,24 @@ mod tests {
         assert!(!pic.is_spurious(Irq::LPT1_OR_SPURIOUS));
         assert!(pic.is_spurious(Irq::IDE_SECONDARY_OR_SPURIOUS));
         assert!(!pic.is_spurious(Irq::TIMER), "other lines read nothing");
+        assert!(bus.script_done());
+    }
+
+    #[test]
+    fn the_service_and_request_registers_are_read_through_ocw3() {
+        let bus = MockPortBus::scripted([
+            Access::outb(0x20, 0x0B),
+            Access::inb(0x20, 0x01),
+            Access::outb(0xA0, 0x0B),
+            Access::inb(0xA0, 0x10),
+            Access::outb(0x20, 0x0A),
+            Access::inb(0x20, 0x02),
+            Access::outb(0xA0, 0x0A),
+            Access::inb(0xA0, 0x00),
+        ]);
+        let pic = Pic8259::new(&bus);
+        assert_eq!(pic.in_service_mask(), 0x1001, "IRQ 0 and IRQ 12 are in service");
+        assert_eq!(pic.pending_mask(), 0x0002, "IRQ 1 is waiting");
         assert!(bus.script_done());
     }
 

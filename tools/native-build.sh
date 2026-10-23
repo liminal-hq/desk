@@ -6,7 +6,7 @@
 #
 # usage: tools/native-build.sh [--nasm-flags "-DA20_TEST=2"]
 #
-# Outputs: dist/native/stage1.bin, stage2.bin, kernel.elf (symbols, for gdb) and kernel.bin (the flat image loaded at 1 MiB).
+# Outputs: dist/native/stage1.bin, stage2.bin, bios16.bin (the real-mode trampoline, embedded in the kernel), kernel.elf (symbols, for gdb) and kernel.bin (the flat image loaded at 1 MiB).
 # The kernel uses -Zbuild-std on the pinned stable toolchain, which needs RUSTC_BOOTSTRAP=1 (see kernel/.cargo/config.toml).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -33,6 +33,8 @@ out=dist/native
 mkdir -p "$out"
 
 run_nasm -f bin -Werror boot/stage1.asm -o "$out/stage1.bin" -l "$out/stage1.lst"
+# The real-mode trampoline the kernel embeds (kernel/src/bios.rs includes the binary), so it is assembled before cargo runs.
+run_nasm -f bin -Werror kernel/bios16.asm -o "$out/bios16.bin" -l "$out/bios16.lst"
 # shellcheck disable=SC2086
 run_nasm -f bin -Werror $nasm_flags boot/stage2.asm -o "$out/stage2.bin" -l "$out/stage2.lst"
 

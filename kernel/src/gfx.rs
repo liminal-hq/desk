@@ -9,6 +9,7 @@
 // when the loader image carries the `gfx` test mode: it prints a `gfx: ready NAME` line at each stable picture and waits for a
 // key, so the QEMU run script can take a screenshot there (`tools/native-test.sh`).
 
+use crate::bios;
 use crate::hal::PORTS;
 use crate::scene::{self, Depth};
 use crate::video::{Lfb, Video, FONT_BYTES};
@@ -25,7 +26,7 @@ use desk_vga::{checksum, regs, text, Canvas, Linear8, Planar16};
 /// produce the same bytes from the same driver and the same scene.
 const HOSTED_13H: u32 = 0x5c0f_1f16;
 const HOSTED_12H: u32 = 0xfaf8_b758;
-const HOSTED_VBE_640X480: u32 = 0x5bc6_5936;
+pub(crate) const HOSTED_VBE_640X480: u32 = 0x5bc6_5936;
 
 /// A tick is 10 ms (`pit::HZ`).
 const SECOND: u32 = pit::HZ;
@@ -38,7 +39,7 @@ fn vga_window() -> MmioRegion {
     unsafe { MmioRegion::new(0xA0000 as *mut u8, 0x10000) }
 }
 
-fn lfb_region(l: &Lfb) -> MmioRegion {
+pub(crate) fn lfb_region(l: &Lfb) -> MmioRegion {
     // SAFETY: `video::init` checked that the frame buffer overlaps no RAM, the first megabyte or the kernel and reserved its
     // frames; the loader's mode set maps `pitch * height` bytes of it, and with no paging the physical address is the pointer.
     unsafe { MmioRegion::new(l.phys as *mut u8, l.bytes() as usize) }
@@ -46,7 +47,7 @@ fn lfb_region(l: &Lfb) -> MmioRegion {
 
 // ---- Drawing the same picture in memory, for the reference checksum
 
-fn reference(w: u32, h: u32, depth: Depth) -> u32 {
+pub(crate) fn reference(w: u32, h: u32, depth: Depth) -> u32 {
     let mut buf = vec![0u8; (w * h) as usize];
     // SAFETY: the Vec outlives the region and nothing else touches it while the region is in use.
     let mut region = unsafe { MmioRegion::new(buf.as_mut_ptr(), buf.len()) };
@@ -72,8 +73,8 @@ fn show_picture<C: Canvas>(c: &mut C, depth: Depth, label: &str, hosted: Option<
 // ---- Modes
 
 /// Bochs/QEMU's VBE_DISPI registers: an index port and a data port. Writing 0 to the enable register (index 4) turns the VBE mode
-/// off so the ordinary VGA registers take effect again. Real VBE cards have their own extended registers for the same job, and
-/// without a BIOS there is no generic way: this is the one piece of the leave-graphics path that is specific to the emulated card.
+/// off so the ordinary VGA registers take effect again. Real VBE cards have their own extended registers for the same job; a card
+/// without these is left through the BIOS (`bios.rs`), which knows its own chip.
 const DISPI_INDEX: u16 = 0x1CE;
 const DISPI_DATA: u16 = 0x1CF;
 
@@ -84,12 +85,19 @@ fn leave_vbe() {
         PORTS.outw(DISPI_INDEX, 4);
         PORTS.outw(DISPI_DATA, 0);
         println!("gfx: leaving VBE: Bochs VBE registers (id {:#06x}) switched off", id);
-    } else {
-        println!("gfx: leaving VBE: no Bochs VBE registers (read {:#06x}); a VBE mode cannot be left without the BIOS", id);
+        return;
+    }
+    // Not a Bochs card (QEMU's Cirrus, a real S3, Trident or ET4000): the register programming of the text and graphics modes does
+    // not undo its extended registers, so the BIOS does it, by setting text mode 3 through the real-mode trampoline.
+    println!("gfx: leaving VBE: no Bochs VBE registers (read {:#06x}), asking the BIOS: INT 10h AX=0003h", id);
+    let mut regs = bios::RealModeRegs::with_eax(0x0003);
+    match bios::call(0x10, &mut regs) {
+        Ok(()) => println!("gfx: leaving VBE: the BIOS set text mode 3"),
+        Err(e) => println!("gfx: leaving VBE: the BIOS call failed: {}", e),
     }
 }
 
-fn palette_of(colours: &[Rgb6]) -> [Rgb6; ENTRIES] {
+pub(crate) fn palette_of(colours: &[Rgb6]) -> [Rgb6; ENTRIES] {
     let mut p = [Rgb6::BLACK; ENTRIES];
     p[..colours.len()].copy_from_slice(colours);
     p

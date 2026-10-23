@@ -4,7 +4,7 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [--vga CARD] [--shots DIR] [IMAGE]
+# usage: tools/native-run.sh [--timeout SECONDS] [--serial FILE] [--debug-log FILE] [--inject SCRIPT] [--vga CARD] [--shots DIR] [--hd FILE] [IMAGE]
 #
 # IMAGE defaults to dist/desk-native.img. With --inject the QEMU monitor listens on a Unix socket and tools/native-inject.py plays
 # SCRIPT into it (keys, mouse motion, waits, screenshots) while the guest runs. --vga picks QEMU's display card (std, cirrus, vmware...;
@@ -15,6 +15,7 @@
 #   2    QEMU exited some other way (a reset or triple fault with -no-reboot, for example)
 #   124  the watchdog timeout ended the run (a hung boot)
 #   3    neither QEMU nor Docker is available
+# --hd FILE attaches FILE as the first IDE hard disk (BIOS drive 0x80) and keeps the boot order on the floppy.
 # QEMU comes from the host if installed, otherwise from the Docker image built from tools/docker/Dockerfile.native-qemu. Set
 # DESK_NATIVE_BACKEND=docker to use Docker even when QEMU is installed.
 set -uo pipefail
@@ -27,6 +28,7 @@ debug_log=""
 inject=""
 vga=""
 shots=""
+hd=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --timeout) timeout_s="$2"; shift 2 ;;
@@ -35,6 +37,7 @@ while [ $# -gt 0 ]; do
     --inject) inject="$2"; shift 2 ;;
     --vga) vga="$2"; shift 2 ;;
     --shots) shots="$2"; shift 2 ;;
+    --hd) hd="$2"; shift 2 ;;
     *) image="$1"; shift ;;
   esac
 done
@@ -61,6 +64,7 @@ fi
 qemu_args=(-cpu 486 -m 16 -drive "if=floppy,format=raw,file=$image" -display none -serial "file:$serial"
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot "${monitor[@]}")
 [ -n "$vga" ] && qemu_args+=(-vga "$vga")
+[ -n "$hd" ] && qemu_args+=(-drive "if=ide,index=0,format=raw,file=$hd" -boot order=a)
 [ -n "$shots" ] && mkdir -p "$shots"
 [ -n "$debug_log" ] && qemu_args+=(-d int,cpu_reset -D "$debug_log")
 
