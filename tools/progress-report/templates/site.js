@@ -234,5 +234,6 @@
     viewBtns.forEach(function (b) { b.addEventListener('click', function () { state.view = b.getAttribute('data-view'); apply(); toHash(); }); });
     fromHash();
     apply();
+    window.addEventListener('hashchange', function () { state.kind = ''; state.track = ''; state.sort = 'chapter'; state.view = 'grid'; fromHash(); apply(); });
   }
 })();

@@ -100,7 +100,7 @@ def coming_rows(data):
 
 
 def tag(state):
-    return '<span class="tag tag-%s">%s</span>' % (TAGS.get(state, "planned"), esc(state))
+    return '<span class="pill pill-%s">%s</span>' % (TAGS.get(state, "planned"), esc(state))
 
 
 def values_of(data):
@@ -423,7 +423,7 @@ class Site:
                 '<div class="tile-pv">%s</div><div class="tile-body"><b class="tile-title">%s</b>%s<span class="tile-cap">%s</span>'
                 '<span class="tile-meta"><span class="kind">%s</span><span>%s</span>%s<span>%s</span></span></div></a></li>') % (
             rec["kind"], rec["track"], i, esc(rec.get("date") or ch["date"]), rec["chapter"], esc(rec["anchor"]), pv, esc(rec["title"]), alt, esc(rec["caption"]),
-            esc(rec["kind"]), esc(chap), tag(state) if state != "none" else '<span class="tag tag-overview">overview</span>', esc(when))
+            esc(rec["kind"]), esc(chap), tag(state) if state != "none" else '<span class="pill pill-overview">overview</span>', esc(when))
 
     def render_gallery(self):
         recs = self.registry
@@ -511,7 +511,7 @@ class Site:
         def coming_html():
             out = []
             for r in coming:
-                out.append('<tr class="coming"><td class="n">·</td><td><b>%s</b> <span class="tag tag-coming">coming</span><div class="sub">%s</div></td><td class="nw">not written</td><td class="nw">%s</td><td class="nw">%s</td></tr>' % (
+                out.append('<tr class="coming"><td class="n">·</td><td><b>%s</b> <span class="pill pill-coming">coming</span><div class="sub">%s</div></td><td class="nw">not written</td><td class="nw">%s</td><td class="nw">%s</td></tr>' % (
                     esc(r["title"]), inline(r["summary"], ctx), tag(r["state"]), esc(("#%d" % r["pr"]) if r["pr"] else "no pull request yet")))
             return "".join(out)
         for c in self.chapters:

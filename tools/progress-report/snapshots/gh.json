@@ -1,8 +1,8 @@
 {
- "capturedAt": "2026-10-23T02:07:21-04:00",
+ "capturedAt": "2026-10-23T02:11:08-04:00",
  "data": {
   "openWork": {
-   "commitsOnBranches": 68,
+   "commitsOnBranches": 75,
    "prs": [
     {
      "ahead": 17,
@@ -661,6 +661,83 @@
      "title": "Boot the native image in Bochs and 86Box, and fix the loader for old BIOSes",
      "updatedAt": "2026-10-23T06:07:08Z",
      "url": "https://github.com/liminal-hq/desk/pull/16"
+    },
+    {
+     "ahead": 47,
+     "base": "spike/d-native-vga",
+     "branch": "spike/n3-native-bios",
+     "ci": "pending",
+     "commitCount": 7,
+     "commits": [
+      {
+       "date": "2026-10-23T01:54:19-04:00",
+       "hash": "5cc045c",
+       "merge": false,
+       "subject": "feat(hal): read the 8259 in-service and request registers"
+      },
+      {
+       "date": "2026-10-23T01:54:39-04:00",
+       "hash": "3743ac9",
+       "merge": false,
+       "subject": "feat(kernel): call the BIOS from protected mode through a real-mode trampoline"
+      },
+      {
+       "date": "2026-10-23T01:57:12-04:00",
+       "hash": "e33f156",
+       "merge": false,
+       "subject": "feat(kernel): leave VBE through the BIOS on cards without the Bochs registers"
+      },
+      {
+       "date": "2026-10-23T02:01:16-04:00",
+       "hash": "589e08e",
+       "merge": false,
+       "subject": "feat(kernel): add a `bios-solo` test mode and a disk error every BIOS answers"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "c863551",
+       "merge": false,
+       "subject": "fix(kernel): start a BIOS handler with the caller's flags"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "64f658c",
+       "merge": false,
+       "subject": "test(kernel): time plain BIOS calls apart from the state checks"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "1ab8769",
+       "merge": false,
+       "subject": "docs: record spike n3, a real BIOS path for the native kernel"
+      }
+     ],
+     "createdAt": "2026-10-23T06:08:30Z",
+     "ghAdditions": 1954,
+     "ghChangedFiles": 31,
+     "ghDeletions": 36,
+     "head": "1ab8769",
+     "headFull": "1ab876922ac363c8406e6ba3466c1d02503dc3c0",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "graphics",
+      "spike"
+     ],
+     "number": 17,
+     "stackedOn": [
+      8,
+      10,
+      11,
+      14
+     ],
+     "state": "in review",
+     "title": "Call the BIOS from the native kernel through a real-mode trampoline",
+     "updatedAt": "2026-10-23T06:08:32Z",
+     "url": "https://github.com/liminal-hq/desk/pull/17"
     }
    ],
    "tips": [
@@ -719,12 +796,81 @@
      "kernelLines": 1091,
      "number": 16,
      "transcripts": 25
+    },
+    {
+     "halLines": 8395,
+     "hostTests": 159,
+     "kernelLines": 3248,
+     "number": 17,
+     "transcripts": 34
     }
    ],
    "warnings": [],
    "widest": 15
   },
   "prs": [
+   {
+    "additions": 1954,
+    "baseRefName": "spike/d-native-vga",
+    "changedFiles": 31,
+    "checks": [
+     {
+      "conclusion": "",
+      "name": "check",
+      "status": "IN_PROGRESS",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T06:08:30Z",
+    "deletions": 36,
+    "headRefName": "spike/n3-native-bios",
+    "headRefOid": "1ab876922ac363c8406e6ba3466c1d02503dc3c0",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 17,
+    "state": "OPEN",
+    "title": "Call the BIOS from the native kernel through a real-mode trampoline",
+    "updatedAt": "2026-10-23T06:08:32Z",
+    "url": "https://github.com/liminal-hq/desk/pull/17"
+   },
    {
     "additions": 650,
     "baseRefName": "main",

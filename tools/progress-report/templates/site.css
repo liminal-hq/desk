@@ -299,10 +299,10 @@ details.alt>summary{cursor:pointer;color:var(--accent-ink);font-size:15px;paddin
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 
 /* state tags, from gh */
-.tag{display:inline-block;font-size:12px;line-height:1.5;padding:0 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text);white-space:nowrap;background:var(--raised)}
-.tag-merged{border-color:var(--s-done);background:var(--s-done-tint)} .tag-review{border-color:var(--s-review);background:var(--s-review-tint)}
-.tag-progress{border-color:var(--s-progress);background:var(--s-progress-tint)} .tag-planned{border-style:dashed;border-color:var(--s-planned)}
-.tag-coming{border-style:dashed;border-color:var(--accent);color:var(--accent-ink)} .tag-closed,.tag-overview{color:var(--text-2)}
+.pill{display:inline-block;font-size:12px;line-height:1.5;padding:0 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text);white-space:nowrap;background:var(--raised)}
+.pill-merged{border-color:var(--s-done);background:var(--s-done-tint)} .pill-review{border-color:var(--s-review);background:var(--s-review-tint)}
+.pill-progress{border-color:var(--s-progress);background:var(--s-progress-tint)} .pill-planned{border-style:dashed;border-color:var(--s-planned)}
+.pill-coming{border-style:dashed;border-color:var(--accent);color:var(--accent-ink)} .pill-closed,.pill-overview{color:var(--text-2)}
 .state-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:14px;color:var(--text-2)}
 tr.coming td{background:var(--accent-soft)}
 .tbl .sub,.status .sub{font-size:14px}
@@ -342,7 +342,8 @@ table.bus td,table.bus th{padding:6px 10px;font-size:13.5px} table.bus caption{c
 @media (max-width:760px){.pl2-row{grid-template-columns:1fr}.pl2-head{display:none}.pl2-tr{grid-template-columns:1fr}.cells{grid-template-columns:repeat(16,minmax(0,1fr))}}
 .shotrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
 .shot .screen{max-width:100%} .shot{align-content:start}
-.boot-info .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} @media (max-width:900px){.boot-info .two{grid-template-columns:1fr}}
+.boot-info .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} .boot-info .two>div{min-width:0} @media (max-width:900px){.boot-info .two{grid-template-columns:minmax(0,1fr)}}
+figcaption{overflow-wrap:anywhere}
 .sz-f{fill:var(--sz1)} .sz-2{fill:var(--sz2)} .sz-3{fill:var(--sz3)} .sz-4{fill:var(--sz4)} .sz-5{fill:var(--sz5)} .sz-1{fill:var(--sz1)}
 .pg{fill:var(--s-planned)} .pg-done,.pg-done-emu{fill:var(--s-done)} .pg-review{fill:var(--s-review)} .pg-progress{fill:var(--s-progress)} .pg-planned{fill:var(--s-planned)} .pg-research{fill:var(--s-research)} .pg-decision{fill:var(--s-decision)}
 .pg-t{fill:#050507;font-weight:700}
@@ -378,3 +379,9 @@ table.bus td,table.bus th{padding:6px 10px;font-size:13.5px} table.bus caption{c
 .tiles.recent{grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr))} .recent .tile-cap{display:none}
 @media (max-width:480px){.tiles{grid-template-columns:1fr}}
 @media (min-width:1100px){.tiles:not(.recent){grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+.pv-spec .tag{font-family:var(--f-small);font-size:8px;line-height:8px;letter-spacing:.04em;text-transform:uppercase;color:var(--spec-dark-mute)}
+.pv-spec .spec-row{display:grid;gap:3px;min-width:0}
+.pv-spec{background:var(--spec-dark-bg);color:var(--spec-dark-fg)}
+
+.px-box.is-off,.px-ring.is-off,.px-count.is-off,.px-pit .x-code .mk.is-off{display:none}

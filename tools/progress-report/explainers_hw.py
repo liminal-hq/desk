@@ -636,7 +636,7 @@ def pipelines(D, ctx):
     ]
     rows = []
     for i, (title, a, b, kind, _) in enumerate(stages):
-        rows.append('<div class="pl2-row %s" data-from="%d"><div class="pl2-h">%s</div><div class="pl2-c pl2-n">%s</div><div class="pl2-c pl2-d">%s</div></div>' % (kind, i, esc(title), inline(a, ctx), inline(b, ctx)))
+        rows.append('<div class="pl2-row %s" data-from="%d"><div class="pl2-h">%s</div><div class="pl2-c pl2-n">%s</div><div class="pl2-c pl2-d">%s</div></div>' % (kind, i, inline(title, ctx), inline(a, ctx), inline(b, ctx)))
     head = '<div class="pl2-row pl2-head"><div></div><div class="pl2-c">Native kernel (PR #10, QEMU)</div><div class="pl2-c">Hosted DOS runtime (PR #15, DOSBox)</div></div>'
     nline = "".join('<span class="ln">%s</span>' % esc(l) for l in nkeys[:2] + nmouse[:2])
     dline = "".join('<span class="ln">%s</span>' % esc(l) for l in dos_keys[:2] + [m for m in dos_mouse if m.startswith("mouse")][:2])
