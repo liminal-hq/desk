@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  var BUNDLES = ['desk', 'hello', 'hello-exit7', 'hello-solo', 'hw', 'vga13', 'vbe', 'vbe-banked', 'hello-486', 'vbe-nolfb', 'vbe-oldvbe', 's1-life', 's1-panic', 's1-fault-div-catch', 'tone', 'tone-compat', 'tone-default'];
+  var BUNDLES = ['desk', 'hello', 'hello-exit7', 'hello-solo', 'hw', 'vga13', 'vbe', 'vbe-banked', 'hello-486', 'vbe-nolfb', 'vbe-oldvbe', 'info', 's1-life', 's1-panic', 's1-fault-div-catch', 'tone', 'tone-compat', 'tone-default'];
   var log = document.getElementById('log');
   var s5 = { stdout: '', events: [], t: {}, ci: null, player: null, exited: false, audio: [] };
   window.s5 = s5;

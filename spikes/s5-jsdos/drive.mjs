@@ -9,9 +9,9 @@
 // Screenshots and a results.json go to dist/s5/out/. The exit status is 0 only if every scenario passed its checks.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, extname, normalize, resolve } from 'node:path';
+import { join, extname, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -24,9 +24,13 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 
 function serve() {
   const server = createServer((req, res) => {
-    const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
-    const file = join(SITE, path === '/' ? 'index.html' : path);
-    if (!file.startsWith(SITE) || !existsSync(file)) { res.writeHead(404).end('not found'); return; }
+    let file = null;
+    try {
+      const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
+      file = join(SITE, path === '/' ? 'index.html' : path);
+      if ((file !== SITE && !file.startsWith(SITE + sep)) || !existsSync(file) || !statSync(file).isFile()) file = null;
+    } catch { file = null; } // a malformed URL is a 404, not a crash of the harness
+    if (!file) { res.writeHead(404).end('not found'); return; }
     res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream' }).end(readFileSync(file));
   });
   return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok(server)));
@@ -44,7 +48,7 @@ async function launch() {
     child.stderr.on('data', (d) => { text += d; const m = text.match(/DevTools listening on (ws:\/\/\S+)/); if (m) ok(m[1]); });
     child.on('exit', (c) => fail(new Error(`chromium exited early (${c}): ${text.slice(-300)}`)));
   });
-  return { child, url, profile, version: child.spawnargs[0] };
+  return { child, url, profile };
 }
 
 class Cdp {
@@ -75,12 +79,17 @@ const results = [];
 function record(name, ok, detail) { results.push({ name, ok, ...detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name}: ${detail.summary ?? ''}`); }
 function savePng(name, dataUrl) { writeFileSync(join(OUT, name), Buffer.from(dataUrl.split(',')[1], 'base64')); }
 
-// Runs a bundle to its DONE.TXT and returns what it printed, its exit status and the timings.
-async function runToDone(page, bundle, backend, url, raw = false) {
-  const t0 = Date.now();
+// Loads the s5 page afresh and waits until its harness (window.s5) is there.
+async function openPage(page, url) {
   await page.cdp.send('Page.navigate', { url: `${url}/index.html` });
   await new Promise((r) => setTimeout(r, 300));
   await page.ev('new Promise(r => { if (window.s5) r(); else addEventListener("load", r); })');
+}
+
+// Runs a bundle to its DONE.TXT and returns what it printed, its exit status and the timings.
+async function runToDone(page, bundle, backend, url, raw = false) {
+  const t0 = Date.now();
+  await openPage(page, url);
   const started = await page.ev(`s5.${raw ? 'startRaw' : 'start'}(${JSON.stringify(bundle)}, ${JSON.stringify(backend)})`);
   const done = await page.ev('s5.waitFile("DONE.TXT", 60000)');
   const wall = Date.now() - t0;
@@ -121,9 +130,7 @@ const SCENARIOS = {
   },
   async vga13(page, url, opt) {
     const t0 = Date.now();
-    await page.cdp.send('Page.navigate', { url: `${url}/index.html` });
-    await new Promise((r) => setTimeout(r, 300));
-    await page.ev('new Promise(r => { if (window.s5) r(); else addEventListener("load", r); })');
+    await openPage(page, url);
     const started = await page.ev(`s5.start("vga13", ${JSON.stringify(opt.backend)})`);
     const report = await page.ev('s5.waitFile("VGA13.TXT", 60000)');
     await new Promise((r) => setTimeout(r, 700)); // let the mode change reach the canvas
@@ -133,7 +140,8 @@ const SCENARIOS = {
     const colours = await page.ev('s5.colours()');
     await page.ev('s5.key(32)');
     const done = await page.ev('s5.waitFile("DONE.TXT", 30000)');
-    const exit = Number(norm(await page.ev('s5.read("EXITCODE.TXT")')));
+    const exitText = await page.ev('s5.read("EXITCODE.TXT")');
+    const exit = exitText === null ? null : Number(norm(exitText));
     const stdout = await page.ev('s5.output()');
     const ok = report !== null && /match=true/.test(report) && cmp.mismatches === 0 && done !== null && exit === 0;
     return { ok, summary: `screenshot ${shot.w}x${shot.h}, ${colours} colours, ${cmp.mismatches} of ${cmp.pixels} pixels differ from the reference (worst channel diff ${cmp.worst}); frame buffer checksum ${/match=true/.test(report ?? '') ? 'matches' : 'DIFFERS'}; exit ${exit}; boot ${started.ready} ms, total ${Date.now() - t0} ms`, report, cmp, stdout };
@@ -142,9 +150,7 @@ const SCENARIOS = {
   // scenario passes when the probe says so and ends by itself.
   async vbe(page, url, opt) {
     const t0 = Date.now();
-    await page.cdp.send('Page.navigate', { url: `${url}/index.html` });
-    await new Promise((r) => setTimeout(r, 300));
-    await page.ev('new Promise(r => { if (window.s5) r(); else addEventListener("load", r); })');
+    await openPage(page, url);
     const started = await page.ev(`s5.start(${JSON.stringify(opt.bundle ?? 'vbe')}, ${JSON.stringify(opt.backend)})`);
     const gfx = await page.ev('s5.waitFile("VBEGFX.TXT", 90000)');
     const info = await page.ev('s5.read("VBE.TXT")');
