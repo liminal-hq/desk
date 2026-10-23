@@ -1,5 +1,5 @@
-# Runs tools/check.sh: licence headers, the markdown style and link check, Rust format and lints, then the DOS build and a headless
-# DOSBox run of DESK.EXE.
+# Runs tools/check.sh: licence headers, the markdown style and link check, the font build check, Rust format and lints, the DOS build and a
+# headless DOSBox run of DESK.EXE, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -34,10 +34,22 @@ jobs:
       # The checkout is owned by another user inside the container, and git refuses to list its files without this.
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The font tools (opentype.js) come from the lockfile; the image carries Bun. Without them tools/check.sh skips the font check.
+      - name: Install the font tools
+        run: bun install --frozen-lockfile
+        working-directory: fonts
       # The image already holds Rust 1.98.0 with rust-src, DJGPP, DOSBox Staging and CWSDPMI under DOS_TOOLCHAIN; setup links vendor/ to
       # them and confirms each one runs. Cargo downloads the crates that -Zbuild-std's standard library sources depend on, so the job
       # needs network access.
       - name: Set up the DOS toolchain
         run: tools/setup.sh
+      # The native boot test needs QEMU and NASM, which the image does not carry yet. This adds roughly half a minute, mostly the
+      # apt download; the install is skipped when the image has them, so it can go once they move into ci-dos.
+      - name: Install QEMU and NASM
+        run: |
+          if ! command -v qemu-system-i386 > /dev/null || ! command -v nasm > /dev/null; then
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends qemu-system-x86 nasm
+          fi
       - name: Check
         run: tools/check.sh

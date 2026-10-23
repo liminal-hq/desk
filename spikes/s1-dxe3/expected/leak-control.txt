@@ -1,0 +1,21 @@
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='x' window=1 events=7
+  log> hello[1]: event 8 kind=1 x=1 y=1
+  log> hello[1]: event 9 kind=2 x=1 y=1
+  log> hello: stop app=1 events=9 kept=2
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  window> app 1 opens 'Hello' 200x100 as window 2
+  log> hello: start app=1 args='x' window=2 events=7
+  log> hello[1]: event 8 kind=1 x=2 y=2
+  log> hello[1]: event 9 kind=2 x=2 y=2
+  log> hello: stop app=1 events=9 kept=2
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+  window> app 1 opens 'Hello' 200x100 as window 200
+  log> hello: start app=1 args='x' window=200 events=7
+  log> hello[1]: event 8 kind=1 x=200 y=200
+  log> hello[1]: event 9 kind=2 x=200 y=200
+  log> hello: stop app=1 events=9 kept=2
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+leak: 200 rounds of load, run, stop, unload (with a deliberate 4 KB leak per round)
+leak: virtual memory after round 1 versus after round 200: LOWER (leak)
+leak: heap break after round 1 versus after round 200: HIGHER (leak)

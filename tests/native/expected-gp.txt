@@ -1,0 +1,10 @@
+...
+test: loading a segment selector beyond the GDT
+
+EXCEPTION 0x0d: general protection fault
+error code 0x00000028
+EIP {HEX}  CS 0x0008  EFLAGS {HEX}
+EAX 0x00000028  EBX {HEX}  ECX {HEX}  EDX {HEX}
+ESI {HEX}  EDI {HEX}  EBP {HEX}  ESP {HEX}
+CR0 0x00000033  CR2 0x00000000  CR3 0x00000000
+halting with a failure status

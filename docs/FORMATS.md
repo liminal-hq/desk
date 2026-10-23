@@ -9,9 +9,9 @@ All text formats are INI-style: `[section]`, `key=value`, `;` comments, CRLF lin
 name=Audio Player
 id=MIDI            ; 1–8 characters, the folder name under C:\DESK\APPS
 version=0.1.0
-module=APP.DXE
+module=APP.DXE      ; a DXE3 module in this folder, loaded by path with dlopen; one instance per file
 icon=APP.ICO
-sdk=1              ; the Desk SDK version it needs
+sdk=1              ; the Desk SDK version it needs, checked before dlopen (a newer module is refused with a message)
 core=no            ; yes only for Files, Programs and Settings
 group=Entertainment ; where it goes in the Desk menu: Accessories, Entertainment, System, or top for the top level
 size=84            ; KB once installed
@@ -174,3 +174,24 @@ Date, 24-hour time, done (0 or 1), then the text. A reminder shows one toast at 
 ## .DFN: a bitmap font
 
 Fixed or proportional, 1 bit per pixel, leftmost pixel in the highest bit, as Fizz's `ui_data.rs` font. Header `DFN1`, height, baseline, glyph count, then for each glyph its code point (4), width (1) and rows.
+
+Byte layout, as `fonts/build.ts` writes it (numbers little-endian): `DFN1`; height (1 byte: rows in every glyph, the whole cell); baseline (1 byte: rows above the baseline); glyph count (2 bytes); then the glyphs in code-point order, each a Unicode code point (4 bytes), a width (1 byte: the advance, including the gap after the glyph) and `height` rows of `ceil(width / 8)` bytes, the leftmost pixel in the highest bit of a row's first byte. See [`FONTS.md`](FONTS.md).
+
+## .DEM: colour emoji
+
+The pixel emoji at one size, as stacks of 1-bit layers in the 16-colour Desk set ([`PALETTE.md`](PALETTE.md)), with a monochrome form of each for text drawn in one colour. One file per size: `emoji16.dem`, `emoji12.dem` and `emoji8.dem` in `fonts/generated/emoji/`, written by `fonts/src/emoji/dem.ts`. See [`EMOJI.md`](EMOJI.md).
+
+Byte layout (numbers little-endian):
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 4 | `DEM1` |
+| 4 | 1 | size: the width and height of every emoji in pixels (16, 12 or 8) |
+| 5 | 1 | reserved, 0 |
+| 6 | 2 | emoji count `n` |
+| 8 | 8 × `n` | directory, in ascending code-point order: the Unicode code point (4 bytes) and the offset of its record from the start of the file (4 bytes) |
+| … | | the records, in directory order, each right after the one before |
+
+A record is the layer count (1 byte), then each layer as its palette slot (1 byte, 0 to 15) and `size` rows of `ceil(size / 8)` bytes, then the monochrome glyph as `size` rows of the same form. In a row the leftmost pixel is the highest bit of the first byte, as in `.DFN`. Each layer holds exactly the pixels of its own colour, so layers never overlap and a pixel set in no layer is transparent; draw the layers in order (black, the outline, first, then the other colours from the largest area to the smallest) or in any order, the result is the same. The monochrome glyph is what to draw where only one colour is available (`docs/EMOJI.md` says how it is derived). A 16-pixel record is 1 + layers × 33 + 32 bytes.
+
+To find an emoji, binary-search the directory for its code point. A code point outside the file has no emoji at that size; fall back to a smaller or larger file, or to the text face's own glyph.

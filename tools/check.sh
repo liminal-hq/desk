@@ -1,5 +1,6 @@
 #!/bin/bash
-# Everything the CI runs: licence headers, markdown style and links, Rust format and lints, then the DOS build and a headless run.
+# Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
+# and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -15,6 +16,13 @@ tools/check-headers.sh
 
 step "Markdown style and links"
 python3 -I tools/check-docs.py
+
+step "Fonts"
+if command -v bun >/dev/null && [ -d fonts/node_modules ]; then
+  (cd fonts && bun build.ts --check && bun test)
+else
+  echo "skipped: needs bun and \`bun install\` in fonts/"
+fi
 
 step "Rust format and lints"
 (cd core && cargo fmt --check)
@@ -51,7 +59,20 @@ esac
 grep -q 'DESK-SKELETON PANIC' dist/OUT.TXT || fail "the panic report is missing from OUT.TXT"
 echo "$actual (exit status $status)"
 
+step "Spike s1-dxe3: Rust format and lints for the modules"
+(cd spikes/s1-dxe3/modules && cargo fmt --check)
+(cd spikes/s1-dxe3/modules && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
+step "Spike s1-dxe3: build the Rust modules (DXE3) and the host"
+spikes/s1-dxe3/build.sh
+
+step "Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox"
+spikes/s1-dxe3/run.sh
+
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
 spikes/d0-rust-dos/check.sh
+
+step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
+tools/native-test.sh
 
 printf '\nAll checks passed.\n'

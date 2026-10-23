@@ -2,7 +2,9 @@
 
 > **Status:** a working design, derived from a design-agent brainstorm before any code existed. Nothing here has been built or measured. Numbers, versions and file formats are targets until a spike confirms them; when code and this document disagree, the code wins and this document is updated in the same branch. "Desk" is a working name (see `NAMING.md`).
 
-Desk is a graphical shell for MS-DOS: the thing you install after DOS that gives the machine windows, icons, menus and a mouse pointer, and lets you run programs without typing at a prompt. It follows the layering Lieutenant Fizz for DOS proved (C for the hardware, Rust for everything else, DJGPP and CWSDPMI underneath) and builds in CI on `ghcr.io/liminal-hq/ci-dos`.
+> **Scope:** Desk is now an operating system in Rust for old hardware, built as a hosted track on DOS and a native track in parallel (`DIRECTION.md`, decided 2026-10-22). This document is the detailed spec of the **hosted track** and of the **OS-independent parts** (the look, the palette, fonts, widgets, apps, the SDK's shape and the interaction design). Anything here about DOS, DJGPP, CWSDPMI, `DESK.COM`, `DESK.RUN`, the handoff, DXE3 modules, 8.3 names or INT 33h applies to the hosted track only. The native track's kernel, boot, drivers and filesystem are specified in `DIRECTION.md` until a native spec exists.
+
+The hosted track is the part of Desk that runs on top of DOS: the thing you install after DOS that gives the machine windows, icons, menus and a mouse pointer, and lets you run programs without typing at a prompt. It follows the layering Lieutenant Fizz for DOS proved (C for the hardware, Rust for everything else, DJGPP and CWSDPMI underneath) and builds in CI on `ghcr.io/liminal-hq/ci-dos`.
 
 The design boards are in `design/Afterglow Desk.dc.html`: the looks (1a Void, 1b 1993, 1c Dusk, 1d the chosen mix), the architecture (2a) and the app anatomy (3a). The working prototype is `design/Afterglow Desk Prototype v4.dc.html`. This file is the reference; `docs/` has the detail, and `docs/HIG.md` is the design language every app follows.
 
@@ -58,6 +60,8 @@ Both looks are themes over the same widgets; an app never draws its own chrome. 
 ## Fonts
 
 Four bitmap faces (`.DFN`), each with ASCII, Latin-1 and CP437 box drawing: 8×16 fixed for Terminal, code and paths; an 11 px proportional UI face; a 12 px bold title face; a 6×8 small face for status bars. Specimen on board 4e.
+
+The faces are bitmaps; reading real `.TTF` files so any font can be used is a later possibility (`OPEN-QUESTIONS.md`, "Reading TrueType fonts").
 
 ## Memory and files
 
@@ -154,9 +158,9 @@ Exit to DOS writes no `DESK.RUN`; `DESK.COM` then exits too. `docs/HANDOFF.md` h
 - The prototype mirrors this: each app is its own component (`NotesApp`, `MidiApp`, `PaintApp`, `CalcApp`, `ClockApp`, `InspectorApp`, `ProgramsApp`, `SettingsApp`, `DeskFiles`, `DeskProperties`) that only talks to the Desk through one `ops` object, built from the shared `DeskMenuBar`, `DeskToolbar`, `DeskTabs`, `DeskPicker` and `FileIcon`.
 - Apps can be written in Rust (`no_std` + `alloc`, the `dos.json` target from Fizz) or C.
 - Only integers, pointers and lengths cross the boundary, never structs passed by value (the rule from Fizz's `RUST_ON_DOS.md`).
-- An app that panics is unloaded and its windows closed, with a toast. The Desk keeps running.
+- An app that panics is unloaded and its windows closed, with a toast. The Desk keeps running. The core wraps every call into an app in `setjmp`; a panic, or a CPU fault caught by a signal handler, jumps back to that frame, and the core unloads the module and frees the memory it held. It is not a sandbox: a stack overflow in an app takes the Desk down, and apps share the core's address space.
 
-**Risk:** Rust objects reach DXE3 through `coff2go32.py` and DJGPP's `dxe3gen`. This is the first spike. If it fails, apps are compiled into the core and installing an app becomes enabling it.
+**Risk (spike `s1-dxe3`, done; `docs/S1-DXE3.md`):** Rust objects reach DXE3 through `coff2go32.py` and DJGPP's `dxe3gen`, and it works: a Rust `no_std` module loads with `dlopen`, calls back into the core through names registered with `dlregsym`, panics without taking the core down, and loads and unloads 200 times with memory unchanged. The limits: LTO is required, one `.DXE` is one instance, a stack overflow in an app cannot be recovered, and page faults could be run only under QEMU (DOSBox Staging aborts on them), not on hardware. If real hardware disagrees, apps are compiled into the core and installing an app becomes enabling it.
 
 ## Installing the Desk
 
@@ -195,14 +199,14 @@ All names are 8.3.
 ## Build and test
 
 - Built in CI on `ghcr.io/liminal-hq/ci-dos`, pinned by digest. The tool versions (Rust, DJGPP, DOSBox Staging, CWSDPMI) are whatever the image carries; `rust-toolchain.toml` pins Rust.
-- The pipeline proved by Fizz DOS (to be re-derived and simplified here): `cargo build -Zbuild-std` for `dos.json`, `coff2go32.py`, link with `i586-pc-msdosdjgpp-gcc`, plus `dxe3gen` for apps.
+- The pipeline proved by Fizz DOS and re-derived in `docs/TOOLCHAIN.md`: `cargo build -Zbuild-std` for `dos.json`, `coff2go32.py`, link with `i586-pc-msdosdjgpp-gcc`. Apps add `dxe3gen`, with the exact commands in `docs/S1-DXE3.md`.
 - **Headless tests** through `dosrun.sh`: the core starts, loads each app, opens and closes its window, and writes a frame checksum of the desktop in both colour depths. A scripted input file drives the mouse and keyboard.
 - **A native bench**, as Fizz DOS's `m5/bench`: the compositor and widgets built for `i586-unknown-linux-gnu` to count instructions per redraw.
 - **Release artefacts**: `-core.img` and `-apps.img` floppy images, the same as zips, a DOSBox demo zip, a `.jsdos` bundle, `SHA256SUMS`.
 
 ## Milestones
 
-1. **Spikes**: VBE 2.0 linear frame buffer and mode 12h from Rust; INT 33h; a Rust DXE3 module that calls back into the core.
+1. **Spikes**: VBE 2.0 linear frame buffer and mode 12h from Rust; INT 33h; a Rust DXE3 module that calls back into the core (done, with the limits above; `docs/S1-DXE3.md`).
 2. **Shell**: compositor, windows, launcher bar, cursor, keyboard focus, both looks.
 3. **Handoff**: `DESK.COM`, `DESK.RUN`, resume; run FIZZ.EXE and come back.
 4. **Core apps**: Files, Programs (folders and `.DAP`), Settings.

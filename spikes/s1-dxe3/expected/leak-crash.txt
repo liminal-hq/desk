@@ -1,0 +1,15 @@
+  log> crash: start app=1
+  log> crash: holding 5 blocks, then panicking
+host: module CRASH crashed: panic: panic with heap (line 60)
+host: unloaded CRASH (dlclose 0, reclaimed 6 blocks, 1560 bytes)
+  log> crash: start app=1
+  log> crash: holding 5 blocks, then panicking
+host: module CRASH crashed: panic: panic with heap (line 60)
+host: unloaded CRASH (dlclose 0, reclaimed 6 blocks, 1560 bytes)
+  log> crash: start app=1
+  log> crash: holding 5 blocks, then panicking
+host: module CRASH crashed: panic: panic with heap (line 60)
+host: unloaded CRASH (dlclose 0, reclaimed 6 blocks, 1560 bytes)
+leak: 200 rounds of load, run, panic, unload
+leak: virtual memory after round 1 versus after round 200: not lower (no growth)
+leak: heap break after round 1 versus after round 200: not higher (stable)

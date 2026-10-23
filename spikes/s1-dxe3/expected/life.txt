@@ -1,0 +1,17 @@
+host: round 1, route a
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='alpha beta' window=1 events=7
+  log> hello[1]: event 8 kind=5 x=10 y=20
+  log> hello[1]: event 9 kind=6 x=30 y=40
+  log> hello[1]: event 10 kind=7 x=50 y=60
+  log> hello: stop app=1 events=10 kept=3
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: round 2, route a
+  window> app 1 opens 'Hello' 200x100 as window 2
+  log> hello: start app=1 args='alpha beta' window=2 events=7
+  log> hello[1]: event 8 kind=5 x=10 y=20
+  log> hello[1]: event 9 kind=6 x=30 y=40
+  log> hello[1]: event 10 kind=7 x=50 y=60
+  log> hello: stop app=1 events=10 kept=3
+host: unloaded HELLO (dlclose 0, reclaimed 0 blocks, 0 bytes)
+host: life ok

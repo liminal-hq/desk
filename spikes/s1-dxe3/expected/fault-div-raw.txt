@@ -1,0 +1,6 @@
+host: fault div, signal handlers off
+  window> app 1 opens 'Hello' 200x100 as window 1
+  log> hello: start app=1 args='good' window=1 events=7
+  log> crash: start app=2
+  log> hello[1]: event 8 kind=1 x=1 y=1
+  log> crash: dividing by zero
