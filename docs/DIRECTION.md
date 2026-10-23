@@ -135,7 +135,7 @@ Small, testable and in order. Each track's list starts from what exists.
 2. The DXE3 spike (s1-dxe3; the result is in, pull request #4: yes, with limits): a Rust module loaded into the core, calling back into it.
 3. **d0 Rust-DOS** (done, pull request #7: yes): a Rust-only DOS program with its own runtime, linked by `rust-lld` and packed by a small script, runs headless in DOSBox under CWSDPMI with no gcc, libc or crt0; retiring the C layer and `coff2go32.py` is the next decision.
 4. VBE and mode 12h from Rust, and the mouse (the other spikes in `spikes/`), written as shared drivers against the HAL ([`HAL.md`](HAL.md), spikes A and B).
-5. Shell: compositor, windows, launcher bar, cursor, keyboard focus.
+5. Shell: compositor, windows, launcher bar, cursor, keyboard focus. The first window ([`FIRST-WINDOW.md`](FIRST-WINDOW.md)) is built and runs live on this track: `SHELL.EXE` on IRQ 1 and the INT 33h mouse, played by `AUTOTYPE` and, opt-in, by `xdotool` under Xvfb, held to host-rendered goldens ([`LIVE-INPUT.md`](LIVE-INPUT.md#result)); the launcher bar and menus are not.
 6. The handoff to DOS programs and back.
 7. Core apps, then optional apps, then release (see `SPEC.md#milestones`).
 
@@ -144,7 +144,7 @@ Small, testable and in order. Each track's list starts from what exists.
 1. **n0 boot** (done, pull request #6, [`NATIVE-BOOT.md`](NATIVE-BOOT.md)): a native walking skeleton that boots a Rust kernel in QEMU (`-cpu 486`) and prints to the screen or serial port.
 2. Protected mode, interrupts, a timer and a memory map (done in the walking skeleton); then the kernel moves its serial, PIC and PIT code onto the shared drivers ([`HAL.md`](HAL.md), migration step 1).
 3. VGA or VBE graphics and a frame drawn by the shared compositor through a native HAL.
-4. PS/2 keyboard and mouse.
+4. PS/2 keyboard and mouse (done: spike C, and the first window now runs live on them in the kernel's `shell-live` mode, played through the QEMU monitor and held to the same goldens as the hosted track, [`LIVE-INPUT.md`](LIVE-INPUT.md#result)).
 5. Floppy or IDE reads and a filesystem the kernel can read.
 6. A module loader, and an app loaded from disk.
 7. The shared Desk core running on the native HAL with the core apps.

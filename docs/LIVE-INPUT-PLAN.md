@@ -2,7 +2,7 @@
 
 The task-by-task plan for building [`LIVE-INPUT.md`](LIVE-INPUT.md): the core's keyboard window management and cursor coalescing, the live loop on both tracks, the tools that turn live scenarios into injected input and check the marks, the INT 33h click counters, the launchers a person runs, and the result. Each task is one pull request in one linear stack, sized for one Sonnet builder working from this document, the design and the files it names. It replaces T12 of [`FIRST-WINDOW-PLAN.md`](FIRST-WINDOW-PLAN.md).
 
-> **Status.** A plan, written on 2026-10-23 against `main` at `44f0265`. No task has started. The API sketches are the design's; a builder may change a signature when the code shows a better one, and says so in the pull request and in [`LIVE-INPUT.md`](LIVE-INPUT.md) in the same branch.
+> **Status.** A plan, written on 2026-10-23 against `main` at `44f0265`, and built the same day as one linear stack of pull requests, one per task; the [Result](LIVE-INPUT.md#result) says what was measured, what differs from the plan and what was not verified. The defaults the plan took for its open decisions (Escape ends a session, F12 marks, Alt+Tab picks on release, a relative pointer with capture, the left button's counters, 10 ms pacing, no Docker window, one launcher) are the ones built. The API sketches are the design's; a builder may change a signature when the code shows a better one, and says so in the pull request and in [`LIVE-INPUT.md`](LIVE-INPUT.md) in the same branch.
 
 ## Contents
 
