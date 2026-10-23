@@ -1,0 +1,12 @@
+# The same freestanding i486 target, linker script and flags as the d0-rust-dos spike, read from there. Run cargo from this directory:
+# the script path is relative.
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+json-target-spec = true
+
+[build]
+target = "../../d0-rust-dos/dos-elf.json"
+
+[target.dos-elf]
+rustflags = ["-C", "link-arg=-T../../d0-rust-dos/link.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]
