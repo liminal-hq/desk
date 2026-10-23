@@ -351,6 +351,20 @@ def check_status(recs, root, data, chapter):
 
 # ---- commands -----------------------------------------------------------------------------------------------------------------
 
+def split_segments(cmd):
+    """The commands of a shell line as word lists, split on | || && ; outside quotes. A line that cannot be read raises ValueError."""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    segs, cur = [], []
+    for w in lex:
+        if w in ("|", "||", "&&", ";"):
+            segs.append(cur)
+            cur = []
+        else:
+            cur.append(w)
+    return segs + [cur]
+
+
 def check_command(cmd, root):
     """The problems with one command of a try block: it must start with a tool we know or a script that exists in the repository, and an
     interpreter's script must exist as well."""
@@ -365,12 +379,12 @@ def check_command(cmd, root):
         if not os.path.isdir(cwd):
             return ["cd %s: no such directory in the repository" % m.group(1)]
         cmd = m.group(2)
-    for seg in re.split(r"\s*(?:\|\||&&|\||;)\s*", cmd):
-        try:
-            words = shlex.split(seg)
-        except ValueError:
-            problems.append("cannot read the command %r" % seg)
-            continue
+    try:
+        segments = split_segments(cmd)
+    except ValueError:
+        return problems + ["cannot read the command %r" % cmd]
+    for words in segments:
+        seg = list(words)
         while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
             words.pop(0)
         if not words:
@@ -384,7 +398,7 @@ def check_command(cmd, root):
                     if skip:
                         skip = False
                         continue
-                    if w == "-c" or w == "-e":
+                    if w in ("-c", "-e", "-m"):
                         script = ""
                         break
                     if w.startswith("-"):
@@ -392,7 +406,7 @@ def check_command(cmd, root):
                     script = w
                     break
                 if script is None:
-                    problems.append("%s: no script named" % seg)
+                    problems.append("%s: no script named" % " ".join(seg))
                 elif script and not os.path.exists(os.path.join(cwd, script)):
                     problems.append("%s: the script %s does not exist" % (first, script))
             continue

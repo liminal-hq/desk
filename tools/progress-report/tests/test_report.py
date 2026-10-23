@@ -720,6 +720,8 @@ class ManualCheckTests(unittest.TestCase):
         self.assertEqual(manual.check_command("(cd hal && cargo test --locked --quiet)", gather.ROOT), [])
         self.assertEqual(manual.check_command("tools/native-test.sh | tail -3", gather.ROOT), [])
         self.assertTrue(manual.check_command("(cd nowhere && cargo test)", gather.ROOT))
+        self.assertEqual(manual.check_command("grep -c \"a|b\" README.md", gather.ROOT), [])
+        self.assertEqual(manual.check_command("python3 -m unittest discover", gather.ROOT), [])
 
     def test_glossary_terms_are_defined_once_and_used(self):
         self.assertRefused(lambda t: t.replace("[segment](term:segment)", "segment"), "defined and never used")
