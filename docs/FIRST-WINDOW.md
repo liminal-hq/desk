@@ -195,13 +195,14 @@ pub struct PresentStats { pub frames: u32, pub spans: u32, pub pixels: u32 }
 
 pub struct CursorLayer { pub x: i32, pub y: i32, pub visible: bool, pub sprite: &'static Sprite, pub inks: [u8; 2] }
 
-pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer */ }
+pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer, shown: Option<Rect> */ }
 impl Compositor {
     pub fn new(width: u32, height: u32, background: u8) -> Result<Compositor, HalError>;   // refuses zero or a width above MAX_WIDTH (1280); the first frame damages the whole screen
     pub fn damage(&mut self, r: Rect);                                   // scene damage
-    pub fn move_cursor(&mut self, x: i32, y: i32);                       // overlay damage: old and new sprite rects
+    pub fn move_cursor(&mut self, x: i32, y: i32);                       // records the position; the next frame damages `shown` and the new sprite rect, however many moves came between
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]);
-    pub fn set_cursor_visible(&mut self, visible: bool);                 // overlay damage: the sprite rectangle
+    pub fn set_cursor_visible(&mut self, visible: bool);                 // the next frame damages where the sprite was drawn (hiding) or is now (showing)
+    pub fn is_dirty(&self) -> bool;                                      // scene or overlay damage pending, or the cursor is not where it was last presented
     pub fn cursor(&self) -> &CursorLayer;
     /// Repaints every scene-damage rect through `paint` (with the surface clipped to it), then presents the union of the
     /// scene and overlay damage, aligned to the presenter, compositing the cursor into each row on the way.
