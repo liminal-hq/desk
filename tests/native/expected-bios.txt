@@ -53,7 +53,7 @@ bios: INT 13h AH=41h extensions (LBA reads with AH=42h) on drive 0x00: not avail
 bios: sector 0 through INT 13h has the boot signature 0x55AA: true
 bios: sector 0 equals the copy of stage 1 still in memory at 0x7C00 (outside its five variables): true
 bios: 16 sectors from LBA 18 (the kernel) equal the first 8 KiB of the running kernel: true
-bios: a read past the end of the disk fails with the BIOS's status: true
+bios: a read of sector 0 (sectors count from 1) fails with the BIOS's status: true
 bios: INT 13h drive 0x80: not present
 bios: keyboard: waiting one second inside INT 15h AH=86h
 bios: keyboard: the call returned, {N:1..2} byte(s) were waiting in the controller and were handed to the driver

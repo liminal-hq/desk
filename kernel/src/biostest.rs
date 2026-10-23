@@ -365,10 +365,12 @@ fn disk_calls(info: &BootInfo) {
     println!("bios: 16 sectors from LBA {} (the kernel) equal the first 8 KiB of the running kernel: {}", lba, same);
     assert!(same);
 
-    // Errors: past the last cylinder, and a count the BIOS cannot do (zero).
-    let past = read_sectors(drive, geometry, cyls * heads * spt, 1);
-    println!("bios: a read past the end of the disk fails with the BIOS's status: {}", past.is_err());
-    assert!(past.is_err());
+    // An error the BIOS itself reports: sector 0 (sectors count from 1). A cylinder past the end is not used here: Bochs's floppy model
+    // treats that as a fatal error of its own before the BIOS can answer.
+    let mut bad = RealModeRegs { eax: 0x0201, ecx: 0x0000, edx: u32::from(drive), es: bounce.segment(), ..RealModeRegs::default() };
+    bios::call(0x13, &mut bad).unwrap();
+    println!("bios: a read of sector 0 (sectors count from 1) fails with the BIOS's status: {}", bad.carry() && bad.ah() != 0);
+    assert!(bad.carry() && bad.ah() != 0);
     hard_disk_calls();
 }
 
@@ -502,8 +504,11 @@ fn describe_mode(m: &VbeMode) -> String {
 }
 
 /// Prints a marker, waits for the key the run script sends once it has taken its screenshot.
-fn rendezvous(ps2: &mut Ps2Input, name: &str) {
+fn rendezvous(ps2: &mut Ps2Input, name: &str, solo: bool) {
     println!("bios: ready {}", name);
+    if solo {
+        return;
+    }
     let start = pit::ticks();
     loop {
         while ps2.poll_mouse().is_some() {}
@@ -556,7 +561,7 @@ fn back_to_text(vbe: &Vbe<NativeBios>) {
     assert_eq!(mode[0], 3);
 }
 
-fn vbe_after_boot(info: &BootInfo, ps2: &mut Ps2Input) {
+fn vbe_after_boot(info: &BootInfo, ps2: &mut Ps2Input, solo: bool) {
     let vbe = Vbe::new(&NativeBios);
     let ctl = match vbe.info() {
         Ok(i) => i,
@@ -593,13 +598,13 @@ fn vbe_after_boot(info: &BootInfo, ps2: &mut Ps2Input) {
         let hosted = (round == 1).then_some(gfx::HOSTED_VBE_640X480);
         show_mode(&vbe, info, &m640, "640x480x8 picture", hosted);
         if round == 1 {
-            rendezvous(ps2, "vbe-640");
+            rendezvous(ps2, "vbe-640", solo);
         }
         match &m800 {
             Some(m) => {
                 show_mode(&vbe, info, m, "800x600x8 picture", None);
                 if round == 1 {
-                    rendezvous(ps2, "vbe-800");
+                    rendezvous(ps2, "vbe-800", solo);
                 }
             }
             None => println!("bios: this card offers no 800x600x8 linear mode"),
@@ -607,22 +612,30 @@ fn vbe_after_boot(info: &BootInfo, ps2: &mut Ps2Input) {
         back_to_text(&vbe);
         println!("bios: text mode is back after round {}", round);
         if round == 1 {
-            rendezvous(ps2, "text");
+            rendezvous(ps2, "text", solo);
         }
     }
     println!("bios: VBE set, draw and return to text worked twice");
 }
 
-pub fn run(info: &BootInfo, _video: &Video, mut ps2: Ps2Input) {
+pub fn run(info: &BootInfo, _video: &Video, mut ps2: Ps2Input, solo: bool) {
     println!("bios: scenarios start");
     memory_calls(info);
     clock_calls();
     error_paths();
     repeats_and_idle();
     disk_calls(info);
-    keyboard_during_call(&mut ps2);
+    if solo {
+        println!("bios: keyboard step skipped, this run has no way to type");
+    } else {
+        keyboard_during_call(&mut ps2);
+    }
     stress();
-    vbe_after_boot(info, &mut ps2);
+    vbe_after_boot(info, &mut ps2, solo);
+    if solo {
+        println!("bios: scenarios complete");
+        return;
+    }
     println!("bios: ready keys");
     let start = pit::ticks();
     let mut keys = 0;

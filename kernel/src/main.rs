@@ -101,6 +101,7 @@ enum TestMode {
     InputIdle = 9,
     Gfx = 10,
     Bios = 11,
+    BiosSolo = 12,
 }
 
 impl TestMode {
@@ -117,6 +118,7 @@ impl TestMode {
             9 => TestMode::InputIdle,
             10 => TestMode::Gfx,
             11 => TestMode::Bios,
+            12 => TestMode::BiosSolo,
             _ => TestMode::Normal,
         }
     }
@@ -224,9 +226,9 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
         }
         panic!("input: no keyboard controller, so the input test cannot run");
     };
-    if mode == TestMode::Bios {
+    if mode == TestMode::Bios || mode == TestMode::BiosSolo {
         println!("input: ready");
-        biostest::run(info, video, ps2);
+        biostest::run(info, video, ps2, mode == TestMode::BiosSolo);
         return;
     }
     if mode == TestMode::Gfx {
@@ -249,7 +251,7 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.
