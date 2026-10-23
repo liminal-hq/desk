@@ -91,6 +91,7 @@ Costs to weigh:
 | d0-rust-dos | Hosted | Scott Morris | PR #7 (on PR #3) | done: yes, a pure Rust DOS program with no gcc, libc or crt0 (a `rust-lld` link, a 139-line packer and a roughly 1,600-line runtime, `docs/D0-RUST-DOS.md`); next: a freestanding ELF target, `rt` as a top-level crate, Rust drivers |
 | H: HAL design | Shared crates | Scott Morris | PR #8 | done: the design ([`HAL.md`](HAL.md)) and `hal/` with host-tested 16550, 8254 and 8259 drivers, built for both targets |
 | A: VGA and VBE (s2-vbe) | Hosted, shared driver | Scott Morris | PR #11 (on PR #8) | done in DOSBox: the `desk-vga` driver (mode 13h and 12h by registers, DAC, VBE 2.0 over a `Bios` trait) and `rt::hal::DosDisplay`, run by `spikes/a-vga-vbe` (`docs/A-VGA-VBE.md`); not run on hardware |
+| D: native graphics (n2) | Native, shared driver | Scott Morris | on PR #10 and PR #11 | done in QEMU: VBE asked in the loader, `desk-vga` modes 13h and 12h by registers and a VBE linear frame buffer from the kernel, a software cursor and a window, text restore, screenshot tests (`docs/D-NATIVE-VGA.md`); not run on hardware |
 | s-std-stubs | Any | Not assigned | None | planned: build `std` for an unknown OS name and measure |
 | s-desk-pal | Desk apps | Not assigned | None | planned: design the platform layer and the app ABI |
 | prebuilt sysroot | All custom targets | Not assigned | None | idea |

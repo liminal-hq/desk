@@ -12,7 +12,10 @@
 # rejected; a divide error, a general protection fault, an invalid opcode, a panic and a masked timer must each end the run with
 # a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Keyboard and mouse: input injected through
 # the QEMU monitor must appear decoded in the transcript, and the negative variants (a missing event, a masked IRQ 1, a kernel
-# waiting for input that never comes) must fail. Skips (exit 0, with a message) only
+# waiting for input that never comes) must fail. Graphics: the kernel's tour (VBE linear frame buffer, register-programmed modes 13h
+# and 12h, a window with a software cursor, text mode restored) is booted with real pixels, and screenshots taken through the QEMU
+# monitor are checked against reference checksums; a wrong reference, a cursor that did not move, a movement outside the cursor's
+# rectangle and a loader that succeeded where it was told to fail must each be rejected. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -102,5 +105,68 @@ rm -f dist/native-input-masked.img
 tools/native-image.sh --test-mode input-idle --out dist/native-input-idle.img > /dev/null
 run_input input-idle dist/native-input-idle.img 124 "" tests/native/input-idle.inject 5
 rm -f dist/native-input-idle.img
+
+echo "== Graphics: screenshots through the QEMU monitor"
+# The tour (kernel/src/gfx.rs) prints "gfx: ready NAME" and waits for a key at each stable picture; the script
+# (tests/native/gfx-*.inject) takes a screendump first and sends the key after. Each run checks its transcript, then every
+# screenshot against a reference checksum (tests/native/gfx-*.sums). The PNGs of a run stay in dist/gfx-NAME/.
+shot() { python3 -I tools/native-shot.py "$@"; }
+run_gfx() {
+  local name=$1 image=$2 card=$3 script=$4 expected=$5 sums=$6 got=0 dir="dist/gfx-$1"
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 60 --vga "$card" --inject "$script" --shots "$dir" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+  python3 -I tools/native-check.py "$expected" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  shot check "$sums" "$dir" > "$work/$name.shots" || { cat "$work/$name.shots" >&2; fail "$name: a screenshot differs from its reference"; }
+  shot has-text "$dir/text.ppm" > /dev/null || fail "$name: the last screenshot is not a text-mode screen"
+  echo "native: ok — $name ($card card, $(grep -c matches "$work/$name.shots") screenshots match their references)"
+}
+# Converts the screenshots of a finished run to PNG (a few kilobytes each) and removes the PPMs.
+finish_gfx() {
+  local f
+  for f in "dist/gfx-$1"/*.ppm; do shot png "$f" "${f%.ppm}.png" && rm -f "$f"; done
+}
+must_fail() {
+  local what=$1
+  shift
+  if "$@" > /dev/null 2>&1; then fail "$what was accepted"; fi
+  echo "native: ok — $what is rejected"
+}
+
+tools/native-build.sh
+tools/native-image.sh --test-mode gfx --video vbe --out dist/native-gfx-vbe.img > /dev/null
+tools/native-image.sh --test-mode gfx --video text --out dist/native-gfx-text.img > /dev/null
+run_gfx gfx-vbe dist/native-gfx-vbe.img std tests/native/gfx-vbe.inject tests/native/expected-gfx-vbe.txt tests/native/gfx-vbe.sums
+# The cursor moved from (320, 240) to (420, 300): the two screenshots may differ only inside the two 12 x 19 sprites' bounding box.
+shot moved dist/gfx-gfx-vbe/vbe-window-a.ppm dist/gfx-gfx-vbe/vbe-window-b.ppm 320 240 432 319 > /dev/null || fail "the cursor did not move as expected"
+echo "native: ok — the cursor moved, and only inside the old and new sprite rectangles"
+# Typing changes only the window's echo line.
+shot moved dist/gfx-gfx-vbe/vbe-window-b.ppm dist/gfx-gfx-vbe/vbe-window-c.ppm 97 150 543 174 > /dev/null || fail "typing changed more than the echo line"
+echo "native: ok — typing changed only the echo line"
+# Negative: each of these must fail.
+sed 's/^vbe-picture \(.*\) .*$/vbe-picture \1 00000000/' tests/native/gfx-vbe.sums > "$work/wrong.sums"
+must_fail "a wrong screenshot reference" python3 -I tools/native-shot.py check "$work/wrong.sums" dist/gfx-gfx-vbe
+must_fail "a screenshot checked against another run's references" python3 -I tools/native-shot.py check tests/native/gfx-fallback.sums dist/gfx-gfx-vbe
+must_fail "two identical screenshots as a cursor movement" python3 -I tools/native-shot.py moved dist/gfx-gfx-vbe/vbe-window-a.ppm dist/gfx-gfx-vbe/vbe-window-a.ppm 0 0 640 480
+must_fail "a cursor movement outside its allowed rectangle" python3 -I tools/native-shot.py moved dist/gfx-gfx-vbe/vbe-window-a.ppm dist/gfx-gfx-vbe/vbe-window-b.ppm 320 240 400 319
+must_fail "a graphics screenshot as a text-mode screen" python3 -I tools/native-shot.py has-text dist/gfx-gfx-vbe/vbe-window-a.ppm
+must_fail "the VBE transcript as the failed-VBE transcript" python3 -I tools/native-check.py tests/native/expected-gfx-vbefail.txt "$work/gfx-vbe.txt"
+finish_gfx gfx-vbe
+
+# VBE not requested: modes 13h and 12h by registers (no BIOS), on a second card (Cirrus) to show the register path is not std-specific.
+run_gfx gfx-text dist/native-gfx-text.img cirrus tests/native/gfx-fallback.inject tests/native/expected-gfx-fallback.txt tests/native/gfx-fallback.sums
+shot moved dist/gfx-gfx-text/window-a.ppm dist/gfx-gfx-text/window-b.ppm 320 240 432 319 > /dev/null || fail "the cursor did not move in mode 12h"
+echo "native: ok — the cursor moved in mode 12h"
+finish_gfx gfx-text
+
+# The loader runs the whole VBE search but the final mode-set call is made to fail (-DVBE_FAIL=1): it must say so, the kernel must say
+# it fell back, and the screens must be the register-mode ones.
+tools/native-build.sh --nasm-flags "-DVBE_FAIL=1"
+tools/native-image.sh --test-mode gfx --video vbe --out dist/native-gfx-fail.img > /dev/null
+run_gfx gfx-vbefail dist/native-gfx-fail.img std tests/native/gfx-fallback.inject tests/native/expected-gfx-vbefail.txt tests/native/gfx-fallback.sums
+must_fail "the failed-VBE transcript as the normal one" python3 -I tools/native-check.py tests/native/expected-gfx-vbe.txt "$work/gfx-vbefail.txt"
+finish_gfx gfx-vbefail
+rm -f dist/native-gfx-vbe.img dist/native-gfx-text.img dist/native-gfx-fail.img
+tools/native-build.sh > /dev/null
 
 printf 'native: all checks passed\n'

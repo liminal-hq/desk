@@ -15,6 +15,7 @@ desk-pit = { path = "../hal/drivers/pit" }
 desk-pic = { path = "../hal/drivers/pic" }
 desk-kbd = { path = "../hal/drivers/kbd" }
 desk-i8042 = { path = "../hal/drivers/i8042" }
+desk-vga = { path = "../hal/drivers/vga" }
 
 [features]
 default = []

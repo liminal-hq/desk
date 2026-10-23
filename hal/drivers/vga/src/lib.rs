@@ -12,6 +12,7 @@
 // - `canvas`  the `Canvas` drawing trait, the Adler-32 checksum used by the checks
 // - `linear`  `Linear8`: pixels, lines, rectangles and blits on an 8-bit linear frame buffer (mode 13h, VBE)
 // - `planar`  `Planar16`: the same on mode 12h's four planes, through the map mask, set/reset and bit mask
+// - `text`    leaving graphics: the text palette and the font for mode 03h, which have to be reloaded without a BIOS
 // - `vbe`     VBE 2.0: the information and mode blocks, the calls 4F00h to 4F05h over `Bios`
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
 
@@ -20,10 +21,11 @@ pub mod dac;
 pub mod linear;
 pub mod planar;
 pub mod regs;
+pub mod text;
 pub mod vbe;
 
 pub use canvas::{checksum, Adler32, Canvas};
 pub use dac::{fade_in, fade_out, read_palette, set_palette, wait_vretrace, FadeReport};
 pub use linear::Linear8;
 pub use planar::Planar16;
-pub use regs::{set_mode_12h, set_mode_13h};
+pub use regs::{set_mode_03h, set_mode_12h, set_mode_13h};

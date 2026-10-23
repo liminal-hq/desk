@@ -1,0 +1,9 @@
+# Reference checksums of the screenshots of the graphics tour with the VGA register modes only (tests/native/gfx-fallback.inject), the same on
+# QEMU's std, cirrus and vmware cards and after a refused VBE mode set.
+# NAME WIDTHxHEIGHT CRC-32 of the RGB bytes of the PPM that the monitor's screendump writes. tools/native-shot.py check compares them.
+mode-13h 640x400 22f676d7
+mode-12h 640x480 a38b4fe3
+window-a 640x480 88edba0f
+window-b 640x480 b60ab105
+window-c 640x480 2aa4f9f8
+text 720x400 23a1daee

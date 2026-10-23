@@ -11,13 +11,17 @@
 ;      other megabyte of memory would alias the one below it.
 ;   3. The memory map (E820, else E801). Only the BIOS knows what RAM exists, and it is only reachable in real mode.
 ;   4. The boot information block at 0x500, which is how the kernel finds the map.
-;   5. A GDT and the switch to protected mode with flat 4 GiB segments, so the kernel sees plain 32-bit addresses.
-;   6. Copy the kernel from its low buffer to 1 MiB (real mode cannot address that high, so this has to wait), set a stack and
+;   5. The video: the BIOS 8x16 font (the kernel cannot call the BIOS, so the font it needs to get back to text mode is copied now)
+;      and a VBE 2.0 linear frame buffer mode, set while the BIOS can still be called. The answer goes in the video block.
+;   6. A GDT and the switch to protected mode with flat 4 GiB segments, so the kernel sees plain 32-bit addresses.
+;   7. Copy the kernel from its low buffer to 1 MiB (real mode cannot address that high, so this has to wait), set a stack and
 ;      jump to the kernel with EAX = the boot information address.
 ;
 ; Build flags for testing the less common paths (see tools/native-build.sh): -DA20_TEST=1 closes the A20 gate first so the
 ; enabling code really runs; -DA20_TEST=2 also skips the fast gate so the keyboard controller method runs; -DNO_E820 pretends
-; the BIOS lacks E820 so the E801 fallback runs.
+; the BIOS lacks E820 so the E801 fallback runs. -DVBE_FAIL=1 runs the whole VBE search but makes the final mode-set call report
+; failure, which exercises the fallback path. Whether VBE is tried at all is a byte in the image (`video_mode`, patched by
+; tools/native-image.sh --video): a plain boot keeps the BIOS text screen, so the kernel's console stays visible.
 
 bits 16
 org 0x7E00
@@ -29,6 +33,11 @@ org 0x7E00
 BOOTINFO        equ 0x0500
 MAP             equ 0x0520              ; the map follows the 32-byte header
 MAP_MAX         equ 32
+VIDEO           equ 0x0820              ; the video block (32 bytes) follows the map's last possible entry
+FONT_BUF        equ 0x2000              ; the 8x16 BIOS font, 256 glyphs of 16 bytes, for the kernel's text-mode restore
+VBE_INFO        equ 0x3000              ; 512 bytes: the VBE controller information block
+VBE_MODE        equ 0x3200              ; 256 bytes: one VBE mode information block
+BOOT_VERSION    equ 1
 KERNEL_LOW      equ 0x10000
 KERNEL_ENTRY    equ 0x100000
 STACK32         equ 0x7000
@@ -39,6 +48,7 @@ start:
         jmp short entry
         nop
 test_mode:      db 0                    ; offset 3: patched by tools/native-image.sh, passed on to the kernel
+video_mode:     db 0                    ; offset 4: patched too; 0 keeps text mode, 1 tries a VBE linear frame buffer mode
 
 entry:
         xor ax, ax
@@ -109,6 +119,12 @@ entry:
         call print_dec
         mov si, msg_crlf
         call print
+
+        ; ---- Video ----
+        mov dword [BOOTINFO + 20], BOOT_VERSION
+        mov dword [BOOTINFO + 24], VIDEO
+        mov dword [BOOTINFO + 28], 0
+        call video_setup
 
         ; ---- Protected mode ----
         mov si, msg_pm
@@ -304,6 +320,270 @@ map_e801:
 .fail:  stc
         ret
 
+; video_setup: fills the video block and sets a VBE mode if it can. It never fails the boot: every outcome, including "no VBE at
+; all", is recorded in the block (layout in docs/NATIVE-BOOT.md) and printed, so the kernel and the transcript both know which
+; path was taken. The block's state: 0 not tried (`video_mode` is 0), 1 a linear 8-bit mode is set, 2 not available (the reason is at +6).
+video_setup:
+        pushad
+        xor ax, ax
+        mov es, ax
+        mov di, VIDEO
+        mov cx, 8
+        xor eax, eax
+        cld
+        rep stosd                       ; the whole 32-byte block starts as zero: "not tried"
+        call load_font
+        cmp byte [video_mode], 0
+        jne .try
+        mov si, msg_vbe_off
+        call print
+        jmp .out
+.try:
+        ; ---- VBE 2.0 controller information (4F00h). Writing "VBE2" first asks for the 512-byte VBE 2.0 layout.
+        mov dword [VBE_INFO], 0x32454256
+        mov ax, 0x4F00
+        mov di, VBE_INFO
+        int 0x10
+        cmp ax, 0x004F                  ; AL = 4Fh: the function is supported, AH = 0: it succeeded
+        mov word [VIDEO + 6], 1
+        mov si, msg_vbe_none
+        jne .unavailable
+        cmp dword [VBE_INFO], 0x41534556        ; "VESA"
+        jne .unavailable
+        mov ax, [VBE_INFO + 4]
+        mov [VIDEO + 4], ax
+        mov word [VIDEO + 6], 2
+        mov si, msg_vbe_old
+        cmp ax, 0x0200                  ; the linear frame buffer arrived with VBE 2.0
+        jb .unavailable
+        mov eax, [VBE_INFO + 18]        ; total memory in 64 KiB blocks (a word), at offset 18
+        movzx eax, ax
+        shl eax, 6                      ; KiB
+        mov [VIDEO + 24], eax
+
+        ; ---- Walk the mode list. Its far pointer is at offset 14; the list may be in ROM or inside the buffer, and it ends with
+        ; 0xFFFF. A mode qualifies when it is supported, graphics, has the linear frame buffer attribute, is packed-pixel and 8
+        ; bits per pixel. 640x480 wins at once; otherwise the largest area up to 1280 wide.
+        mov bx, [VBE_INFO + 14]
+        mov ax, [VBE_INFO + 16]
+        mov fs, ax
+        mov word [best_mode], 0
+        mov dword [best_area], 0
+        mov word [budget], 256          ; a broken list with no terminator must not hang the boot
+.next:  dec word [budget]
+        jz .listed
+        mov cx, [fs:bx]
+        add bx, 2
+        cmp cx, 0xFFFF
+        je .listed
+        push bx
+        push fs
+        mov ax, 0x4F01
+        mov di, VBE_MODE
+        int 0x10
+        pop fs
+        pop bx
+        cmp ax, 0x004F
+        jne .next
+        mov ax, [VBE_MODE]              ; ModeAttributes: bit 0 supported, bit 4 graphics, bit 7 linear frame buffer
+        and ax, 0x0091
+        cmp ax, 0x0091
+        jne .next
+        cmp byte [VBE_MODE + 27], 4     ; memory model 4: packed pixel
+        jne .next
+        cmp byte [VBE_MODE + 25], 8     ; bits per pixel
+        jne .next
+        cmp dword [VBE_MODE + 40], 0    ; the frame buffer's physical address
+        je .next
+        mov ax, [VBE_MODE + 18]         ; XResolution
+        mov dx, [VBE_MODE + 20]         ; YResolution
+        cmp ax, 1280
+        ja .next
+        cmp ax, 640
+        jne .area
+        cmp dx, 480
+        jne .area
+        mov [best_mode], cx
+        jmp .listed
+.area:  movzx eax, ax
+        movzx edx, dx
+        imul eax, edx
+        cmp eax, [best_area]
+        jbe .next
+        mov [best_area], eax
+        mov [best_mode], cx
+        jmp .next
+.listed:
+        mov si, msg_vbe_nomode
+        mov word [VIDEO + 6], 3
+        cmp word [best_mode], 0
+        je .unavailable
+
+        ; ---- Read the chosen mode again (the buffer holds the last one tried) and record it.
+        mov cx, [best_mode]
+        mov ax, 0x4F01
+        mov di, VBE_MODE
+        int 0x10
+        mov si, msg_vbe_nomode
+        cmp ax, 0x004F
+        jne .unavailable
+        mov [VIDEO + 8], cx
+        mov ax, [VBE_MODE + 18]
+        mov [VIDEO + 10], ax
+        mov ax, [VBE_MODE + 20]
+        mov [VIDEO + 12], ax
+        mov ax, [VBE_MODE + 16]         ; BytesPerScanLine
+        cmp word [VIDEO + 4], 0x0300
+        jb .pitch
+        mov dx, [VBE_MODE + 50]         ; VBE 3.0: LinBytesPerScanLine is the pitch of the linear frame buffer (0: not given)
+        test dx, dx
+        jz .pitch
+        mov ax, dx
+.pitch: mov [VIDEO + 14], ax
+        mov al, [VBE_MODE + 25]
+        mov [VIDEO + 16], al
+        mov al, [VBE_MODE + 27]
+        mov [VIDEO + 17], al
+        mov ax, [VBE_MODE]
+        mov [VIDEO + 18], ax
+        mov eax, [VBE_MODE + 40]
+        mov [VIDEO + 20], eax
+        mov si, msg_vbe_mode
+        call print
+        mov ax, [VIDEO + 4]
+        shr ax, 8
+        call print_dec
+        mov al, '.'
+        call putc
+        mov ax, [VIDEO + 4]
+        and ax, 0xFF
+        call print_dec
+        mov si, msg_vbe_mode2
+        call print
+        mov ax, [VIDEO + 8]
+        call print_hex16
+        mov al, ' '
+        call putc
+        mov ax, [VIDEO + 10]
+        call print_dec
+        mov al, 'x'
+        call putc
+        mov ax, [VIDEO + 12]
+        call print_dec
+        mov al, 'x'
+        call putc
+        movzx ax, byte [VIDEO + 16]
+        call print_dec
+        mov si, msg_vbe_pitch
+        call print
+        mov ax, [VIDEO + 14]
+        call print_dec
+        mov si, msg_vbe_lfb
+        call print
+        mov eax, [VIDEO + 20]
+        call print_hex32
+        mov si, msg_crlf
+        call print
+
+        ; ---- Set the mode with the linear frame buffer bit (bit 14). Bit 15 stays clear, so the BIOS clears the frame buffer.
+%ifdef VBE_FAIL
+        mov ax, 0x014F                  ; pretend the BIOS answered "failed"
+%else
+        mov bx, [VIDEO + 8]
+        or bx, 0x4000
+        mov ax, 0x4F02
+        int 0x10
+%endif
+        cmp ax, 0x004F
+        mov word [VIDEO + 6], 4
+        mov si, msg_vbe_setfail
+        jne .unavailable
+        mov dword [VIDEO + 0], 1
+        mov word [VIDEO + 6], 0
+        mov si, msg_vbe_set
+        call print
+        jmp .out
+
+.unavailable:
+        call print
+        mov dword [VIDEO + 0], 2
+        ; keep the version and the reason; clear the geometry, which is not valid
+        mov di, VIDEO + 8
+        xor eax, eax
+        mov cx, 5
+        rep stosd
+        mov si, msg_vbe_fallback
+        call print
+.out:   popad
+        ret
+
+; load_font: INT 10h AX=1130h BH=06h returns ES:BP at the BIOS's 8x16 font and CX = bytes per character. The 4096 bytes are
+; copied to FONT_BUF and the address recorded at BOOTINFO+28; 0 there means no font. Protected mode has no BIOS, and the text
+; font is the one thing the kernel cannot get back after it leaves text mode.
+load_font:
+        pushad
+        push ds
+        push es
+        mov ax, 0x1130
+        mov bh, 6
+        int 0x10
+        mov ax, es
+        or ax, bp
+        jz .none
+        cmp cx, 16
+        jne .none
+        mov si, bp
+        push es
+        pop ds                          ; DS:SI = the font
+        xor ax, ax
+        mov es, ax
+        mov di, FONT_BUF
+        mov cx, 1024
+        cld
+        rep movsd
+        xor ax, ax
+        mov ds, ax
+        mov dword [BOOTINFO + 28], FONT_BUF
+        mov si, msg_font
+        jmp .say
+.none:  xor ax, ax
+        mov ds, ax
+        mov si, msg_nofont
+.say:   mov es, ax
+        call print
+        pop es
+        pop ds
+        popad
+        ret
+
+print_hex16:                            ; AX as 0x0000
+        pushad
+        movzx ebx, ax
+        shl ebx, 16
+        mov cx, 4
+        jmp print_hex_common
+
+print_hex32:                            ; EAX as 0x00000000
+        pushad
+        mov ebx, eax
+        mov cx, 8
+print_hex_common:
+        mov al, '0'
+        call putc
+        mov al, 'x'
+        call putc
+.n:     rol ebx, 4
+        mov al, bl
+        and al, 0x0F
+        add al, '0'
+        cmp al, '9'
+        jbe .d
+        add al, 7
+.d:     call putc
+        loop .n
+        popad
+        ret
+
 ; Output goes to both the BIOS screen and COM1, so a headless run records the loader too.
 serial_init:
         mov dx, COM1 + 1
@@ -394,6 +674,22 @@ msg_pm:         db 'stage2: entering protected mode', 13, 10, 0
 msg_crlf:       db 13, 10, 0
 name_e820:      db 'E820', 0
 name_e801:      db 'E801', 0
+msg_font:       db 'stage2: font: 8x16 copied from the BIOS', 13, 10, 0
+msg_nofont:     db 'stage2: font: the BIOS gave no 8x16 font', 13, 10, 0
+msg_vbe_off:    db 'stage2: vbe: not requested, the screen stays in text mode', 13, 10, 0
+msg_vbe_none:   db 'stage2: vbe: no VBE BIOS', 13, 10, 0
+msg_vbe_old:    db 'stage2: vbe: older than 2.0, no linear frame buffer', 13, 10, 0
+msg_vbe_nomode: db 'stage2: vbe: no 8-bit linear frame buffer mode', 13, 10, 0
+msg_vbe_setfail: db 'stage2: vbe: the BIOS refused to set the mode', 13, 10, 0
+msg_vbe_fallback: db 'stage2: vbe: not used, the kernel falls back to the VGA register modes', 13, 10, 0
+msg_vbe_mode:   db 'stage2: vbe ', 0
+msg_vbe_mode2:  db ': mode ', 0
+msg_vbe_pitch:  db ', pitch ', 0
+msg_vbe_lfb:    db ', frame buffer at ', 0
+msg_vbe_set:    db 'stage2: vbe: mode set with the linear frame buffer', 13, 10, 0
+best_mode:      dw 0
+best_area:      dd 0
+budget:         dw 0
 
 ; ---------------------------------------------------------------------------------------------------------------------------
 ; Protected mode

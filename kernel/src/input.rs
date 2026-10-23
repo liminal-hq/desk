@@ -109,7 +109,7 @@ fn modifier_names(m: Modifiers) -> alloc::string::String {
     out
 }
 
-fn print_key(e: KeyEvent) {
+pub fn print_key(e: KeyEvent) {
     let ch = if e.pressed { desk_kbd::char_for(e.code, e.modifiers) } else { None };
     match ch {
         Some(c) => println!("key: {:?} down mods={} char={:?}", e.code, modifier_names(e.modifiers), c),
@@ -148,13 +148,19 @@ pub fn run(input: &mut Ps2Input, timeout_ticks: u32) {
         if pit::ticks().wrapping_sub(start) > timeout_ticks {
             panic!("input: no Escape within {} ticks ({} key events, {} mouse events)", timeout_ticks, keys, mice);
         }
-        sync::without_interrupts(|| {
-            if input.is_empty() {
-                // `sti` takes effect after the next instruction, so an interrupt that arrives now wakes the `hlt` instead of
-                // being missed. without_interrupts restores IF afterwards.
-                // SAFETY: waits for the next interrupt; the timer guarantees one.
-                unsafe { asm!("sti", "hlt", "cli") };
-            }
-        });
+        idle(input);
     }
+}
+
+/// One idle step: the work is done, so sleep until an interrupt brings an event or a tick. The rings are checked with interrupts
+/// off so an interrupt cannot slip in between the check and the `hlt`.
+pub fn idle(input: &Ps2Input) {
+    sync::without_interrupts(|| {
+        if input.is_empty() {
+            // `sti` takes effect after the next instruction, so an interrupt that arrives now wakes the `hlt` instead of
+            // being missed. without_interrupts restores IF afterwards.
+            // SAFETY: waits for the next interrupt; the timer guarantees one.
+            unsafe { asm!("sti", "hlt", "cli") };
+        }
+    });
 }

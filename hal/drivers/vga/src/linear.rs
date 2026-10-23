@@ -36,11 +36,9 @@ impl<'a> Linear8<'a> {
     }
 
     fn fill_span(&mut self, x: u32, y: u32, len: u32, colour: u8) {
-        let base = self.offset(x, y);
-        for i in 0..len as usize {
-            // Inside the region: `new` checked pitch * height and the callers clip to width and height.
-            let _ = self.region.write8(base + i, colour);
-        }
+        // Inside the region: `new` checked pitch * height and the callers clip to width and height. One bounds check and word-sized
+        // stores for the aligned middle of the span (`MmioRegion::fill8`).
+        let _ = self.region.fill8(self.offset(x, y), len as usize, colour);
     }
 }
 
