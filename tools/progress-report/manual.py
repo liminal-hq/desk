@@ -275,7 +275,8 @@ def check_item(kind, rest, root, data):
             return "commit:%s is not in this repository" % rest
         return None
     if kind == "repo":
-        return None if rest and os.path.exists(os.path.join(root, rest)) else "repo:%s does not exist in the tree" % rest
+        path = rest.split("#")[0]
+        return None if path and os.path.exists(os.path.join(root, path)) else "repo:%s does not exist in the tree" % rest
     if kind in ("sym", "test"):
         path, sep, name = rest.partition("::")
         if not sep or not name:
@@ -283,7 +284,9 @@ def check_item(kind, rest, root, data):
         text = file_text(root, path)
         if text is None:
             return "%s:%s: the file does not exist" % (kind, rest)
-        return None if name in text else "%s:%s: %r does not appear in %s" % (kind, rest, name, path)
+        # a plain identifier must appear as a whole word (Heap is not HeapAlloc); a longer name, such as a transcript line, as written
+        found = re.search(r"(?<![\w])%s(?![\w])" % re.escape(name), text) if re.fullmatch(r"\w+", name) else name in text
+        return None if found else "%s:%s: %r does not appear in %s" % (kind, rest, name, path)
     if kind == "doc":
         path, sep, anchor = rest.partition("#")
         if not sep or not anchor:
@@ -351,52 +354,54 @@ def check_status(recs, root, data, chapter):
 
 # ---- commands -----------------------------------------------------------------------------------------------------------------
 
+def split_segments(cmd):
+    """The commands of a shell line as word lists, split on | || && ; outside quotes. A line that cannot be read raises ValueError."""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    segs, cur = [], []
+    for w in lex:
+        if w in ("|", "||", "&&", ";"):
+            segs.append(cur)
+            cur = []
+        else:
+            cur.append(w)
+    return segs + [cur]
+
+
 def check_command(cmd, root):
     """The problems with one command of a try block: it must start with a tool we know or a script that exists in the repository, and an
-    interpreter's script must exist as well. Pipes, `&&`, `;`, redirections and one `cd DIR &&` are read; quoting is respected."""
+    interpreter's script must exist as well."""
     problems = []
-    lex = shlex.shlex(cmd.strip(), posix=True, punctuation_chars=True)
-    lex.whitespace_split = True
-    try:
-        tokens = list(lex)
-    except ValueError:
-        return ["cannot read the command %r" % cmd]
+    cmd = cmd.strip()
+    if cmd.startswith("(") and cmd.endswith(")"):
+        cmd = cmd[1:-1].strip()
     cwd = root
-    segments, cur, skip_next = [], [], False
-    for t in tokens:
-        if skip_next:
-            skip_next = False
-            continue
-        if t in ("|", "||", "&&", ";", "&", ";;"):
-            segments.append(cur)
-            cur = []
-        elif t in ("(", ")"):
-            continue
-        elif t in (">", ">>", "<", "2>", "&>", ">&"):
-            skip_next = True
-        elif re.match(r"^[<>&]+$", t):
-            skip_next = True
-        else:
-            cur.append(t)
-    segments.append(cur)
+    m = re.match(r"^cd\s+(\S+)\s*&&\s*(.*)$", cmd)
+    if m:
+        cwd = os.path.join(root, m.group(1))
+        if not os.path.isdir(cwd):
+            return ["cd %s: no such directory in the repository" % m.group(1)]
+        cmd = m.group(2)
+    try:
+        segments = split_segments(cmd)
+    except ValueError:
+        return problems + ["cannot read the command %r" % cmd]
     for words in segments:
+        seg = list(words)
         while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
             words.pop(0)
         if not words:
             continue
         first = words[0]
-        if first == "cd":
-            target = os.path.join(root, words[1]) if len(words) > 1 else root
-            if not os.path.isdir(target):
-                problems.append("cd %s: no such directory in the repository" % (words[1] if len(words) > 1 else ""))
-            else:
-                cwd = target
-            continue
         if first in TOOLS:
             if first in INTERPRETERS:
                 script = None
+                skip = False
                 for w in words[1:]:
-                    if w in ("-c", "-e"):
+                    if skip:
+                        skip = False
+                        continue
+                    if w in ("-c", "-e", "-m"):
                         script = ""
                         break
                     if w.startswith("-"):
@@ -404,12 +409,13 @@ def check_command(cmd, root):
                     script = w
                     break
                 if script is None:
-                    problems.append("%s: no script named" % first)
+                    problems.append("%s: no script named" % " ".join(seg))
                 elif script and not os.path.exists(os.path.join(cwd, script)):
                     problems.append("%s: the script %s does not exist" % (first, script))
             continue
-        if "/" in first or first.endswith((".sh", ".py")):
-            if not os.path.isfile(os.path.join(cwd, first)) and not os.path.isfile(os.path.join(root, first)):
+        path = first
+        if "/" in path or path.endswith((".sh", ".py")):
+            if not os.path.isfile(os.path.join(cwd, path)) and not os.path.isfile(os.path.join(root, path)):
                 problems.append("%s: no such script in the repository" % first)
         else:
             problems.append("%s: not a script in the repository or a known tool (%s)" % (first, ", ".join(sorted(TOOLS))))
@@ -531,6 +537,8 @@ def check_terms(chapters):
     problems, defined = [], {}
     for c in chapters:
         for t in c.get("glossary", []):
+            if not t["id"]:
+                problems.append("%s: the term %r has no letters or digits to make an anchor from" % (c["id"], t["term"]))
             if t["id"] in defined:
                 problems.append("the term %r is defined in %s and in %s" % (t["term"], defined[t["id"]], c["id"]))
             defined[t["id"]] = c["id"]
