@@ -246,7 +246,7 @@ HarfBuzz (uharfbuzz 0.53.3) then shapes the outline faces' layout in both format
 
 ## Not yet verified
 
-- No DOS code reads the `.DFN` files yet; only the build's decoder and the FreeType comparison in `validate.py` have read them.
+- No DOS code reads the `.DFN` files yet. `desk-font` (`shell/font/`) parses the four on the host and its tests check their metrics and a text-art rendering; the DOS wiring that loads them is still to come (`docs/FIRST-WINDOW-PLAN.md`, T9). The build's decoder and the FreeType comparison in `validate.py` read them too.
 - The TrueType files have not been installed on real Windows 3.1, 95, NT 3.5x or OS/2 Warp. Trying them in an emulator needs licensed installation media for those systems, which this repository does not have, so the era support rests on the structure checks and on FreeType, which is a different rasteriser from Windows'.
 - The outline faces have been looked at in headless Chromium and in FreeType proof sheets on Linux only; Windows (GDI, DirectWrite and ClearType), macOS and Windows 3.1 have not rendered them.
 - The kerning and features have been checked with HarfBuzz and in headless Chromium only. Whether Windows 3.1 and 95-era programs apply the `kern` table, and how DirectWrite, Core Text, Word, LibreOffice and code editors treat the features and the code ligatures' caret, has not been tried.

@@ -1,0 +1,9 @@
+[package]
+name = "desk-font"
+description = "Reads the .DFN bitmap faces: metrics, glyph rows and text advances, with no drawing code"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

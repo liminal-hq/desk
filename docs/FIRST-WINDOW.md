@@ -285,7 +285,7 @@ pub struct Glyph<'a> { pub code: u32, pub advance: u8, pub height: u8, pub strid
 impl Glyph<'_> { pub fn bit(&self, x: u32, y: u32) -> bool; }
 ```
 
-A face loaded at run time (`Vec<u8>` from a file on DOS) becomes `'static` with `Vec::leak`; the faces live as long as the shell. `desk-font` has no drawing code: `desk-ui` draws glyph rows with `Surface::mono`.
+A face loaded at run time (`Vec<u8>` from a file on DOS) becomes `'static` with `Vec::leak`; the faces live as long as the shell. `FontError::Truncated` carries offset 0 when the file ends inside the 8-byte header and the glyph's starting offset when it ends inside a glyph; `glyph_or_fallback` returns an empty glyph of advance 0 for a face that has neither the character nor `?`. `desk-font` has no drawing code: `desk-ui` draws glyph rows with `Surface::mono`.
 
 ## desk-ui: theme roles, text and window chrome
 

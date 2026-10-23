@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "desk-font"
+version = "0.0.0"
+
+[[package]]
 name = "desk-gfx"
 version = "0.0.0"
 dependencies = [
