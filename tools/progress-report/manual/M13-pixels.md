@@ -16,7 +16,7 @@ Everything the shell shows on the screen is first drawn into memory. This chapte
 
 On the map of the system ([M1](chapter:m-map)) these are two boxes of the [shared core](term:shared-core) and of the platform-side code that both tracks use: [`gfx`](chapter:anatomydesk#box-desk-gfx) and [`present`](chapter:anatomydesk#box-desk-present) on the native page, [`gfx`](chapter:anatomydos#box-dos-gfx) and [`present`](chapter:anatomydos#box-dos-present) on the DOS page. They are the same crates in both places. The hardware under them is the VGA card and its [DAC](term:dac), taught in [M3](chapter:m-devices) and [M12](chapter:m-graphics); the contract they are written against is the [HAL](term:hal) ([M9](chapter:m-hal)). The next chapter, [M14](chapter:m-text), puts text, colour roles and window chrome on top of the surface this chapter builds.
 
-After it you should be able to say where one pixel of the first window lives in memory and what it costs to move it to the screen; read a line such as `shell: damage moved: 0 pixels repainted, 456 presented in 2 rectangles` and say why each number is what it is; explain why a cursor move repaints nothing; say what the two digests of a frame are and why two different machines can agree on them; and add a presenter for another kind of frame buffer by implementing four methods.
+After it you should be able to say where one pixel of the first window lives in memory and what it costs to move it to the screen; read a line such as `shell: damage moved: 0 pixels repainted, 456 presented in 2 rectangles` and say why each number is what it is; explain why a cursor move repaints nothing; say what the two digests of a frame are and why two different machines can agree on them; and add a presenter for another kind of frame buffer by implementing three required methods (`width`, `height` and `span`) and, if it needs one, `align`.
 
 ## How it works
 
@@ -26,7 +26,7 @@ The core draws into a `Vec<u8>` of `width × height` bytes, whatever the display
 
 Two depths exist. At depth 8 the byte is written to the screen as it is, to a linear frame buffer ([VBE](term:vbe) mode `0x101` is 640 × 480 × 8). At depth 4 the screen is VGA mode 12h, the [planar mode](term:planar-mode) with 16 colours, and only the low four bits of each byte reach the [bit planes](term:bit-plane). Nothing in the drawing code knows which depth it is drawing for: the theme ([M14](chapter:m-text)) hands it palette indices, and at depth 4 every index it hands out is 0 to 15. The platform loads the palette into the DAC before the first frame.
 
-The decision to keep a full 8-bit buffer in RAM even for a 4-bit screen is the first of the design's choices, and the reason is on the card: reading video memory is the slow direction on real hardware, and a buffer in RAM means nothing ever has to. Nothing reads the frame buffer back except the test captures (below).
+The decision to keep a full 8-bit buffer in RAM even for a 4-bit screen is the second of the design's decisions, and the reason is on the card: reading video memory is the slow direction on real hardware, and a buffer in RAM means nothing ever has to. Nothing reads the frame buffer back except the test captures (below).
 
 ### Rectangles
 
@@ -247,10 +247,16 @@ evidence: test:shell/present/tests/planar.rs::every_colour_at_every_bit_position
 note: On the host through a four-plane model, and in QEMU at depth 4 on a Cirrus card in mode 12h set by registers. The register writes of VgaPlanes are checked against the mock port bus; no real card has been written to.
 
 id: pixels.readback
-label: The capture read-back through the VGA driver's read_row
+label: The linear capture read-back through the VGA driver's read_row
 state: built-verified
-evidence: test:shell/present/tests/linear.rs::a_known_picture_reads_back, sym:shell/present/src/readback.rs::read_back_planar
-note: The linear read-back has a unit test on the host. The planar read-back is used by the DOS program in DOSBox, which this chapter did not run, so that path rests on the committed DOS transcripts (docs/FIRST-WINDOW.md, Result).
+evidence: test:shell/present/tests/linear.rs::a_known_picture_reads_back, sym:shell/present/src/readback.rs::read_back_linear
+note: The linear read-back has a unit test on the host.
+
+id: pixels.readback-planar
+label: The planar capture read-back, as the DOS program uses it
+state: built-unverified
+evidence: sym:shell/present/src/readback.rs::read_back_planar, doc:docs/FIRST-WINDOW.md#result
+note: The planar read-back is used by the DOS program in DOSBox, which this chapter did not run, and no test in shell/present/tests runs it, so that path rests on the committed DOS transcripts (docs/FIRST-WINDOW.md, Result), which were not rerun.
 
 id: pixels.damage-numbers
 label: The damage counts of the scenario, host and native
