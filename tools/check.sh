@@ -1,5 +1,5 @@
 #!/bin/bash
-# Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
+# Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
 # and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
@@ -16,6 +16,10 @@ tools/check-headers.sh
 
 step "Markdown style and links"
 python3 -I tools/check-docs.py
+
+step "Progress report generator: unit tests and a dry run of the data gather"
+python3 -I tools/progress-report/tests/test_report.py
+python3 -I tools/progress-report/gather.py --dry-run
 
 step "Fonts"
 if command -v bun >/dev/null && [ -d fonts/node_modules ]; then
