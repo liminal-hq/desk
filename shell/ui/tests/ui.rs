@@ -506,3 +506,20 @@ fn a_label_draws_its_text_in_its_role_at_its_place_in_the_content_area() {
     draw_text(&mut want, &font, 28, 16, "Hello", t.slot(Role::TextSecondary));
     assert_eq!(s.pixels(), want.pixels());
 }
+
+#[test]
+fn chords_do_not_backspace_and_a_full_field_refuses_what_would_not_fit() {
+    let font = Font::parse(UI).unwrap();
+    let mut w = field(200);
+    w.key(key(KeyCode::A, Modifiers::NONE), &font);
+    assert_eq!(w.key(key(KeyCode::Backspace, Modifiers::CTRL), &font), None);
+    assert_eq!(text_of(&w), "a");
+    // Typing wide letters stops before the text and caret leave the 120-pixel field's outline.
+    for _ in 0..100 {
+        w.key(key(KeyCode::W, Modifiers::SHIFT), &font);
+    }
+    let Widget::TextLine(f) = &w else { unreachable!() };
+    assert!(font.advance(&f.text) + 6 + 1 < f.width - 1);
+    assert!(w.key(key(KeyCode::W, Modifiers::SHIFT), &font).is_none());
+    assert!(w.key(key(KeyCode::Backspace, Modifiers::NONE), &font).is_some());
+}

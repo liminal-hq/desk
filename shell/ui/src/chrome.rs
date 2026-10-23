@@ -6,7 +6,7 @@
 // The measurements are `docs/FIRST-WINDOW.md` ("Window chrome"). They are all taken from the window's outer box, which excludes
 // the halo; the halo is drawn outside it.
 
-use crate::icons::{CLOSE, MAXIMISE, MINIMISE};
+use crate::icons::{Icon, CLOSE, MAXIMISE, MINIMISE};
 use crate::text::{draw_text, fit_with_ellipsis};
 use crate::theme::{Role, Theme};
 use desk_font::Font;
@@ -18,8 +18,9 @@ pub const TITLE_HEIGHT: u32 = 22;
 pub const HALO: i32 = 3;
 /// The side of a control box.
 pub const BOX: u32 = 18;
-/// The smallest outer box; `ChromeLayout::new` widens a smaller one to it.
+/// The smallest outer box; `ChromeLayout::new` widens a smaller one to it, so callers take `outer` and `extent` from the layout.
 pub const MIN_WIDTH: u32 = 120;
+/// See `MIN_WIDTH`.
 pub const MIN_HEIGHT: u32 = 40;
 
 const TITLE_INSET: i32 = 8;
@@ -110,7 +111,7 @@ pub fn paint_chrome(s: &mut Surface, t: &Theme, title_font: &Font, l: &ChromeLay
     }
 
     let icons = [&MINIMISE, &MAXIMISE, &CLOSE];
-    let pad = (BOX - crate::icons::Icon::SIZE) as i32 / 2;
+    let pad = (BOX - Icon::SIZE) as i32 / 2;
     for (b, icon) in l.buttons.iter().zip(icons) {
         s.fill(*b, t.slot(Role::Chrome));
         icon.draw(s, b.x0 + pad, b.y0 + pad, t.slot(icon_role));

@@ -47,6 +47,7 @@ The first window (`FIRST-WINDOW.md`) draws with these 256-colour slots; every ot
 | 97 | `#050507` | the Void wallpaper |
 | 98 | `#0c0c10` | title bars and control boxes |
 | 99 | `#111116` | window content and the inside of a field |
+| 100–101 | `#14161d`, `#16161c` | loaded with the other Afterglow surfaces; the first window does not draw with them |
 | 102 | `#1b1e28` | raised surfaces (hovered control boxes, later) |
 | 103 | `#262a37` | the rule under a title bar and the unfocused hairline |
 | 104 | `#333847` | field outlines |

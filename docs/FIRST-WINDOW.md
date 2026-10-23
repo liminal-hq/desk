@@ -389,7 +389,7 @@ impl Widget {
 }
 ```
 
-`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
 
 ## desk-wm: windows, focus and damage
 

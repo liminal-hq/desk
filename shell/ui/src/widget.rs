@@ -10,8 +10,7 @@ use crate::theme::{Role, Theme};
 use alloc::string::String;
 use desk_font::Font;
 use desk_gfx::{Rect, Surface};
-use desk_hal::KeyEvent;
-use desk_hal::{KeyCode, Modifiers};
+use desk_hal::{KeyCode, KeyEvent, Modifiers};
 
 /// The height of a text field, outline included.
 pub const FIELD_HEIGHT: u32 = 20;
@@ -31,7 +30,7 @@ pub struct Label {
 }
 
 /// A field: a `Border` outline, `Content` inside, the text in `Text`, and a caret in `Accent` after the text while its window is
-/// focused. It is `width` wide and `FIELD_HEIGHT` high at `at`, and holds at most `max_chars` characters.
+/// focused. It is `width` wide and `FIELD_HEIGHT` high at `at`, and holds at most `max_chars` characters, fewer when they would not fit inside the outline with the caret.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TextLine {
     pub at: (i32, i32),
@@ -97,22 +96,32 @@ impl TextLine {
     }
 
     fn key(&mut self, e: KeyEvent, font: &Font) -> Option<Rect> {
-        if !e.pressed {
+        let chord = Modifiers::CTRL.union(Modifiers::ALT).union(Modifiers::GUI);
+        if !e.pressed || e.modifiers.0 & chord.0 != 0 {
             return None;
         }
-        let before = self.ink(font, &self.text);
-        if e.code == KeyCode::Backspace {
-            self.text.pop()?;
+        let typed = if e.code == KeyCode::Backspace {
+            None
         } else {
-            let chord = Modifiers::CTRL.union(Modifiers::ALT).union(Modifiers::GUI);
-            if e.modifiers.0 & chord.0 != 0 || self.text.chars().count() >= usize::from(self.max_chars) {
-                return None;
-            }
             let c = desk_kbd::char_for(e.code, e.modifiers)?;
             if c != ' ' && !c.is_ascii_graphic() {
                 return None;
             }
-            self.text.push(c);
+            // The text and its caret must stay inside the outline, so a character that would not fit is refused as well.
+            let room = self.width.saturating_sub(2 * TEXT_INSET as u32);
+            if self.text.chars().count() >= usize::from(self.max_chars)
+                || font.advance(&self.text) + font.advance(c.encode_utf8(&mut [0; 4])) >= room
+            {
+                return None;
+            }
+            Some(c)
+        };
+        let before = self.ink(font, &self.text);
+        match typed {
+            Some(c) => self.text.push(c),
+            None => {
+                self.text.pop()?;
+            }
         }
         let after = self.ink(font, &self.text);
         Some(before.union(&after).intersect(&self.bounds()))
