@@ -767,14 +767,14 @@ class Site:
         # the shelves summary comes from the chapters, so render them first
         for i in range(len(self.chapters)):
             self.pages.update([self.render_chapter(i)])
-        if self.gallery_recs:
-            self.render_gallery()
         if self.plan:
             for c in self.mchapters:
                 self.pages.update([self.render_manual_chapter(c)])
             self.pages.update([self.render_manual_landing()])
             for a in self.plan.get("appendices", []):
                 self.pages.update([self.appendix_page(a)])
+        if self.gallery_recs:
+            self.render_gallery()
         sh = []
         for k in ("catalogued", "uncatalogued", "wish"):
             name, what = SHELF_TEXT[k]
