@@ -1,0 +1,9 @@
+# Builds the kernel for its own target. `RUSTC_BOOTSTRAP=1` lets the pinned stable toolchain use `build-std`.
+[build]
+target = "i486-desk-none.json"
+rustflags = ["-Clink-arg=-Tlink.ld", "-Clink-arg=-nostdlib", "-Clink-arg=-zmax-page-size=0x1000"]
+
+[unstable]
+json-target-spec = true
+build-std = ["core", "alloc", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]

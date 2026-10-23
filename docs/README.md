@@ -14,6 +14,7 @@ Working design documents for Desk, derived from a design-agent brainstorm that h
 | [`HIG.md`](HIG.md) | The design language every app follows |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
+| [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
 

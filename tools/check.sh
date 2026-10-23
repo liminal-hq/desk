@@ -1,6 +1,6 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
-# and lints, then the DOS build and a headless run.
+# and lints, the DOS build and a headless run, then the native boot test under QEMU.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -58,5 +58,8 @@ case "$actual" in
 esac
 grep -q 'DESK-SKELETON PANIC' dist/OUT.TXT || fail "the panic report is missing from OUT.TXT"
 echo "$actual (exit status $status)"
+
+step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
+tools/native-test.sh
 
 printf '\nAll checks passed.\n'
