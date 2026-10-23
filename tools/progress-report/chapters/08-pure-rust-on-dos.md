@@ -41,3 +41,14 @@ It is not only a hello. A hardware transcript in `spikes/d0-rust-dos/expected/hw
 
 > **From the stacks — Mode 13h.** BIOS video mode 13h is 320 by 200 pixels in 256 colours, introduced with the VGA on IBM's PS/2 line in 1987. Its frame buffer is a plain run of 64,000 bytes, one per pixel, at segment `0xA000` offset 0, and the palette lives in the DAC rather than in memory. That simplicity is why so many DOS games drew straight into it, and why d0 could check the whole mode with a checksum of memory.
 > Source: [Mode 13h, Wikipedia](https://en.wikipedia.org/wiki/Mode_13h)
+
+```figures
+id: link-and-pack
+kind: explainer
+track: hosted
+title: From Rust object to DOS program
+alt: A step-through of the pipeline that links Rust objects with rust-lld and packs the result into a DOS executable with the DJGPP stub, with the sizes at each stage.
+caption: The link-and-pack pipeline, with the sizes the spike recorded.
+at: explainer pipeline
+thumb: steps
+```

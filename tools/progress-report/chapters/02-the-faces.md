@@ -12,6 +12,10 @@ You are reading this page in them. The headings are `Desk Title`, the prose is `
 
 <!-- figure specimens -->
 
+The families against their styles, with the glyph count of each file, are in the matrix below.
+
+<!-- figure font-matrix -->
+
 The era matters to the way the files are built. The `.ttf` files follow what Windows 3.1 expected: the required tables, a `cmap` for the 3,1 and 1,0 encodings over CP1252, name records, OS/2 version 1, `post` 2.0, and every face lands on a whole point size at 96 dpi. `Desk Fixed DOS` carries the 256 characters of code page 437 at their DOS byte values as a symbol-encoded font for ANSI programs, with a Unicode table beside it for modern systems. Kerning is counted in the file itself: the generator reads {{kern.desk_sans}} pairs from the `kern` table of `desk-sans.ttf` and {{kern.desk_serif}} from `desk-serif.ttf` (PR #1 says "about 430"), and the `.otf` files carry the same pairs as GPOS for modern shaping. Ligatures (`fi`, `fl`, `ff`, `ffi`, `ffl`) and the code ligatures of `Desk Mono` (`->`, `=>`, `!=`, `<=`, `===`) live in the OpenType tables, which era systems ignore.
 
 <!-- facts fontFiles bunTests -->
@@ -38,3 +42,23 @@ Everything is built by one script, `fonts/build.ts`, and `bun build.ts --check` 
 
 > **From the stacks — TrueType.** As the story is usually told, Apple developed TrueType in the late 1980s as a rival to Adobe's Type 1 fonts and released it with Mac System 7 in May 1991. Microsoft added it to Windows 3.1, the Windows of the Desk's own era, which is why the `.ttf` files here follow its rules. OpenType with CFF outlines, which is what the `.otf` files are, only arrived in the late 1990s, so it is no part of that story.
 > Source: [TrueType, Wikipedia](https://en.wikipedia.org/wiki/TrueType)
+
+```figures
+id: specimens
+kind: specimen
+track: design
+title: The font family specimens
+alt: Sample lines set in the Desk fonts: the pixel faces Title, UI, Small and Fixed, and the outline faces Sans, Serif and Mono, on a dark and a light ground.
+caption: Live text in the pixel faces, the outline family, its italics and ligatures.
+at: figure specimens
+thumb: specimen
+
+id: font-matrix
+kind: chart
+track: design
+title: The font matrix
+alt: A grid of the eight Desk font families against five styles, each filled cell showing the number of glyphs in that OpenType file.
+caption: Families against styles, with the glyph count of every file.
+at: figure font-matrix
+thumb: svg
+```

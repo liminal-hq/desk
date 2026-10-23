@@ -21,7 +21,7 @@ One field note for the cataloguer. Every merged change since has had to pass the
 ## The shelves
 
 ### Catalogued
-- The licence header and markdown style checks exist and run in CI: the CI conclusion on each of the {{m.prs}} merge commits is "success" (`gh run list --branch main`).
+- The licence header and markdown style checks exist and run in CI: the CI conclusion on each of the {{m.prsMergeDay}} merge-day merge commits is "success" (`gh run list --branch main`).
 - The checks were tried against bad input before being trusted (stated in the Initial Commit message; I have not re-run that experiment).
 - The banner rebuilds from `tools/build-hero.py`; the Initial Commit says it was rendered in headless Chromium and rebuilt byte for byte.
 
@@ -35,3 +35,14 @@ One field note for the cataloguer. Every merged change since has had to pass the
 
 > **From the stacks — The 8.3 rule.** The Desk's launcher is called `DESK.COM` and its core `DESKCORE.EXE` because DOS file names have a name of at most eight characters and an extension of at most three. As the story is usually told, the limit comes from the FAT file system's directory entries, and Windows 95 was where long file names reached ordinary users in 1995. For the Desk this is a hosted-track rule: `docs/DIRECTION.md` notes that the native track is not bound by it.
 > Source: [8.3 filename, Wikipedia](https://en.wikipedia.org/wiki/8.3_filename)
+
+```figures
+id: banner
+kind: diagram
+track: design
+title: The README banner
+alt: The Desk banner: a wide drawing in the Desk palette with the project name set in its own pixel face.
+caption: The banner at the top of the repository README, rebuilt by a script.
+at: figure hero
+thumb: svg
+```

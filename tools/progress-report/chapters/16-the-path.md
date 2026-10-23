@@ -3,12 +3,12 @@ id: path
 n:
 kicker: The path
 title: The path
-date: 2026-10-22
+date: 2026-10-23
 summary: Everything still to do, as a tree that grows from the Desk to its first milestone, with the critical path marked.
 prs: []
 section: reference
 ---
-A shelf of finished things is only half an archive; the other half is the list of what is missing. This is the path, drawn from `tools/progress-report/roadmap.json`. Its target is one milestone, **First Window**: a window drawn by the shared Desk core and moved with a mouse, on DOS and on the bare-metal kernel. Nothing like it exists yet, and the tree says so with a box that is still dashed.
+A shelf of finished things is only half an archive; the other half is the list of what is missing. This is the path, drawn from `tools/progress-report/roadmap.json`. Its target is one milestone, **First Window**: a window drawn by the shared Desk core and moved with a mouse, on DOS and on the bare-metal kernel. Nothing like it exists yet. The native kernel draws a window with a cursor in an emulator (chapter 12), but with its own code, in a pull request that is still open; there is no hosted equivalent and no shared core, so the milestone box is still dashed.
 
 The architecture comes first, because the tree is easier to read once you know which layers exist.
 
@@ -18,6 +18,10 @@ Now the tree. Every box is a step; the colour and shape of its icon say what has
 
 <!-- figure tree -->
 
+The same steps, counted by track and by state:
+
+<!-- figure track-progress -->
+
 And the next move of each branch, with what is in its way.
 
 <!-- figure nexts -->
@@ -25,12 +29,46 @@ And the next move of each branch, with what is in its way.
 ## The shelves
 
 ### Catalogued
-- The steps marked done have a merged pull request and a passing CI run on its merge commit: the generator drops any step to "partly done" if that is not true.
+- The steps marked done have merged pull requests and a passing CI run on each merge commit: the generator drops a step to "built, in review" while its pull requests are open, and to "partly done" if one cannot be found.
+- Every step carries a tag from `gh` (merged, in review, in progress or planned), so a reader can tell a merged step from one that is built and waiting.
 - "Catalogued in an emulator" is as far as any native or DOS step goes: the checks run in QEMU or headless DOSBox Staging.
 
 ### Uncatalogued
-- Every step marked "catalogued in an emulator" is uncatalogued on real hardware. No step has a real machine behind it.
+- Every step marked "catalogued in an emulator" or "built, in review" is uncatalogued on real hardware. No step has a real machine behind it, and the "built, in review" steps are not merged.
+- The steps for spikes G and n3 (Bochs and 86Box, and a real BIOS path for the native kernel) are placeholders: this archive has not read them.
 - The roadmap's dependency edges and the critical path are my reading of `docs/DIRECTION.md`, `docs/SPEC.md` and `docs/RUST-TARGETS.md`; the generator checks the statuses, not the edges.
 
 ### Wish list
-- Every dashed or dotted box in the tree: the HAL, the shared drivers, the shell, the handoff, the core apps, the native desktop and the milestone itself.
+- Every dashed or dotted box in the tree: the shared core, the shell, the handoff, the core apps, the native desktop, the filesystem, the module loader, the scheduling model, FreeDOS under the native OS, Fizz Episode 2, the real-hardware runs and the milestone itself.
+
+```figures
+id: architecture
+kind: diagram
+track: shared
+title: The architecture of the two tracks
+alt: Layered diagram of the hosted and native tracks from apps down to the machine, drawn solid where work exists and dashed where it is only planned.
+caption: Layers from docs/DIRECTION.md, with what is built and what is in review.
+at: figure arch
+thumb: svg
+state: none
+
+id: roadmap-tree
+kind: diagram
+track: shared
+title: The path tree
+alt: A tree of every roadmap step growing from the Desk to the First Window milestone, each step marked by its state and the critical path in amber.
+caption: Every step, its state, and the critical path.
+at: figure tree
+thumb: svg
+state: none
+
+id: track-progress
+kind: chart
+track: shared
+title: Progress by track
+alt: Stacked bars of the roadmap steps in each track, split by state from catalogued to open decision.
+caption: Steps by track and state.
+at: figure track-progress
+thumb: svg
+state: none
+```
