@@ -18,7 +18,7 @@ import struct
 import subprocess
 import sys
 
-USAGE = "usage: gather.py [--ref REF] [--out FILE] [--offline] [--update-snapshot] [--dry-run]"
+USAGE = "usage: gather.py [--ref REF] [--out FILE] [--offline] [--update-snapshot] [--update-captures] [--dry-run]"
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 
@@ -102,6 +102,34 @@ def gh_json(*args):
         return json.loads(p.stdout)
     except ValueError:
         return None
+
+
+def slim_pr(p):
+    """A pull request as gh returns it, with the check rollup reduced to what the report uses."""
+    out = dict(p)
+    out["checks"] = [{"name": c.get("name"), "workflow": c.get("workflowName"), "status": c.get("status"), "conclusion": c.get("conclusion")}
+                     for c in out.pop("statusCheckRollup", None) or []]
+    return out
+
+
+def ci_of(checks):
+    """passing, failing, pending or none, from the checks on a pull request's head commit."""
+    if not checks:
+        return "none"
+    if any(c.get("conclusion") in ("FAILURE", "CANCELLED", "TIMED_OUT") for c in checks):
+        return "failing"
+    if all(c.get("status") == "COMPLETED" and c.get("conclusion") in ("SUCCESS", "NEUTRAL", "SKIPPED") for c in checks):
+        return "passing"
+    return "pending"
+
+
+def snapshot_open_work():
+    """The open-work record committed with the gh snapshot, or None."""
+    path = os.path.join(HERE, "snapshots", "gh.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return (json.load(f).get("data") or {}).get("openWork")
 
 
 def gh_available():
@@ -361,17 +389,205 @@ def gh_data(offline):
     snap_path = os.path.join(HERE, "snapshots", "gh.json")
     if not offline and gh_available():
         prs = gh_json("pr", "list", "--state", "all", "--limit", "100", "--json",
-                      "number,title,headRefName,baseRefName,createdAt,mergedAt,additions,deletions,changedFiles,labels,url")
+                      "number,title,headRefName,baseRefName,headRefOid,createdAt,updatedAt,mergedAt,state,isDraft,additions,deletions,changedFiles,labels,url,"
+                      "statusCheckRollup")
         runs = gh_json("run", "list", "--branch", "main", "--limit", "200", "--json",
                        "conclusion,headSha,displayTitle,createdAt,url,workflowName,event")
         repo = gh_json("repo", "view", "--json", "description,repositoryTopics,url,visibility")
         if prs is not None and runs is not None:
-            return {"prs": prs, "runs": runs, "repo": repo}, "gh", None
+            return {"prs": [slim_pr(p) for p in prs], "runs": runs, "repo": repo}, "gh", None
     if os.path.exists(snap_path):
         with open(snap_path, encoding="utf-8") as f:
             snap = json.load(f)
         return snap["data"], "snapshot", snap.get("capturedAt")
     return {"prs": [], "runs": [], "repo": None}, "none", None
+
+
+# ---- open pull requests: work that is on a branch and not merged ---------------------------------------------------------------
+
+REPORT_BRANCH_PREFIX = "docs/progress-report"
+TRANSCRIPT_RX = r"^(tests/native/[^/]+\.txt|spikes/[^/]+/expected/[^/]+\.txt)$"
+
+
+def pr_state(p):
+    """The state tag of a pull request from gh: merged, in review (open and ready), in progress (a draft) or closed."""
+    if p.get("mergedAt"):
+        return "merged"
+    if p.get("state") == "OPEN":
+        return "in progress" if p.get("isDraft") else "in review"
+    return "closed"
+
+
+def branch_ref(root, name):
+    """The remote-tracking ref of a branch if there is one, else the local branch, else None."""
+    for cand in ("origin/" + name, name):
+        if subprocess.run(["git", "rev-parse", "--verify", "-q", cand + "^{commit}"], cwd=root, capture_output=True).returncode == 0:
+            return cand
+    return None
+
+
+def is_ancestor(root, a, b):
+    return subprocess.run(["git", "merge-base", "--is-ancestor", a, b], cwd=root, capture_output=True).returncode == 0
+
+
+def open_work(root, gh_prs):
+    """The open pull requests and what their branches hold, read from git. None when a branch is not available (a shallow clone,
+    or a branch that was never fetched), in which case the caller uses the snapshot. A branch's own commits leave out the commits of
+    every other open branch that it contains, so a stacked pull request is not credited with the work it was built on."""
+    opens = sorted((p for p in gh_prs if p.get("state") == "OPEN"), key=lambda p: p["number"])
+    main = branch_ref(root, "main")
+    if not main:
+        return None
+    refs = {}
+    for p in opens:
+        r = branch_ref(root, p["headRefName"])
+        if not r:
+            return None
+        refs[p["number"]] = r
+    heads = {n: subprocess.run(["git", "rev-parse", r], cwd=root, capture_output=True, text=True).stdout.strip() for n, r in refs.items()}
+    out, warnings = [], []
+    for p in opens:
+        n, ref = p["number"], refs[p["number"]]
+        base = branch_ref(root, p["baseRefName"]) or main
+        below = [refs[m] for m in refs if m != n and is_ancestor(root, refs[m], ref)]
+        repo = Repo(root, ref)
+        own = []
+        for line in repo.git("log", "--reverse", "--format=%h%x09%aI%x09%s%x09%P", ref, "^" + base, *["^" + b for b in below]).splitlines():
+            h, d, sub, par = line.split("\t")
+            own.append({"hash": h, "date": d, "subject": sub, "merge": len(par.split()) > 1})
+        if heads[n] != p.get("headRefOid"):
+            warnings.append("the local ref of PR #%d is at %s but gh says its head is %s: fetch before building" % (n, heads[n][:7], (p.get("headRefOid") or "?")[:7]))
+        out.append({
+            "number": n, "title": p["title"], "branch": p["headRefName"], "base": p["baseRefName"], "head": heads[n][:7], "headFull": heads[n],
+            "state": pr_state(p), "ci": ci_of(p.get("checks")), "createdAt": p.get("createdAt"), "updatedAt": p.get("updatedAt"), "url": p.get("url"),
+            "labels": [l["name"] for l in p.get("labels", [])], "ghAdditions": p.get("additions"), "ghDeletions": p.get("deletions"),
+            "ghChangedFiles": p.get("changedFiles"), "commits": own, "commitCount": len(own),
+            "ahead": int(repo.git("rev-list", "--count", ref, "^" + main).strip() or 0), "stackedOn": [int(m) for m in refs if m != n and is_ancestor(root, refs[m], ref)],
+            "isReport": p["headRefName"].startswith(REPORT_BRANCH_PREFIX),
+        })
+    subject = [o for o in out if not o["isReport"]]
+    tips = []
+    for o in subject:
+        repo = Repo(root, refs[o["number"]])
+        tests = sum(len(re.findall(rb"^\s*#\[test\]", b or b"", flags=re.M)) for b in repo.blobs(repo.matching(r"^hal/.*\.rs$")).values())
+        tips.append({"number": o["number"], "hostTests": tests, "transcripts": len(repo.matching(TRANSCRIPT_RX)), "halLines": repo.lines(r"^hal/.*\.rs$"),
+                     "kernelLines": repo.lines(r"^kernel/src/.*\.rs$")})
+    union = ""
+    if subject:
+        union = subprocess.run(["git", "rev-list", "--count", *[refs[o["number"]] for o in subject], "^" + main], cwd=root, capture_output=True, text=True).stdout.strip()
+    best = max(tips, key=lambda t: t["hostTests"]) if tips else None
+    return {"prs": out, "tips": tips, "commitsOnBranches": int(union or 0), "widest": best["number"] if best else None, "warnings": warnings,
+            "conflicts": trial_merges(root, {o["number"]: refs[o["number"]] for o in subject})}
+
+
+def trial_merges(root, refs):
+    """Which pairs of open branches would conflict if both were merged, found with `git merge-tree`, which writes only objects and
+    never touches a working tree. Pairs where one branch contains the other are skipped: merging the second is not a new question."""
+    out = []
+    nums = sorted(refs)
+    for i, a in enumerate(nums):
+        for b in nums[i + 1:]:
+            if is_ancestor(root, refs[a], refs[b]) or is_ancestor(root, refs[b], refs[a]):
+                continue
+            p = subprocess.run(["git", "merge-tree", "--write-tree", "--name-only", refs[a], refs[b]], cwd=root, capture_output=True, text=True)
+            if p.returncode == 1:
+                files = []
+                for line in p.stdout.splitlines()[1:]:
+                    if not line.strip():
+                        break
+                    files.append(line.strip())
+                out.append({"a": a, "b": b, "files": files})
+    return out
+
+
+# ---- captures: the few files of other branches that the explainers replay ------------------------------------------------------
+
+def extract(text, spec):
+    """The part of a text file a capture keeps: all of it, the Nth fenced block after a marker line, or the first table after one."""
+    if not spec:
+        return text
+    lines = text.splitlines()
+    start = next((i for i, l in enumerate(lines) if spec["after"] in l), None)
+    if start is None:
+        return None
+    if "fence" in spec:
+        seen, i = 0, start
+        while i < len(lines):
+            if lines[i].startswith("```"):
+                seen += 1
+                j = i + 1
+                while j < len(lines) and not lines[j].startswith("```"):
+                    j += 1
+                if seen == spec["fence"]:
+                    return "\n".join(lines[i + 1:j]) + "\n"
+                i = j
+            i += 1
+        return None
+    if "table" in spec:
+        i = start
+        while i < len(lines) and not lines[i].startswith("|"):
+            i += 1
+        j = i
+        while j < len(lines) and lines[j].startswith("|"):
+            j += 1
+        return "\n".join(lines[i:j]) + "\n" if j > i else None
+    return None
+
+
+def load_captures():
+    path = os.path.join(HERE, "media", "captures.json")
+    return read_json(path) if os.path.exists(path) else []
+
+
+def capture_source(root, c):
+    """(bytes or None, commit) of the capture's source on its branch, or (None, None) when the branch is not available."""
+    ref = branch_ref(root, c["branch"])
+    if not ref:
+        return None, None
+    repo = Repo(root, ref)
+    blob = repo.show_bytes(c["path"])
+    if blob is None:
+        return None, repo.git("rev-parse", "--short", ref).strip()
+    if c.get("extract"):
+        text = extract(blob.decode("utf-8", errors="replace"), c["extract"])
+        blob = text.encode("utf-8") if text is not None else None
+    return blob, repo.git("rev-parse", "--short", ref).strip()
+
+
+def check_captures(root):
+    """Compares each committed capture with its source on the branch it came from: matches, differs, or not checked."""
+    out = []
+    for c in load_captures():
+        mine = os.path.join(HERE, "media", c["file"])
+        have = None
+        if os.path.exists(mine):
+            with open(mine, "rb") as f:
+                have = f.read()
+        src, head = capture_source(root, c)
+        if have is None:
+            status = "missing"
+        elif head is None:
+            status = "not checked"
+        elif src == have:
+            status = "matches"
+        else:
+            status = "differs"
+        out.append({"file": c["file"], "branch": c["branch"], "path": c["path"], "commit": c.get("commit"), "branchHead": head, "status": status})
+    return out
+
+
+def update_captures(root):
+    caps = load_captures()
+    for c in caps:
+        src, head = capture_source(root, c)
+        if src is None:
+            raise SystemExit("cannot capture %s: %s:%s is not available" % (c["file"], c["branch"], c["path"]))
+        with open(os.path.join(HERE, "media", c["file"]), "wb") as f:
+            f.write(src)
+        c["commit"] = head
+    with open(os.path.join(HERE, "media", "captures.json"), "w", encoding="utf-8") as f:
+        json.dump(caps, f, indent=1)
+        f.write("\n")
 
 
 # ---- the whole record ----------------------------------------------------------------------------------------------------------
@@ -385,19 +601,51 @@ def load_roadmap():
     return read_json(os.path.join(HERE, "roadmap.json"))
 
 
-def resolve_roadmap(roadmap, prs):
-    """Checks every node against what is merged. A node that claims a PR must have that PR merged with CI passing on the
-    merge commit, or it drops to 'progress'. Returns the roadmap with the evidence the check used, and any warnings."""
+def resolve_roadmap(roadmap, prs, open_prs=()):
+    """Checks every node against what is merged and what is open, and gives each a state tag from gh. A node that claims pull requests
+    may keep a 'done' or 'done-emu' state only if every one is merged with CI passing on its merge commit. If they are open, it is
+    'review'; if any cannot be found it drops to 'progress'. The tag is merged, in review, in progress or planned. Returns the
+    per-branch progress, and any warnings."""
     by_num = {p["number"]: p for p in prs}
+    open_by = {p["number"]: p for p in open_prs}
     warnings = []
     for n in roadmap["nodes"]:
-        pr = by_num.get(n.get("pr"))
-        if n.get("pr"):
-            n["merged"] = bool(pr)
-            n["ci"] = pr.get("ci") if pr else "not merged"
-            if n["state"] in ("done", "done-emu") and not (pr and pr.get("ci") == "passing"):
-                warnings.append("node %s drops to progress: PR #%s is not merged with CI passing" % (n["id"], n["pr"]))
-                n["state"] = "progress"
+        nums = n.get("prs") or ([n["pr"]] if n.get("pr") else [])
+        n["prs"] = nums
+        n["merged"] = bool(nums) and all(k in by_num for k in nums)
+        tags = []
+        for k in nums:
+            tags.append("merged" if k in by_num else (open_by[k]["state"] if k in open_by else "unknown"))
+        if nums:
+            n["ci"] = "passing" if all((by_num.get(k) or open_by.get(k) or {}).get("ci") == "passing" for k in nums) else "not all passing"
+            if "unknown" in tags:
+                if n["state"] in ("done", "done-emu", "review"):
+                    warnings.append("node %s drops to progress: PR #%s was not found" % (n["id"], ", #".join(str(k) for k in nums if k not in by_num and k not in open_by)))
+                    n["state"] = "progress"
+            elif n["merged"]:
+                if n["state"] in ("done", "done-emu") and n["ci"] != "passing":
+                    warnings.append("node %s drops to progress: its pull requests are merged but CI did not pass on every merge commit" % n["id"])
+                    n["state"] = "progress"
+                if n["state"] == "review":
+                    warnings.append("node %s is marked review but its pull requests are merged" % n["id"])
+            else:
+                if n["state"] in ("done", "done-emu"):
+                    warnings.append("node %s drops to review: PR #%s is open, not merged" % (n["id"], ", #".join(str(k) for k in nums if k in open_by)))
+                    n["state"] = "review"
+                elif n["ci"] != "passing" and n["state"] == "review":
+                    warnings.append("node %s is in review but CI is not passing on every open pull request" % n["id"])
+        if "in progress" in tags:
+            n["tag"] = "in progress"
+        elif "in review" in tags:
+            n["tag"] = "in review"
+        elif nums and n["merged"]:
+            n["tag"] = "merged"
+        elif nums:
+            n["tag"] = "planned"
+        elif n["state"] in ("done", "done-emu"):
+            n["tag"] = "merged"
+        else:
+            n["tag"] = n.get("work", "planned")
     progress = {}
     for n in roadmap["nodes"]:
         if n["branch"] != "root":
@@ -406,13 +654,25 @@ def resolve_roadmap(roadmap, prs):
     return progress, warnings
 
 
+def local_date(iso):
+    """The calendar date of a timestamp in the project's own time zone, where merge day began and ended."""
+    d = datetime.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    try:
+        from zoneinfo import ZoneInfo
+        d = d.astimezone(ZoneInfo("America/Toronto"))
+    except Exception:
+        d = d.astimezone(datetime.timezone(datetime.timedelta(hours=-4)))
+    return d.date().isoformat()
+
+
 def metric(value, label, how):
     return {"value": value, "label": label, "how": how}
 
 
 def gather(root=ROOT, ref="main", offline=False, dry_run=False):
-    repo = Repo(root, ref)
-    if repo.git("rev-parse", "--verify", ref, check=False).strip() == "":
+    # `main` means the remote's main when there is one: the local branch of a worktree-based checkout can be behind what gh reports.
+    repo = Repo(root, (branch_ref(root, "main") or "main") if ref == "main" else ref)
+    if repo.git("rev-parse", "--verify", repo.ref, check=False).strip() == "":
         raise SystemExit("no such ref: %s" % ref)
     first_parent, prs, sync = history(repo)
     facts = tree_facts(repo)
@@ -432,18 +692,38 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         p["ghAdditions"], p["ghDeletions"], p["ghChangedFiles"] = g.get("additions"), g.get("deletions"), g.get("changedFiles")
         concl = ci_by_sha.get(p["mergeFull"])
         p["ci"] = "passing" if concl == "success" else ("failing" if concl else "unknown")
+    work = open_work(root, gh["prs"]) if gh["prs"] else None
+    work_source = "git"
+    if work is None:
+        # a branch is not fetched here: the open work recorded with the snapshot stands in, even when gh itself answered live
+        work, work_source = gh.get("openWork") or snapshot_open_work(), "snapshot"
+    if work is None:
+        work, work_source = {"prs": [], "tips": [], "commitsOnBranches": 0, "widest": None, "warnings": []}, "none"
+    captures = check_captures(root)
     roadmap = load_roadmap()
-    progress, warnings = resolve_roadmap(roadmap, prs)
+    subject_open = [o for o in work["prs"] if not o["isReport"]]
+    progress, warnings = resolve_roadmap(roadmap, prs, work["prs"])
+    warnings += work.get("warnings", [])
+    warnings += ["capture %s differs from %s:%s" % (c["file"], c["branch"], c["path"]) for c in captures if c["status"] in ("differs", "missing")]
     now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     day0 = first_parent[-1] if first_parent else None
     merged_ci_ok = sum(1 for p in prs if p["ci"] == "passing")
+    # Merge day: the pull requests merged on the local date of the first merge. The early chapters describe that day, and a later merge
+    # (the report's own generator) must not change what they say.
+    md_date = local_date(prs[0]["mergedAt"]) if prs else None
+    md_prs = [p for p in prs if local_date(p["mergedAt"]) == md_date]
+    since = [p for p in prs if p not in md_prs]
+    md_last = md_prs[-1]["mergeFull"] if md_prs else None
+    md_first_parent = int(repo.git("rev-list", "--count", "--first-parent", md_last).strip()) if md_last else 0
+    md_all = int(repo.git("rev-list", "--count", md_last).strip()) if md_last else 0
+    md_ci = sum(1 for p in md_prs if p["ci"] == "passing")
     mpath = os.path.join(HERE, "snapshots", "measured.json")
     measured = read_json(mpath) if os.path.exists(mpath) else {}
     emoji, loc, tests = facts["emoji"], facts["loc"], facts["tests"]
     metrics = {
         "prs": metric(len(prs), "pull requests merged", "Merge commits on the first-parent line of %s whose subject ends in (#N), from `git log --first-parent`." % ref),
         "commitsFirst": metric(len(first_parent), "commits on the first-parent line", "`git log --first-parent --oneline %s | wc -l`: the initial commit plus one merge per pull request." % ref),
-        "commitsAll": metric(int(repo.git("rev-list", "--count", ref).strip() or 0), "commits in all", "`git rev-list --count %s`, which includes every commit inside the merged branches." % ref),
+        "commitsAll": metric(int(repo.git("rev-list", "--count", repo.ref).strip() or 0), "commits in all", "`git rev-list --count %s`, which includes every commit inside the merged branches." % ref),
         "ciGreen": metric(("%d of %d" % (merged_ci_ok, len(prs))) if source != "none" else "unknown", "merge commits with CI green", "The CI workflow's conclusion on each merge commit, from `gh run list --branch main` (source: %s)." % source),
         "files": metric(facts["files"], "files in the tree", "`git ls-tree -r %s | wc -l`." % ref),
         "docs": metric(facts["docs"], "design and result documents", "Markdown files directly under docs/ in the tree of %s." % ref),
@@ -458,6 +738,16 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         "bootLines": metric(loc["bootAsm"], "lines of boot assembly", "Newlines in boot/*.asm in the tree."),
         "packerLines": metric(loc["elf2go32Py"], "lines in the ELF packer", "Newlines in tools/elf2go32.py in the tree."),
         "docLines": metric(loc["docsMd"], "lines of design prose", "Newlines in docs/*.md in the tree."),
+        "prsOpen": metric(len(subject_open), "pull requests open", "Open pull requests from `gh pr list`, not counting the pull requests that carry this report. Each is CI-green or not as `gh` says; none is merged."),
+        "openCi": metric(("%d of %d" % (sum(1 for o in subject_open if o["ci"] == "passing"), len(subject_open))) if work_source != "none" else "unknown", "open pull requests with CI green", "The conclusion of every check on the head commit of each open pull request, from `gh pr list` (statusCheckRollup)."),
+        "commitsBranches": metric(work["commitsOnBranches"], "commits on open branches, not on main", "`git rev-list --count HEAD1 HEAD2 … ^main` over the heads of the open pull requests (the report's own excluded): each commit counted once, even when branches share it."),
+        "hostTests": metric(max([t["hostTests"] for t in work["tips"]] or [0]), "Rust host tests at the widest open branch", "Lines that are `#[test]` under hal/ in the tree of the open branch with the most of them (pull request #%s). It is a count of declarations; the pull request's own document states the same figure from `cargo test`." % work["widest"]),
+        "branchTranscripts": metric(max([t["transcripts"] for t in work["tips"]] or [0]), "expected transcripts at the widest open branch", "Files under tests/native and spikes/*/expected in the tree of the open branch with the most; this includes the ones already on main."),
+        "halLines": metric(max([t["halLines"] for t in work["tips"] if t["number"] == work["widest"]] or [0]), "lines of Rust in hal/ (open branch)", "Newlines in hal/**/*.rs in the tree of the open branch with the most host tests."),
+        "prsMergeDay": metric(len(md_prs), "pull requests merged on merge day", "Merge commits on main whose local date is the date of the first merge, from `git log --first-parent`."),
+        "commitsFirstMergeDay": metric(md_first_parent, "commits on the first-parent line at the end of merge day", "`git rev-list --count --first-parent` at the last merge of merge day."),
+        "commitsMergeDay": metric(md_all, "commits in all at the end of merge day", "`git rev-list --count` at the last merge of merge day."),
+        "ciGreenMergeDay": metric("%d of %d" % (md_ci, len(md_prs)), "merge-day merge commits with CI green", "The CI workflow's conclusion on each merge commit of merge day, from `gh run list --branch main` (source: %s)." % source),
         "daySpan": metric(None, "hours from first commit to last merge", "Author dates of the first commit and the last merge commit on main."),
     }
     if day0 and first_parent:
@@ -477,13 +767,16 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         "prs": prs, "sync": sync, "fonts": facts["fonts"], "emoji": emoji, "tests": tests, "loc": loc,
         "docSizes": facts["docSizes"], "measured": measured, "faces": faces_history(repo), "transcripts": transcripts(repo),
         "roadmap": roadmap, "progress": progress, "warnings": warnings, "missing": sorted(set(missing)), "metrics": metrics,
+        "open": work, "openSource": work_source, "captures": captures,
+        "mergeDay": {"date": md_date, "numbers": [p["number"] for p in md_prs], "since": [p["number"] for p in since]},
     }
 
 
 def summary(data):
     lines = ["ref %s at %s (%s)" % (data["ref"], data["head"], "shallow clone" if data["shallow"] else "full history"),
              "gh data: %s" % data["sources"]["gh"], "pull requests merged: %d" % len(data["prs"]),
-             "files in tree: %d" % data["main"]["files"]]
+             "files in tree: %d" % data["main"]["files"],
+             "open pull requests: %s (from %s)" % (", ".join("#%d" % o["number"] for o in data["open"]["prs"]), data["openSource"])]
     for k, m in data["metrics"].items():
         lines.append("  %-12s %-8s %s" % (k, m["value"], m["label"]))
     lines += ["warning: " + w for w in data["warnings"]]
@@ -500,7 +793,7 @@ def main(argv):
         if args[i] in opts and i + 1 < len(args):
             opts[args[i]] = args[i + 1]
             i += 2
-        elif args[i] in ("--offline", "--update-snapshot", "--dry-run"):
+        elif args[i] in ("--offline", "--update-snapshot", "--update-captures", "--dry-run"):
             flags.add(args[i])
             i += 1
         else:
@@ -512,6 +805,10 @@ def main(argv):
         # The dry run reads whatever is checked out, so it also works in a CI clone that has no local `main`.
         ref = "HEAD"
     offline = "--offline" in flags
+    if "--update-captures" in flags:
+        update_captures(ROOT)
+        print("captures updated from the branches; commit the files under tools/progress-report/media/")
+        return 0
     if "--update-snapshot" in flags:
         if not gh_available():
             print("cannot update the snapshot: gh is not available or not signed in", file=sys.stderr)
@@ -519,6 +816,10 @@ def main(argv):
         fresh, source, _ = gh_data(False)
         if source != "gh":
             print("cannot update the snapshot: the gh queries failed", file=sys.stderr)
+            return 1
+        fresh["openWork"] = open_work(ROOT, fresh["prs"])
+        if fresh["openWork"] is None:
+            print("cannot update the snapshot: a branch of an open pull request is not available (git fetch origin)", file=sys.stderr)
             return 1
         with open(os.path.join(HERE, "snapshots", "gh.json"), "w", encoding="utf-8") as f:
             json.dump({"capturedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "data": fresh}, f, indent=1, sort_keys=True)

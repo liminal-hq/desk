@@ -18,7 +18,10 @@ TOOL = os.path.normpath(os.path.join(HERE, ".."))
 sys.path.insert(0, TOOL)
 
 import build  # noqa: E402
+import charts  # noqa: E402
 import explainers as ex  # noqa: E402
+import explainers_hw as hw  # noqa: E402
+import figures  # noqa: E402
 import gather  # noqa: E402
 import mdlite  # noqa: E402
 
@@ -262,7 +265,7 @@ class RealContentTests(unittest.TestCase):
             self.assertTrue(any(b["type"] == "quote" and b["lines"][0].startswith("**From the stacks") for b in c["blocks"]) or c["section"] == "reference", c["id"])
             for b in c["blocks"]:
                 if b["type"] == "directive":
-                    self.assertIn(b["name"], ("explainer", "figure", "facts"))
+                    self.assertIn(b["name"], ("explainer", "figure", "facts", "table"))
             text = rd(os.path.join(REAL, c["file"]))
             for target in re.findall(r"\]\(chapter:([\w-]+)", text):
                 self.assertIn(target, ids, "%s links to a missing chapter" % c["id"])
@@ -291,6 +294,293 @@ class RealContentTests(unittest.TestCase):
         self.assertFalse(ex.expected_matches("usable {N:14000..16384} KiB", ["usable 5 KiB"]), "the range must be honoured")
         self.assertFalse(ex.expected_matches("at {HEX}", ["at 1f"]), "{HEX} needs the 0x prefix")
         self.assertFalse(ex.expected_matches("a\nb", ["a", "extra", "b"]), "lines may only be skipped at '...'")
+
+
+def broken_site(figs_block, extra=""):
+    """A one-chapter site with the given figures block, built offline from a throwaway repository; returns (site dir, problems)."""
+    out = tempfile.mkdtemp()
+    ch = os.path.join(out, "chapters")
+    os.makedirs(ch)
+    wr(os.path.join(ch, "00-one.md"), "---\nid: one\nn: 1\ntitle: One\ndate: 2026-10-23\nsummary: S\nprs: []\n---\nText.\n\n<!-- figure arch -->\n%s\n### Catalogued\n- a\n\n### Uncatalogued\n- b\n\n### Wish list\n- c\n\n```figures\n%s\n```\n" % (extra, figs_block))
+    return out, ch
+
+
+GOOD = "id: arch-test\nkind: diagram\ntrack: shared\ntitle: The architecture\nalt: Layered diagram of the hosted and native tracks from apps to the machine.\ncaption: Layers.\nat: figure arch\nthumb: svg"
+
+
+class FigureTests(unittest.TestCase):
+    def build(self, figs, extra="", assets=False):
+        out, ch = broken_site(figs, extra)
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            data = gather.gather(d, "main", offline=True)
+        site_dir = os.path.join(out, "site")
+        chapters = build.load_chapters(ch)
+        site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), site_dir, assets=assets)
+        site.write()
+        return site_dir, build.check_site(site_dir, [c["id"] for c in chapters])
+
+    def test_a_registered_figure_gets_an_anchor_a_tile_and_a_working_link(self):
+        d, problems = self.build(GOOD)
+        self.assertEqual(problems, [])
+        gallery = rd(os.path.join(d, "gallery.html"))
+        self.assertIn('href="one.html#fig-arch-test"', gallery)
+        self.assertIn("The architecture", gallery)
+        self.assertIn('id="fig-arch-test"', rd(os.path.join(d, "one.html")))
+        self.assertIn("Recent figures", rd(os.path.join(d, "index.html")))
+        manifest = json.loads(rd(os.path.join(d, "manifest.json")))
+        self.assertIn("gallery.html", manifest["publish"]["files"])
+
+    def test_no_registry_means_no_gallery(self):
+        out, ch = broken_site("")
+        wr(os.path.join(ch, "00-one.md"), rd(os.path.join(ch, "00-one.md")).replace("<!-- figure arch -->", ""))
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            data = gather.gather(d, "main", offline=True)
+        site = build.Site(data, build.load_chapters(ch), os.path.join(HERE, "fixture", "pages"), os.path.join(out, "site"), assets=False)
+        site.write()
+        self.assertFalse(os.path.exists(os.path.join(out, "site", "gallery.html")))
+
+    def test_a_figure_without_alt_text_fails_the_build(self):
+        for bad in (GOOD.replace("alt: Layered diagram of the hosted and native tracks from apps to the machine.\n", ""), GOOD.replace("Layered diagram of the hosted and native tracks from apps to the machine.", "arch.png")):
+            with self.assertRaises(mdlite.MdError):
+                self.build(bad)
+
+    def test_a_record_must_be_complete_and_well_formed(self):
+        for bad in (GOOD.replace("kind: diagram", "kind: poster"), GOOD.replace("track: shared", "track: moon"), GOOD.replace("thumb: svg", "thumb: jpeg"), GOOD.replace("title: The architecture\n", ""),
+                    GOOD.replace("state", "state") + "\nstate: sleepy", GOOD.replace("id: arch-test", "id: Arch Test")):
+            with self.assertRaises(mdlite.MdError, msg=bad):
+                self.build(bad)
+
+    def test_a_record_that_names_a_directive_the_chapter_lacks_fails(self):
+        with self.assertRaises(mdlite.MdError):
+            self.build(GOOD.replace("at: figure arch", "at: figure tree"))
+
+    def test_a_drawing_that_no_record_claims_fails(self):
+        with self.assertRaises(mdlite.MdError):
+            self.build(GOOD, extra="\n<!-- figure tree -->\n")
+
+    def test_duplicate_ids_and_unknown_chapters_fail(self):
+        with self.assertRaises(mdlite.MdError):
+            self.build(GOOD + "\n\n" + GOOD)
+        rec = figures.parse_block(GOOD, "nowhere")
+        with self.assertRaises(mdlite.MdError):
+            figures.validate(rec, [{"id": "one"}])
+
+    def test_the_checker_catches_a_registry_entry_whose_anchor_or_image_is_missing(self):
+        d, problems = self.build(GOOD.replace("at: figure arch\nthumb: svg", "at: figure arch\nanchor: nope\nthumb: svg"))
+        self.assertTrue(any("anchor #nope" in p for p in problems), problems)
+        d, problems = self.build(GOOD.replace("thumb: svg", "thumb: img:img/none.png"))
+        self.assertTrue(any("none.png" in p for p in problems), problems)
+
+    def test_previews_are_made_from_the_rendered_figure(self):
+        html = '<figure><svg viewBox="0 0 2 2" id="a"><g><svg id="b"></svg></g><path d="M0,0" marker-end="url(#a)"/></svg></figure>'
+        self.assertEqual(len(figures.svgs_of(html)), 1)
+        pv = figures.preview({"thumb": "svg", "id": "x", "alt": "A", "title": "T"}, html, "g1-", {})
+        self.assertIn('id="g1-a"', pv)
+        self.assertIn("url(#g1-a)", pv)
+        self.assertIn('aria-hidden="true"', pv)
+        card = figures.steps_card("T", '<h4 class="x-title"><button>One</button></h4><h4 class="x-title">Two</h4>')
+        self.assertIn("2 steps", card)
+
+    def test_the_real_registry_is_complete_and_resolves(self):
+        chapters = build.load_chapters(REAL)
+        recs = [r for c in chapters for r in c["figs"]]
+        self.assertGreaterEqual(len(recs), 30)
+        reg = figures.validate(recs, chapters)
+        claimed = {r.get("at") for r in reg}
+        for r in reg:
+            ch = [c for c in chapters if c["id"] == r["chapter"]][0]
+            keys = [figures.directive_key(b["name"], b["args"]) for b in ch["blocks"] if b["type"] == "directive"]
+            self.assertIn(r["at"], keys, "%s: %s" % (r["chapter"], r["id"]))
+            self.assertGreater(len(r["alt"].split()), 5, r["id"])
+        for c in chapters:
+            for key in figures.unregistered(c["blocks"], [r for r in reg if r["chapter"] == c["id"]], c["id"]):
+                self.assertIn(key, claimed, "%s draws %s and nothing claims it" % (c["id"], key))
+        for r in reg:
+            if r["thumb"].startswith("img:"):
+                name = r["thumb"][4:]
+                self.assertTrue(name.startswith(("img/img-", "shots/", "img/pixel-", "img/qemu")), name)
+                if name.startswith("img/img-"):
+                    self.assertTrue(os.path.exists(os.path.join(TOOL, "media", name[4:])), name)
+
+
+class OpenWorkTests(unittest.TestCase):
+    def make(self, d):
+        make_repo(d)
+        git(d, "checkout", "-q", "-b", "feat/p", "main")
+        wr(os.path.join(d, "p.txt"), "p\n")
+        git(d, "add", "p.txt")
+        git(d, "commit", "-q", "-m", "feat: p")
+        git(d, "checkout", "-q", "-b", "feat/q", "feat/p")
+        wr(os.path.join(d, "hal.rs"), "#[test]\nfn a() {}\n")
+        os.makedirs(os.path.join(d, "hal"))
+        wr(os.path.join(d, "hal", "x.rs"), "#[test]\nfn a() {}\n#[test]\nfn b() {}\n")
+        git(d, "add", "hal/x.rs", "hal.rs")
+        git(d, "commit", "-q", "-m", "feat: q")
+        git(d, "checkout", "-q", "-b", "feat/r", "main")
+        git(d, "merge", "-q", "--no-ff", "-m", "merge p", "feat/p")
+        wr(os.path.join(d, "r.txt"), "r\n")
+        git(d, "add", "r.txt")
+        git(d, "commit", "-q", "-m", "feat: r")
+        git(d, "checkout", "-q", "main")
+
+    def prs(self, d):
+        def pr(n, b, base, draft=False, ok=True):
+            return {"number": n, "title": "T%d" % n, "headRefName": b, "baseRefName": base, "headRefOid": git(d, "rev-parse", b).strip(), "state": "OPEN", "isDraft": draft,
+                    "createdAt": "2026-10-23T00:00:00Z", "labels": [], "additions": 1, "deletions": 0, "changedFiles": 1, "url": "u", "checks": [{"status": "COMPLETED", "conclusion": "SUCCESS" if ok else "FAILURE"}]}
+        return [pr(2, "feat/p", "main"), pr(3, "feat/q", "feat/p", ok=False), pr(4, "feat/r", "main", draft=True)]
+
+    def test_stacked_branches_are_not_credited_with_their_parents_work(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.make(d)
+            w = gather.open_work(d, self.prs(d))
+            by = {p["number"]: p for p in w["prs"]}
+            self.assertEqual(by[2]["commitCount"], 1)
+            self.assertEqual(by[3]["commitCount"], 1)
+            self.assertEqual(by[4]["commitCount"], 2, "r's own commit and the merge that brought p in, but not p's commit")
+            self.assertEqual([c["merge"] for c in by[4]["commits"]], [True, False])
+            self.assertEqual(by[4]["stackedOn"], [2])
+            self.assertEqual(by[3]["stackedOn"], [2])
+            self.assertEqual((by[2]["state"], by[4]["state"]), ("in review", "in progress"))
+            self.assertEqual((by[2]["ci"], by[3]["ci"]), ("passing", "failing"))
+            self.assertEqual(w["commitsOnBranches"], 4)
+            self.assertEqual(w["widest"], 3)
+            self.assertEqual([t["hostTests"] for t in w["tips"] if t["number"] == 3], [2])
+
+    def test_a_missing_branch_means_use_the_snapshot(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.make(d)
+            prs = self.prs(d)
+            prs[0]["headRefName"] = "feat/never-fetched"
+            self.assertIsNone(gather.open_work(d, prs))
+
+    def test_a_moved_branch_is_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.make(d)
+            prs = self.prs(d)
+            prs[0]["headRefOid"] = "0" * 40
+            self.assertTrue(gather.open_work(d, prs)["warnings"])
+
+    def test_trial_merges_find_the_conflict_between_independent_branches(self):
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            for name in ("p1", "p2"):
+                git(d, "checkout", "-q", "-b", "feat/" + name, "main")
+                wr(os.path.join(d, "shared.txt"), name + "\n")
+                git(d, "add", "shared.txt")
+                git(d, "commit", "-q", "-m", "feat: " + name)
+            git(d, "checkout", "-q", "main")
+            out = gather.trial_merges(d, {2: "feat/p1", 3: "feat/p2"})
+            self.assertEqual(out, [{"a": 2, "b": 3, "files": ["shared.txt"]}])
+            git(d, "checkout", "-q", "-b", "feat/z", "feat/p1")
+            wr(os.path.join(d, "z.txt"), "z\n")
+            git(d, "add", "z.txt")
+            git(d, "commit", "-q", "-m", "feat: z")
+            self.assertEqual(gather.trial_merges(d, {2: "feat/p1", 4: "feat/z"}), [], "a branch that contains the other is skipped")
+
+    def test_pr_state_and_ci(self):
+        self.assertEqual(gather.pr_state({"mergedAt": "x"}), "merged")
+        self.assertEqual(gather.pr_state({"state": "OPEN", "isDraft": True}), "in progress")
+        self.assertEqual(gather.pr_state({"state": "CLOSED"}), "closed")
+        self.assertEqual(gather.ci_of([]), "none")
+        self.assertEqual(gather.ci_of([{"status": "IN_PROGRESS"}]), "pending")
+
+    def test_roadmap_uses_open_pull_requests_and_tags(self):
+        road = {"branches": [], "nodes": [
+            {"id": "a", "branch": "b", "state": "done-emu", "prs": [5], "deps": []},
+            {"id": "b", "branch": "b", "state": "review", "prs": [5, 1], "deps": []},
+            {"id": "c", "branch": "b", "state": "planned", "work": "in progress", "deps": []},
+            {"id": "d", "branch": "b", "state": "planned", "deps": []},
+            {"id": "e", "branch": "b", "state": "done", "deps": []},
+            {"id": "f", "branch": "b", "state": "review", "prs": [77], "deps": []}]}
+        _, warnings = gather.resolve_roadmap(road, [{"number": 1, "ci": "passing"}], [{"number": 5, "state": "in review", "ci": "passing"}])
+        n = {x["id"]: x for x in road["nodes"]}
+        self.assertEqual((n["a"]["state"], n["a"]["tag"]), ("review", "in review"))
+        self.assertEqual((n["b"]["state"], n["b"]["tag"]), ("review", "in review"))
+        self.assertEqual(n["c"]["tag"], "in progress")
+        self.assertEqual(n["d"]["tag"], "planned")
+        self.assertEqual(n["e"]["tag"], "merged")
+        self.assertEqual(n["f"]["state"], "progress")
+        self.assertTrue(any("node a drops to review" in w for w in warnings))
+
+    def test_captures_compare_with_their_branch(self):
+        text = "intro\n\n```text\nfirst\n```\n\n## Results\n\nx\n\n```text\none\ntwo\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+        self.assertEqual(gather.extract(text, {"after": "## Results", "fence": 1}), "one\ntwo\n")
+        self.assertEqual(gather.extract(text, {"after": "## Results", "table": 1}), "| a | b |\n|---|---|\n| 1 | 2 |\n")
+        self.assertIsNone(gather.extract(text, {"after": "## Nowhere", "fence": 1}))
+        self.assertEqual(gather.extract(text, None), text)
+
+
+class HardwareExplainerTests(unittest.TestCase):
+    D = {"captures": []}
+
+    def test_every_hardware_explainer_builds_from_the_captures(self):
+        ctx = mdlite.Ctx()
+        counts = {"pit": (hw.pit_test, 9), "input": (hw.input_replay, 19), "vga13": (hw.vga13, 10), "vbe": (hw.vbe_attrs, 3), "pipelines": (hw.pipelines, 7), "memchain": (hw.memchain, 5), "biscall": (hw.bios_roundtrip, 14)}
+        for name, (fn, n) in counts.items():
+            html = fn(self.D, ctx)
+            self.assertEqual(html.count('class="x-step"'), n, name)
+            self.assertIn('data-n="%d"' % n, html)
+        self.assertIn("std, desk", hw.std_sizes(self.D, ctx))
+        self.assertIn("video block", hw.bootinfo(self.D, ctx).lower())
+        self.assertIn("<svg", hw.hal_layers(self.D, ctx))
+        self.assertIn("microseconds", hw.bios_cost(self.D, ctx))
+
+    def with_media(self, name, old, new):
+        real = hw.media
+
+        def fake(n):
+            t = real(n)
+            return t.replace(old, new) if n == name else t
+        hw.media = fake
+        self.addCleanup(setattr, hw, "media", real)
+
+    def test_the_input_replay_refuses_a_transcript_that_the_derived_bytes_do_not_reproduce(self):
+        self.with_media("input-expected.txt", "key: A down mods=shift char='A'", "key: A down mods=shift char='a'")
+        with self.assertRaises(ValueError):
+            hw.input_replay(self.D, mdlite.Ctx())
+
+    def test_the_pit_test_refuses_a_script_that_the_arithmetic_does_not_give(self):
+        self.with_media("hal-pit.rs.txt", "Access::outb(0x40, 0x9C)", "Access::outb(0x40, 0x9D)")
+        with self.assertRaises(ValueError):
+            hw.pit_test(self.D, mdlite.Ctx())
+
+    def test_the_mode_13h_walk_refuses_a_table_of_the_wrong_length(self):
+        self.with_media("vga-regs.rs.txt", "0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00, 0x41,", "0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00,")
+        with self.assertRaises(ValueError):
+            hw.vga13(self.D, mdlite.Ctx())
+
+    def test_the_loader_explainer_refuses_a_changed_fallback_order(self):
+        self.with_media("g-stage2.asm.txt", "call map_e801\n        jnc .map_ok", "call map_88\n        jnc .map_ok")
+        with self.assertRaises(ValueError):
+            hw.memchain(self.D, mdlite.Ctx())
+
+    def test_the_round_trip_refuses_a_trip_that_does_not_put_the_pics_back(self):
+        self.with_media("n3-switch.md", "Puts the PICs back", "Leaves the PICs")
+        with self.assertRaises(ValueError):
+            hw.bios_roundtrip(self.D, mdlite.Ctx())
+
+    def test_a_link_into_the_source_document_keeps_its_words(self):
+        self.with_media("n3-switch.md", "[below](#x)", "[below](#x)")
+        html = hw.captable("n3-switch.md", mdlite.Ctx(), "t")
+        self.assertNotIn('href="#', html)
+
+    def test_the_decoder_replica_and_packets(self):
+        t = hw.kbd_tables()
+        self.assertEqual(t["Delete"], [(True, 0x53)])
+        ev = hw.decode_replica([0x2A, 0x1E, 0x9E, 0xAA], t)
+        self.assertEqual([hw.event_line(e) for e in ev][1], "key: A down mods=shift char='A'")
+        p = hw.mouse_packet(-20, 7, 0)
+        self.assertEqual(hw.packet_decode(p), (-20, 7, 0))
+        self.assertEqual(p, [0x38, 0xEC, 0xF9, 0])
+
+    def test_charts_draw_from_the_data(self):
+        data = json.loads(rd(os.path.join(TOOL, "snapshots", "gh.json")))["data"]
+        D = {"fonts": [{"file": "desk-sans.otf", "glyphs": 423, "size": 1}], "emoji": {"pixel": 480, "pixel12": 480, "pixel8": 40, "vector": 156, "requested": 244, "requestedDone": 164, "requestedPlanned": 80},
+             "roadmap": json.loads(rd(os.path.join(TOOL, "roadmap.json"))), "open": data["openWork"]}
+        for fn in (charts.font_matrix, charts.emoji_coverage, charts.track_progress, charts.pr_stack):
+            self.assertIn("<svg", fn(D))
 
 
 if __name__ == "__main__":

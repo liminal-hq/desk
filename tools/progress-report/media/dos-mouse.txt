@@ -1,0 +1,17 @@
+mouse dx=40 dy=0 buttons=- wheel=0
+mouse dx=40 dy=0 buttons=- wheel=0
+mouse dx=0 dy=30 buttons=- wheel=0
+mouse dx=0 dy=30 buttons=- wheel=0
+mouse dx=-25 dy=-10 buttons=- wheel=0
+mouse dx=0 dy=0 buttons=L wheel=0
+mouse dx=0 dy=0 buttons=- wheel=0
+mouse dx=0 dy=0 buttons=R wheel=0
+mouse dx=0 dy=0 buttons=- wheel=0
+mouse dx=0 dy=0 buttons=M wheel=0
+mouse dx=0 dy=0 buttons=- wheel=0
+mouse dx=0 dy=0 buttons=- wheel=1
+mouse dx=0 dy=0 buttons=- wheel=-1
+mouse dx=0 dy=0 buttons=L wheel=0
+key A down mods=none
+key A up mods=none
+key Escape down mods=none

@@ -47,3 +47,23 @@ The kernel itself is small and honest about it: {{m.kernelLines}} lines of Rust 
 
 > **From the stacks — Why not just boot it in DOSBox?** `docs/DIRECTION.md` says DOSBox and js-dos "emulate DOS, not PC hardware", so the native track is tested in QEMU instead. DOSBox's own wiki describes a `BOOT` command that starts floppy and hard-disk images outside its built-in DOS, so I will not claim that DOSBox cannot boot a custom kernel: nobody has tried it here. QEMU is chosen because it models a PC and has a `-cpu 486` setting, not because DOSBox was shown to fail.
 > Source: [DOSBox wiki, BOOT](https://www.dosbox.com/wiki/BOOT) (as quoted by search results; the page itself refused an automated fetch)
+
+```figures
+id: boot-stepper
+kind: explainer
+track: native
+title: The boot sequence and the memory map
+alt: A step-through of the native boot: the BIOS loads the boot sector, the loader gets the memory map and switches to protected mode, and the kernel prints its lines, with the memory map filling in.
+caption: From power on to boot complete, with the memory-map fill, from a recorded QEMU run.
+at: explainer boot
+thumb: steps
+
+id: qemu-boot
+kind: screenshot
+track: native
+title: The boot screen in QEMU
+alt: A black 720 by 400 text screen showing the loader and kernel lines printed at the end of a headless QEMU boot.
+caption: The VGA text screen after the native kernel booted in QEMU.
+at: figure qemu
+thumb: img:img/qemu-boot.png
+```

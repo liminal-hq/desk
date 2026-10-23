@@ -10,7 +10,7 @@ Every archive has a donation that arrived in a box. Ours arrived as a design bra
 
 The brainstorm called the project "Afterglow Desk": a graphical shell for MS-DOS, with windows, files and small apps on a 486, that could step aside to run any DOS program full-screen and resume afterwards. The name did not survive — it overlaps with the studio's colour themes — but the *look* did, and keeps its name: the void, the orange accent, the stepped halo on the horizon. `docs/NAMING.md` has the whole argument, and "Desk" is only the working name.
 
-Here is what the prototype looked like. These four pictures are screenshots stored in `design/screenshots/`, taken from the Afterglow Desk prototype. They are the only picture of the Desk that exists: no code in the repository draws a window yet.
+Here is what the prototype looked like. These four pictures are screenshots stored in `design/screenshots/`, taken from the Afterglow Desk prototype. Until the native kernel drew its first window (chapter 12) they were the only pictures of the Desk that existed, and they are still the only ones of the finished design: no code in the repository draws a window yet.
 
 <!-- figure design -->
 
@@ -35,3 +35,15 @@ The first commit also set the rules that every later chapter follows, and the ne
 
 > **From the stacks — Shells on top of DOS.** Microsoft's first Windows, 1.0, went on sale on 20 November 1985 and was built on the MS-DOS kernel, which makes a graphical shell on top of DOS one of the oldest ideas in the PC world. The Desk's hosted track, which you will meet in chapter 4, is in that lineage; its native track is the part that is not.
 > Source: [Windows 1.0, Wikipedia](https://en.wikipedia.org/wiki/Windows_1.0)
+
+```figures
+id: design-prototypes
+kind: screenshot
+track: design
+title: The Afterglow Desk prototype
+alt: Screenshot of the Afterglow Desk design prototype: a Files window over a dark desktop with a launcher column at the left and a taskbar along the bottom.
+caption: Four screenshots of the design brainstorm, the only pictures of the Desk before the first real window.
+at: figure design
+thumb: img:shots/01-v4-800.jpg
+state: merged
+```

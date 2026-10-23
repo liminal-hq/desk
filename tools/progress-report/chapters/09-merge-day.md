@@ -20,14 +20,14 @@ Read down the right-hand column and you will see the pattern. `tools/check.sh` i
 
 ## What the first-parent view shows
 
-`git log --first-parent main` shows eight commits: the Initial Commit and one merge per pull request. `git rev-list --count main` shows {{m.commitsAll}}, because each merge brings its branch with it. Both are right, and the difference is the point of merge-commit-only: the story of a change stays on its branch and the story of the project stays readable.
+`git log --first-parent main` shows eight commits: the Initial Commit and one merge per pull request. `git rev-list --count main` shows {{m.commitsMergeDay}} at the end of that night, because each merge brings its branch with it. Both are right, and the difference is the point of merge-commit-only: the story of a change stays on its branch and the story of the project stays readable.
 
-<!-- facts prs commitsFirst commitsAll ciGreen -->
+<!-- facts prsMergeDay commitsFirstMergeDay commitsMergeDay ciGreenMergeDay -->
 
 ## The shelves
 
 ### Catalogued
-- All {{m.prs}} pull requests are merged into `main` as merge commits, one branch (`main`) remains, and CI concluded "success" on each merge commit (`gh run list --branch main`, {{m.ciGreen}}).
+- All {{m.prsMergeDay}} merge-day pull requests are merged into `main` as merge commits, and CI concluded "success" on each merge commit (`gh run list --branch main`, {{m.ciGreenMergeDay}}).
 - The conflict resolutions are recorded in the six merge commits' own messages, and the table above prints them as written.
 - The merge order, the times and the commit hashes in the replay come from `git log`; nothing in it is reconstructed.
 
@@ -41,3 +41,14 @@ Read down the right-hand column and you will see the pattern. `tools/check.sh` i
 
 > **From the stacks — First parent.** `git log --first-parent` follows only the first parent of each merge commit, which, in the manual's words, "can give a better overview when viewing the evolution of a particular topic branch" because the merges into a branch are usually only about keeping up with upstream. The Desk's rule of merge commits only, and never squash, is what makes that overview work: a squash would hide the branch, and a rebase would erase the merge.
 > Source: [git-log documentation](https://git-scm.com/docs/git-log)
+
+```figures
+id: merge-day
+kind: explainer
+track: shared
+title: Merge day, replayed
+alt: A step-through of seven pull requests merging into main in thirty minutes, each after merging main into its branch, drawn from the git history.
+caption: Seven merges in thirty minutes, from git log.
+at: explainer mergeday 3 1 2 6 5 4 7
+thumb: steps
+```

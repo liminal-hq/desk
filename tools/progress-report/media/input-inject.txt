@@ -1,0 +1,32 @@
+# Input played into the kernel's keyboard and mouse handlers through the QEMU monitor (tools/native-inject.py).
+# Each mouse command is followed by a pause: QEMU folds events that arrive before the guest has read the previous packet.
+# Wait until the kernel has its handlers live, then move and click the mouse, give the kernel time to drain it so the two
+# streams do not interleave in the transcript, then type. Escape ends the run.
+wait input: ready
+mouse_move 10 -5
+sleep 0.1
+mouse_move -20 7
+sleep 0.1
+mouse_button 1
+sleep 0.1
+mouse_button 0
+sleep 0.1
+# The monitor's button bits are 1 left, 2 right, 4 middle (the PS/2 packet's order).
+mouse_button 2
+sleep 0.1
+mouse_button 0
+sleep 0.1
+mouse_button 4
+sleep 0.1
+mouse_button 0
+sleep 0.1
+sleep 0.5
+sendkey a
+sendkey shift-a
+sendkey 1
+sendkey shift-1
+sendkey ret
+sendkey kp_enter
+sendkey up
+sendkey ctrl-alt-delete
+sendkey esc

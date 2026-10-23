@@ -37,3 +37,14 @@ What the replay shows is the property the design needed. A Rust panic inside a m
 
 > **From the stacks — DXE.** DXE is a DJGPP facility for loading code at run time. The DJGPP FAQ describes the original design as "intentionally limited", with no access from a module to the main program's variables or functions and no unloading. The spike used the newer DXE3 interface through `dlopen` and `dlclose`, and in its runs unloading worked: every `dlclose` the transcripts print returned 0.
 > Source: [DJGPP FAQ, DXE node](https://djgpp.mirror.garr.it/v2faq/faq22_15.html)
+
+```figures
+id: modules
+kind: explainer
+track: hosted
+title: The module life cycle
+alt: A step-through of a Rust module being loaded into the DOS host, run, panicking and being unloaded, replayed from the recorded transcripts.
+caption: Load, run, panic and unload, from the real transcripts.
+at: explainer modules
+thumb: steps
+```

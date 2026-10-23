@@ -1,5 +1,5 @@
 {
- "note": "Status of each step, checked against docs/DIRECTION.md, docs/RUST-TARGETS.md, docs/SPEC.md, docs/EMOJI-ROADMAP.md and the merged pull requests. gather.py drops any 'done' or 'done-emu' node whose pull request is not merged with CI passing on its merge commit. 'done-emu' means checked in an emulator only; nothing here has run on real hardware. Edges (deps) mean 'this unlocks that'.",
+ "note": "Status of each step, checked against docs/DIRECTION.md, docs/RUST-TARGETS.md, docs/SPEC.md, docs/EMOJI-ROADMAP.md, the merged pull requests and the open ones. gather.py drops a 'done' or 'done-emu' node to 'review' while its pull requests are open and to 'progress' if one cannot be found, and sets each node's tag (merged, in review, in progress or planned) from gh. 'done-emu' means checked in an emulator only; nothing here has run on real hardware. A node marked 'review' is built and checked in an emulator or on the host, in an open pull request that is not merged. Edges (deps) mean 'this unlocks that'.",
  "milestone": {
   "id": "first-window",
   "name": "First Window",
@@ -15,26 +15,26 @@
   {
    "id": "hosted",
    "label": "Hosted track (Desk on DOS)",
-   "next": "Decide to retire the C layer and coff2go32.py, then promote d0's rt to a top-level crate on a freestanding ELF target.",
-   "blocker": "Owner decision on retiring the C layer."
+   "next": "Decide to retire the C layer and coff2go32.py, then promote d0's rt (which now also carries the DOS platform of the shared drivers) to a top-level crate on a freestanding ELF target.",
+   "blocker": "Owner decision on retiring the C layer, and the shared core, which a hosted window needs."
   },
   {
    "id": "convergence",
    "label": "Convergence (shared)",
-   "next": "Sketch the HAL against the two real consumers: the hosted skeleton and the native kernel.",
-   "blocker": "The first drivers on each side: both skeletons are merged."
+   "next": "Review and merge the open pull requests, the HAL (#8) first because the others stack on it; then start the shared core and compositor, which nothing has begun.",
+   "blocker": "The merge order, and the compositor design: the windows drawn so far are proofs, one per track."
   },
   {
    "id": "native",
    "label": "Native track (own kernel)",
-   "next": "A PS/2 keyboard driver on IRQ 1 in the kernel; it needs no decision. Graphics waits on the driver-strategy decision.",
-   "blocker": "Graphics strategy (BIOS before the switch, V86, or native drivers)."
+   "next": "Review and merge #14 and #17; then the shared core on the native HAL, and a V86 monitor if FreeDOS or calls that must not stop the kernel need it.",
+   "blocker": "Leaving VBE is solved in emulators by the BIOS trampoline, not on a real card; scheduling and paging are still open decisions."
   },
   {
    "id": "games",
    "label": "Games and apps",
-   "next": "Nothing to start until the shared drivers crate exists; Fizz Episode 2 is its first customer.",
-   "blocker": "The shared drivers crate (convergence)."
+   "next": "Nothing to start until the shared core exists; Fizz Episode 2 is the first customer of the shared drivers, which are now built in open pull requests.",
+   "blocker": "The shared core, and the review of the drivers."
   }
  ],
  "nodes": [
@@ -242,27 +242,33 @@
    "id": "hvbe",
    "label": "VBE and mode 12h",
    "branch": "hosted",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "rt"
    ],
    "critical": true,
-   "what": "The VBE 2.0 linear frame buffer (DPMI 0800h) and the 16-colour fallback from Rust.",
+   "what": "VGA modes 13h and 12h, the DAC and VBE 2.0 with a linear frame buffer (DPMI 0800h), from Rust, proved in DOSBox Staging by read-back checksums.",
    "why": "Pixels for the compositor.",
-   "evidence": "DIRECTION.md hosted milestone 4; spikes/README.md"
+   "evidence": "docs/A-VGA-VBE.md; PR #11 (open, CI green). No real VGA chip.",
+   "prs": [
+    11
+   ]
   },
   {
    "id": "hmouse",
    "label": "Keyboard and mouse",
    "branch": "hosted",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "rt"
    ],
    "critical": true,
-   "what": "IRQ 1 keyboard and INT 33h mouse with a real-mode callback.",
+   "what": "The keyboard on IRQ 1 under DPMI and the mouse through INT 33h by polling, producing the same event types as the native kernel. The real-mode callback was not built.",
    "why": "Input for windows and the cursor.",
-   "evidence": "DIRECTION.md hosted milestone 4"
+   "evidence": "docs/B-DOS-INPUT.md; PR #15 (open, CI green). DOSBox's own mouse driver only.",
+   "prs": [
+    15
+   ]
   },
   {
    "id": "hsound",
@@ -289,7 +295,7 @@
    "critical": true,
    "what": "Compositor, windows, launcher bar, cursor and keyboard focus on DOS.",
    "why": "The first thing anyone would call the Desk.",
-   "evidence": "SPEC.md milestone 2; DIRECTION.md hosted milestone 5"
+   "evidence": "SPEC.md milestone 2; DIRECTION.md hosted milestone 5; the DOS programs so far draw test pictures, not a shell"
   },
   {
    "id": "handoff",
@@ -319,13 +325,16 @@
    "id": "jsdos",
    "label": "js-dos browser build",
    "branch": "hosted",
-   "state": "decision",
+   "state": "review",
    "deps": [
     "hvbe"
    ],
-   "what": "The hosted Desk in the browser.",
+   "what": "DOS programs in the browser. The spike programs run unchanged in js-dos 8, and the VBE linear frame buffer works there. The Desk itself is not in the browser, because the hosted Desk does not exist yet.",
    "why": "A demo anyone can open.",
-   "evidence": "OPEN-QUESTIONS.md: waits on the linear frame buffer in js-dos"
+   "evidence": "docs/S5-JSDOS.md; PR #13 (open, CI green): headless Chromium only.",
+   "prs": [
+    13
+   ]
   },
   {
    "id": "hreal",
@@ -343,28 +352,37 @@
    "id": "hal",
    "label": "Hardware layer (HAL)",
    "branch": "convergence",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "skel",
     "kernel"
    ],
    "critical": true,
-   "what": "Display, input, timer, sound, storage, memory, module loading: one small surface per track.",
+   "what": "One crate with two edges: the traits and shared types, a mock platform, and three drivers (serial, PIT, PIC) tested on the host. The input and video surfaces were added by the pull requests stacked on it.",
    "why": "One Desk core on both tracks; without it they drift apart.",
-   "evidence": "DIRECTION.md: not designed yet"
+   "evidence": "docs/HAL.md; PR #8, open, CI green. The kernel and the DOS runtime use it in later open pull requests; nothing runs on real hardware.",
+   "prs": [
+    8
+   ]
   },
   {
    "id": "drivers",
    "label": "Shared drivers crate",
    "branch": "convergence",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "d0",
     "kernel"
    ],
-   "what": "VGA/VBE, keyboard, PIT, OPL and SB written once over port I/O and IRQs.",
+   "what": "Built, in open pull requests: serial, PIT, PIC, the 8042 controller, the scancode decoder, VGA modes 13h, 12h and 03h with the DAC, VBE, and the INT 33h mouse. Not started: OPL, Sound Blaster, DMA, IDE and floppy.",
    "why": "Shared by the hosted Desk, the native kernel and Fizz Episode 2.",
-   "evidence": "DIRECTION.md, Rust for DOS item 4"
+   "evidence": "docs/HAL.md; PRs #8, #10, #11, #15 (open, CI green)",
+   "prs": [
+    8,
+    10,
+    11,
+    15
+   ]
   },
   {
    "id": "core",
@@ -378,19 +396,22 @@
    "critical": true,
    "what": "Compositor, window manager, widgets, palette, fonts, event loop, app host.",
    "why": "The product, independent of the machine below.",
-   "evidence": "SPEC.md; nothing built beyond the skeleton"
+   "evidence": "SPEC.md; nothing built: the native demo's window is a proof, not a compositor (docs/D-NATIVE-VGA.md)"
   },
   {
    "id": "std",
    "label": "std platform layer",
    "branch": "convergence",
-   "state": "research",
+   "state": "review",
    "deps": [
     "direction"
    ],
-   "what": "A Desk app target with std over the SDK; first the 'unsupported' stubs experiment.",
+   "what": "A patched std platform layer over the d0 runtime (55 added lines in 12 files and about 340 lines of new files) that makes println!, HashMap, Instant and process::exit work in DOSBox.",
    "why": "Apps are where std pays off.",
-   "evidence": "RUST-TARGETS.md: s-std-stubs, s-desk-pal, prebuilt sysroot"
+   "evidence": "docs/E-STD-STUBS.md; PR #12 (open, CI green). An invented OS name alone does not build.",
+   "prs": [
+    12
+   ]
   },
   {
    "id": "freedos",
@@ -448,27 +469,48 @@
    "id": "nkbd",
    "label": "PS/2 keyboard and mouse",
    "branch": "native",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "kernel"
    ],
    "critical": true,
-   "what": "Own drivers on IRQ 1 and IRQ 12.",
+   "what": "The 8042, the scancode set 1 decoder and the IntelliMouse packets as shared drivers, with the kernel's IRQ 1 and IRQ 12 handlers and a lock-free ring.",
    "why": "Input; native milestone 4.",
-   "evidence": "DIRECTION.md native milestone 4"
+   "evidence": "docs/C-INPUT.md; PR #10 (open, CI green): a QEMU run with injected input matches its expected transcript. No real keyboard or mouse.",
+   "prs": [
+    10
+   ]
   },
   {
    "id": "ngfx",
-   "label": "VGA/VBE graphics",
+   "label": "VGA, VBE, window and cursor",
    "branch": "native",
-   "state": "decision",
+   "state": "review",
    "deps": [
     "kernel"
    ],
    "critical": true,
-   "what": "VBE through the BIOS before the switch, V86 calls, or native drivers.",
+   "what": "VBE asked in the loader before the switch to protected mode, VGA modes 13h and 12h by registers, a software cursor and a first window, all in QEMU. Leaving a VBE mode without the BIOS works on QEMU's standard card and fails on its Cirrus card.",
    "why": "A frame drawn by the shared compositor; native milestone 3.",
-   "evidence": "DIRECTION.md open question: graphics driver strategy"
+   "evidence": "docs/D-NATIVE-VGA.md; PR #14 (open, CI green): real QEMU screendumps checked against reference checksums.",
+   "prs": [
+    14
+   ]
+  },
+  {
+   "id": "nbios",
+   "label": "Native BIOS path (n3)",
+   "branch": "native",
+   "state": "review",
+   "deps": [
+    "kernel"
+   ],
+   "what": "A real-mode trampoline gives the protected-mode kernel the BIOS back one call at a time: VBE set and left on three QEMU cards, floppy and LBA reads, the memory map and the clock. V86 mode and paging are design only.",
+   "why": "Spike D found that leaving VBE without the BIOS fails on QEMU's Cirrus card.",
+   "evidence": "docs/N3-BIOS-PATH.md; PR #17 (open, based on #14). Emulators only.",
+   "prs": [
+    17
+   ]
   },
   {
    "id": "paging",
@@ -569,19 +611,22 @@
    "critical": true,
    "what": "The shared core on the native HAL: a window and a cursor on bare metal.",
    "why": "The native half of the first milestone; native milestone 7 begins here.",
-   "evidence": "DIRECTION.md native milestones 3 and 7"
+   "evidence": "DIRECTION.md native milestones 3 and 7; the native window of PR #14 is not drawn by a shared core"
   },
   {
    "id": "emus",
-   "label": "86Box, Bochs, v86",
+   "label": "Bochs and 86Box (spike G)",
    "branch": "native",
-   "state": "planned",
+   "state": "review",
    "deps": [
     "kernel"
    ],
-   "what": "The same image in more emulators and in the browser.",
+   "what": "The native image boots unchanged in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on a 1993 AMIBIOS board, after a loader fix for a BIOS with neither E820 nor E801. v86, the browser emulator, is a later step.",
    "why": "QEMU alone is one opinion.",
-   "evidence": "DIRECTION.md native milestone 9; only QEMU has run it"
+   "evidence": "docs/NATIVE-EMULATORS.md; PR #16 (open). Not part of CI, which has no Docker. No hardware.",
+   "prs": [
+    16
+   ]
   },
   {
    "id": "nreal",
@@ -593,7 +638,7 @@
    ],
    "what": "Boot the floppy on period hardware.",
    "why": "The actual target.",
-   "evidence": "No real hardware available yet"
+   "evidence": "No real hardware available yet; the emulators tried are QEMU, Bochs and 86Box"
   },
   {
    "id": "fizz2",
@@ -657,7 +702,7 @@
    "critical": true,
    "what": "A window drawn by the shared core and moved with a mouse, hosted on DOS and native.",
    "why": "The first thing a person would see and call the Desk.",
-   "evidence": "Not started"
+   "evidence": "Not reached: the native demo (PR #14) draws its window with its own code, there is no hosted equivalent, and the shared core does not exist."
   }
  ]
 }

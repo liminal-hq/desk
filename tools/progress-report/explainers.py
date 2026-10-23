@@ -449,13 +449,13 @@ def tree_layout(roadmap):
 STATE_LABEL = {
     "done": "Catalogued: merged, CI green, checked beyond an emulator or not hardware-dependent",
     "done-emu": "Catalogued in an emulator; real hardware uncatalogued",
-    "review": "In a pull request, awaiting review",
+    "review": "In an open pull request: built and checked in an emulator or on the host, not merged",
     "progress": "Partly done",
     "planned": "Wish list: planned",
     "research": "Wish list: an idea or research",
     "decision": "Open decision or blocked",
 }
-STATE_SHORT = {"done": "catalogued", "done-emu": "catalogued in an emulator", "review": "in review", "progress": "partly done",
+STATE_SHORT = {"done": "catalogued", "done-emu": "catalogued in an emulator", "review": "built, in review", "progress": "partly done",
                "planned": "planned", "research": "idea", "decision": "open decision"}
 
 
@@ -557,16 +557,16 @@ def tree(D):
                 lines[-1] = (lines[-1] + " " + w).strip()
         lines = [n["label"]] if n["id"] == "first-window" else lines[:2]
         g.append('<g class="node" transform="translate(%d,%d)" tabindex="0" role="button" data-id="%s" aria-label="%s">' % (
-            p["x"], p["y"], esc(n["id"]), esc("%s: %s%s%s" % (n["label"], STATE_SHORT[s], (", PR %d" % n["pr"]) if n.get("pr") else "", ", on the critical path" if n.get("critical") else ""))))
+            p["x"], p["y"], esc(n["id"]), esc("%s: %s%s%s" % (n["label"], STATE_SHORT[s], (", PR " + ", ".join(str(k) for k in n["prs"])) if n.get("prs") else "", ", on the critical path" if n.get("critical") else ""))))
         if n.get("critical"):
             g.append('<rect x="-3" y="-3" width="%d" height="%d" rx="8" fill="none" class="t-crit" stroke-width="2"/>' % (NW + 6, NH + 6))
         g.append('<rect class="focus t-node t-n-%s" x="0" y="0" width="%d" height="%d" rx="6" stroke-width="1.6"/>' % (s, NW, NH))
         g.append('<rect x="1" y="1" width="26" height="%d" rx="5" class="t-tint t-tint-%s"/>' % (NH - 2, s))
-        g.append('<g transform="translate(7,%g)">%s</g>' % (8 if n.get("pr") else (NH - 14) / 2, state_icon(s)))
+        g.append('<g transform="translate(7,%g)">%s</g>' % (8 if n.get("prs") else (NH - 14) / 2, state_icon(s)))
         for i, l in enumerate(lines):
             g.append('<text x="33" y="%g" font-size="12" class="t-label">%s</text>' % (NH / 2 + (i - (len(lines) - 1) / 2) * 14 + 4, esc(l)))
-        if n.get("pr"):
-            g.append('<text x="14" y="%d" text-anchor="middle" font-size="9" class="t-pr">#%d</text>' % (NH - 4, n["pr"]))
+        if n.get("prs"):
+            g.append('<text x="14" y="%d" text-anchor="middle" font-size="9" class="t-pr">#%d%s</text>' % (NH - 4, n["prs"][0], "+" if len(n["prs"]) > 1 else ""))
         g.append("</g>")
     g.append("</svg>")
     # the list form: also the narrow layout and the text alternative
@@ -577,21 +577,21 @@ def tree(D):
         for n in sorted([n for n in nodes if band(n) == b], key=lambda n: depth[n["id"]]):
             kids = [nb[k]["label"] for k in children.get(n["id"], [])]
             needs = [nb[k]["label"] for k in n["deps"]]
-            pr = (" · #%d" % n["pr"]) if n.get("pr") else ""
+            pr = (" · " + ", ".join("#%d" % k for k in n["prs"])) if n.get("prs") else ""
             items.append('<li class="%s"><details id="node-%s"><summary class="vnode%s">%s<span class="lbl">%s</span><span class="st">%s</span></summary><div class="vmore"><div>%s</div><div><b>Why it matters:</b> %s</div><div><b>Needs:</b> %s</div><div><b>Unlocks:</b> %s</div><div><b>Evidence:</b> %s</div></div></details></li>' % (
-                "crit" if n.get("critical") else "", esc(n["id"]), " crit" if n.get("critical") else "", state_icon(n["state"], 16), esc(n["label"] + pr), esc(STATE_SHORT[n["state"]]),
+                "crit" if n.get("critical") else "", esc(n["id"]), " crit" if n.get("critical") else "", state_icon(n["state"], 16), esc(n["label"] + pr), esc(STATE_SHORT[n["state"]] + " · " + n.get("tag", "planned")),
                 esc(n["what"]), esc(n["why"]), esc(", ".join(needs) or "nothing"), esc(", ".join(kids) or "nothing yet"), esc(n["evidence"])))
         lis.append('<div class="vband"><h3><span>%s</span><span class="muted">%d of %d done</span></h3><ol>%s</ol></div>' % (esc(binfo[b]["label"]), d, a, "".join(items)))
     used = used_states(nodes)
     detail = '<div class="detail" id="treeDetail" aria-live="polite"><div class="muted">Choose a step in the tree to read what it is, why it matters, what it needs and what it unlocks.</div></div>'
-    nodedata = {n["id"]: {"label": n["label"], "state": STATE_SHORT[n["state"]], "pr": n.get("pr"), "critical": bool(n.get("critical")), "what": n["what"], "why": n["why"],
+    nodedata = {n["id"]: {"label": n["label"], "state": STATE_SHORT[n["state"]], "pr": ", ".join("#%d" % k for k in n.get("prs", [])), "tag": n.get("tag", "planned"), "critical": bool(n.get("critical")), "what": n["what"], "why": n["why"],
                           "needs": [nb[k]["label"] for k in n["deps"]], "unlocks": [nb[k]["label"] for k in children.get(n["id"], [])], "evidence": n["evidence"],
                           "branch": binfo.get(band(n), {"label": "Root"})["label"]} for n in nodes}
     import json
     return ('<figure class="treefig"><div class="tree-wide"><div class="chart scroll" tabindex="0" aria-label="Roadmap tree, scrolls sideways">%s</div>%s</div>'
             '%s<details class="alt" open><summary>Every step as a list</summary>%s</details>'
             '<script type="application/json" id="treeData">%s</script>'
-            '<figcaption>Every box is a row of <code>tools/progress-report/roadmap.json</code>. A step only counts as done if its pull request is merged and CI passed on the merge commit, which the generator checks. The amber line is the critical path to the first milestone.</figcaption></figure>') % (
+            '<figcaption>Every box is a row of <code>tools/progress-report/roadmap.json</code>. A step only counts as done if its pull requests are merged and CI passed on the merge commit, which the generator checks; a step in an open pull request shows as built and in review, and every step carries a state tag from <code>gh</code>. The amber line is the critical path to the first milestone.</figcaption></figure>') % (
         "".join(g), detail, legend(used + ([]) ), "".join(lis), json.dumps(nodedata, ensure_ascii=False).replace("</", "<\\/"))
 
 

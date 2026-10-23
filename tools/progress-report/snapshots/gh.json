@@ -1,14 +1,1818 @@
 {
- "capturedAt": "2026-10-22T23:22:10-04:00",
+ "capturedAt": "2026-10-23T02:28:30-04:00",
  "data": {
+  "openWork": {
+   "commitsOnBranches": 77,
+   "conflicts": [
+    {
+     "a": 8,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 8,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 8,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 11,
+     "files": [
+      "docs/README.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 10,
+     "b": 16,
+     "files": [
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 12,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 11,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 13,
+     "files": [
+      "docs/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 14,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 16,
+     "files": [
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 12,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "spikes/d0-rust-dos/rt/Cargo.toml",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 14,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 16,
+     "files": [
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 13,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 14,
+     "b": 15,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md",
+      "tools/README.md"
+     ]
+    },
+    {
+     "a": 14,
+     "b": 16,
+     "files": [
+      "boot/stage2.asm",
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 15,
+     "b": 16,
+     "files": [
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    },
+    {
+     "a": 15,
+     "b": 17,
+     "files": [
+      "docs/README.md",
+      "docs/RUST-TARGETS.md",
+      "hal/Cargo.toml",
+      "hal/platform/mock/src/lib.rs",
+      "spikes/README.md",
+      "tools/README.md"
+     ]
+    },
+    {
+     "a": 16,
+     "b": 17,
+     "files": [
+      "boot/stage2.asm",
+      "docs/NATIVE-BOOT.md",
+      "docs/RUST-TARGETS.md",
+      "spikes/README.md",
+      "tools/README.md",
+      "tools/check.sh"
+     ]
+    }
+   ],
+   "prs": [
+    {
+     "ahead": 17,
+     "base": "main",
+     "branch": "feat/hal-design",
+     "ci": "passing",
+     "commitCount": 17,
+     "commits": [
+      {
+       "date": "2026-10-22T23:28:07-04:00",
+       "hash": "77f3299",
+       "merge": false,
+       "subject": "feat: add the shared HAL crates with serial, PIT and PIC drivers"
+      },
+      {
+       "date": "2026-10-22T23:28:13-04:00",
+       "hash": "abffc42",
+       "merge": false,
+       "subject": "ci: run the HAL's host tests and no_std cross builds in check.sh"
+      },
+      {
+       "date": "2026-10-22T23:30:03-04:00",
+       "hash": "0cf89bb",
+       "merge": false,
+       "subject": "refactor: report the clock's tick rate in millihertz"
+      },
+      {
+       "date": "2026-10-22T23:33:34-04:00",
+       "hash": "f395e0b",
+       "merge": false,
+       "subject": "docs: design the HAL and the shared drivers (spike H)"
+      },
+      {
+       "date": "2026-10-22T23:34:35-04:00",
+       "hash": "73599b3",
+       "merge": false,
+       "subject": "docs: link the HAL design and mark merged work as merged"
+      },
+      {
+       "date": "2026-10-22T23:38:15-04:00",
+       "hash": "6197213",
+       "merge": false,
+       "subject": "docs: record the PR number and the ci-dos run of spike H"
+      },
+      {
+       "date": "2026-10-22T23:49:52-04:00",
+       "hash": "77e2941",
+       "merge": false,
+       "subject": "fix: refuse 1 baud and wait for the loopback echo in the 16550 probe"
+      },
+      {
+       "date": "2026-10-22T23:50:27-04:00",
+       "hash": "895257a",
+       "merge": false,
+       "subject": "fix: restore the BIOS's PIT mode and validate the clock's divisor"
+      },
+      {
+       "date": "2026-10-22T23:50:41-04:00",
+       "hash": "92f7351",
+       "merge": false,
+       "subject": "docs: require interrupts off around 8259 mask changes"
+      },
+      {
+       "date": "2026-10-22T23:51:32-04:00",
+       "hash": "641ceca",
+       "merge": false,
+       "subject": "fix: register interrupt work over shared atomics without leaking"
+      },
+      {
+       "date": "2026-10-22T23:51:53-04:00",
+       "hash": "dd7701f",
+       "merge": false,
+       "subject": "fix: drop the wall-clock trait until something implements it"
+      },
+      {
+       "date": "2026-10-22T23:52:00-04:00",
+       "hash": "905fa56",
+       "merge": false,
+       "subject": "docs: exempt the test platform from the platform-location rule"
+      },
+      {
+       "date": "2026-10-22T23:52:10-04:00",
+       "hash": "bd43d29",
+       "merge": false,
+       "subject": "docs: record the tests added by the review fixes in HAL.md"
+      },
+      {
+       "date": "2026-10-22T23:57:20-04:00",
+       "hash": "24776dd",
+       "merge": false,
+       "subject": "fix: let the 16550 finish sending before the loopback probe"
+      },
+      {
+       "date": "2026-10-22T23:58:10-04:00",
+       "hash": "c57afa0",
+       "merge": false,
+       "subject": "fix: acknowledge spurious IRQ 15 through the trait and use the C ABI"
+      },
+      {
+       "date": "2026-10-22T23:58:59-04:00",
+       "hash": "de7c496",
+       "merge": false,
+       "subject": "fix: program the PIT and record the clock's rate in one step"
+      },
+      {
+       "date": "2026-10-22T23:59:18-04:00",
+       "hash": "ab23751",
+       "merge": false,
+       "subject": "docs: record the assembly check rerun after the review fixes"
+      }
+     ],
+     "createdAt": "2026-10-23T03:38:21Z",
+     "ghAdditions": 3113,
+     "ghChangedFiles": 34,
+     "ghDeletions": 22,
+     "head": "ab23751",
+     "headFull": "ab23751289914de3263c34b026c15723a37acc2f",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "design-docs"
+     ],
+     "number": 8,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Design the HAL and add host-tested shared serial, PIT and PIC drivers",
+     "updatedAt": "2026-10-23T04:04:37Z",
+     "url": "https://github.com/liminal-hq/desk/pull/8"
+    },
+    {
+     "ahead": 24,
+     "base": "feat/hal-design",
+     "branch": "spike/c-kernel-input",
+     "ci": "passing",
+     "commitCount": 7,
+     "commits": [
+      {
+       "date": "2026-10-23T00:04:47-04:00",
+       "hash": "6b81760",
+       "merge": false,
+       "subject": "feat(hal): add the PS/2 input drivers and their mock controller"
+      },
+      {
+       "date": "2026-10-23T00:05:05-04:00",
+       "hash": "a70369f",
+       "merge": true,
+       "subject": "merge: bring in the HAL design branch"
+      },
+      {
+       "date": "2026-10-23T00:08:59-04:00",
+       "hash": "13c3256",
+       "merge": false,
+       "subject": "feat(kernel): run on the shared HAL drivers and read the keyboard and mouse"
+      },
+      {
+       "date": "2026-10-23T00:08:59-04:00",
+       "hash": "cd6a319",
+       "merge": false,
+       "subject": "test(native): inject keys and mouse motion through the QEMU monitor"
+      },
+      {
+       "date": "2026-10-23T00:10:37-04:00",
+       "hash": "3ad4c85",
+       "merge": false,
+       "subject": "docs: record the keyboard and mouse spike and its HAL feedback"
+      },
+      {
+       "date": "2026-10-23T00:11:20-04:00",
+       "hash": "3d03ff4",
+       "merge": false,
+       "subject": "docs: give the exact test counts in C-INPUT"
+      },
+      {
+       "date": "2026-10-23T00:15:57-04:00",
+       "hash": "33b37c9",
+       "merge": false,
+       "subject": "fix(input): apply the code review of the keyboard and mouse spike"
+      }
+     ],
+     "createdAt": "2026-10-23T04:11:15Z",
+     "ghAdditions": 3959,
+     "ghChangedFiles": 41,
+     "ghDeletions": 131,
+     "head": "33b37c9",
+     "headFull": "33b37c9a72b7360d687734e6a572fd55c609ea5f",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "spike"
+     ],
+     "number": 10,
+     "stackedOn": [
+      8
+     ],
+     "state": "in review",
+     "title": "Add keyboard and PS/2 mouse input to the native kernel",
+     "updatedAt": "2026-10-23T04:20:22Z",
+     "url": "https://github.com/liminal-hq/desk/pull/10"
+    },
+    {
+     "ahead": 23,
+     "base": "feat/hal-design",
+     "branch": "spike/a-vga-vbe-rust",
+     "ci": "passing",
+     "commitCount": 6,
+     "commits": [
+      {
+       "date": "2026-10-23T00:05:17-04:00",
+       "hash": "a5a1144",
+       "merge": false,
+       "subject": "feat: add the VGA and VBE driver and the video types to the HAL"
+      },
+      {
+       "date": "2026-10-23T00:05:18-04:00",
+       "hash": "16d40d2",
+       "merge": true,
+       "subject": "Merge remote-tracking branch 'origin/feat/hal-design' into spike/a-vga-vbe-rust"
+      },
+      {
+       "date": "2026-10-23T00:10:53-04:00",
+       "hash": "8625acd",
+       "merge": false,
+       "subject": "feat: run VGA and VBE from Rust on the DOS runtime through desk-vga"
+      },
+      {
+       "date": "2026-10-23T00:12:29-04:00",
+       "hash": "7d59239",
+       "merge": false,
+       "subject": "docs: record the spike A result for VGA and VBE"
+      },
+      {
+       "date": "2026-10-23T00:13:03-04:00",
+       "hash": "5bd167b",
+       "merge": false,
+       "subject": "docs: name the spike A pull request in the targets table"
+      },
+      {
+       "date": "2026-10-23T00:17:47-04:00",
+       "hash": "4ab237b",
+       "merge": false,
+       "subject": "fix: leave graphics after direct mode sets, bound a dead fade, free a replaced mapping"
+      }
+     ],
+     "createdAt": "2026-10-23T04:12:56Z",
+     "ghAdditions": 4127,
+     "ghChangedFiles": 49,
+     "ghDeletions": 8,
+     "head": "4ab237b",
+     "headFull": "4ab237bdc8fd0cdfedbf0c3701e182c54e0ac87a",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "dos",
+      "graphics",
+      "spike"
+     ],
+     "number": 11,
+     "stackedOn": [
+      8
+     ],
+     "state": "in review",
+     "title": "Add the VGA and VBE driver and prove it on the DOS runtime",
+     "updatedAt": "2026-10-23T04:24:39Z",
+     "url": "https://github.com/liminal-hq/desk/pull/11"
+    },
+    {
+     "ahead": 5,
+     "base": "main",
+     "branch": "spike/e-std-stubs",
+     "ci": "passing",
+     "commitCount": 5,
+     "commits": [
+      {
+       "date": "2026-10-23T00:27:41-04:00",
+       "hash": "648d009",
+       "merge": false,
+       "subject": "feat: build std for an invented OS and probe every stubbed API"
+      },
+      {
+       "date": "2026-10-23T00:27:41-04:00",
+       "hash": "098b714",
+       "merge": false,
+       "subject": "docs: record the result of spike E, std for an invented OS"
+      },
+      {
+       "date": "2026-10-23T00:34:45-04:00",
+       "hash": "563ebb6",
+       "merge": false,
+       "subject": "fix: carry the monotonic clock across midnight"
+      },
+      {
+       "date": "2026-10-23T00:34:45-04:00",
+       "hash": "c3b3be4",
+       "merge": false,
+       "subject": "docs: correct the desk_* function count and drop dead code"
+      },
+      {
+       "date": "2026-10-23T00:34:45-04:00",
+       "hash": "7c88426",
+       "merge": false,
+       "subject": "fix: give std programs the program path as argv[0]"
+      }
+     ],
+     "createdAt": "2026-10-23T04:28:09Z",
+     "ghAdditions": 2253,
+     "ghChangedFiles": 44,
+     "ghDeletions": 9,
+     "head": "7c88426",
+     "headFull": "7c88426b9522d2dbdaf16b6d086598b5a0e070b6",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "rust",
+      "experimental",
+      "spike"
+     ],
+     "number": 12,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Run spike E: build std for an invented OS and patch in a platform layer",
+     "updatedAt": "2026-10-23T04:43:27Z",
+     "url": "https://github.com/liminal-hq/desk/pull/12"
+    },
+    {
+     "ahead": 6,
+     "base": "main",
+     "branch": "spike/s5-jsdos",
+     "ci": "passing",
+     "commitCount": 6,
+     "commits": [
+      {
+       "date": "2026-10-23T00:25:25-04:00",
+       "hash": "f3f6470",
+       "merge": false,
+       "subject": "feat: add the s5-jsdos graphics and sound probes"
+      },
+      {
+       "date": "2026-10-23T00:32:24-04:00",
+       "hash": "8544b4c",
+       "merge": false,
+       "subject": "test: run the DOS programs in js-dos 8 in headless Chromium"
+      },
+      {
+       "date": "2026-10-23T00:32:24-04:00",
+       "hash": "87c2a15",
+       "merge": false,
+       "subject": "docs: record the result of spike s5-jsdos"
+      },
+      {
+       "date": "2026-10-23T00:38:41-04:00",
+       "hash": "25389db",
+       "merge": false,
+       "subject": "fix: harden the s5 probes against a missing window segment and the midnight tick wrap"
+      },
+      {
+       "date": "2026-10-23T00:38:41-04:00",
+       "hash": "bfc6598",
+       "merge": false,
+       "subject": "test: make the s5 driver survive bad requests and missing exit files"
+      },
+      {
+       "date": "2026-10-23T00:38:41-04:00",
+       "hash": "869785a",
+       "merge": false,
+       "subject": "build: keep the s5 output directory in one place and re-fetch a partial js-dos"
+      }
+     ],
+     "createdAt": "2026-10-23T04:32:55Z",
+     "ghAdditions": 2260,
+     "ghChangedFiles": 37,
+     "ghDeletions": 10,
+     "head": "869785a",
+     "headFull": "869785a1cd76326275648ac420a05311b134fe85",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "experimental",
+      "dos",
+      "spike"
+     ],
+     "number": 13,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Run spike s5: DOS programs and the VBE linear frame buffer work in js-dos 8",
+     "updatedAt": "2026-10-23T04:43:31Z",
+     "url": "https://github.com/liminal-hq/desk/pull/13"
+    },
+    {
+     "ahead": 40,
+     "base": "spike/c-kernel-input",
+     "branch": "spike/d-native-vga",
+     "ci": "passing",
+     "commitCount": 10,
+     "commits": [
+      {
+       "date": "2026-10-23T00:32:35-04:00",
+       "hash": "7f6b22c",
+       "merge": true,
+       "subject": "Merge spike A's `desk-vga` driver into the native graphics spike"
+      },
+      {
+       "date": "2026-10-23T00:37:36-04:00",
+       "hash": "7d0e128",
+       "merge": false,
+       "subject": "feat(hal): add the text-mode restore to `desk-vga`"
+      },
+      {
+       "date": "2026-10-23T00:37:36-04:00",
+       "hash": "995d6c6",
+       "merge": false,
+       "subject": "feat(boot): ask VBE for a linear frame buffer before the switch to protected mode"
+      },
+      {
+       "date": "2026-10-23T00:49:39-04:00",
+       "hash": "c962b00",
+       "merge": false,
+       "subject": "feat(kernel): draw with `desk-vga` from protected mode, with a cursor and a first window"
+      },
+      {
+       "date": "2026-10-23T00:49:39-04:00",
+       "hash": "316043b",
+       "merge": false,
+       "subject": "test(native): check the graphics tour against screenshots taken through the QEMU monitor"
+      },
+      {
+       "date": "2026-10-23T00:51:16-04:00",
+       "hash": "ed8f947",
+       "merge": false,
+       "subject": "perf(hal): fill spans with word stores through `MmioRegion::fill8`"
+      },
+      {
+       "date": "2026-10-23T00:54:20-04:00",
+       "hash": "31a0306",
+       "merge": false,
+       "subject": "docs: record spike D, native graphics in the kernel"
+      },
+      {
+       "date": "2026-10-23T01:02:31-04:00",
+       "hash": "172901b",
+       "merge": false,
+       "subject": "fix(boot): use the linear bytes per scan line of a VBE 3.0 mode as the pitch"
+      },
+      {
+       "date": "2026-10-23T01:02:31-04:00",
+       "hash": "0621e68",
+       "merge": false,
+       "subject": "fix(kernel): let Backspace edit the echo line and tidy the tour's helpers"
+      },
+      {
+       "date": "2026-10-23T01:02:31-04:00",
+       "hash": "563f6c4",
+       "merge": false,
+       "subject": "test(native): show monitor error replies that end like the command"
+      }
+     ],
+     "createdAt": "2026-10-23T04:55:01Z",
+     "ghAdditions": 6331,
+     "ghChangedFiles": 85,
+     "ghDeletions": 47,
+     "head": "563f6c4",
+     "headFull": "563f6c42c26348320db719d5630a2f73b5c73596",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "graphics",
+      "spike"
+     ],
+     "number": 14,
+     "stackedOn": [
+      8,
+      10,
+      11
+     ],
+     "state": "in review",
+     "title": "Draw from the native kernel: VBE from the loader, a cursor and a first window",
+     "updatedAt": "2026-10-23T05:08:46Z",
+     "url": "https://github.com/liminal-hq/desk/pull/14"
+    },
+    {
+     "ahead": 39,
+     "base": "spike/a-vga-vbe-rust",
+     "branch": "spike/b-dos-input",
+     "ci": "passing",
+     "commitCount": 9,
+     "commits": [
+      {
+       "date": "2026-10-23T00:31:44-04:00",
+       "hash": "85e6581",
+       "merge": true,
+       "subject": "Merge spike C (the kernel's input drivers) into the DOS input spike"
+      },
+      {
+       "date": "2026-10-23T00:38:30-04:00",
+       "hash": "a3dc83c",
+       "merge": false,
+       "subject": "feat: add the INT 33h mouse driver crate and a seeded keyboard decoder"
+      },
+      {
+       "date": "2026-10-23T00:51:46-04:00",
+       "hash": "fbf6a0a",
+       "merge": false,
+       "subject": "feat: add the DOS interrupt registry and BIOS keyboard state to rt, and a software cursor to desk-vga"
+      },
+      {
+       "date": "2026-10-23T00:51:55-04:00",
+       "hash": "37802fd",
+       "merge": false,
+       "subject": "feat: add INPUT.EXE, the keyboard and mouse on the pure-Rust DOS runtime, with AUTOTYPE checks"
+      },
+      {
+       "date": "2026-10-23T00:56:19-04:00",
+       "hash": "7a88d8f",
+       "merge": false,
+       "subject": "test: drive the DOS mouse with xdotool under Xvfb (opt-in) and record the screen"
+      },
+      {
+       "date": "2026-10-23T00:56:52-04:00",
+       "hash": "caf2b03",
+       "merge": false,
+       "subject": "feat: let the core ask an input source whether there is a mouse"
+      },
+      {
+       "date": "2026-10-23T01:01:37-04:00",
+       "hash": "d82b80d",
+       "merge": false,
+       "subject": "docs: write up spike B, the keyboard and the mouse on the DOS runtime"
+      },
+      {
+       "date": "2026-10-23T01:11:01-04:00",
+       "hash": "ec86c13",
+       "merge": false,
+       "subject": "fix: refuse an IRQ registration the clean-up list cannot undo, and keep a line registered when its vector cannot be restored"
+      },
+      {
+       "date": "2026-10-23T01:11:01-04:00",
+       "hash": "ba6456f",
+       "merge": false,
+       "subject": "fix: keep a poll's motion when the button read fails, and report chained lock keys honestly"
+      }
+     ],
+     "createdAt": "2026-10-23T05:02:11Z",
+     "ghAdditions": 6988,
+     "ghChangedFiles": 73,
+     "ghDeletions": 139,
+     "head": "ba6456f",
+     "headFull": "ba6456f0100376b4d4f1f41896188a07768633e9",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "dos",
+      "input",
+      "spike"
+     ],
+     "number": 15,
+     "stackedOn": [
+      8,
+      10,
+      11
+     ],
+     "state": "in review",
+     "title": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DOS runtime",
+     "updatedAt": "2026-10-23T05:34:06Z",
+     "url": "https://github.com/liminal-hq/desk/pull/15"
+    },
+    {
+     "ahead": 8,
+     "base": "main",
+     "branch": "spike/g-boot-bochs-86box",
+     "ci": "passing",
+     "commitCount": 8,
+     "commits": [
+      {
+       "date": "2026-10-23T00:08:32-04:00",
+       "hash": "078f2e4",
+       "merge": false,
+       "subject": "test: accept any CR0 cache-disable bits in the exception dump checks"
+      },
+      {
+       "date": "2026-10-23T00:08:32-04:00",
+       "hash": "1eccdf1",
+       "merge": false,
+       "subject": "test: boot the native image in Bochs as a 486 (opt-in)"
+      },
+      {
+       "date": "2026-10-23T01:42:03-04:00",
+       "hash": "a1ced7b",
+       "merge": false,
+       "subject": "fix: fall back to INT 15h AH=88 when the BIOS has neither E820 nor E801"
+      },
+      {
+       "date": "2026-10-23T01:42:15-04:00",
+       "hash": "28a4be3",
+       "merge": false,
+       "subject": "test: boot the native image in headless 86Box on an AMIBIOS 486 (experimental)"
+      },
+      {
+       "date": "2026-10-23T01:44:01-04:00",
+       "hash": "7ab0e33",
+       "merge": false,
+       "subject": "docs: record spike G, the native image in Bochs and 86Box"
+      },
+      {
+       "date": "2026-10-23T01:51:34-04:00",
+       "hash": "45c303f",
+       "merge": false,
+       "subject": "docs: count the AH=88 build among the four verified loader variants"
+      },
+      {
+       "date": "2026-10-23T01:51:35-04:00",
+       "hash": "bc4d6da",
+       "merge": false,
+       "subject": "fix: time the Bochs watchdog by the clock and match its container exactly"
+      },
+      {
+       "date": "2026-10-23T01:51:35-04:00",
+       "hash": "04f1212",
+       "merge": false,
+       "subject": "fix: retry dismissing the 86Box serial message box and time out by the clock"
+      }
+     ],
+     "createdAt": "2026-10-23T05:44:39Z",
+     "ghAdditions": 650,
+     "ghChangedFiles": 24,
+     "ghDeletions": 38,
+     "head": "04f1212",
+     "headFull": "04f12127fcd9ec5f80be0a468761948ba8576530",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "experimental",
+      "spike"
+     ],
+     "number": 16,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Boot the native image in Bochs and 86Box, and fix the loader for old BIOSes",
+     "updatedAt": "2026-10-23T06:07:08Z",
+     "url": "https://github.com/liminal-hq/desk/pull/16"
+    },
+    {
+     "ahead": 49,
+     "base": "spike/d-native-vga",
+     "branch": "spike/n3-native-bios",
+     "ci": "passing",
+     "commitCount": 9,
+     "commits": [
+      {
+       "date": "2026-10-23T01:54:19-04:00",
+       "hash": "5cc045c",
+       "merge": false,
+       "subject": "feat(hal): read the 8259 in-service and request registers"
+      },
+      {
+       "date": "2026-10-23T01:54:39-04:00",
+       "hash": "3743ac9",
+       "merge": false,
+       "subject": "feat(kernel): call the BIOS from protected mode through a real-mode trampoline"
+      },
+      {
+       "date": "2026-10-23T01:57:12-04:00",
+       "hash": "e33f156",
+       "merge": false,
+       "subject": "feat(kernel): leave VBE through the BIOS on cards without the Bochs registers"
+      },
+      {
+       "date": "2026-10-23T02:01:16-04:00",
+       "hash": "589e08e",
+       "merge": false,
+       "subject": "feat(kernel): add a `bios-solo` test mode and a disk error every BIOS answers"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "c863551",
+       "merge": false,
+       "subject": "fix(kernel): start a BIOS handler with the caller's flags"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "64f658c",
+       "merge": false,
+       "subject": "test(kernel): time plain BIOS calls apart from the state checks"
+      },
+      {
+       "date": "2026-10-23T02:07:47-04:00",
+       "hash": "1ab8769",
+       "merge": false,
+       "subject": "docs: record spike n3, a real BIOS path for the native kernel"
+      },
+      {
+       "date": "2026-10-23T02:15:24-04:00",
+       "hash": "9109761",
+       "merge": false,
+       "subject": "fix(kernel): pass the direction flag into a BIOS handler and count the midnight rollover"
+      },
+      {
+       "date": "2026-10-23T02:15:24-04:00",
+       "hash": "8704850",
+       "merge": false,
+       "subject": "docs: name PR #17 for spike n3 in the Rust targets table"
+      }
+     ],
+     "createdAt": "2026-10-23T06:08:30Z",
+     "ghAdditions": 1987,
+     "ghChangedFiles": 31,
+     "ghDeletions": 36,
+     "head": "8704850",
+     "headFull": "870485044468933e9f2d34db5c3a916176028324",
+     "isReport": false,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "rust",
+      "graphics",
+      "spike"
+     ],
+     "number": 17,
+     "stackedOn": [
+      8,
+      10,
+      11,
+      14
+     ],
+     "state": "in review",
+     "title": "Call the BIOS from the native kernel through a real-mode trampoline",
+     "updatedAt": "2026-10-23T06:15:48Z",
+     "url": "https://github.com/liminal-hq/desk/pull/17"
+    },
+    {
+     "ahead": 8,
+     "base": "main",
+     "branch": "docs/progress-report-chapters",
+     "ci": "passing",
+     "commitCount": 8,
+     "commits": [
+      {
+       "date": "2026-10-23T02:07:39-04:00",
+       "hash": "8900789",
+       "merge": false,
+       "subject": "feat: read open pull requests and their branches in the report generator"
+      },
+      {
+       "date": "2026-10-23T02:08:05-04:00",
+       "hash": "a9dd0db",
+       "merge": false,
+       "subject": "feat: add the hardware explainers, charts and the gallery to the report generator"
+      },
+      {
+       "date": "2026-10-23T02:08:05-04:00",
+       "hash": "4cd606f",
+       "merge": false,
+       "subject": "docs: add six chapters to the progress report and refresh the archive"
+      },
+      {
+       "date": "2026-10-23T02:08:08-04:00",
+       "hash": "b1a3e29",
+       "merge": true,
+       "subject": "Merge main into docs/progress-report-chapters"
+      },
+      {
+       "date": "2026-10-23T02:11:20-04:00",
+       "hash": "df47e7e",
+       "merge": false,
+       "subject": "fix: stop state tags clashing with specimen labels and hide unused explainer panels"
+      },
+      {
+       "date": "2026-10-23T02:17:26-04:00",
+       "hash": "8f63d31",
+       "merge": false,
+       "subject": "fix: apply the review of the progress report pull request"
+      },
+      {
+       "date": "2026-10-23T02:17:59-04:00",
+       "hash": "1882f41",
+       "merge": false,
+       "subject": "docs: mark spike n3's pull request and the work-in-progress state in the report"
+      },
+      {
+       "date": "2026-10-23T02:19:07-04:00",
+       "hash": "7dee5ee",
+       "merge": false,
+       "subject": "docs: say in the archive's description that it is a work in progress"
+      }
+     ],
+     "createdAt": "2026-10-23T06:11:49Z",
+     "ghAdditions": 6954,
+     "ghChangedFiles": 68,
+     "ghDeletions": 268,
+     "head": "7dee5ee",
+     "headFull": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
+     "isReport": true,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "design-docs"
+     ],
+     "number": 18,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Add chapters for the open spikes and a gallery to the progress report",
+     "updatedAt": "2026-10-23T06:19:25Z",
+     "url": "https://github.com/liminal-hq/desk/pull/18"
+    }
+   ],
+   "tips": [
+    {
+     "halLines": 2401,
+     "hostTests": 35,
+     "kernelLines": 1090,
+     "number": 8,
+     "transcripts": 25
+    },
+    {
+     "halLines": 5393,
+     "hostTests": 106,
+     "kernelLines": 1320,
+     "number": 10,
+     "transcripts": 27
+    },
+    {
+     "halLines": 5111,
+     "hostTests": 82,
+     "kernelLines": 1090,
+     "number": 11,
+     "transcripts": 28
+    },
+    {
+     "halLines": 0,
+     "hostTests": 0,
+     "kernelLines": 1090,
+     "number": 12,
+     "transcripts": 25
+    },
+    {
+     "halLines": 0,
+     "hostTests": 0,
+     "kernelLines": 1090,
+     "number": 13,
+     "transcripts": 25
+    },
+    {
+     "halLines": 8358,
+     "hostTests": 158,
+     "kernelLines": 2086,
+     "number": 14,
+     "transcripts": 33
+    },
+    {
+     "halLines": 9459,
+     "hostTests": 173,
+     "kernelLines": 1320,
+     "number": 15,
+     "transcripts": 31
+    },
+    {
+     "halLines": 0,
+     "hostTests": 0,
+     "kernelLines": 1091,
+     "number": 16,
+     "transcripts": 25
+    },
+    {
+     "halLines": 8395,
+     "hostTests": 159,
+     "kernelLines": 3280,
+     "number": 17,
+     "transcripts": 34
+    }
+   ],
+   "warnings": [],
+   "widest": 15
+  },
   "prs": [
+   {
+    "additions": 6954,
+    "baseRefName": "main",
+    "changedFiles": 68,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T06:11:49Z",
+    "deletions": 268,
+    "headRefName": "docs/progress-report-chapters",
+    "headRefOid": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": null,
+    "number": 18,
+    "state": "OPEN",
+    "title": "Add chapters for the open spikes and a gallery to the progress report",
+    "updatedAt": "2026-10-23T06:19:25Z",
+    "url": "https://github.com/liminal-hq/desk/pull/18"
+   },
+   {
+    "additions": 1987,
+    "baseRefName": "spike/d-native-vga",
+    "changedFiles": 31,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T06:08:30Z",
+    "deletions": 36,
+    "headRefName": "spike/n3-native-bios",
+    "headRefOid": "870485044468933e9f2d34db5c3a916176028324",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 17,
+    "state": "OPEN",
+    "title": "Call the BIOS from the native kernel through a real-mode trampoline",
+    "updatedAt": "2026-10-23T06:15:48Z",
+    "url": "https://github.com/liminal-hq/desk/pull/17"
+   },
+   {
+    "additions": 650,
+    "baseRefName": "main",
+    "changedFiles": 24,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T05:44:39Z",
+    "deletions": 38,
+    "headRefName": "spike/g-boot-bochs-86box",
+    "headRefOid": "04f12127fcd9ec5f80be0a468761948ba8576530",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "e99695",
+      "description": "Spike/proof-of-concept work, not a committed direction",
+      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
+      "name": "experimental"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 16,
+    "state": "OPEN",
+    "title": "Boot the native image in Bochs and 86Box, and fix the loader for old BIOSes",
+    "updatedAt": "2026-10-23T06:07:08Z",
+    "url": "https://github.com/liminal-hq/desk/pull/16"
+   },
+   {
+    "additions": 6988,
+    "baseRefName": "spike/a-vga-vbe-rust",
+    "changedFiles": 73,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T05:02:11Z",
+    "deletions": 139,
+    "headRefName": "spike/b-dos-input",
+    "headRefOid": "ba6456f0100376b4d4f1f41896188a07768633e9",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 15,
+    "state": "OPEN",
+    "title": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DOS runtime",
+    "updatedAt": "2026-10-23T05:34:06Z",
+    "url": "https://github.com/liminal-hq/desk/pull/15"
+   },
+   {
+    "additions": 6331,
+    "baseRefName": "spike/c-kernel-input",
+    "changedFiles": 85,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T04:55:01Z",
+    "deletions": 47,
+    "headRefName": "spike/d-native-vga",
+    "headRefOid": "563f6c42c26348320db719d5630a2f73b5c73596",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 14,
+    "state": "OPEN",
+    "title": "Draw from the native kernel: VBE from the loader, a cursor and a first window",
+    "updatedAt": "2026-10-23T05:08:46Z",
+    "url": "https://github.com/liminal-hq/desk/pull/14"
+   },
+   {
+    "additions": 2260,
+    "baseRefName": "main",
+    "changedFiles": 37,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T04:32:55Z",
+    "deletions": 10,
+    "headRefName": "spike/s5-jsdos",
+    "headRefOid": "869785a1cd76326275648ac420a05311b134fe85",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "e99695",
+      "description": "Spike/proof-of-concept work, not a committed direction",
+      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
+      "name": "experimental"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 13,
+    "state": "OPEN",
+    "title": "Run spike s5: DOS programs and the VBE linear frame buffer work in js-dos 8",
+    "updatedAt": "2026-10-23T04:43:31Z",
+    "url": "https://github.com/liminal-hq/desk/pull/13"
+   },
+   {
+    "additions": 2253,
+    "baseRefName": "main",
+    "changedFiles": 44,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T04:28:09Z",
+    "deletions": 9,
+    "headRefName": "spike/e-std-stubs",
+    "headRefOid": "7c88426b9522d2dbdaf16b6d086598b5a0e070b6",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "e99695",
+      "description": "Spike/proof-of-concept work, not a committed direction",
+      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
+      "name": "experimental"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 12,
+    "state": "OPEN",
+    "title": "Run spike E: build std for an invented OS and patch in a platform layer",
+    "updatedAt": "2026-10-23T04:43:27Z",
+    "url": "https://github.com/liminal-hq/desk/pull/12"
+   },
+   {
+    "additions": 4127,
+    "baseRefName": "feat/hal-design",
+    "changedFiles": 49,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T04:12:56Z",
+    "deletions": 8,
+    "headRefName": "spike/a-vga-vbe-rust",
+    "headRefOid": "4ab237bdc8fd0cdfedbf0c3701e182c54e0ac87a",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 11,
+    "state": "OPEN",
+    "title": "Add the VGA and VBE driver and prove it on the DOS runtime",
+    "updatedAt": "2026-10-23T04:24:39Z",
+    "url": "https://github.com/liminal-hq/desk/pull/11"
+   },
+   {
+    "additions": 3959,
+    "baseRefName": "feat/hal-design",
+    "changedFiles": 41,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T04:11:15Z",
+    "deletions": 131,
+    "headRefName": "spike/c-kernel-input",
+    "headRefOid": "33b37c9a72b7360d687734e6a572fd55c609ea5f",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": null,
+    "number": 10,
+    "state": "OPEN",
+    "title": "Add keyboard and PS/2 mouse input to the native kernel",
+    "updatedAt": "2026-10-23T04:20:22Z",
+    "url": "https://github.com/liminal-hq/desk/pull/10"
+   },
+   {
+    "additions": 4694,
+    "baseRefName": "main",
+    "changedFiles": 37,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T03:43:39Z",
+    "deletions": 5,
+    "headRefName": "docs/progress-report",
+    "headRefOid": "2f5ba39a5641aae828a0b5545b4aba2bd52fe5e8",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-10-23T06:00:08Z",
+    "number": 9,
+    "state": "MERGED",
+    "title": "Add the progress report generator and its chapters",
+    "updatedAt": "2026-10-23T06:00:11Z",
+    "url": "https://github.com/liminal-hq/desk/pull/9"
+   },
+   {
+    "additions": 3113,
+    "baseRefName": "main",
+    "changedFiles": 34,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T03:38:21Z",
+    "deletions": 22,
+    "headRefName": "feat/hal-design",
+    "headRefOid": "ab23751289914de3263c34b026c15723a37acc2f",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": null,
+    "number": 8,
+    "state": "OPEN",
+    "title": "Design the HAL and add host-tested shared serial, PIT and PIC drivers",
+    "updatedAt": "2026-10-23T04:04:37Z",
+    "url": "https://github.com/liminal-hq/desk/pull/8"
+   },
    {
     "additions": 2858,
     "baseRefName": "main",
     "changedFiles": 47,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T22:14:06Z",
     "deletions": 3,
     "headRefName": "spike/d0-rust-dos",
+    "headRefOid": "7f1a32ac4a527712e68d65a74baf32e87af2bd07",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -55,16 +1859,28 @@
     ],
     "mergedAt": "2026-10-23T03:11:00Z",
     "number": 7,
+    "state": "MERGED",
     "title": "Run spike d0: a pure Rust DOS program with no C layer",
+    "updatedAt": "2026-10-23T03:11:02Z",
     "url": "https://github.com/liminal-hq/desk/pull/7"
    },
    {
     "additions": 2394,
     "baseRefName": "main",
     "changedFiles": 43,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T21:57:08Z",
     "deletions": 6,
     "headRefName": "feat/native-skeleton",
+    "headRefOid": "b1d8d079a7fe54686dc52d5caebb551af0548914",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -105,16 +1921,28 @@
     ],
     "mergedAt": "2026-10-23T02:55:46Z",
     "number": 6,
+    "state": "MERGED",
     "title": "Add a native walking skeleton: NASM boot sector and a Rust kernel in QEMU",
+    "updatedAt": "2026-10-23T02:55:49Z",
     "url": "https://github.com/liminal-hq/desk/pull/6"
    },
    {
     "additions": 345,
     "baseRefName": "main",
     "changedFiles": 12,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T21:37:31Z",
     "deletions": 40,
     "headRefName": "docs/direction",
+    "headRefOid": "9e73ea4f78e918462b5e16bfb4a02595c99054be",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -137,16 +1965,28 @@
     ],
     "mergedAt": "2026-10-23T03:01:41Z",
     "number": 5,
+    "state": "MERGED",
     "title": "Record the direction: a native Rust OS for old hardware",
+    "updatedAt": "2026-10-23T03:01:43Z",
     "url": "https://github.com/liminal-hq/desk/pull/5"
    },
    {
     "additions": 1978,
     "baseRefName": "main",
     "changedFiles": 46,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T21:33:12Z",
     "deletions": 21,
     "headRefName": "spike/s1-dxe3",
+    "headRefOid": "6bfda74d6dabd8e4ac32f62b87b25942500e8e27",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -199,16 +2039,28 @@
     ],
     "mergedAt": "2026-10-23T03:06:11Z",
     "number": 4,
+    "state": "MERGED",
     "title": "Run spike s1-dxe3: load Rust modules as DXE3 files",
+    "updatedAt": "2026-10-23T03:06:14Z",
     "url": "https://github.com/liminal-hq/desk/pull/4"
    },
    {
     "additions": 931,
     "baseRefName": "main",
     "changedFiles": 26,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T20:59:50Z",
     "deletions": 22,
     "headRefName": "feat/walking-skeleton",
+    "headRefOid": "a0323d30f9f74f13de42680f0bb69452f30f5803",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -255,16 +2107,28 @@
     ],
     "mergedAt": "2026-10-23T02:41:06Z",
     "number": 3,
+    "state": "MERGED",
     "title": "Add the DOS toolchain and a headless walking skeleton",
+    "updatedAt": "2026-10-23T02:41:10Z",
     "url": "https://github.com/liminal-hq/desk/pull/3"
    },
    {
     "additions": 18325,
     "baseRefName": "main",
     "changedFiles": 94,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T19:54:46Z",
     "deletions": 158,
     "headRefName": "feat/emoji",
+    "headRefOid": "ff698ec65bc89adde839cfc79fd42b76e77bb597",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -299,16 +2163,28 @@
     ],
     "mergedAt": "2026-10-23T02:50:02Z",
     "number": 2,
+    "state": "MERGED",
     "title": "Add the Desk emoji set, colour fonts and .DEM format",
+    "updatedAt": "2026-10-23T02:50:04Z",
     "url": "https://github.com/liminal-hq/desk/pull/2"
    },
    {
     "additions": 10681,
     "baseRefName": "main",
     "changedFiles": 112,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
     "createdAt": "2026-10-22T16:46:06Z",
     "deletions": 6,
     "headRefName": "feat/fonts",
+    "headRefOid": "36c3db86bf49dcae814265c6e379e9ce4a98a0fe",
+    "isDraft": false,
     "labels": [
      {
       "color": "0075ca",
@@ -349,7 +2225,9 @@
     ],
     "mergedAt": "2026-10-23T02:45:09Z",
     "number": 1,
+    "state": "MERGED",
     "title": "Add the Desk pixel and outline font families",
+    "updatedAt": "2026-10-23T02:45:12Z",
     "url": "https://github.com/liminal-hq/desk/pull/1"
    }
   ],
@@ -397,6 +2275,15 @@
    "visibility": "PUBLIC"
   },
   "runs": [
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T06:00:11Z",
+    "displayTitle": "Add the progress report generator and its chapters (#9)",
+    "event": "push",
+    "headSha": "06fa290a9a1642f8a722a38f9e59f6f095c1fb85",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39908887388",
+    "workflowName": "CI"
+   },
    {
     "conclusion": "success",
     "createdAt": "2026-10-23T03:11:02Z",

@@ -10,6 +10,10 @@ With letters done, the Desk needed pictures, and PR #2 (stacked on #1, {{pr2.com
 
 <!-- figure contact -->
 
+And how much of the request is drawn, by form:
+
+<!-- figure emoji-coverage -->
+
 The wish behind the set is a list: every emoji in Gboard's Smileys and emotions panel. `docs/EMOJI-ROADMAP.md` tracks all {{emoji.requested}} requested sequences, of which {{emoji.requestedDone}} are drawn and {{emoji.requestedPlanned}} are planned, and a test fails if the roadmap and the manifest disagree. The faces are complete; hands, the seven joined sequences and 240 skin-tone variants are the work that remains.
 
 <!-- facts emojiPixel emojiVector -->
@@ -42,3 +46,32 @@ The lesson for the archive is small and useful: a picture that has to be underst
 
 > **From the stacks — Twelve by twelve.** The tiny pictures that became emoji have a pixel-art past. As the story has been told for years, NTT DoCoMo's 1999 i-mode set by Shigetaka Kurita was the first; later research found earlier sets, among them a 1997 J-Phone set whose 90 emoji were 12 by 12 pixels and monochrome. The Desk's 12 px grid is the same size; the repository does not claim that it is an homage, and neither do I.
 > Source: [Emoji, Wikipedia](https://en.wikipedia.org/wiki/Emoji)
+
+```figures
+id: emoji-contact
+kind: specimen
+track: design
+title: The emoji contact sheets
+alt: A contact sheet of the 480 pixel emoji at 16 by 16 pixels, drawn in the sixteen colours of the Desk palette.
+caption: All the pixel emoji at 16, 12 and 8 px.
+at: figure contact
+thumb: img:img/pixel-16.png
+
+id: emoji-coverage
+kind: chart
+track: design
+title: Emoji coverage
+alt: Bars of how many emoji are drawn as pixel and vector forms, and a stacked bar of how much of the 244-sequence Gboard request is done and planned.
+caption: Emoji by form, and how much of the Gboard request is done.
+at: figure emoji-coverage
+thumb: svg
+
+id: face-drawings
+kind: history
+track: design
+title: Three drawings of the distorted face
+alt: Three 16 by 16 pixel drawings of the distorted face emoji, each from a later commit than the one before.
+caption: The same emoji redrawn in three commits.
+at: figure faces
+thumb: svgs
+```

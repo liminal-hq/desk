@@ -1,11 +1,62 @@
 [
- {"what": "Real hardware.", "why": "Nothing in the archive has run on a real 486 or any other physical PC. Every boot and every program ran in QEMU (`-cpu 486`) or headless DOSBox Staging."},
- {"what": "86Box and Bochs.", "why": "The native track names them as test targets in `docs/DIRECTION.md`; neither has booted the image."},
- {"what": "Other BIOSes and boot media.", "why": "Only QEMU's SeaBIOS and a floppy image were tried. IDE and hard-disk boot were not (PR #6)."},
- {"what": "Other DPMI hosts and memory managers.", "why": "Only CWSDPMI under DOSBox's own DOS. EMM386, QEMM and a Windows 9x DOS box were not tried (PRs #3, #4 and #7)."},
- {"what": "Windows 3.1 and friends.", "why": "The fonts follow the era's TrueType rules, but Windows 3.1, 95, NT and OS/2 were not run. Neither were GDI, DirectWrite, macOS, Safari or Firefox (PR #1)."},
- {"what": "The fonts on a DOS screen.", "why": "The `.DFN` and `.DEM` files were checked against FreeType and a decoder in the tests; no DOS program has drawn them yet."},
- {"what": "Sound.", "why": "Audio cannot be checked headless, and nothing here makes any."},
- {"what": "Stack overflow in a module.", "why": "CWSDPMI aborts the whole program before any signal handler runs, so it is not recoverable (PR #4). A null write was recovered only under QEMU with FreeDOS (by hand, not in CI)."},
- {"what": "The published site's own clicks.", "why": "The generator was tested by serving the files locally. Publishing needs the owner's sign-in, so the live page's controls have not been clicked by the author."}
+ {
+  "what": "Real hardware.",
+  "why": "Nothing in the archive has run on a real 486 or any other physical PC, and no real VGA or VBE card, 8042 controller, keyboard, mouse or monitor has been used. Every boot and every program ran in QEMU (`-cpu 486`), headless DOSBox Staging or a browser."
+ },
+ {
+  "what": "Emulators beyond the two that ran.",
+  "why": "The native image booted in QEMU, in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on one 1993 AMIBIOS board (chapter 16, PR #16, {{pr16.state}}). Other 86Box machines, chipsets and disks, a hard-disk or CD boot, and v86 in the browser were not tried, the 86Box run is not part of CI, and the picture of it is not in the pull request."
+ },
+ {
+  "what": "The BIOS trampoline on real machines.",
+  "why": "The real-mode round trip, and the 8259 re-initialisation that it depends on, ran only in emulators, on SeaBIOS and two Bochs BIOSes. The kernel of that branch does not start on 86Box until the loader has the AH=88h fallback of PR #16. Paging and V86 mode are design only."
+ },
+ {
+  "what": "VBE on other cards.",
+  "why": "VBE was asked for on QEMU's standard, Cirrus and VMware cards, and on the S3 model of DOSBox Staging and of js-dos. Leaving a VBE mode without the BIOS failed on Cirrus (PR #14), and the BIOS path of spike n3 (chapter 17, PR #17, {{pr17.state}}) returns all three QEMU cards to text through the BIOS. A real card, a real VGA BIOS, a banked-only BIOS and a VBE 1.2 BIOS are untried."
+ },
+ {
+  "what": "Other BIOSes and boot media.",
+  "why": "Only QEMU's SeaBIOS and a floppy image were tried here. IDE and hard-disk boot were not (PR #6)."
+ },
+ {
+  "what": "Other DPMI hosts and memory managers.",
+  "why": "Only CWSDPMI under DOSBox's own DOS (and, in the browser, inside js-dos). EMM386, QEMM, HDPMI and a Windows 9x DOS box were not tried (PRs #3, #4, #7, #11 and #15)."
+ },
+ {
+  "what": "Real input devices.",
+  "why": "The keyboard and mouse drivers met QEMU's PS/2 model, DOSBox's keyboard and its built-in mouse driver. A USB-legacy 8042, a laptop touchpad, a wheel mouse, a lost byte on a real cable, key repeat and a real INT 33h driver are untried (PRs #10 and #15). The mouse wheel was tested on the host only on the native side."
+ },
+ {
+  "what": "Browsers other than Chromium.",
+  "why": "js-dos ran in headless Chromium 154 on Linux. Firefox, Safari, other operating systems, touch and phones, and anything audible were not tried (PR #13). This archive's own pages were looked at in one browser as well."
+ },
+ {
+  "what": "The published pages' own clicks.",
+  "why": "The generator was tested by serving the files locally. Publishing needs the owner's sign-in, so the live page's controls have not been clicked by the author."
+ },
+ {
+  "what": "`std` on other Rust releases, and on hardware.",
+  "why": "The patch to `std` was applied only on the pinned release; on older releases it applied partly, and whether the new files compile there was not tried (PR #12). Its clock was never run across midnight, and nothing ran on real hardware."
+ },
+ {
+  "what": "Windows 3.1 and friends.",
+  "why": "The fonts follow the era's TrueType rules, but Windows 3.1, 95, NT and OS/2 were not run. Neither were GDI, DirectWrite, macOS, Safari or Firefox (PR #1)."
+ },
+ {
+  "what": "The fonts on a DOS screen.",
+  "why": "The `.DFN` and `.DEM` files were checked against FreeType and a decoder in the tests; no DOS program has drawn them yet."
+ },
+ {
+  "what": "Sound.",
+  "why": "Audio cannot be checked headless. The js-dos spike measured the pitch of three tones from the emulator's sample stream, and nobody listened (PR #13)."
+ },
+ {
+  "what": "Stack overflow in a module.",
+  "why": "CWSDPMI aborts the whole program before any signal handler runs, so it is not recoverable (PR #4). A null write was recovered only under QEMU with FreeDOS (by hand, not in CI)."
+ },
+ {
+  "what": "Speed on a 486.",
+  "why": "Every rate and size in the graphics and `std` chapters was measured under an emulator on a fast machine. They show relative costs, not what a 486 does."
+ }
 ]
