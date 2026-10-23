@@ -198,7 +198,8 @@ fn clock_calls() {
     assert!(close);
     let (res, c) = int(0x1A, 0);
     res.unwrap();
-    println!("bios: INT 1Ah AH=00h answers without error: {}", c.eax >> 8 == 0 || c.eax >> 8 == 1);
+    println!("bios: INT 1Ah AH=00h answers without error: {}", !c.carry() && c.al() <= 1);
+    assert!(!c.carry() && c.al() <= 1);
 }
 
 // ---- Errors, repeats and the idle loop
@@ -276,6 +277,23 @@ fn error_paths() {
     res.unwrap();
     println!("bios: the next call after the refusals works: {}", !r.carry());
     assert!(!r.carry());
+    entry_flags();
+}
+
+/// The handler starts with the flags the caller gave: a handler in the bounce buffer (`pushf`, `pop ax`, `iret`) hands back what it
+/// was entered with. Carry and direction must arrive as given, the interrupt flag clear as for an `INT`.
+fn entry_flags() {
+    let (slot, saved) = (0xF0u8, bios::vector_entry(0xF0));
+    let bounce = bios::bounce_buffer();
+    bounce.write_low(0x100, &[0x9C, 0x58, 0xCF]).unwrap();
+    bios::set_vector_entry(slot, u32::from(bounce.segment()) << 16 | 0x100);
+    let mut r = RealModeRegs { flags: RealModeRegs::CARRY | 0x0400, ..RealModeRegs::default() };
+    let res = bios::call(slot, &mut r);
+    bios::set_vector_entry(slot, saved);
+    res.unwrap();
+    let ok = r.eax & 0x0401 == 0x0401 && r.eax & 0x0200 == 0;
+    println!("bios: a handler is entered with the caller's carry and direction flags and interrupts off: {}", ok);
+    assert!(ok, "the handler was entered with flags {:#06x}", r.eax & 0xFFFF);
 }
 
 fn repeats_and_idle() {

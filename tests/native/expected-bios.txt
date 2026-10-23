@@ -45,6 +45,7 @@ bios: interrupt 0xf0 with an empty vector table entry: Err(NoHandler(240))
 bios: a second call while one is in progress is refused as busy: true
 bios: a call made from the timer interrupt handler is refused as in-interrupt: true
 bios: the next call after the refusals works: true
+bios: a handler is entered with the caller's carry and direction flags and interrupts off: true
 bios: two calls in a row both work, and read the same second or the next: true
 bios: five calls from the idle loop (halt, then call) with interrupts on all work, and the interrupt flag survives: true
 bios: the kernel's CPU state is the same after the calls: true

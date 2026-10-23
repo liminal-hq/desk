@@ -74,6 +74,10 @@ impl RealModeRegs {
         self.flags & Self::CARRY != 0
     }
 
+    pub fn al(&self) -> u8 {
+        self.eax as u8
+    }
+
     pub fn ah(&self) -> u8 {
         (self.eax >> 8) as u8
     }
@@ -145,6 +149,8 @@ const KBC_FROM_MOUSE: u8 = 1 << 5;
 /// The BIOS data area's timer tick count (a dword) and midnight flag (a byte).
 const BDA_TICKS: u32 = 0x46C;
 const BDA_MIDNIGHT: u32 = 0x470;
+/// The tick count at which the BIOS rolls over to zero and sets the midnight flag (24 hours of 18.2 Hz ticks).
+const BDA_TICKS_PER_DAY: u32 = 0x18_00B0;
 const CR0_PG: u32 = 1 << 31;
 
 static READY: AtomicBool = AtomicBool::new(false);
@@ -305,7 +311,7 @@ pub fn set_vector_entry(vector: u8, value: u32) {
 ///   the kernel has left it: a handler that never returns, or that corrupts low memory, takes the kernel with it.
 pub unsafe fn bios_int(vector: u8, regs: &mut RealModeRegs) -> Result<(), BiosError> {
     let saved_mask = PIC.mask_bits();
-    let (ticks_before, _) = bda_ticks();
+    let (ticks_before, midnight_before) = bda_ticks();
     // A tick raised but not yet delivered would be thrown away by the controller reset below. The kernel owes it to its clock.
     let tick_waiting = PIC.pending_mask() & 1 != 0;
 
@@ -318,7 +324,7 @@ pub unsafe fn bios_int(vector: u8, regs: &mut RealModeRegs) -> Result<(), BiosEr
     // SAFETY: the control block is in the copied blob; the blob only reads these fields after `entry` is called below.
     unsafe {
         write_volatile(addr_of_mut!((*ctl).vector), vector);
-        write_volatile(addr_of_mut!((*ctl).flags_in), (regs.flags & 0x08D5) | 0x0002);
+        write_volatile(addr_of_mut!((*ctl).flags_in), (regs.flags & 0x0CD5) | 0x0002);
         write_volatile(addr_of_mut!((*ctl).regs), *regs);
         // The blob saves and restores everything it changes (pushad, pushfd, the descriptor tables, the segments, ESP and CR0),
         // so apart from the memory it writes the call is an ordinary function call.
@@ -332,9 +338,17 @@ pub unsafe fn bios_int(vector: u8, regs: &mut RealModeRegs) -> Result<(), BiosEr
     PORTS.outb(CMOS_INDEX, if NMI_ENABLED_AFTER { 0 } else { NMI_DISABLE });
 
     // The BIOS timer handler counted the ticks the kernel's handler did not see: the kernel keeps the PIT at its own rate, so one
-    // BIOS tick is one kernel tick. A midnight rollover resets the count, so the delta is meaningless then and nothing is added.
-    let (ticks_after, midnight) = bda_ticks();
-    let counted = if midnight != 0 { 0 } else { ticks_after.wrapping_sub(ticks_before).min(10_000) };
+    // BIOS tick is one kernel tick. The count restarts from zero at midnight and the handler sets the flag, which stays set until
+    // a caller reads the time with INT 1Ah AH=00h, so only a flag that went from clear to set during this call means a rollover
+    // happened in it (and then the ticks are those to the end of the day plus those since). A count that went backwards was set
+    // by the caller (INT 1Ah AH=01h), not counted by the handler, and adds nothing.
+    let (ticks_after, midnight_after) = bda_ticks();
+    let counted = if midnight_before == 0 && midnight_after != 0 {
+        BDA_TICKS_PER_DAY.saturating_sub(ticks_before).saturating_add(ticks_after)
+    } else {
+        ticks_after.saturating_sub(ticks_before)
+    }
+    .min(10_000);
     let pending = u32::from(tick_waiting) + u32::from(tick_late);
     for _ in 0..counted + pending {
         CLOCK.counter().tick();
