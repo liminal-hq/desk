@@ -624,8 +624,11 @@ class Live(unittest.TestCase):
         self.assertEqual(self.lines(body, "--qemu")[2:-2], ["sendkey alt-tab", "sendkey f4", "sendkey shift-alt-tab"])
 
     def test_a_mouse_step_and_a_key_step_are_a_third_of_a_second_apart_either_way_round(self):
-        got = self.lines("press left\nkey A down\nkey A up\nmove 1 1\n", "--qemu")[2:]
-        self.assertEqual(got, ["mouse_button 1", "sleep 0.1", "sleep 0.3", "sendkey a", "sleep 0.3", "mouse_move 1 1", "sleep 0.1", "sleep 0.3", "sendkey esc"])
+        got = self.lines("press left\nrelease left\nkey A down\nkey A up\nmove 1 1\n", "--qemu")[2:]
+        self.assertEqual(
+            got,
+            ["mouse_button 1", "sleep 0.1", "mouse_button 0", "sleep 0.1", "sleep 0.3", "sendkey a", "sleep 0.3", "mouse_move 1 1", "sleep 0.1", "sleep 0.3", "sendkey esc"],
+        )
 
     def test_autotype_gives_the_arguments_with_f12_at_each_frame_but_the_first(self):
         status, out, err = live_status("live", self.scn('type "ok"\nframe a\nkey Backspace down\nkey Backspace up\nframe b\n'), "--autotype")
@@ -674,6 +677,19 @@ class Live(unittest.TestCase):
         self.refused("key LeftAlt down\nkey Tab down\nkey Tab up\nframe a\nkey LeftAlt up\n", "--qemu", 4)
         self.refused("key LeftAlt down\nmove 1 1\nkey LeftAlt up\n", "--qemu", 2)
         self.refused("key LeftShift down\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftShift up\nkey LeftAlt up\n", "--qemu", 5)
+
+    def test_malformed_steps_are_refused_with_their_line_not_a_traceback(self):
+        for body in ("key Tab\n", "move 1\n", "move a b\n", "frame\n", "press\n", "type\n", "key Tab dwon\n", "frame Open\n", "pointer 1 2 3\n"):
+            status, out, err = live_status("live", self.scn(body), "--qemu")
+            self.assertEqual((status, out), (1, ""), body)
+            self.assertIn(f"t.scn:{SETUP_LINES + 2}:", err, body)
+            self.assertNotIn("Traceback", err)
+
+    def test_a_held_button_or_a_repeated_modifier_is_refused(self):
+        self.refused("press left\n", "--qemu", 1)
+        self.refused("press left\npress left\nrelease left\n", "--qemu", 2)
+        self.refused("release left\n", "--qemu", 1)
+        self.refused("key LeftAlt down\nkey LeftAlt down\nkey Tab down\nkey Tab up\nkey LeftAlt up\nkey LeftAlt up\n", "--qemu", 2)
 
     def test_unknown_keys_and_characters_are_refused(self):
         self.refused("key Nonsense down\n", "--qemu", 1)
@@ -808,6 +824,29 @@ class Marks(unittest.TestCase):
         self.assertEqual(status, 0, out)
         self.assertEqual(sorted(os.listdir(dumps)), ["B.PAL", "B.RAW", "C.PAL", "C.RAW", "START.PAL", "START.RAW"])
         self.assertEqual(slurp(os.path.join(dumps, "C.PAL"), "rb"), bytes([12]))
+
+    def test_a_wrong_digest_still_renames_a_complete_set_so_check_can_show_the_difference(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        for k in range(3):
+            write(os.path.join(dumps, f"M{k:02d}.RAW"), bytes([k]))
+            write(os.path.join(dumps, f"M{k:02d}.PAL"), bytes([k]))
+        bad = list(self.good)
+        bad[2] = "shell: mark 02 8 640x480 33333333 cccccc00"
+        self.assertEqual(self.marks(bad, 8, "--dumps", dumps)[0], 1)
+        self.assertIn("C.RAW", os.listdir(dumps))
+
+    def test_an_incomplete_set_of_dumps_is_left_alone(self):
+        dumps = os.path.join(self.tmp.name, "dumps")
+        for k in range(2):
+            write(os.path.join(dumps, f"M{k:02d}.RAW"), bytes([k]))
+            write(os.path.join(dumps, f"M{k:02d}.PAL"), bytes([k]))
+        self.assertEqual(self.marks(self.good, 8, "--dumps", dumps)[0], 1)
+        self.assertEqual(sorted(os.listdir(dumps)), ["M00.PAL", "M00.RAW", "M01.PAL", "M01.RAW"], "nothing is renamed")
+
+    def test_the_inject_and_marks_commands_read_scenarios_as_live_does(self):
+        path = live_scn(self.tmp.name, "frame abcdefghi\n")
+        self.assertEqual(live_status("live", path, "--qemu")[0], 1)
+        self.assertEqual(run("inject", path)[0], 1)
 
     def test_a_missing_dump_fails(self):
         dumps = os.path.join(self.tmp.name, "dumps")

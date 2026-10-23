@@ -579,14 +579,9 @@ def cmd_diff(args):
 
 def scenario_frames(path):
     """The frame names of a scenario file in order, validated as the scenario parser does."""
-    try:
-        text = slurp(path, "r", encoding="utf-8")
-    except OSError as err:
-        raise FramesError(f"{path}: {err.strerror}") from None
     names = []
-    for number, raw in enumerate(text.splitlines(), 1):
-        words = raw.split("#", 1)[0].split()
-        if len(words) < 1 or words[0] != "frame":
+    for number, words in scenario_lines(path):
+        if words[0] != "frame":
             continue
         if len(words) != 2 or not NAME_RE.match(words[1]):
             raise FramesError(f"{path}:{number}: a frame name is 1 to 8 characters of a-z, 0-9 and -")
@@ -795,11 +790,25 @@ class Live:
                 self.pointer = (int(w[1]), int(w[2]))
         if self.pointer is None:
             self.pointer = (self.screen[0] // 2, self.screen[1] // 2)
+        self._arity(lines[first:])
         self.frames = [lines[first][1][1]]
         self.actions = []
         self._steps(lines[first + 1 :])
         if len(self.frames) > MAX_MARKS:
             raise FramesError(f"{path}: {len(self.frames)} frames, but a session prints at most {MAX_MARKS} marks")
+
+    def _arity(self, lines):
+        """Refuses, with its line, a step with the wrong number of words, a number that is not one, or an unknown key state."""
+        arity = {"move": 3, "pointer": 3, "press": 2, "release": 2, "type": 2, "key": 3, "frame": 2}
+        for number, w in lines:
+            if w[0] in arity and len(w) != arity[w[0]]:
+                self.refuse(number, f"{w[0]} takes {arity[w[0]] - 1} argument{'s' if arity[w[0]] > 2 else ''}")
+            if w[0] in ("move", "pointer") and not all(re.fullmatch(r"-?\d+", v) for v in w[1:]):
+                self.refuse(number, f"{w[0]} takes whole numbers")
+            if w[0] == "key" and w[2] not in ("down", "up"):
+                self.refuse(number, f"a key state is down or up, not {w[2]}")
+            if w[0] == "frame" and not NAME_RE.match(w[1]):
+                self.refuse(number, "a frame name is 1 to 8 characters of a-z, 0-9 and -")
 
     def refuse(self, number, why):
         raise FramesError(f"{self.path}:{number}: {why}")
@@ -816,6 +825,7 @@ class Live:
 
     def _steps(self, lines):
         held = []  # [(modifier name, line number, keys pressed under it)]
+        pressed_at = None  # the line of a left press with no release yet
         i = 0
         while i < len(lines):
             number, w = lines[i]
@@ -841,6 +851,14 @@ class Live:
                     self.refuse(number, f"only the left button can be injected, not {' '.join(w[1:])}")
                 if self.emulator == "autotype":
                     self.refuse(number, "AUTOTYPE cannot press a mouse button")
+                if cmd == "press":
+                    if pressed_at is not None:
+                        self.refuse(number, "press left while the button is already down")
+                    pressed_at = number
+                else:
+                    if pressed_at is None:
+                        self.refuse(number, "release left while the button is up")
+                    pressed_at = None
                 self.actions.append(("button", cmd == "press"))
             elif cmd == "type":
                 for c in unquote(w[1], f"{self.path}:{number}"):
@@ -861,6 +879,8 @@ class Live:
                 if state == "down":
                     adjacent_up = nxt == ["key", name, "up"]
                     if name in MODIFIERS and not adjacent_up:
+                        if any(h[0] == name for h in held):
+                            self.refuse(number, f"key {name} down while it is already held")
                         held.append([name, number, 0])
                     elif adjacent_up:
                         self._press(number, [h[0] for h in held], name)
@@ -885,6 +905,8 @@ class Live:
             i += 1
         if held:
             self.refuse(held[-1][1], f"key {held[-1][0]} down is never released")
+        if pressed_at is not None:
+            self.refuse(pressed_at, "press left is never released")
 
     def _press(self, number, mods, name):
         if mods and self.emulator == "autotype":
@@ -1024,14 +1046,18 @@ def cmd_marks(args):
         ok = False
     if args.dumps:
         files = lookup(args.dumps)
+        moves, complete = [], True
         for k, name in enumerate(names):
             for ext in ("RAW", "PAL"):
                 src = files.get(f"m{k:02d}.{ext.lower()}")
                 if src is None:
                     print(f"FAIL {name}: no dump M{k:02d}.{ext} in {args.dumps}")
-                    ok = False
-                    continue
-                os.replace(src, os.path.join(args.dumps, f"{name.upper()}.{ext}"))
+                    ok = complete = False
+                else:
+                    moves.append((src, os.path.join(args.dumps, f"{name.upper()}.{ext}")))
+        if complete:  # rename only a complete set (matching or not, so `check` can show what differs), never half of one
+            for src, dst in moves:
+                os.replace(src, dst)
     if ok:
         print(f"ok: {len(names)} marks in {args.transcript} carry the digests of {args.sums} at depth {args.depth}")
     return 0 if ok else 1
