@@ -61,12 +61,15 @@ for depth in 8 4; do
     [ "$d" = "$depth" ] || continue
     printf '%-8s %-10s %-10s %-10s\n' "$name" "$want" "$(digest dist/shell/dumps-$depth "$name")" "$(digest dist/shell-native-$depth "$name")"
   done < <(grep -v '^#' "$sums" | grep -v '^$')
-  frames same dist/shell/dumps-$depth dist/shell-native-$depth || fail "the DOS and native captures differ at depth $depth"
-  [ "$(frames same dist/shell/dumps-$depth dist/shell-native-$depth | sed -n 's/^ok: \([0-9]*\) frames.*/\1/p')" = "$(awk -v d=$depth '$2 == d' "$sums" | wc -l)" ] || fail "depth $depth: not every frame of the sums was compared"
+  same_out=$(frames same "dist/shell/dumps-$depth" "dist/shell-native-$depth") || { printf '%s\n' "$same_out" >&2; fail "the DOS and native captures differ at depth $depth"; }
+  echo "$same_out"
+  [ "$(printf '%s\n' "$same_out" | sed -n 's/^ok: \([0-9]*\) frames.*/\1/p')" = "$(grep -v '^#' "$sums" | awk -v d="$depth" '$2 == d' | wc -l)" ] || fail "depth $depth: not every frame of the sums was compared"
 done
 
 echo "== the DOS run with no VBE (depth 4 by fallback) against the native depth 4 screendumps"
-frames same dist/shell/dumps-vga dist/shell-native-4 || fail "the DOS fallback captures differ from the native depth 4 captures"
+frames same dist/shell/dumps-vga dist/shell-native-4 > "$work/vga.txt" || { cat "$work/vga.txt" >&2; fail "the DOS fallback captures differ from the native depth 4 captures"; }
+cat "$work/vga.txt"
+[ "$(sed -n 's/^ok: \([0-9]*\) frames.*/\1/p' "$work/vga.txt")" = "$(awk '$2 == 4' "$sums" | wc -l)" ] || fail "the fallback comparison did not cover every frame of the sums"
 
 echo "== the comparison has to be able to fail"
 must_fail "DOS depth 8 against native depth 4" frames same dist/shell/dumps-8 dist/shell-native-4

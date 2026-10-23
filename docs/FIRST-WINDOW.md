@@ -735,7 +735,7 @@ The pictures do not. The paths differ: the DOS files are raw indices with a 768-
 
 ### What was seen
 
-The `typed` frame from each track at each depth is in [`images/first-window/`](images/first-window/) (`dos-8-typed.png`, `native-8-typed.png`, `dos-4-typed.png`, `native-4-typed.png`, and the `dragged` frames beside them). Viewed one after the other, the four are indistinguishable: a near-black desktop, a dimmer "Notes" window at the back reading "The first window." with its title text and minimise, maximise and close glyphs, and the focused "Welcome to Desk" window over it with the orange halo, the prompt "Type something:", a text field holding "desk" with the caret after it, and the arrow cursor at about (400, 310). No stray pixels, no fringe on the halo, no shift between the tracks. Only the four `typed` frames were looked at by eye; the others are held by their digests.
+The `typed` frame from each track at each depth is in [`images/first-window/`](images/first-window/) (`dos-8-typed.png`, `native-8-typed.png`, `dos-4-typed.png`, `native-4-typed.png`, and the `dragged` frames beside them, which were not looked at). Viewed one after the other, the four are indistinguishable: a near-black desktop, a dimmer "Notes" window at the back reading "The first window." with its title text and minimise, maximise and close glyphs, and the focused "Welcome to Desk" window over it with the orange halo, the prompt "Type something:", a text field holding "desk" with the caret after it, and the arrow cursor at about (400, 310). No stray pixels, no fringe on the halo, no shift between the tracks. Only the four `typed` frames were looked at by eye; the others are held by their digests.
 
 | DOS, depth 8 | Native, depth 8 |
 |---|---|
