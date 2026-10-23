@@ -502,13 +502,15 @@
    "label": "Native BIOS path (n3)",
    "branch": "native",
    "state": "planned",
-   "work": "in progress",
    "deps": [
     "kernel"
    ],
-   "what": "A real BIOS path for the native kernel: a way to call the BIOS after the switch to protected mode, so that a VBE mode can be left again on any card. Spike n3 is running and has no pull request yet; it has no chapter.",
+   "what": "A real BIOS path for the native kernel: a way to call the BIOS after the switch to protected mode, so that a VBE mode can be left again on any card. Spike n3's pull request is open and in review; its results are not in this archive yet, and it has no chapter.",
    "why": "Spike D found that leaving VBE without the BIOS is card-specific and fails on QEMU's Cirrus card.",
-   "evidence": "Planned in this archive's brief; docs/D-NATIVE-VGA.md names the problem. Nothing to read yet."
+   "evidence": "PR #17 (open); not read here. docs/D-NATIVE-VGA.md names the problem.",
+   "prs": [
+    17
+   ]
   },
   {
    "id": "paging",

@@ -24,7 +24,7 @@ This site is not hand-built. It is generated from the repository by Python in `t
 | #14 | `spike/d-native-vga` | `{{pr14.head}}` | {{pr14.state}} |
 | #15 | `spike/b-dos-input` | `{{pr15.head}}` | {{pr15.state}} |
 
-The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). Spike G's branch (#16, head `{{pr16.head}}`) is counted in the open pull requests and the commit totals, and has not been read. Spike n3 had no branch when this edition was generated.
+The generator itself was merged as #9 (merge commit `{{pr9.merge}}`). Spike G's branch (#16, head `{{pr16.head}}`) is counted in the open pull requests and the commit totals, and has not been read. Spike n3's branch (#17, head `{{pr17.head}}`) is counted too and has not been read.
 
 **The counts of tests are counts of declarations.** The generator counts `test(` and `it(` calls in `fonts/test/`, `#[test]` attributes in `hal/` on the open branches, and the expected transcripts under `tests/native/` and `spikes/`. That is not an official total and not a runner's tally, and the page says so wherever it uses the number. Where a pull request's own document states a test count, the generator's count agrees with it, which is how I checked the counter.
 

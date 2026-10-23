@@ -1,8 +1,8 @@
 {
- "capturedAt": "2026-10-23T02:11:08-04:00",
+ "capturedAt": "2026-10-23T02:17:46-04:00",
  "data": {
   "openWork": {
-   "commitsOnBranches": 75,
+   "commitsOnBranches": 77,
    "prs": [
     {
      "ahead": 17,
@@ -663,11 +663,11 @@
      "url": "https://github.com/liminal-hq/desk/pull/16"
     },
     {
-     "ahead": 47,
+     "ahead": 49,
      "base": "spike/d-native-vga",
      "branch": "spike/n3-native-bios",
      "ci": "pending",
-     "commitCount": 7,
+     "commitCount": 9,
      "commits": [
       {
        "date": "2026-10-23T01:54:19-04:00",
@@ -710,14 +710,26 @@
        "hash": "1ab8769",
        "merge": false,
        "subject": "docs: record spike n3, a real BIOS path for the native kernel"
+      },
+      {
+       "date": "2026-10-23T02:15:24-04:00",
+       "hash": "9109761",
+       "merge": false,
+       "subject": "fix(kernel): pass the direction flag into a BIOS handler and count the midnight rollover"
+      },
+      {
+       "date": "2026-10-23T02:15:24-04:00",
+       "hash": "8704850",
+       "merge": false,
+       "subject": "docs: name PR #17 for spike n3 in the Rust targets table"
       }
      ],
      "createdAt": "2026-10-23T06:08:30Z",
-     "ghAdditions": 1954,
+     "ghAdditions": 1987,
      "ghChangedFiles": 31,
      "ghDeletions": 36,
-     "head": "1ab8769",
-     "headFull": "1ab876922ac363c8406e6ba3466c1d02503dc3c0",
+     "head": "8704850",
+     "headFull": "870485044468933e9f2d34db5c3a916176028324",
      "isReport": false,
      "labels": [
       "documentation",
@@ -736,8 +748,66 @@
      ],
      "state": "in review",
      "title": "Call the BIOS from the native kernel through a real-mode trampoline",
-     "updatedAt": "2026-10-23T06:08:32Z",
+     "updatedAt": "2026-10-23T06:15:48Z",
      "url": "https://github.com/liminal-hq/desk/pull/17"
+    },
+    {
+     "ahead": 5,
+     "base": "main",
+     "branch": "docs/progress-report-chapters",
+     "ci": "passing",
+     "commitCount": 5,
+     "commits": [
+      {
+       "date": "2026-10-23T02:07:39-04:00",
+       "hash": "8900789",
+       "merge": false,
+       "subject": "feat: read open pull requests and their branches in the report generator"
+      },
+      {
+       "date": "2026-10-23T02:08:05-04:00",
+       "hash": "a9dd0db",
+       "merge": false,
+       "subject": "feat: add the hardware explainers, charts and the gallery to the report generator"
+      },
+      {
+       "date": "2026-10-23T02:08:05-04:00",
+       "hash": "4cd606f",
+       "merge": false,
+       "subject": "docs: add six chapters to the progress report and refresh the archive"
+      },
+      {
+       "date": "2026-10-23T02:08:08-04:00",
+       "hash": "b1a3e29",
+       "merge": true,
+       "subject": "Merge main into docs/progress-report-chapters"
+      },
+      {
+       "date": "2026-10-23T02:11:20-04:00",
+       "hash": "df47e7e",
+       "merge": false,
+       "subject": "fix: stop state tags clashing with specimen labels and hide unused explainer panels"
+      }
+     ],
+     "createdAt": "2026-10-23T06:11:49Z",
+     "ghAdditions": 6819,
+     "ghChangedFiles": 68,
+     "ghDeletions": 266,
+     "head": "df47e7e",
+     "headFull": "df47e7e9896896ebf365ebf8d3a2ca0f8c36bb18",
+     "isReport": true,
+     "labels": [
+      "documentation",
+      "enhancement",
+      "testing",
+      "design-docs"
+     ],
+     "number": 18,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Add chapters for the open spikes and a gallery to the progress report",
+     "updatedAt": "2026-10-23T06:11:51Z",
+     "url": "https://github.com/liminal-hq/desk/pull/18"
     }
    ],
    "tips": [
@@ -800,7 +870,7 @@
     {
      "halLines": 8395,
      "hostTests": 159,
-     "kernelLines": 3248,
+     "kernelLines": 3280,
      "number": 17,
      "transcripts": 34
     }
@@ -810,7 +880,57 @@
   },
   "prs": [
    {
-    "additions": 1954,
+    "additions": 6819,
+    "baseRefName": "main",
+    "changedFiles": 68,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T06:11:49Z",
+    "deletions": 266,
+    "headRefName": "docs/progress-report-chapters",
+    "headRefOid": "df47e7e9896896ebf365ebf8d3a2ca0f8c36bb18",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": null,
+    "number": 18,
+    "state": "OPEN",
+    "title": "Add chapters for the open spikes and a gallery to the progress report",
+    "updatedAt": "2026-10-23T06:11:51Z",
+    "url": "https://github.com/liminal-hq/desk/pull/18"
+   },
+   {
+    "additions": 1987,
     "baseRefName": "spike/d-native-vga",
     "changedFiles": 31,
     "checks": [
@@ -824,7 +944,7 @@
     "createdAt": "2026-10-23T06:08:30Z",
     "deletions": 36,
     "headRefName": "spike/n3-native-bios",
-    "headRefOid": "1ab876922ac363c8406e6ba3466c1d02503dc3c0",
+    "headRefOid": "870485044468933e9f2d34db5c3a916176028324",
     "isDraft": false,
     "labels": [
      {
@@ -868,7 +988,7 @@
     "number": 17,
     "state": "OPEN",
     "title": "Call the BIOS from the native kernel through a real-mode trampoline",
-    "updatedAt": "2026-10-23T06:08:32Z",
+    "updatedAt": "2026-10-23T06:15:48Z",
     "url": "https://github.com/liminal-hq/desk/pull/17"
    },
    {
