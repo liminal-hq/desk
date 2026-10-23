@@ -10,6 +10,8 @@ The generator for the Desk Progress Report, a multi-page archive of the project'
 - [Chapters](#chapters)
 - [Explainers and figures](#explainers-and-figures)
 - [The figure registry and the gallery](#the-figure-registry-and-the-gallery)
+- [The manual](#the-manual)
+- [Updating the manual](#updating-the-manual)
 - [Checks](#checks)
 - [Publishing](#publishing)
 
@@ -42,6 +44,8 @@ python3 -m http.server -d dist/progress-report 8000                            #
 | `not-verified.json` | The "not verified" panel |
 | `snapshots/` | `gh.json` (a snapshot of `gh` data for offline runs) and `measured.json` (numbers that need a build to measure, with the command) |
 | `media/` | A captured serial transcript and screenshot of the native boot (how they were made is in `snapshots/measured.json`), and the files copied from other branches, listed in `captures.json` |
+| `manual.py`, `manual/` | The Manual: `plan.json` (parts, chapters, both reading orders, the task index), `MNN-id.md` (one file per chapter), `explainers/*.py` (one module per manual explainer), and the code that loads, checks and draws them |
+| `pages/manual-preface.md` | The archivist's preface on `manual.html` |
 | `pages/front.md`, `pages/coming.json` | The text at the top of the front page, and the chapters that are expected and not written, which show as "coming" rows |
 | `templates/site.css`, `templates/site.js` | Shared style and behaviour |
 | `tests/` | `unittest` tests and a fixture |
@@ -83,6 +87,31 @@ The build refuses a record with no alt text, an unknown kind or track, a duplica
 
 The first window's step-through reads `tests/shell/first-window.sums`, the damage lines of `tests/native/expected-shell-*.txt` and the result table of `docs/FIRST-WINDOW.md`, and refuses to build if the table and the sums disagree or the scenario's frames change; its pictures are `media/img-fw-*.png`, copies of the goldens and of the kept native screendumps. The boot explainer's transcript, `media/native-serial.txt`, is the unedited output of `tools/native-run.sh --serial FILE` on the image built from `main` (carriage returns removed), with the build and the image's checksum recorded in `snapshots/measured.json`.
 
+## The manual
+
+A second group of pages beside the log, planned in [`docs/MANUAL-PLAN.md`](../../docs/MANUAL-PLAN.md): a technical manual and textbook of what has been built, by layer from the processor upward. A chapter is `manual/MNN-id.md`, written to the template in the plan (what it is, how it works, why, the code, a worked example, the state of the layer, history sidebars, commands to try, where next). `manual/plan.json` lists every chapter, written or not, the two reading orders ("Learn it", bottom-up, which the pager follows, and "Find it", top-down) and the task index. Chapters in the plan that are not written show as "coming" rows on the contents and on `manual.html`.
+
+Three fenced blocks in a chapter are data, and the generator renders them in place:
+
+- `status`: records separated by a blank line, each with `id`, `label`, `state` (`built-verified`, `built-unverified`, `planned` or `external`), `evidence` and an optional `note`. Evidence items are `pr:N`, `commit:HASH`, `repo:PATH`, `sym:PATH::NAME` (the name appears in the file), `test:PATH::NAME` (a test function or a transcript line containing the name) and `doc:PATH#ANCHOR` (the heading exists). A `built-verified` record needs a `test:` item or a `pr:` item whose pull request is merged with CI passing; without one it is shown as built, not verified, and the table says why. A `planned` record cites where it is planned. `{{state.ID}}` in the prose draws the same tag as the table.
+- `try`: `needs:` and `ran:` lines, then commands (`$ cmd`), each followed by the output it printed. Every command must start with a script that exists in the repository or a known tool, and the script an interpreter runs must exist.
+- `glossary`: records with `term` and `def`. Each term is defined once and used at least once with a `[word](term:id)` link, and the glossary page is built from them.
+
+Other link schemes in the manual are `sym:PATH::NAME`, `test:PATH::NAME`, `doc:PATH#ANCHOR` and `term:ID`, besides `repo:`, `pr:`, `commit:` and `chapter:`. A link to a chapter that is not written yet points at its row on `manual.html`. Two directives are required in every chapter, `<!-- manual proved -->` (the log chapters and pull requests that proved the layer) and `<!-- manual next -->` (the next chapter on each path and the tasks that lead here). A manual chapter can draw a figure the log already declares by giving it a `figures` record with `reuse: FIGURE-ID` and the same `at`; the gallery keeps the one tile. New manual explainers are modules in `manual/explainers/` with an `ID` and `render(D, ctx)`; they are found by file name, loaded by path and used as `<!-- explainer ID -->`.
+
+Each chapter's `reviewed` is the commit of `main` it was last checked against and `watches` the paths whose changes may make it stale. At build time the generator runs `git log REVIEWED..HEAD -- WATCHES` and shows a notice with the commits and pull requests, and a pill on the contents; in a clone that does not have the commit it says it could not tell. `build.py --manual-report` prints the same as text, with the status records that are shown lower than they claim.
+
+The build refuses a chapter with a missing section, a path or symbol that does not exist, a state that its evidence does not support, a command that does not exist, an undefined or unused glossary term, or a `log` or `anatomy` reference that does not resolve. The log pages are unchanged by the manual except for a computed "In the manual" aside on the chapters a manual chapter names, a "Manual" column (and anchors) on the anatomy pages' text tables, and the "Manual" link in the header.
+
+A chapter that needs checks of its own (a number it quotes against a source, a table against the code) keeps them in `tests/test_chapter_NAME.py`, a self-contained `unittest` module that `test_report.py` picks up, so the one test command runs them all.
+
+## Updating the manual
+
+1. **In a code pull request.** If the checks fail on a manual pointer, fix the pointer (a path or a name), nothing more.
+2. **After the merge.** Run `python3 tools/progress-report/build.py --manual-report` to list, for each chapter, the commits that touched its watched paths since `reviewed` and the status records shown lower than they claim.
+3. **Update the chapter.** Change the prose the change made wrong; promote or add status records with their evidence (never promote without it); add the new log chapter to `log`; add a Revisions entry; set `reviewed` to the merge commit. If an anatomy box changed, change the box and the chapter in the same branch.
+4. **Check and publish.** `python3 -I tools/progress-report/tests/test_report.py`, `python3 tools/progress-report/build.py --check`, then [Publishing](#publishing).
+
 ## Checks
 
 `tools/check.sh` runs the cheap parts: the unit tests and a dry run of `gather.py` (no network; `gh` is skipped when it is not signed in).
@@ -93,7 +122,7 @@ python3 -I tools/progress-report/gather.py --dry-run      # a dry run of the dat
 python3 -I tools/progress-report/build.py --data DATA --check   # a full build and link check
 ```
 
-The tests cover the figure registry (a broken record, a missing alt text, an unclaimed drawing, an anchor or image that does not exist), the open-work reader on a throwaway repository with stacked branches, the roadmap's tags, the markdown reader, `gather.py` on a throwaway git repository and on a shallow clone, a build of a small fixture with checks for valid tags, unique ids, internal links and anchors, the checker itself on a deliberately broken page, and the real chapters (front matter, three shelves, sidebar sources, chapter links) and the boot explainer against `tests/native/expected.txt`; the hardware explainers are built from the captured files and must refuse a capture that disagrees with the arithmetic or the decoder they replay.
+The tests cover the figure registry (a broken record, a missing alt text, an unclaimed drawing, an anchor or image that does not exist), the open-work reader on a throwaway repository with stacked branches, the roadmap's tags, the markdown reader, `gather.py` on a throwaway git repository and on a shallow clone, a build of a small fixture with checks for valid tags, unique ids, internal links and anchors, the checker itself on a deliberately broken page, the manual's checks, each with a twin that breaks the rule and must be refused (a missing section, a pointer to a renamed symbol, a state without run evidence, a command that does not exist, an unused glossary term, a figure reused wrongly), a fixture build of a manual with its contents, pager, backlinks and anatomy column, and the real chapters (front matter, three shelves, sidebar sources, chapter links) and the boot explainer against `tests/native/expected.txt`; the hardware explainers are built from the captured files and must refuse a capture that disagrees with the arithmetic or the decoder they replay.
 
 For a visual check, serve `dist/progress-report/` and look at every page at 400 and 1280 px, in light and dark, with and without `prefers-reduced-motion`; the file protocol does not load the pages' fonts and assets, so use a server.
 

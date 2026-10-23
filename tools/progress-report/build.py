@@ -4,8 +4,8 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: python3 tools/progress-report/build.py [--data data.json] [--out dist/progress-report] [--chapters DIR] [--pages DIR]
-#                                               [--no-assets] [--check]
+# usage: python3 tools/progress-report/build.py [--data data.json] [--out dist/progress-report] [--chapters DIR] [--pages DIR] [--manual DIR]
+#                                               [--no-assets] [--check] [--manual-report]
 #
 # Standard library only. Without --data the data is gathered from the repository first (see gather.py). The chapters are
 # markdown files with a small front matter (chapters/NN-id.md); the front page text is pages/front.md. --check validates what was
@@ -18,7 +18,7 @@ import re
 import shutil
 import sys
 
-USAGE = "usage: build.py [--data FILE] [--out DIR] [--chapters DIR] [--pages DIR] [--no-assets] [--check]"
+USAGE = "usage: build.py [--data FILE] [--out DIR] [--chapters DIR] [--pages DIR] [--manual DIR] [--no-assets] [--check] [--manual-report]"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -29,6 +29,7 @@ import explainers_fw as fw  # noqa: E402
 import explainers_hw as hw  # noqa: E402
 import figures  # noqa: E402
 import gather  # noqa: E402
+import manual  # noqa: E402
 import mdlite  # noqa: E402
 from mdlite import Ctx, esc, inline  # noqa: E402
 
@@ -56,7 +57,8 @@ def read_text(path):
         return f.read()
 
 
-def load_chapters(directory):
+def load_chapters(directory, manual_dir=None):
+    """The log's chapters (chapters/NN-id.md) and, when `manual_dir` is given, the manual's (manual/MNN-id.md, marked section: manual)."""
     chapters = []
     for name in sorted(os.listdir(directory)):
         if not name.endswith(".md"):
@@ -74,6 +76,10 @@ def load_chapters(directory):
         except ValueError:
             raise mdlite.MdError("%s: prs must be pull request numbers" % name)
         chapters.append(meta)
+    if manual_dir:
+        plan = manual.load_plan(manual_dir)
+        if plan:
+            chapters += manual.load_chapters(plan, manual_dir)
     ids = [c["id"] for c in chapters]
     if len(set(ids)) != len(ids):
         raise mdlite.MdError("duplicate chapter ids")
@@ -169,7 +175,7 @@ def site_header(current, ids):
             return ""
         return '<a href="%s"%s>%s</a>' % (href, ' aria-current="page"' if current == i else "", text)
     return ('<a class="skip" href="#main">Skip to the content</a>\n<header class="site"><div class="wrap site-in"><a class="brand" href="index.html">Desk Progress Report</a>'
-            '<nav aria-label="Site">%s%s%s%s%s</nav></div></header>' % (link("index", "index.html", "Contents"), link("gallery", "gallery.html", "Gallery"), link("path", "path.html", "The path"),
+            '<nav aria-label="Site">%s%s%s%s%s%s</nav></div></header>' % (link("index", "index.html", "Contents"), link("manual", "manual.html", "Manual"), link("gallery", "gallery.html", "Gallery"), link("path", "path.html", "The path"),
                                                                    link("findings", "findings.html", "Findings"), link("archive", "archive.html", "How this is made")))
 
 
@@ -255,11 +261,31 @@ def metric_tile(data, k):
 # ---- the site -----------------------------------------------------------------------------------------------------------------
 
 class Site:
-    def __init__(self, data, chapters, pages_dir, out, assets=True):
-        self.data, self.chapters, self.pages_dir, self.out, self.assets = data, chapters, pages_dir, out, assets
-        self.ids = [c["id"] for c in chapters]
+    def __init__(self, data, chapters, pages_dir, out, assets=True, manual_dir=None):
+        self.data, self.pages_dir, self.out, self.assets = data, pages_dir, out, assets
+        self.all = chapters
+        self.mchapters = [c for c in chapters if c.get("section") == "manual"]
+        self.chapters = [c for c in chapters if c.get("section") != "manual"]
+        self.ids = [c["id"] for c in self.chapters]
+        self.plan = manual.load_plan(manual_dir) if manual_dir else None
+        if self.mchapters and not self.plan:
+            raise mdlite.MdError("manual chapters need manual/plan.json")
         self.repo_url = ((data.get("repo") or {}).get("url") or "https://github.com/liminal-hq/desk")
-        self.ctx = Ctx(values_of(data), self.ids, self.repo_url, data["prs"])
+        written = [c["id"] for c in self.mchapters]
+        appendices = [a["id"] for a in self.plan.get("appendices", [])] if self.plan else []
+        self.ctx = Ctx(values_of(data), self.ids + written + appendices, self.repo_url, data["prs"])
+        if self.plan:
+            self.ctx.coming = {c["id"] for c in self.plan["chapters"]} - set(written)
+            self.ctx.terms = set(manual.terms_of(self.mchapters))
+            self.ctx.values.update(manual.state_values(self.mchapters, data))
+            self.ctx.manual_boxes = self.box_index()
+            boxes = {"%s:%s" % (n, b["id"]) for n in ("desk", "dos") for b in fw.load_anatomy(n)["boxes"]}
+            problems = manual.check_all(self.mchapters, self.plan, gather.ROOT, data, self.ids, boxes)
+            if problems:
+                raise mdlite.MdError("the manual has %d problem%s:\n  %s" % (len(problems), "" if len(problems) == 1 else "s", "\n  ".join(problems)))
+            self.explainers = manual.explainers(os.path.join(manual_dir, "explainers"))
+        else:
+            self.explainers = {}
         self.shelf_counts = {"catalogued": 0, "uncatalogued": 0, "wish": 0}
         self.shelf_items = []
         self.pages = {}
@@ -267,6 +293,7 @@ class Site:
         for r in allrecs:
             r["anchor_given"] = bool(r.get("anchor"))
         self.registry = figures.validate(allrecs, chapters)
+        self.gallery_recs = [r for r in self.registry if not r.get("reuse")]
         claimed = {r.get("at") for r in self.registry}
         for c in chapters:
             for key in figures.unregistered(c["blocks"], [r for r in self.registry if r["chapter"] == c["id"]], c["id"]):
@@ -298,6 +325,14 @@ class Site:
             return html
 
         def inner(name, args):
+            if name == "@status":
+                return manual.render_status(args[0], chapter["id"], d, ctx)
+            if name == "@try":
+                return manual.render_try(args[0], chapter["id"], ctx)
+            if name == "@glossary":
+                return manual.render_glossary(args[0], chapter["id"], ctx)
+            if name == "manual":
+                return self.manual_box(chapter, args[0] if args else "")
             if name == "explainer":
                 xid = args[0]
                 if xid == "boot":
@@ -314,6 +349,8 @@ class Site:
                 hwx = {"pit": hw.pit_test, "input": hw.input_replay, "vga13": hw.vga13, "vbeattrs": hw.vbe_attrs, "pipelines": hw.pipelines, "memchain": hw.memchain, "biscall": hw.bios_roundtrip}
                 if xid in hwx:
                     return hwx[xid](d, ctx)
+                if xid in self.explainers:
+                    return self.explainers[xid](d, ctx)
                 raise mdlite.MdError("unknown explainer %s in %s" % (xid, chapter["id"]))
             if name == "table":
                 if len(args) != 1 or not os.path.exists(os.path.join(media, args[0])):
@@ -385,9 +422,211 @@ class Site:
                     parts.append("#%d %s%s" % (n, r["state"], "" if r["state"] == "merged" else (", CI " + ("green" if r["ci"] == "passing" else r["ci"]) + ", not merged yet")))
             staterow = '<p class="state-row">%s <span>%s</span></p>' % (tag(chapter_state(self.data, c["prs"])), esc("; ".join(parts)))
         main = ('<main id="main" class="wrap chapter"><article><header class="chead"><div class="eyebrow">%s</div><h1>%s</h1>%s<p class="lead">%s</p></header>'
-                '<div class="prose">%s</div>%s</article></main>') % (esc(" · ".join(eyebrow)), esc(c["title"]), staterow, inline(c["summary"], self.ctx), body, evidence)
+                '<div class="prose">%s</div>%s%s</article></main>') % (esc(" · ".join(eyebrow)), esc(c["title"]), staterow, inline(c["summary"], self.ctx), body, evidence, self.manual_aside(c["id"]))
         title = "%s · %s" % (TITLE, c["title"])
         return c["id"] + ".html", document(title, site_header(c["id"] if c["id"] in ("path", "findings", "archive") else "", self.ids + self.extra_ids()) + main + site_footer(self.data, prev, nxt))
+
+    # ---- the manual -----------------------------------------------------------------------------------------------------------
+
+    def box_index(self):
+        """{(diagram, box id): [manual chapters that explain it]}, from the chapters' `anatomy` lists."""
+        out = {}
+        for c in self.mchapters:
+            for ref in c.get("anatomy", []):
+                name, _, bid = ref.partition(":")
+                out.setdefault((name, bid), []).append({"id": c["id"], "label": label_of(c)})
+        return out
+
+    def manual_aside(self, log_id):
+        """On a log chapter: the manual chapters that name it in their `log` list. Nothing at all while there are none."""
+        users = [c for c in self.mchapters if log_id in c.get("log", [])]
+        if not users:
+            return ""
+        items = "".join('<li><a href="%s.html"><b>%s</b></a><div class="sub">%s</div></li>' % (c["id"], esc(label_of(c)), inline(c["summary"], self.ctx)) for c in users)
+        return ('<aside class="m-aside" aria-labelledby="in-the-manual"><h2 id="in-the-manual">In the manual</h2>'
+                '<p class="sub">The manual explains how this layer works and where its code is, in the order a textbook would.</p><ul>%s</ul></aside>' % items)
+
+    def plan_entry(self, cid):
+        for c in self.plan["chapters"] + self.plan.get("appendices", []):
+            if c["id"] == cid:
+                return c
+        raise mdlite.MdError("unknown manual id %s" % cid)
+
+    def written(self):
+        return {c["id"]: c for c in self.mchapters}
+
+    def path(self, which):
+        """The written chapters in the order of a path ("learn" or "find")."""
+        w = self.written()
+        return [w[i] for i in self.plan["paths"][which] if i in w]
+
+    def mlink(self, cid):
+        e = self.plan_entry(cid)
+        label = "%s. %s" % (e["n"], e["title"])
+        if cid in self.written():
+            return '<a href="%s.html">%s</a>' % (cid, esc(label))
+        return '%s <span class="pill pill-coming">coming</span>' % esc(label)
+
+    def stale_of(self, c):
+        if not hasattr(self, "_stale"):
+            self._stale = {}
+        if c["id"] not in self._stale:
+            self._stale[c["id"]] = manual.staleness(c)
+        return self._stale[c["id"]]
+
+    def log_label(self, cid):
+        c = [x for x in self.chapters if x["id"] == cid][0]
+        return ("%s. %s" % (c["n"], c["title"])) if c.get("n") != "" else c["title"]
+
+    def manual_box(self, chapter, kind):
+        if kind == "proved":
+            if not chapter.get("log"):
+                return '<p>No log chapter is tied to this layer; the evidence is in the state table above.</p>'
+            recs = pr_records(self.data)
+            items = []
+            for lid in chapter["log"]:
+                lc = [x for x in self.chapters if x["id"] == lid][0]
+                prs = ", ".join("<a href=\"%s\" target=\"_blank\" rel=\"noopener\">#%d</a> %s" % (esc(recs[n].get("url") or self.ctx.href("pr:%d" % n)), n, tag(recs[n]["state"])) for n in lc["prs"] if n in recs)
+                items.append('<li><a href="%s.html"><b>%s</b></a>%s</li>' % (lid, esc(self.log_label(lid)), (" <span class=\"sub\">Pull requests: %s</span>" % prs) if prs else ""))
+            return '<ul class="m-proved">%s</ul>' % "".join(items)
+        if kind == "next":
+            cid = chapter["id"]
+            out = []
+            for which, name in (("learn", "Learn it"), ("find", "Find it")):
+                order = self.plan["paths"][which]
+                i = order.index(cid)
+                nxt = order[i + 1] if i + 1 < len(order) else None
+                out.append("<li><b>%s</b>: %s</li>" % (name, ("next is " + self.mlink(nxt)) if nxt else "this is the last chapter of the path"))
+            tasks = [t for t in self.plan.get("tasks", []) if cid in t["chapters"]]
+            if tasks:
+                out.append("<li><b>Tasks that lead here</b>: %s</li>" % "; ".join("%s (%s)" % (esc(t["task"]), ", ".join(self.mlink(x) for x in t["chapters"] if x != cid) or "this chapter alone") for t in tasks))
+            return '<aside class="m-next" aria-label="Where next"><ul>%s</ul><p class="how">The paths and the task index are on <a href="manual.html">the manual\'s first page</a>.</p></aside>' % "".join(out)
+        raise mdlite.MdError("unknown manual box %r in %s" % (kind, chapter["id"]))
+
+    def anatomy_links(self, c):
+        out = []
+        for ref in c.get("anatomy", []):
+            name, _, bid = ref.partition(":")
+            box = [b for b in fw.load_anatomy(name)["boxes"] if b["id"] == bid][0]
+            page = {"desk": "anatomydesk", "dos": "anatomydos"}[name]
+            out.append(('<a href="%s.html#box-%s-%s">%s</a>' % (page, name, bid, esc(box["label"]))) if page in self.ids else esc(box["label"]))
+        return out
+
+    def render_manual_chapter(self, c):
+        body, _ = mdlite.render(c["blocks"], self.ctx, self.directive(c))
+        order = self.path("learn")
+        i = [x["id"] for x in order].index(c["id"])
+        prev, nxt = (order[i - 1] if i > 0 else None), (order[i + 1] if i + 1 < len(order) else None)
+        part = [p for p in self.plan["parts"] if p["id"] == c["part"]][0]
+        eyebrow = "Manual · %s · Part %s. %s" % (c["n"], part["id"], part["title"])
+        counts = manual.state_counts(c, self.data)
+        stale = self.stale_of(c)
+        pill = ' <span class="pill pill-stale">may be out of date</span>' if stale["state"] == "stale" else ""
+        anat = self.anatomy_links(c)
+        anat_html = ('<p class="m-anat"><b>On the anatomy pages:</b> %s.</p>' % ", ".join(anat)) if anat else ""
+        main = ('<main id="main" class="wrap chapter manual"><article><header class="chead"><div class="eyebrow">%s</div><h1>%s</h1>'
+                '<p class="state-row"><span class="mt-count">%s</span>%s <span>First written %s; reviewed against <code>%s</code>.</span></p><p class="lead">%s</p>%s%s</header>'
+                '<div class="prose">%s</div></article></main>') % (
+            esc(eyebrow), esc(c["title"]), esc(manual.counts_text(counts)), pill, esc(self.date_label(c["date"])), esc(c["reviewed"]), inline(c["summary"], self.ctx), anat_html,
+            manual.stale_banner(c, stale, self.ctx), body)
+        title = "%s · %s" % (TITLE, c["title"])
+        return c["id"] + ".html", document(title, site_header("", self.ids + self.extra_ids()) + main + site_footer(self.data, prev, nxt))
+
+    def part_rows(self, ids=False):
+        """The manual's table by part: written chapters with their state counts, the others as coming rows."""
+        w = self.written()
+        rows = []
+        for part in self.plan["parts"]:
+            rows.append('<tr class="m-part"><th scope="rowgroup" colspan="4">Part %s. %s</th></tr>' % (esc(part["id"]), esc(part["title"])))
+            for e in [x for x in self.plan["chapters"] if x["part"] == part["id"]]:
+                rid = (' id="row-%s"' % e["id"]) if ids else ""
+                if e["id"] in w:
+                    c = w[e["id"]]
+                    stale = ' <span class="pill pill-stale">may be out of date</span>' if self.stale_of(c)["state"] == "stale" else ""
+                    rows.append('<tr%s><td class="n">%s</td><td><a href="%s.html"><b>%s</b></a>%s<div class="sub">%s</div></td><td class="nw">%s</td><td class="nw">%s</td></tr>' % (
+                        rid, esc(e["n"]), e["id"], esc(e["title"]), stale, inline(c["summary"], self.ctx), esc(manual.counts_text(manual.state_counts(c, self.data))), esc(self.date_label(c["date"]))))
+                else:
+                    rows.append('<tr class="coming"%s><td class="n">%s</td><td><b>%s</b> <span class="pill pill-coming">coming</span><div class="sub">%s</div></td><td class="nw">not written</td><td class="nw"></td></tr>' % (
+                        rid, esc(e["n"]), esc(e["title"]), inline(e["summary"], self.ctx)))
+        return "".join(rows)
+
+    def manual_contents(self):
+        """The section of the front page: the manual by part."""
+        n, total = len(self.mchapters), len(self.plan["chapters"])
+        return ('<section aria-labelledby="h-manual"><h2 id="h-manual">The manual</h2><p class="sub col">A technical manual and textbook beside the log: each layer explained on its own terms, from the processor up, with where its code is and what has been verified. '
+                '%d of %d chapters are written. <a href="manual.html">Start at the manual\'s first page</a>, which has both reading paths and the task index.</p>'
+                '<div class="tbl"><table class="toc"><caption class="sr">The manual, by part, with the state of each chapter\'s mechanisms</caption><thead><tr><th scope="col" class="n">No.</th><th scope="col">Chapter</th><th scope="col">State of its layer</th><th scope="col">First written</th></tr></thead><tbody>%s</tbody></table></div>'
+                '<p class="how">Appendices: %s.</p></section>') % (
+            n, total, self.part_rows(), ", ".join('<a href="%s.html">%s</a>' % (a["id"], esc(a["title"])) for a in self.plan.get("appendices", [])))
+
+    def render_manual_landing(self):
+        d, ctx = self.data, self.ctx
+        pre = os.path.join(self.pages_dir, "manual-preface.md")
+        preface = ""
+        if os.path.exists(pre):
+            preface, _ = mdlite.render(mdlite.parse_blocks(read_text(pre)), ctx, lambda n, a: "")
+            preface = '<section aria-labelledby="h-preface"><h2 id="h-preface">Preface, from the archivist</h2><div class="prose preface">%s</div></section>' % preface
+
+        def path_list(which):
+            items = []
+            for cid in self.plan["paths"][which]:
+                items.append("<li>%s</li>" % self.mlink(cid))
+            return "<ol>%s</ol>" % "".join(items)
+        paths = ('<section aria-labelledby="h-paths"><h2 id="h-paths">Two paths through the same chapters</h2><p class="sub col">Every chapter serves both. <b>Learn it</b> goes from the processor upward, prerequisites first, and is the order the page-turning buttons follow. '
+                 '<b>Find it</b> starts at what you can see and walks down towards the machine, for someone who has come to change something.</p>'
+                 '<div class="m-paths"><div><h3>Learn it</h3>%s</div><div><h3>Find it</h3>%s</div></div></section>') % (path_list("learn"), path_list("find"))
+        task_rows = "".join('<tr><td>%s</td><td>%s</td><td>%s</td></tr>' % (esc(t["task"]), ", ".join(self.mlink(x) for x in t["chapters"]), "<br>".join("<code>%s</code>" % esc(x) for x in t["checks"])) for t in self.plan.get("tasks", []))
+        tasks = ('<section aria-labelledby="h-tasks"><h2 id="h-tasks">The task index</h2><p class="sub col">If you want to change something, read these chapters and run these checks.</p>'
+                 '<div class="tbl"><table><caption class="sr">Tasks, the chapters to read and the checks to run</caption><thead><tr><th scope="col">Task</th><th scope="col">Read</th><th scope="col">Check with</th></tr></thead><tbody>%s</tbody></table></div></section>') % task_rows
+        parts = ('<section aria-labelledby="h-parts"><h2 id="h-parts">The chapters, by part</h2><div class="tbl"><table class="toc"><caption class="sr">The manual, by part</caption><thead><tr><th scope="col" class="n">No.</th><th scope="col">Chapter</th><th scope="col">State of its layer</th><th scope="col">First written</th></tr></thead><tbody>%s</tbody></table></div></section>') % self.part_rows(ids=True)
+        app = ('<section aria-labelledby="h-app"><h2 id="h-app">Appendices</h2><ul class="m-appx">%s</ul></section>') % "".join(
+            '<li><a href="%s.html"><b>%s</b></a><div class="sub">%s</div></li>' % (a["id"], esc(a["title"]), inline(a["summary"], ctx)) for a in self.plan.get("appendices", []))
+        key = ('<section aria-labelledby="h-tags"><h2 id="h-tags">How to read the state tags</h2><ul class="m-key m-tagkey">%s</ul><p class="how">The manual\'s rule is stricter than the anatomy pages\': a mechanism is built and verified only when its evidence includes a test or a merged pull request with CI passing. '
+               'A claim that cites neither is shown as built, not verified, with the reason. Nothing here has run on real hardware.</p></section>') % "".join(
+            '<li>%s <span>%s</span></li>' % (manual.tag_html(s), esc(manual.STATE_WHAT[s])) for s in manual.STATES)
+        body = ('%s<main id="main" class="wrap chapter manual-landing"><header class="chead"><div class="eyebrow">Manual · %d of %d chapters written</div><h1>The Manual</h1>'
+                '<p class="lead">How the Desk is built, layer by layer, as a textbook and as a reference: how each part works, why it is that way, where its code is and what has been verified.</p></header>'
+                '<div class="prose">%s%s%s%s%s%s</div></main>') % (
+            site_header("manual", self.ids + self.extra_ids()), len(self.mchapters), len(self.plan["chapters"]), preface, paths, tasks, parts, app, key)
+        return "manual.html", document("%s · The Manual" % TITLE, body + site_footer(d, None, None))
+
+    def appendix_page(self, a):
+        ctx = self.ctx
+        terms, used = manual.glossary_page(self.mchapters)
+        if a["id"] == "m-glossary":
+            names = {c["id"]: c for c in self.mchapters}
+            rows = []
+            for tid in sorted(terms, key=lambda t: terms[t]["term"].lower()):
+                t = terms[tid]
+                also = [x for x in used.get(tid, []) if x != t["chapter"]]
+                rows.append('<div id="term-%s"><dt>%s</dt><dd>%s <span class="sub">Defined in <a href="%s.html">%s</a>%s.</span></dd></div>' % (
+                    esc(tid), esc(t["term"]), inline(t["def"], ctx), t["chapter"], esc(label_of(names[t["chapter"]])),
+                    ("; used in " + ", ".join('<a href="%s.html">%s</a>' % (x, esc(names[x]["n"])) for x in also)) if also else ""))
+            inner = ('<dl class="m-glossary">%s</dl>' % "".join(rows)) if rows else '<p class="sub">No chapter has defined a term yet. Each chapter has a glossary block, and this page is built from them.</p>'
+            lead = "Every term the chapters define, with a one-line definition and the chapter that teaches it. Generated from the chapters' glossary blocks."
+        elif a["id"] == "m-commands":
+            parts = []
+            for c in self.mchapters:
+                cmds = [(t, k) for t in c["try"] for k in t["cmds"]]
+                if cmds:
+                    parts.append('<h3 id="%s">%s</h3><ul class="m-cmds">%s</ul>' % (esc(c["id"]), esc(label_of(c)), "".join(
+                        '<li><code>%s</code><div class="sub">Needs %s</div></li>' % (esc(k["cmd"]), esc(t["needs"])) for t, k in cmds)))
+            inner = "".join(parts) or '<p class="sub">No chapter has a &#8220;Try it yourself&#8221; block yet. Each chapter has one, and this page is built from them.</p>'
+            lead = "Every command of every chapter's &#8220;Try it yourself&#8221; blocks, grouped by chapter, with what it needs. The output each prints is in the chapter."
+        elif a["id"] == "m-sources":
+            side, docs = manual.sources_of(self.mchapters)
+            s1 = "".join('<li><a href="%s.html">%s</a>%s: %s</li>' % (c["id"], esc(c["n"]), (" (" + esc(title) + ")") if title else "", inline(line[line.index(":") + 1:].strip() if ":" in line[:10] else line, ctx)) for c, title, line in side)
+            s2 = "".join('<li><a href="%s" target="_blank" rel="noopener"><code>%s</code></a>, used in %s</li>' % (esc(ctx.href("repo:" + p)), esc(p), ", ".join('<a href="%s.html">%s</a>' % (x, esc(x)) for x in cs)) for p, cs in sorted(docs.items()))
+            inner = ('<h2 id="sidebars">Sidebar sources</h2>%s<h2 id="documents">Documents the chapters lean on</h2>%s') % (
+                ("<ul>%s</ul>" % s1) if s1 else '<p class="sub">No sidebar has cited a source yet.</p>', ("<ul>%s</ul>" % s2) if s2 else '<p class="sub">No chapter has linked a design document yet.</p>')
+            lead = "Every source a &#8220;From the stacks&#8221; sidebar cites, and every design document a chapter links. A sidebar is background history and is never evidence."
+        else:
+            inner = ('<p class="sub col">Reference tables in one place: physical memory while booting and after, the I/O ports the code touches, IRQ lines and interrupt vectors, the BIOS calls made and by whom, the exit statuses of every runner, and the test modes. '
+                     'Each table will cite the source file it was read from, and the ones a script can read will be generated from it. None has been generated yet.</p>')
+            lead = "Maps and numbers: the tables a contributor looks up. Not written yet."
+        body = ('%s<main id="main" class="wrap chapter manual"><article><header class="chead"><div class="eyebrow">Manual · Appendix</div><h1>%s</h1><p class="lead">%s</p></header><div class="prose">%s</div></article></main>') % (
+            site_header("", self.ids + self.extra_ids()), esc(a["title"]), lead, inner)
+        return a["id"] + ".html", document("%s · %s" % (TITLE, a["title"]), body + site_footer(self.data, None, None))
 
     @staticmethod
     def date_label(iso):
@@ -396,12 +635,14 @@ class Site:
         return "%d %s %d" % (d.day, d.strftime("%B"), d.year)
 
     def extra_ids(self):
-        return ["gallery"] if self.registry else []
+        return (["gallery"] if self.gallery_recs else []) + (["manual"] if self.plan else [])
 
     def fig_state(self, rec):
         if rec.get("state"):
             return rec["state"]
-        ch = [c for c in self.chapters if c["id"] == rec["chapter"]][0]
+        ch = [c for c in self.all if c["id"] == rec["chapter"]][0]
+        if ch.get("section") == "manual":
+            return "none"
         return chapter_state(self.data, ch["prs"]) if ch["prs"] else "merged"
 
     def make_thumbs(self):
@@ -414,7 +655,7 @@ class Site:
         except ImportError:
             return {}, []
         out, written = {}, []
-        for src in sorted({r["thumb"][4:] for r in self.registry if r["thumb"].startswith("img:")}):
+        for src in sorted({r["thumb"][4:] for r in self.gallery_recs if r["thumb"].startswith("img:")}):
             fp = os.path.join(self.out, src)
             if not os.path.exists(fp):
                 continue
@@ -437,20 +678,21 @@ class Site:
         return out, written
 
     def tile(self, rec, i):
-        ch = [c for c in self.chapters if c["id"] == rec["chapter"]][0]
+        ch = [c for c in self.all if c["id"] == rec["chapter"]][0]
         state = self.fig_state(rec)
-        chap = ("Chapter %s" % ch["n"]) if ch.get("n") != "" else ch["title"]
+        chap = ("Manual %s" % ch["n"]) if ch.get("section") == "manual" else (("Chapter %s" % ch["n"]) if ch.get("n") != "" else ch["title"])
         pv = figures.preview(rec, self.fig_html.get(rec["id"], ""), "g%d-" % i, self.thumbs)
         alt = "" if rec["thumb"].startswith("img:") else '<span class="sr">%s</span>' % esc(rec["alt"])
         when = self.date_label(rec.get("date") or ch["date"])
-        return ('<li class="tile" data-kind="%s" data-track="%s" data-i="%d" data-date="%s"><a class="tile-link" href="%s.html#%s">'
+        pill = tag(state) if state != "none" else ('<span class="pill pill-overview">%s</span>' % ("manual" if ch.get("section") == "manual" else "overview"))
+        return ('<li class="tile" data-kind="%s" data-track="%s" data-section="%s" data-i="%d" data-date="%s"><a class="tile-link" href="%s.html#%s">'
                 '<div class="tile-pv">%s</div><div class="tile-body"><b class="tile-title">%s</b>%s<span class="tile-cap">%s</span>'
                 '<span class="tile-meta"><span class="kind">%s</span><span>%s</span>%s<span>%s</span></span></div></a></li>') % (
-            rec["kind"], rec["track"], i, esc(rec.get("date") or ch["date"]), rec["chapter"], esc(rec["anchor"]), pv, esc(rec["title"]), alt, esc(rec["caption"]),
-            esc(rec["kind"]), esc(chap), tag(state) if state != "none" else '<span class="pill pill-overview">overview</span>', esc(when))
+            rec["kind"], rec["track"], ch.get("section") == "manual" and "manual" or "log", i, esc(rec.get("date") or ch["date"]), rec["chapter"], esc(rec["anchor"]), pv, esc(rec["title"]), alt, esc(rec["caption"]),
+            esc(rec["kind"]), esc(chap), pill, esc(when))
 
     def render_gallery(self):
-        recs = self.registry
+        recs = self.gallery_recs
         kinds = [k for k in figures.KINDS if any(r["kind"] == k for r in recs)]
         tracks = [t for t in figures.TRACKS if any(r["track"] == t for r in recs)]
 
@@ -458,32 +700,38 @@ class Site:
             return "".join('<a class="chip" id="%s-%s" href="#%s-%s" data-group="%s" data-value="%s" aria-pressed="false">%s <span class="muted">%d</span></a>' % (
                 group, v, group, v, group, v, esc(v.title() if group == "track" else v), sum(1 for r in recs if r[group] == v)) for v in values)
         tiles = "".join(self.tile(r, i) for i, r in enumerate(recs))
+        sections = [x for x in ("log", "manual") if any(self.section_of(r) == x for r in recs)]
+        section_row = ('<div class="chiprow" role="group" aria-label="Group"><span class="chip-h">Group</span><a class="chip" id="section-all" href="#section-all" data-group="section" data-value="" aria-pressed="true">All</a>%s</div>' % "".join(
+            '<a class="chip" id="section-%s" href="#section-%s" data-group="section" data-value="%s" aria-pressed="false">%s <span class="muted">%d</span></a>' % (v, v, v, "The log" if v == "log" else "The manual", sum(1 for r in recs if self.section_of(r) == v)) for v in sections)) if len(sections) > 1 else ""
         rows = []
         for i, r in enumerate(recs):
-            ch = [c for c in self.chapters if c["id"] == r["chapter"]][0]
+            ch = [c for c in self.all if c["id"] == r["chapter"]][0]
             st = self.fig_state(r)
-            rows.append('<tr data-kind="%s" data-track="%s"><td><a href="%s.html#%s">%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="nw">%s</td></tr>' % (
-                r["kind"], r["track"], r["chapter"], esc(r["anchor"]), esc(r["title"]), esc(r["kind"]), esc(r["track"]), esc(ch["title"]), tag(st) if st != "none" else "overview",
+            rows.append('<tr data-kind="%s" data-track="%s" data-section="%s"><td><a href="%s.html#%s">%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class="nw">%s</td></tr>' % (
+                r["kind"], r["track"], ch.get("section") == "manual" and "manual" or "log", r["chapter"], esc(r["anchor"]), esc(r["title"]), esc(r["kind"]), esc(r["track"]), esc(ch["title"]), tag(st) if st != "none" else ("manual" if ch.get("section") == "manual" else "overview"),
                 esc(self.date_label(r.get("date") or ch["date"]))))
         body = ('<main id="main" class="wrap gallery"><header class="chead"><div class="eyebrow">Gallery · %d figures</div><h1>Gallery</h1>'
                 '<p class="lead">Every picture, diagram, chart and step-through in the archive, to browse first. Each tile links to the place in a chapter where its figure lives, and the story behind it. The tiles are built from the figure registry that each chapter declares, so a figure added to a chapter appears here by itself.</p></header>'
                 '<form class="controls" id="galleryControls" aria-label="Filter and sort the gallery" onsubmit="return false">'
                 '<div class="chiprow" role="group" aria-label="Kind"><span class="chip-h">Kind</span><a class="chip" id="kind-all" href="#kind-all" data-group="kind" data-value="" aria-pressed="true">All <span class="muted">%d</span></a>%s</div>'
                 '<div class="chiprow" role="group" aria-label="Track"><span class="chip-h">Track</span><a class="chip" id="track-all" href="#track-all" data-group="track" data-value="" aria-pressed="true">All</a>%s</div>'
-                '<div class="chiprow" role="group" aria-label="Sort and view"><span class="chip-h">Order</span>'
+                '%s<div class="chiprow" role="group" aria-label="Sort and view"><span class="chip-h">Order</span>'
                 '<button type="button" class="chip" data-sort="chapter" aria-pressed="true">Chapter order</button><button type="button" class="chip" data-sort="new" aria-pressed="false">Newest first</button>'
                 '<span class="chip-h">View</span><button type="button" class="chip" data-view="grid" aria-pressed="true">Tiles</button><button type="button" class="chip" data-view="list" aria-pressed="false">List</button></div>'
                 '<p class="count" id="galleryCount" aria-live="polite">Showing all %d figures.</p></form>'
                 '<ul class="tiles" id="tiles">%s</ul>'
                 '<details class="fig-listbox" id="figList"><summary>List view: every figure as text</summary><div class="tbl"><table><caption class="sr">Every figure, with its kind, track, chapter, state and date</caption><thead><tr><th scope="col">Figure</th><th scope="col">Kind</th><th scope="col">Track</th><th scope="col">Chapter</th><th scope="col">State</th><th scope="col">Date</th></tr></thead><tbody>%s</tbody></table></div></details>'
                 '<p class="how">Tags come from <code>gh</code>: a figure takes the state of its chapter\'s pull requests, and a figure of the history of <code>main</code> is merged. A figure marked overview is generated from the whole roadmap or repository and has no single pull request. Previews of step-throughs are static: play them in the chapter.</p>'
-                '</main>') % (len(recs), len(recs), chips("kind", kinds), chips("track", tracks), len(recs), tiles, "".join(rows))
+                '</main>') % (len(recs), len(recs), chips("kind", kinds), chips("track", tracks), section_row, len(recs), tiles, "".join(rows))
         title = "%s · Gallery" % TITLE
         self.pages["gallery.html"] = document(title, site_header("gallery", self.ids + self.extra_ids()) + body + site_footer(self.data, None, None))
 
+    def section_of(self, rec):
+        return "manual" if [c for c in self.all if c["id"] == rec["chapter"]][0].get("section") == "manual" else "log"
+
     def recent_strip(self):
-        recs = list(enumerate(self.registry))
-        recs.sort(key=lambda t: (t[1].get("date") or [c for c in self.chapters if c["id"] == t[1]["chapter"]][0]["date"], t[0]), reverse=True)
+        recs = list(enumerate(self.gallery_recs))
+        recs.sort(key=lambda t: (t[1].get("date") or [c for c in self.all if c["id"] == t[1]["chapter"]][0]["date"], t[0]), reverse=True)
         picked, per = [], {}
         for i, r in recs:
             if per.get(r["chapter"], 0) >= 2:
@@ -493,7 +741,7 @@ class Site:
             if len(picked) == 6:
                 break
         return ('<ul class="tiles recent">%s</ul><p class="how"><a href="gallery.html">Browse all %d figures in the gallery</a>, filtered by kind and track.</p>' % (
-            "".join(self.tile(r, 100 + i) for i, r in picked), len(self.registry)))
+            "".join(self.tile(r, 100 + i) for i, r in picked), len(self.gallery_recs)))
 
     def render_index(self):
         d, ctx = self.data, self.ctx
@@ -519,7 +767,13 @@ class Site:
         # the shelves summary comes from the chapters, so render them first
         for i in range(len(self.chapters)):
             self.pages.update([self.render_chapter(i)])
-        if self.registry:
+        if self.plan:
+            for c in self.mchapters:
+                self.pages.update([self.render_manual_chapter(c)])
+            self.pages.update([self.render_manual_landing()])
+            for a in self.plan.get("appendices", []):
+                self.pages.update([self.appendix_page(a)])
+        if self.gallery_recs:
             self.render_gallery()
         sh = []
         for k in ("catalogued", "uncatalogued", "wish"):
@@ -548,9 +802,9 @@ class Site:
                 esc(", ".join("#%d" % n for n in c["prs"]))))
         if not placed:
             toc.append(coming_html())
-        if self.registry:
+        if self.gallery_recs:
             toc.append('<tr><td class="n">·</td><td><a href="gallery.html"><b>Gallery</b></a><div class="sub">Every figure in the archive as a tile, linked to the chapter where it lives: %d figures, from %d chapters.</div></td><td class="nw"></td><td class="nw"></td><td class="nw"></td></tr>' % (
-                len(self.registry), len({r["chapter"] for r in self.registry})))
+                len(self.gallery_recs), len({r["chapter"] for r in self.gallery_recs})))
         road = d["roadmap"]
         cols = []
         for b in ("foundations", "hosted", "convergence", "native"):
@@ -564,7 +818,7 @@ class Site:
         nv = gather.read_json(os.path.join(HERE, "not-verified.json"))
         notver = "".join("<li><b>%s</b> %s</li>" % (esc(x["what"]), inline(x["why"], ctx)) for x in nv)
         hero = self.directive({"id": "index"})("figure", ["hero"])
-        strip = ('<section aria-labelledby="h-recent"><h2 id="h-recent">Recent figures</h2><p class="sub col">The newest pictures and step-throughs, from the figure registry. Each tile links to where it lives.</p>%s</section>' % self.recent_strip()) if self.registry else ""
+        strip = ('<section aria-labelledby="h-recent"><h2 id="h-recent">Recent figures</h2><p class="sub col">The newest pictures and step-throughs, from the figure registry. Each tile links to where it lives.</p>%s</section>' % self.recent_strip()) if self.gallery_recs else ""
         body = ('%s<main id="main" class="wrap front">'
                 '<header class="hero">%s<div class="eyebrow">Liminal HQ · Desk · The archive · generated %s</div><h1>Desk Progress Report</h1>'
                 '<div class="prose lead-block">%s</div></header>'
@@ -572,10 +826,11 @@ class Site:
                 '%s'
                 '<section aria-labelledby="h-shelves"><h2 id="h-shelves">The three shelves</h2><p class="sub col">Everything in the archive sits on one of three shelves, and nothing is moved up a shelf until it has earned it. These are counts of entries on the chapter pages, not a measure of the work.</p><div class="shelves">%s</div></section>'
                 '<section aria-labelledby="h-toc"><h2 id="h-toc">The chapters</h2><div class="tbl"><table class="toc"><caption class="sr">Chapters, with date and pull requests</caption><thead><tr><th scope="col" class="n">No.</th><th scope="col">Chapter</th><th scope="col">Date</th><th scope="col">State</th><th scope="col">Pull requests</th></tr></thead><tbody>%s</tbody></table></div></section>'
+                '%s'
                 '<section aria-labelledby="h-cols"><h2 id="h-cols">Status by track</h2><div class="glance">%s</div>%s</section>'
                 '<section aria-labelledby="h-nums"><h2 id="h-nums">Headline numbers</h2><p class="sub col">Each number is computed by the generator from the repository or <code>gh</code>. The test figures are counts of test declarations and expected transcripts, not an official total.</p><h3>Merged into main</h3>%s%s</section>'
                 '<section aria-labelledby="h-nv"><h2 id="h-nv">Not verified</h2><p class="sub col">What nobody has checked yet. Anything in the archive that depends on one of these stays on the uncatalogued shelf.</p><ul class="notver">%s</ul></section>'
-                '</main>') % (site_header("index", self.ids + self.extra_ids()), hero, esc(d["generated"][:10]), intro, panel, strip, "".join(sh), "".join(toc), "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), (('<h3>In open pull requests, not merged</h3><p class="sub col">Read from the open branches, so they change when a branch does. None of this is on main.</p>' + facts_strip(d, HEADLINE_OPEN)) if subject else ''), notver)
+                '</main>') % (site_header("index", self.ids + self.extra_ids()), hero, esc(d["generated"][:10]), intro, panel, strip, "".join(sh), "".join(toc), self.manual_contents() if self.plan else "", "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), (('<h3>In open pull requests, not merged</h3><p class="sub col">Read from the open branches, so they change when a branch does. None of this is on main.</p>' + facts_strip(d, HEADLINE_OPEN)) if subject else ''), notver)
         return body
 
     def write(self):
@@ -744,13 +999,13 @@ def check_site(out, expect_chapters=()):
 
 def main(argv):
     opts = {"--data": None, "--out": os.path.join(gather.ROOT, "dist", "progress-report"), "--chapters": os.path.join(HERE, "chapters"),
-            "--pages": os.path.join(HERE, "pages")}
+            "--pages": os.path.join(HERE, "pages"), "--manual": os.path.join(HERE, "manual")}
     flags, i = set(), 1
     while i < len(argv):
         if argv[i] in opts and i + 1 < len(argv):
             opts[argv[i]] = argv[i + 1]
             i += 2
-        elif argv[i] in ("--no-assets", "--check"):
+        elif argv[i] in ("--no-assets", "--check", "--manual-report"):
             flags.add(argv[i])
             i += 1
         else:
@@ -758,8 +1013,11 @@ def main(argv):
             return 2
     try:
         data = gather.read_json(opts["--data"]) if opts["--data"] else gather.gather()
-        chapters = load_chapters(opts["--chapters"])
-        site = Site(data, chapters, opts["--pages"], opts["--out"], assets="--no-assets" not in flags)
+        chapters = load_chapters(opts["--chapters"], opts["--manual"])
+        if "--manual-report" in flags:
+            print(manual.report([c for c in chapters if c.get("section") == "manual"], data))
+            return 0
+        site = Site(data, chapters, opts["--pages"], opts["--out"], assets="--no-assets" not in flags, manual_dir=opts["--manual"])
         files = site.write()
     except (mdlite.MdError, ValueError, KeyError, OSError) as e:
         print("build: %s: %s" % (type(e).__name__, e), file=sys.stderr)
