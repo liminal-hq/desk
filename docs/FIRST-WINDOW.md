@@ -101,7 +101,7 @@ Dependencies, all by path, no external crates:
 | `desk-font` | Core | nothing |
 | `desk-ui` | Core | `desk-gfx`, `desk-font`, `desk-hal`, `desk-kbd` (`char_for`, the pure key map the core already uses to decode keys) |
 | `desk-wm` | Core | `desk-gfx`, `desk-font`, `desk-ui`, `desk-hal` |
-| `desk-shell` | Core | all of the above |
+| `desk-shell` | Core | all of the above (so far `desk-hal`, `desk-gfx`, `desk-ui` for `Depth`, and `desk-kbd` for `char_for`) |
 | `desk-present` | Platform-side, shared | `desk-gfx`, `desk-hal`, `desk-vga` |
 
 The core crates never depend on `desk-present`; the platforms and the host tests do.
@@ -457,9 +457,12 @@ pub mod scenario {
     pub enum Step { Open { name: String, outer: Rect, title: String }, Label { window: String, x: i32, y: i32, text: String },
                     Field { window: String, x: i32, y: i32, width: u32 }, Close(String), Focus(String),
                     Event(Event), Type(String), Frame(FrameName), ExpectDamage { depth: Depth, max_pixels: u32, max_rects: Option<u8> } }
-    pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);
+    pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);       // FrameName::new(&str) -> Option, as_str()
     pub struct ParseError { pub line: u32, pub kind: ParseErrorKind }
+    pub enum ParseErrorKind { /* one variant per kind of malformed line, each carrying the text at fault */ }
     pub fn parse(text: &str) -> Result<Scenario, ParseError>;
+    pub fn type_events(text: &str) -> Result<Vec<Event>, char>;   // what a `type` step does; Err is the first character no key types
+    pub fn key_code(name: &str) -> Option<KeyCode>;               // a scenario's key name
     /// Runs every step; after each Frame step's frame has been presented, calls `capture(name, &shell, stats)`.
     pub fn run<P: Present>(sc: &Scenario, depth: Depth, shell: &mut Shell, out: &mut P,
                            capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>) -> Result<(), RunError>;
@@ -468,6 +471,8 @@ pub mod scenario {
 
 - **The frame loop** on a platform: drain the input source into `handle`, call `frame`, then wait: `hlt` until the next interrupt natively; under DOS the loop simply polls again, since the INT 33h mouse is polled once per iteration ([`B-DOS-INPUT.md`](B-DOS-INPUT.md)). A frame with no damage writes nothing.
 - **The pointer**: `Pointer` events add the motion (`dy` positive is down, as the HAL says), clamp to the screen, and move the cursor; `PointerTo` sets it (scenarios use it for clarity). Button changes go to `Wm::pointer`.
+- **What the parser checks.** Besides the line's own shape, `parse` refuses: a first line other than `desk-scenario 1`; `screen` or `depths` twice or after a step (a step with no `screen` before it is `MissingScreen`, and a file with no `depths` line runs at both depths); a name that is not 1 to 8 characters of `a-z`, `0-9` and `-`; a frame name used twice or that is a prefix of another; a window name that is used before it is opened, after it is closed or opened twice; a key name that is not a `KeyCode` variant's name (case matters); a `type` string with a character outside printable ASCII; and `move` offsets outside `i16`. The error carries the line number, counted from 1. `ParseError`'s `Display` prints `line N: KIND`.
+- **What a step becomes.** The parser keeps the button state and the modifier state, so `press` and `release` give `Pointer` events whose `buttons` are the state afterwards, `move` keeps them, and `key` events carry the modifiers after the event, as the HAL reports them. `type_events` expands each character into a key down and a key up with `desk_kbd::char_for` as the oracle, preferring the unshifted key; a capital or a shifted symbol is wrapped in Left Shift down and up (so `type "aB"` is six events). `Step::Type` keeps the string, and `run` expands it with `type_events`.
 - **Scenario frames**: `run` calls `frame` after every step that can change the picture, so a `Frame` step captures exactly what is on the screen, and an `ExpectDamage` step checks the stats of the frame just presented (host only; the platforms skip it).
 
 ## The scenario format
@@ -548,19 +553,20 @@ The native transcripts live with the others, in `tests/native/expected-shell-*.t
 
 ```
 frames.py png RAW PAL WIDTH HEIGHT OUT.png         a raw index dump and a 768-byte 6-bit DAC dump to an indexed PNG
-frames.py digest FILE [PAL]                        WIDTHxHEIGHT INDEX COLOUR of a PNG, a PPM (INDEX is "-"), or a RAW with its PAL
-frames.py check SUMS DEPTH DIR                     every frame NAME of SUMS at DEPTH has a capture in DIR (NAME.ppm, NAME.png, or
+frames.py digest FILE [PAL WIDTH HEIGHT]           WIDTHxHEIGHT INDEX COLOUR of a PNG, a PPM (INDEX is "-"), or a RAW with its PAL and size
+frames.py check SUMS DEPTH DIR [--golden DIR]      every frame NAME of SUMS at DEPTH has a capture in DIR (NAME.ppm, NAME.png, or
                                                    NAME.RAW with NAME.PAL; names compared without case) with the same COLOUR
                                                    digest, and the same INDEX where the capture has indices; writes NAME.diff.png
-                                                   and prints the bounding box and count of differing pixels on a mismatch
+                                                   and prints the bounding box and count of differing pixels on a mismatch,
+                                                   against the golden PNG (by default golden/SUMSNAME/NAME-DEPTH.png beside SUMS)
 frames.py transcript SUMS DEPTH FILE               the "shell: frame NAME ..." lines of a transcript carry the SUMS digests
 frames.py goldens SUMS DIR                         every PNG in DIR matches its SUMS line and every SUMS line has a PNG
-frames.py same DIR_A DIR_B                         two capture sets hold the same frames with equal COLOUR digests
-frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A
+frames.py same DIR_A DIR_B [--size WxH]            two capture sets hold the same frames with equal COLOUR digests (the size of RAW dumps, 640x480 by default)
+frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A (exit status 0 once written; 1 if the sizes differ)
 frames.py inject SCENARIO > FILE                   the QEMU monitor script for the native run (below)
 ```
 
-The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
+A RAW has no size of its own, so `digest` takes it on the command line and `check` takes it from the SUMS line. Exit status is 0 on success, 1 on a failed check or an unreadable input, 2 on a usage error, as `tools/native-shot.py` does; `tools/test_frames.py` holds the tests. The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
 
 **Recording.** `tools/shell-goldens.sh` runs the host scenario test with `DESK_FRAMES_RECORD=1`, which writes each frame's `RAW` and `PAL` into `shell/target/frames/` and a new `.sums`, then converts them to the golden PNGs. A change that moves a pixel is a deliberate re-record in the same branch, and the reviewer looks at the PNGs. Without the variable the test compares and, on a mismatch, writes the dumps and names the `frames.py diff` command to run.
 
