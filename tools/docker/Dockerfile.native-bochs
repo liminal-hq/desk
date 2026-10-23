@@ -1,0 +1,21 @@
+# Bochs 2.7 built from source as a 486 for the native track's second-emulator check. tools/native-run-bochs.sh builds this once as
+# desk-native-bochs:1.
+#
+# Ubuntu's bochs package is built for a P6-class CPU (its models start at a generic CPU with CPUID level 5 or 6, then a Pentium), so
+# it cannot stand in for a 486. Configured with --enable-cpu-level=4, Bochs runs a 486 instruction set: no Pentium or later
+# instructions. --with-nogui and --disable-debugger give a build that runs headless with no display library, no X and no debugger
+# prompt. The BIOS images (BIOS-bochs-legacy, BIOS-bochs-latest and the SeaBIOS build bios.bin-1.13.0) and the VGA BIOS are
+# installed beside it.
+FROM ubuntu:24.04
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential ca-certificates curl pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; cd /tmp; \
+    curl -fsSL -o bochs.tar.gz https://sourceforge.net/projects/bochs/files/bochs/2.7/bochs-2.7.tar.gz/download; \
+    echo 'a010ab1bfdc72ac5a08d2e2412cd471c0febd66af1d9349bc0d796879de5b17a  bochs.tar.gz' | sha256sum -c -; \
+    tar xzf bochs.tar.gz; cd bochs-2.7; \
+    ./configure --prefix=/opt/bochs --enable-cpu-level=4 --enable-all-optimizations --with-nogui --disable-debugger \
+        --disable-plugins --disable-x86-64 --disable-avx --disable-evex > /dev/null; \
+    make -j"$(nproc)" > /dev/null; make install > /dev/null; \
+    cd /; rm -rf /tmp/bochs.tar.gz /tmp/bochs-2.7
+ENV PATH=/opt/bochs/bin:$PATH

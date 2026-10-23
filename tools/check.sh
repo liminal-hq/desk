@@ -1,11 +1,13 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
 # and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
+# With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 # usage: tools/check.sh        (run tools/setup.sh once first)
+#        NATIVE_EXTRA=1 tools/check.sh    (adds the Bochs run)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 step() { printf '\n== %s\n' "$1"; }
@@ -74,5 +76,10 @@ spikes/d0-rust-dos/check.sh
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
+
+if [ "${NATIVE_EXTRA:-}" = 1 ]; then
+  step "Native boot: the same checks in Bochs as a 486 (opt-in, needs Docker)"
+  tools/native-test-bochs.sh
+fi
 
 printf '\nAll checks passed.\n'

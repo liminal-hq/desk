@@ -12,11 +12,20 @@
 # rejected; a divide error, a general protection fault, an invalid opcode, a panic and a masked timer must each end the run with
 # a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
+#
+# DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
+# take the same arguments and return the same exit statuses as tools/native-run.sh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if ! command -v qemu-system-i386 > /dev/null && ! command -v docker > /dev/null; then
-  echo "native: SKIPPED — neither qemu-system-i386 nor docker is installed, so the image cannot be booted"
+runner=${DESK_NATIVE_RUNNER:-tools/native-run.sh}
+if [ "$runner" = tools/native-run.sh ]; then
+  if ! command -v qemu-system-i386 > /dev/null && ! command -v docker > /dev/null; then
+    echo "native: SKIPPED — neither qemu-system-i386 nor docker is installed, so the image cannot be booted"
+    exit 0
+  fi
+elif ! command -v docker > /dev/null; then
+  echo "native: SKIPPED — docker is not installed, so $runner cannot run its emulator"
   exit 0
 fi
 
@@ -27,7 +36,7 @@ fail() { echo "native: FAILED — $*" >&2; exit 1; }
 # run NAME IMAGE EXPECTED_EXIT EXPECTED_TRANSCRIPT [TIMEOUT]: boots, checks the exit status and compares the transcript.
 run() {
   local name=$1 image=$2 want=$3 expected=$4 timeout=${5:-20} got=0
-  tools/native-run.sh --timeout "$timeout" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  "$runner" --timeout "$timeout" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
   [ "$got" = "$want" ] || { cat "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected $want"; }
   if [ -n "$expected" ]; then
     python3 -I tools/native-check.py "$expected" "$work/$name.txt" || fail "$name: transcript differs"
