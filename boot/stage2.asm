@@ -322,7 +322,7 @@ map_e801:
 
 ; video_setup: fills the video block and sets a VBE mode if it can. It never fails the boot: every outcome, including "no VBE at
 ; all", is recorded in the block (layout in docs/NATIVE-BOOT.md) and printed, so the kernel and the transcript both know which
-; path was taken. The block's state: 0 not tried (-DNO_VBE), 1 a linear 8-bit mode is set, 2 not available (the reason is at +6).
+; path was taken. The block's state: 0 not tried (`video_mode` is 0), 1 a linear 8-bit mode is set, 2 not available (the reason is at +6).
 video_setup:
         pushad
         xor ax, ax
@@ -432,8 +432,14 @@ video_setup:
         mov [VIDEO + 10], ax
         mov ax, [VBE_MODE + 20]
         mov [VIDEO + 12], ax
-        mov ax, [VBE_MODE + 16]
-        mov [VIDEO + 14], ax
+        mov ax, [VBE_MODE + 16]         ; BytesPerScanLine
+        cmp word [VIDEO + 4], 0x0300
+        jb .pitch
+        mov dx, [VBE_MODE + 50]         ; VBE 3.0: LinBytesPerScanLine is the pitch of the linear frame buffer (0: not given)
+        test dx, dx
+        jz .pitch
+        mov ax, dx
+.pitch: mov [VIDEO + 14], ax
         mov al, [VBE_MODE + 25]
         mov [VIDEO + 16], al
         mov al, [VBE_MODE + 27]

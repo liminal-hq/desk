@@ -56,7 +56,7 @@ Protected mode has no BIOS, and a kernel with flat segments and no V86 monitor c
 
 The build flag `-DVBE_FAIL=1` makes step 5 report failure after the whole search has run, which is how the fallback path is tested without a BIOS that refuses.
 
-The offsets used are those of the VBE 2.0 mode information block as I know them from the specification: attributes at 0, bytes per scan line at 16, X and Y resolution at 18 and 20, bits per pixel at 25, memory model at 27 and the physical base pointer at 40. They were not checked against the specification text in this spike; they were checked in the way that matters here, by the values QEMU's BIOS returns (640, 480, 8, pitch 640 and a base that is the PCI BAR of the card).
+The offsets used are those of the VBE 2.0 mode information block as I know them from the specification: attributes at 0, bytes per scan line at 16 (for VBE 3.0 and later the loader uses the linear bytes per scan line at 50 instead when it is non-zero, as the specification says for a linear mode), X and Y resolution at 18 and 20, bits per pixel at 25, memory model at 27 and the physical base pointer at 40. They were not checked against the specification text in this spike; they were checked in the way that matters here, by the values QEMU's BIOS returns (640, 480, 8, pitch 640 and a base that is the PCI BAR of the card). QEMU reports the same pitch in both fields, so the linear-pitch path is not exercised by any test.
 
 ## The boot information block
 
