@@ -973,6 +973,92 @@ class RealManualTests(unittest.TestCase):
             self.assertEqual(section.count("pill-coming"), len(self.plan["chapters"]) - len(self.chapters))
 
 
+def explainer_module(name):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("t_" + name, os.path.join(manual.MANUAL_DIR, "explainers", name + ".py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class BootChaptersTests(unittest.TestCase):
+    """The loader and boot chapters (M4, M5) and their explainers against the code and the committed transcripts."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.chapters = {c["id"]: c for c in manual.load_chapters(manual.load_plan())}
+
+    def text(self, cid):
+        return self.chapters[cid]["raw"]
+
+    def test_the_boot_explainer_is_reused_once_between_the_two_chapters(self):
+        names = [" ".join([d["name"]] + d["args"]) for cid in ("m-loader", "m-boot") for d in self.chapters[cid]["blocks"] if d["type"] == "directive"]
+        self.assertEqual(names.count("explainer boot"), 1)
+
+    def test_m5_walks_every_line_of_the_recorded_transcript(self):
+        serial = rd(os.path.join(TOOL, "media", "native-serial.txt")).splitlines()
+        text = self.text("m-boot")
+        missing = [l for l in serial if l.strip() and l not in text]
+        self.assertEqual(missing, [])
+
+    def test_m5_lists_every_test_mode_with_the_number_and_name_of_the_code(self):
+        main = rd(os.path.join(gather.ROOT, "kernel", "src", "main.rs"))
+        enum = re.findall(r"^\s+(\w+) = (\d+),$", main[main.index("enum TestMode"):main.index("impl TestMode")], flags=re.M)
+        image = rd(os.path.join(gather.ROOT, "tools", "native-image.sh"))
+        names = {int(n): m for m, n in re.findall(r"([a-z0-9-]+)\) code=(\d+)", image)}
+        rows = [r for r in re.findall(r"^\| (\d+) \| `([a-z0-9-]+)` \| `(\w+)` \|", self.text("m-boot"), flags=re.M)]
+        self.assertEqual([(int(n), v) for v, n in enum], [(int(n), v) for n, _, v in rows])
+        for n, name, variant in rows:
+            self.assertEqual(names[int(n)], name, variant)
+
+    def test_m5_exit_statuses_are_those_of_the_run_script(self):
+        run = rd(os.path.join(gather.ROOT, "tools", "native-run.sh"))
+        exit_rs = rd(os.path.join(gather.ROOT, "kernel", "src", "exit.rs"))
+        for status in ("33", "35", "124"):
+            self.assertIn(status, run)
+            self.assertIn(status, self.text("m-boot"))
+        self.assertIn("0x10", exit_rs)
+        self.assertIn("0x11", exit_rs)
+        self.assertRegex(self.text("m-boot"), r"\(0x10 << 1\) \| 1 = 33")
+
+    def test_m4_numbers_are_the_ones_the_sources_give(self):
+        image = explainer_module("image")
+        c = image.constants()
+        self.assertEqual((c["STAGE2_SECTORS"], c["KERNEL_LBA"], c["TOTAL_SECTORS"]), (17, 18, 2880))
+        kbytes, ksec = image.kernel_sectors(c)
+        reads = image.reads(c["KERNEL_LBA"], ksec, c["KERNEL_SEG"], c)
+        self.assertIn("%d calls of INT 13h" % len(reads), self.text("m-loader"))
+        self.assertEqual(len(reads), 21)
+        self.assertIn("%d reads" % (len(reads) + 1), self.text("m-loader"))
+        self.assertIn("%d sectors" % ksec, self.text("m-loader"))
+        self.assertEqual(639 + 15232, 15871)
+        self.assertIn("15871 KiB", self.text("m-loader"))
+
+    def test_the_image_explainer_refuses_overlaps_and_boundary_crossings(self):
+        image = explainer_module("image")
+        c = image.constants()
+        kbytes, ksec = image.kernel_sectors(c)
+        r2 = image.reads(c["STAGE2_LBA"], c["STAGE2_SECTORS"], c["STAGE2_SEG"], c)
+        rk = image.reads(c["KERNEL_LBA"], ksec, c["KERNEL_SEG"], c)
+        self.assertEqual(image.check(c, r2, rk, ksec), [])
+        self.assertTrue(any("overlaps" in p for p in image.check(dict(c, KERNEL_LBA=10), r2, rk, ksec)))
+        self.assertTrue(any("too large" in p or "more than" in p for p in image.check(c, r2, rk, c["KERNEL_LIMIT"] + 1)))
+        bad = [dict(rk[0], start=0x1F000, end=0x21000)] + rk[1:]
+        self.assertTrue(any("crosses a 64 KiB boundary" in p for p in image.check(c, r2, bad, ksec)))
+        self.assertTrue(any("past the end" in p for p in image.check(dict(c, TOTAL_SECTORS=300), r2, rk, ksec)))
+
+    def test_the_negative_checks_explainer_refuses_a_mode_the_test_does_not_run(self):
+        neg = explainer_module("negatives")
+        main, image, test, run, enum, codes = neg.load()
+        self.assertEqual(neg.check(main, image, test, run, enum, codes), [])
+        self.assertTrue(any("does not run the negative mode div0" in p for p in neg.check(main, image, test.replace("div0", "d1v0"), run, enum, codes)))
+        self.assertTrue(any("TestMode::DivideError" in p for p in neg.check(main, image, test, run, {k: v for k, v in enum.items() if k != "DivideError"}, codes)))
+        self.assertTrue(any("no test mode accounts for" in p for p in neg.check(main, image, test, run, enum, codes, listing=["expected-div0.txt", "expected-mystery.txt"])))
+        bad = list(neg.NEGATIVES)
+        bad[0] = bad[0][:3] + (["EXCEPTION 0x00: no such line"],) + bad[0][4:]
+        self.assertTrue(any("has no line" in p for p in neg.check(main, image, test, run, enum, codes, negatives=bad)))
+
+
 def load_chapter_tests():
     """Each manual chapter may keep its own checks in tests/test_chapter_NAME.py (self-contained, a plain unittest module); their test
     cases are picked up here so that the one command, `python3 -I tools/progress-report/tests/test_report.py`, runs them all."""

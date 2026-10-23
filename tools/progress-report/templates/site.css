@@ -449,3 +449,21 @@ tr.m-part th{background:var(--raised);text-align:left;font-family:var(--f-displa
 .preface{max-width:70ch;display:grid;gap:12px}
 .manual .chead .state-row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
 @media (prefers-reduced-motion: reduce){.m-state tr:target{outline-width:3px}}
+/* manual explainers: the floppy image and the negative checks */
+.m-image .mi-boot{fill:var(--accent)} .m-image .mi-kern{fill:var(--c1)} .m-image .mi-free{fill:var(--line)}
+.m-image .mi-ram{fill:var(--raised);stroke:var(--line-strong)} .m-image .mi-s2{fill:var(--accent)} .m-image .mi-ka{fill:var(--c1)} .m-image .mi-kb{fill:var(--c3)}
+.m-image .mi-cur{stroke:var(--text)} .m-image .mi-bound{stroke:var(--s-decision);stroke-dasharray:4 3;stroke-width:1.5}
+.sw.mi-boot{background:var(--accent)} .sw.mi-kern{background:var(--c1)} .sw.mi-free{background:var(--line)} .sw.mi-ka{background:var(--c1)} .sw.mi-kb{background:var(--c3)}
+.m-image .is-off{display:none}
+.mn-stage{display:grid;min-height:150px}
+.mn-panel{grid-area:1/1;display:grid;gap:8px;align-content:start}
+.mn-panel.is-off{display:none}
+.mn-head{font-size:14px;color:var(--text-2)} .mn-exit{display:inline-block;margin-left:8px;padding:0 8px;border:1px solid var(--line-strong);border-radius:999px;font-size:12.5px}
+.mn-pre{margin:0;background:var(--term-bg);color:var(--term-fg);border:1px solid var(--line);border-radius:6px;padding:10px 14px;overflow-x:auto;font-size:13.5px}
+.mn-pre code{background:none;border:0;padding:0;font-size:inherit;white-space:pre}
+/* grids in the manual must not grow to the width of their widest child (a long command line, a table) */
+.m-try,.m-terms dl,.m-glossary,.preface,.m-appx,.m-tagkey,.m-cmds,.m-next ul,.m-aside ul,.m-proved,.mn-panel,.mn-stage{grid-template-columns:minmax(0,1fr)}
+.m-paths{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:760px){.m-paths{grid-template-columns:minmax(0,1fr)}}
+.m-term,.mn-pre{max-width:100%}
+.manual-landing .prose,.manual .prose{grid-template-columns:minmax(0,1fr)}
