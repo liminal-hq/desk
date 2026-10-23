@@ -5,3 +5,13 @@ edition = "2021"
 publish = false
 description = "A Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87"
 license = "Apache-2.0 OR MIT"
+
+[features]
+# The panic handler is a lang item that `std` defines for itself, so a program that links `std` turns this off.
+default = ["panic-handler"]
+panic-handler = []
+
+[dependencies]
+desk-hal = { path = "../../../hal/hal" }
+desk-pic = { path = "../../../hal/drivers/pic" }
+desk-vga = { path = "../../../hal/drivers/vga" }

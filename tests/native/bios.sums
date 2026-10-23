@@ -1,0 +1,6 @@
+# Reference checksums of the screenshots of the BIOS scenarios (tests/native/bios.inject): VBE modes set from the kernel after boot,
+# then the text screen after INT 10h AX=0003h. The same three values come out of QEMU's std, cirrus and vmware cards.
+# NAME WIDTHxHEIGHT CRC-32 of the RGB bytes of the PPM that the monitor's screendump writes. tools/native-shot.py check compares them.
+vbe-640 640x480 84cd5f8b
+vbe-800 800x600 2c094efc
+text 720x400 3eeee6dd

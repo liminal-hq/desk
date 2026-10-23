@@ -14,6 +14,15 @@
 # the command outlived DOS_TIMEOUT seconds (default 60), and 125 when DOSBox itself failed, in which case its log is printed to
 # standard error. Set DOS_VERBOSE=1 to always see DOSBox's log.
 #
+# The emulated video card is `svga_s3` (VESA BIOS extensions, a linear frame buffer). A program that must see another card sets
+# DOS_MACHINE (for example `vgaonly`, which has no VBE) for that run only; the default is unchanged.
+#
+# Keys can be typed into the program with DOS_AUTOTYPE, the arguments of DOSBox's AUTOTYPE command (for example `-w 3 -p 0.3 a b esc`):
+# the keys go in through the emulated keyboard controller, so a program that reads port 0x60 sees them as a keyboard would send them.
+# DOS_CONF appends text to the generated dosbox.conf, for a section the script does not set (for example `[mouse]` and
+# `builtin_dos_mouse_driver = off`, which takes the mouse driver away). DOS_X11=1 keeps the environment's DISPLAY and uses SDL's x11
+# driver instead of the dummy one, for a run under a virtual X server (tools/docker/Dockerfile.dos-xvfb).
+#
 # DOSBox needs no display: SDL_VIDEODRIVER=dummy gives it a video driver that draws nowhere, and SDL_AUDIODRIVER=dummy the same
 # for audio. The environment's DISPLAY and WAYLAND_DISPLAY are removed so a developer's desktop is never used by accident.
 #
@@ -36,6 +45,7 @@ trap 'rm -rf "$WORK"' EXIT
 # The scratch directory is mounted as D: so the program's own directory only gets what the program writes.
 {
   echo '@echo off'
+  [ -z "${DOS_AUTOTYPE:-}" ] || echo "autotype $DOS_AUTOTYPE"
   echo "$* > D:\\STDOUT.TXT"
   echo 'set RC=0'
   for n in $(seq 1 255); do echo "if errorlevel $n set RC=$n"; done
@@ -49,7 +59,7 @@ fullscreen = false
 output = texture
 
 [dosbox]
-machine = svga_s3
+machine = ${DOS_MACHINE:-svga_s3}
 memsize = 16
 
 [cpu]
@@ -79,9 +89,15 @@ c:
 call d:\\run.bat
 exit
 CONF
+[ -z "${DOS_CONF:-}" ] || printf '\n%s\n' "$DOS_CONF" >> "$WORK/dosbox.conf"
 
 status=0
-env -u DISPLAY -u WAYLAND_DISPLAY SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+if [ -n "${DOS_X11:-}" ]; then
+  video=(env SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy)
+else
+  video=(env -u DISPLAY -u WAYLAND_DISPLAY SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy)
+fi
+"${video[@]}" \
   timeout "${DOS_TIMEOUT:-60}" "${DOSBOX[0]}" --noprimaryconf --nolocalconf --conf "$WORK/dosbox.conf" \
   > "$WORK/dosbox.log" 2>&1 || status=$?
 

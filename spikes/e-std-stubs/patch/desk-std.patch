@@ -1,0 +1,186 @@
+--- a/library/std/build.rs
++++ b/library/std/build.rs
+@@ -53,6 +53,8 @@
+         || target_os == "hurd"
+         || target_os == "uefi"
+         || target_os == "teeos"
++        || target_os == "desk"
++        || target_os == "dos"
+         || target_os == "zkvm"
+         || target_os == "rtems"
+         || target_os == "nuttx"
+--- a/library/std/src/sys/alloc/mod.rs
++++ b/library/std/src/sys/alloc/mod.rs
+@@ -107,4 +107,10 @@
+     target_os = "zkvm" => {
+         mod zkvm;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++    }
++    target_os = "stub" => {
++        mod stub;
++    }
+ }
+--- a/library/std/src/sys/args/mod.rs
++++ b/library/std/src/sys/args/mod.rs
+@@ -57,6 +57,10 @@
+         mod zkvm;
+         pub use zkvm::*;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use desk::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use unsupported::*;
+--- a/library/std/src/sys/env/mod.rs
++++ b/library/std/src/sys/env/mod.rs
+@@ -11,6 +11,8 @@
+     target_os = "uefi",
+     target_os = "wasi",
+     target_os = "xous",
++    target_os = "desk",
++    target_os = "dos",
+ ))]
+ mod common;
+ 
+@@ -55,6 +57,10 @@
+         mod zkvm;
+         pub use zkvm::*;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use desk::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use unsupported::*;
+--- a/library/std/src/sys/exit.rs
++++ b/library/std/src/sys/exit.rs
+@@ -135,6 +135,9 @@
+         target_os = "xous" => {
+             crate::os::xous::ffi::exit(code as u32)
+         }
++        any(target_os = "desk", target_os = "dos") => {
++            unsafe { crate::sys::pal::abi::desk_exit(code) }
++        }
+         _ => {
+             let _ = code;
+             crate::intrinsics::abort()
+--- a/library/std/src/sys/io/error/mod.rs
++++ b/library/std/src/sys/io/error/mod.rs
+@@ -44,6 +44,9 @@
+         target_family = "wasm",
+         target_os = "zkvm",
+         target_os = "trusty",
++        target_os = "desk",
++        target_os = "dos",
++        target_os = "stub",
+     ) => {
+         mod generic;
+         pub use generic::*;
+--- a/library/std/src/sys/pal/mod.rs
++++ b/library/std/src/sys/pal/mod.rs
+@@ -60,6 +60,10 @@
+         mod zkvm;
+         pub use self::zkvm::*;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use self::desk::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use self::unsupported::*;
+--- a/library/std/src/sys/random/mod.rs
++++ b/library/std/src/sys/random/mod.rs
+@@ -103,10 +103,15 @@
+         mod zkvm;
+         pub use zkvm::fill_bytes;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use desk::fill_bytes;
++    }
+     any(
+         all(target_family = "wasm", target_os = "unknown"),
+         target_os = "xous",
+         target_os = "vexos",
++        target_os = "stub",
+     ) => {
+         // FIXME: finally remove std support for wasm32-unknown-unknown
+         // FIXME: add random data generation to xous
+@@ -123,6 +128,7 @@
+     all(target_os = "wasi", not(target_env = "p1")),
+     target_os = "xous",
+     target_os = "vexos",
++    target_os = "stub",
+ )))]
+ pub fn hashmap_random_keys() -> (u64, u64) {
+     let mut buf = [0; 16];
+--- a/library/std/src/sys/stdio/mod.rs
++++ b/library/std/src/sys/stdio/mod.rs
+@@ -45,6 +45,10 @@
+         mod zkvm;
+         pub use zkvm::*;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use desk::*;
++    }
+     _ => {
+         mod unsupported;
+         pub use unsupported::*;
+--- a/library/std/src/sys/thread/mod.rs
++++ b/library/std/src/sys/thread/mod.rs
+@@ -115,6 +115,13 @@
+         mod unsupported;
+         pub use unsupported::{current_os_id, set_name};
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        pub use desk::sleep;
++        #[expect(dead_code)]
++        mod unsupported;
++        pub use unsupported::{Thread, available_parallelism, current_os_id, set_name, yield_now, DEFAULT_MIN_STACK_SIZE};
++    }
+     _ => {
+         mod unsupported;
+         pub use unsupported::{Thread, available_parallelism, current_os_id, set_name, sleep, yield_now, DEFAULT_MIN_STACK_SIZE};
+--- a/library/std/src/sys/thread_local/mod.rs
++++ b/library/std/src/sys/thread_local/mod.rs
+@@ -30,6 +30,9 @@
+         target_os = "zkvm",
+         target_os = "trusty",
+         target_os = "vexos",
++        target_os = "desk",
++        target_os = "dos",
++        target_os = "stub",
+     ) => {
+         mod no_threads;
+         pub use no_threads::{EagerStorage, LazyStorage, thread_local_inner};
+@@ -100,6 +103,9 @@
+             target_os = "zkvm",
+             target_os = "trusty",
+             target_os = "vexos",
++            target_os = "desk",
++            target_os = "dos",
++            target_os = "stub",
+         ) => {
+             pub(crate) fn enable() {
+                 // FIXME: Right now there is no concept of "thread exit" on
+--- a/library/std/src/sys/time/mod.rs
++++ b/library/std/src/sys/time/mod.rs
+@@ -44,6 +44,10 @@
+         mod xous;
+         use xous as imp;
+     }
++    any(target_os = "desk", target_os = "dos") => {
++        mod desk;
++        use desk as imp;
++    }
+     _ => {
+         mod unsupported;
+         use unsupported as imp;
