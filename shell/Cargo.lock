@@ -19,6 +19,23 @@ name = "desk-hal"
 version = "0.0.0"
 
 [[package]]
+name = "desk-hal-mock"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
+name = "desk-present"
+version = "0.0.0"
+dependencies = [
+ "desk-gfx",
+ "desk-hal",
+ "desk-hal-mock",
+ "desk-vga",
+]
+
+[[package]]
 name = "desk-vga"
 version = "0.0.0"
 dependencies = [

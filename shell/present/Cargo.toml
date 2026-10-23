@@ -1,0 +1,18 @@
+[package]
+name = "desk-present"
+description = "The shell's presenters: the linear and planar (mode 12h) frame buffer writers and the capture read-back"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-gfx = { path = "../gfx" }
+desk-hal.workspace = true
+desk-vga = { path = "../../hal/drivers/vga" }
+
+[features]
+std = ["desk-gfx/std", "desk-hal/std", "desk-vga/std"]
+
+[dev-dependencies]
+desk-hal-mock = { path = "../../hal/platform/mock" }
