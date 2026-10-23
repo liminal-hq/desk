@@ -351,38 +351,50 @@ def check_status(recs, root, data, chapter):
 
 def check_command(cmd, root):
     """The problems with one command of a try block: it must start with a tool we know or a script that exists in the repository, and an
-    interpreter's script must exist as well."""
+    interpreter's script must exist as well. Pipes, `&&`, `;`, redirections and one `cd DIR &&` are read; quoting is respected."""
     problems = []
-    cmd = cmd.strip()
-    if cmd.startswith("(") and cmd.endswith(")"):
-        cmd = cmd[1:-1].strip()
+    lex = shlex.shlex(cmd.strip(), posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    try:
+        tokens = list(lex)
+    except ValueError:
+        return ["cannot read the command %r" % cmd]
     cwd = root
-    m = re.match(r"^cd\s+(\S+)\s*&&\s*(.*)$", cmd)
-    if m:
-        cwd = os.path.join(root, m.group(1))
-        if not os.path.isdir(cwd):
-            return ["cd %s: no such directory in the repository" % m.group(1)]
-        cmd = m.group(2)
-    for seg in re.split(r"\s*(?:\|\||&&|\||;)\s*", cmd):
-        try:
-            words = shlex.split(seg)
-        except ValueError:
-            problems.append("cannot read the command %r" % seg)
+    segments, cur, skip_next = [], [], False
+    for t in tokens:
+        if skip_next:
+            skip_next = False
             continue
+        if t in ("|", "||", "&&", ";", "&", ";;"):
+            segments.append(cur)
+            cur = []
+        elif t in ("(", ")"):
+            continue
+        elif t in (">", ">>", "<", "2>", "&>", ">&"):
+            skip_next = True
+        elif re.match(r"^[<>&]+$", t):
+            skip_next = True
+        else:
+            cur.append(t)
+    segments.append(cur)
+    for words in segments:
         while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
             words.pop(0)
         if not words:
             continue
         first = words[0]
+        if first == "cd":
+            target = os.path.join(root, words[1]) if len(words) > 1 else root
+            if not os.path.isdir(target):
+                problems.append("cd %s: no such directory in the repository" % (words[1] if len(words) > 1 else ""))
+            else:
+                cwd = target
+            continue
         if first in TOOLS:
             if first in INTERPRETERS:
                 script = None
-                skip = False
                 for w in words[1:]:
-                    if skip:
-                        skip = False
-                        continue
-                    if w == "-c" or w == "-e":
+                    if w in ("-c", "-e"):
                         script = ""
                         break
                     if w.startswith("-"):
@@ -390,13 +402,12 @@ def check_command(cmd, root):
                     script = w
                     break
                 if script is None:
-                    problems.append("%s: no script named" % seg)
+                    problems.append("%s: no script named" % first)
                 elif script and not os.path.exists(os.path.join(cwd, script)):
                     problems.append("%s: the script %s does not exist" % (first, script))
             continue
-        path = first
-        if "/" in path or path.endswith((".sh", ".py")):
-            if not os.path.isfile(os.path.join(cwd, path)) and not os.path.isfile(os.path.join(root, path)):
+        if "/" in first or first.endswith((".sh", ".py")):
+            if not os.path.isfile(os.path.join(cwd, first)) and not os.path.isfile(os.path.join(root, first)):
                 problems.append("%s: no such script in the repository" % first)
         else:
             problems.append("%s: not a script in the repository or a known tool (%s)" % (first, ", ".join(sorted(TOOLS))))
