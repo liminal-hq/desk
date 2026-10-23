@@ -643,6 +643,7 @@ class FirstWindowTests(unittest.TestCase):
 
 
 FIXTURE_MANUAL = os.path.join(HERE, "fixture", "manual")
+SHALLOW = manual.is_shallow(gather.ROOT)  # the CI checks out one commit: no history, so the whole site cannot be built there
 FAKE_DATA = {"prs": [{"number": 1, "ci": "passing"}, {"number": 3, "ci": "failing"}], "open": {"prs": [{"number": 4, "state": "in review", "ci": "passing"}]}}
 BOXES = {"desk:kernel", "dos:main"}
 
@@ -671,6 +672,7 @@ class ManualCheckTests(unittest.TestCase):
     def test_the_fixture_chapter_is_clean(self):
         self.assertEqual(manual_problems(), [])
 
+    @unittest.skipIf(SHALLOW, "a shallow clone cannot tell a missing commit from one it does not have")
     def test_front_matter_and_sections_are_required(self):
         self.assertRefused(lambda t: t.replace("reviewed: 44f0265\n", ""), "reviewed must be a commit hash")
         self.assertRefused(lambda t: t.replace("reviewed: 44f0265", "reviewed: zzzz"), "reviewed must be a commit hash")
@@ -739,6 +741,16 @@ class ManualCheckTests(unittest.TestCase):
         self.assertIn("mt-verified", mdlite.inline("It is {{state.fix.heap}}.", ctx))
         with self.assertRaises(mdlite.MdError):
             mdlite.inline("{{state.fix.nothing}}", ctx)
+
+    def test_a_pull_request_that_cannot_be_looked_up_is_accepted_only_in_a_shallow_clone(self):
+        shallow = dict(FAKE_DATA, prs=[], shallow=True)
+        self.assertEqual(manual_problems(data=shallow), [])
+        d, plan, chapters = manual_copy()
+        rec = [r for r in chapters[0]["status"] if r["id"] == "fix.unrun"][0]
+        st, why = manual.effective_state(rec, shallow)
+        self.assertEqual(st, "built-unverified")
+        self.assertIn("not in this clone", why)
+        self.assertTrue(any("not among the pull requests" in p for p in manual_problems(data=dict(FAKE_DATA, prs=[]))))
 
     def test_the_plan_is_checked(self):
         def plan_problems(f):
@@ -907,7 +919,7 @@ class RealManualTests(unittest.TestCase):
     def setUpClass(cls):
         cls.plan = manual.load_plan()
         cls.chapters = manual.load_chapters(cls.plan)
-        cls.data = gather.gather(offline=True)
+        cls.data = gather.gather(gather.ROOT, "HEAD", offline=True)
         cls.log_ids = [c["id"] for c in build.load_chapters(REAL)]
         cls.boxes = {"%s:%s" % (n, b["id"]) for n in ("desk", "dos") for b in __import__("explainers_fw").load_anatomy(n)["boxes"]}
 
@@ -920,6 +932,7 @@ class RealManualTests(unittest.TestCase):
         ids = [c["id"] for c in self.plan["chapters"]] + [a["id"] for a in self.plan["appendices"]]
         self.assertFalse(set(ids) & set(self.log_ids))
 
+    @unittest.skipIf(SHALLOW, "the front page needs the merge history, which a shallow clone does not have")
     def test_the_real_manual_builds_into_a_site_that_checks(self):
         chapters = build.load_chapters(REAL, manual.MANUAL_DIR)
         with tempfile.TemporaryDirectory() as out:
