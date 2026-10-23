@@ -1,0 +1,23 @@
+shell: faces from the program
+shell: display offers 37 modes, VBE present
+shell: mode 0x101, depth 8, pitch 640
+shell: frame open 8 640x480 920263aa c310363f
+shell: readback open 8 640x480 920263aa c310363f equal
+shell: wrote OPEN.RAW (307200 bytes) and OPEN.PAL
+shell: frame moved 8 640x480 10201b69 03faf8b3
+shell: readback moved 8 640x480 10201b69 03faf8b3 equal
+shell: wrote MOVED.RAW (307200 bytes) and MOVED.PAL
+shell: frame focus 8 640x480 29970e1c 8fa785c2
+shell: readback focus 8 640x480 29970e1c 8fa785c2 equal
+shell: wrote FOCUS.RAW (307200 bytes) and FOCUS.PAL
+shell: frame dragged 8 640x480 2abd99f3 a8143a01
+shell: readback dragged 8 640x480 2abd99f3 a8143a01 equal
+shell: wrote DRAGGED.RAW (307200 bytes) and DRAGGED.PAL
+shell: frame typed 8 640x480 90edf2e0 2cd55463
+shell: readback typed 8 640x480 90edf2e0 2cd55463 equal
+shell: wrote TYPED.RAW (307200 bytes) and TYPED.PAL
+shell: frame closed 8 640x480 53532002 379c4c02
+shell: readback closed 8 640x480 53532002 379c4c02 equal
+shell: wrote CLOSED.RAW (307200 bytes) and CLOSED.PAL
+shell: scenario done, 6 frames
+shell: after the clean-up list the video mode is 0x03

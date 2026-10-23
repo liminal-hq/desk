@@ -1,0 +1,12 @@
+# The same pure-Rust DOS target as d0-rust-dos, whose target specification and linker script are used from there. Run cargo from this
+# directory: the script path is relative. See spikes/d0-rust-dos/.cargo/config.toml for why build-std and RUSTC_BOOTSTRAP=1.
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+json-target-spec = true
+
+[build]
+target = "../../spikes/d0-rust-dos/dos-elf.json"
+
+[target.dos-elf]
+rustflags = ["-C", "link-arg=-T../../spikes/d0-rust-dos/link.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]

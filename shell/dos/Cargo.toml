@@ -1,0 +1,36 @@
+# The hosted wiring of the first window: SHELL.EXE, the shell on the pure-Rust DOS runtime. Its own workspace, because the default
+# target here is the DOS one (`.cargo/config.toml`); `shell/Cargo.toml` excludes it. See docs/FIRST-WINDOW.md.
+[workspace]
+resolver = "2"
+
+[package]
+name = "desk-shell-dos"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The first window on DOS: the shell on the pure-Rust DOS runtime, with the scenario run and captured for comparison with the goldens"
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+rt = { path = "../../spikes/d0-rust-dos/rt" }
+desk-hal = { path = "../../hal/hal" }
+desk-vga = { path = "../../hal/drivers/vga" }
+desk-i8042 = { path = "../../hal/drivers/i8042" }
+desk-int33 = { path = "../../hal/drivers/int33" }
+desk-gfx = { path = "../gfx" }
+desk-font = { path = "../font" }
+desk-ui = { path = "../ui" }
+desk-wm = { path = "../wm" }
+desk-present = { path = "../present" }
+desk-shell = { path = "../shell" }
+
+[[bin]]
+name = "shell"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 0
