@@ -264,6 +264,8 @@ def check_item(kind, rest, root, data):
         if not rest.isdigit():
             return "pr:%s is not a pull request number" % rest
         if int(rest) not in known_prs(data):
+            if data.get("shallow"):
+                return None  # the pull request history is not in a shallow clone, so the number cannot be looked up
             return "pr:%s is not among the pull requests the report knows" % rest
         return None
     if kind == "commit":
@@ -313,7 +315,7 @@ def effective_state(rec, data):
     if rec["state"] == "built-verified" and not run_evidence(rec, data):
         prs = [int(r) for k, r in rec["items"] if k == "pr" and r.isdigit()]
         if prs:
-            why = ", ".join("#%d is %s" % (n, "not merged with CI passing" if n in known_prs(data) else "not known") for n in prs)
+            why = ", ".join("#%d is %s" % (n, "not merged with CI passing" if n in known_prs(data) else ("not known, because the pull request history is not in this clone" if data.get("shallow") else "not known")) for n in prs)
         else:
             why = "it cites no test and no merged pull request"
         return "built-unverified", "Shown as built, not verified: " + why + "."
