@@ -78,11 +78,6 @@ impl<B: Bios> DosInput<B> {
         }
     }
 
-    /// Whether a mouse driver is in use.
-    pub fn has_mouse(&self) -> bool {
-        self.mouse.is_some()
-    }
-
     /// The mouse, for the platform's set-up and clean-up calls.
     pub fn mouse(&self) -> Option<&Mouse<B>> {
         self.mouse.as_ref().map(MouseInput::mouse)
@@ -127,5 +122,9 @@ impl<B: Bios> InputSource for DosInput<B> {
 
     fn poll_mouse(&mut self) -> Option<MouseEvent> {
         self.mouse.as_mut()?.poll()
+    }
+
+    fn has_mouse(&self) -> bool {
+        self.mouse.is_some()
     }
 }

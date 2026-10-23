@@ -212,6 +212,11 @@ pub trait InputSource {
     fn poll_key(&mut self) -> Option<KeyEvent>;
     /// The next mouse report, if any.
     fn poll_mouse(&mut self) -> Option<MouseEvent>;
+    /// Whether there is a mouse at all. The hosted platform has none when no DOS mouse driver is installed, and the core then runs
+    /// keyboard-only (no cursor to draw, every action reachable by key: `docs/SPEC.md`, "Input"). Native platforms assume one.
+    fn has_mouse(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(test)]
