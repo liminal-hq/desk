@@ -1,0 +1,18 @@
+[package]
+name = "desk-vga"
+description = "The VGA and VBE driver, written once against the HAL: mode 13h and 12h registers, the DAC, drawing primitives, VBE 2.0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+
+[features]
+# Only for host builds; see `desk-hal`.
+std = ["desk-hal/std"]
+
+[dev-dependencies]
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { workspace = true, features = ["std"] }

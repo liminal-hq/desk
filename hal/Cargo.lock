@@ -36,3 +36,11 @@ dependencies = [
  "desk-hal",
  "desk-hal-mock",
 ]
+
+[[package]]
+name = "desk-vga"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-hal-mock",
+]
