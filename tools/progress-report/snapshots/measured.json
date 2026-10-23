@@ -1,0 +1,8 @@
+{
+ "note": "Numbers measured by running a build, which the generator cannot repeat from the tree. Update by hand when the build changes, and say how.",
+ "nativeKernelBytes": 36384,
+ "nativeStage1Bytes": 512,
+ "nativeStage2Bytes": 8704,
+ "how": "tools/native-build.sh then tools/native-image.sh on the tree of main at 6c563f0 (2026-10-22); the image tool prints 'kernel 36384 bytes in 72 sectors'. The image's SHA-256 was 8e5e6e19fe2735d7dcc1d56d8b26b12cfec16d7fc635664851753b6f55450627, and a run of tools/native-run.sh on it printed the transcript in media/native-serial.txt. Stage 2 is padded to 17 sectors (docs/NATIVE-BOOT.md).",
+ "qemu": "QEMU emulator version 11.1.2, qemu-system-i386 -cpu 486 -m 16"
+}

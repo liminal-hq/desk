@@ -1,0 +1,14 @@
+mousemove 320 240
+mousemove_relative 40 0
+mousemove_relative 40 0
+mousemove_relative 0 30
+mousemove_relative 0 30
+mousemove_relative -- -25 -10
+mousedown 1 sleep 0.3 mouseup 1
+mousedown 3 sleep 0.3 mouseup 3
+mousedown 2 sleep 0.3 mouseup 2
+click 5
+click 4
+mousedown 1
+key a
+key Escape
