@@ -94,6 +94,24 @@ pub const MODE_12H: ModeRegs = ModeRegs {
     ],
 };
 
+/// Mode 03h: 80 × 25 text, 9 × 16 cells on 400 lines (720 × 400 on the monitor), 70 Hz, the characters at B8000h in the odd/even
+/// layout (even bytes in plane 0, attributes in plane 1) with the font in plane 2. The attribute palette is the BIOS's, which sends
+/// colours 6 and 8 to 15 to DAC entries 14h and 38h to 3Fh (`text::TEXT_DAC` holds those entries). The tables are the IBM VGA ones
+/// that the BIOSes and most hobby kernels use; QEMU's (Bochs) BIOS programs the same values.
+pub const MODE_03H: ModeRegs = ModeRegs {
+    misc: 0x67,
+    seq: [0x03, 0x00, 0x03, 0x00, 0x02],
+    crtc: [
+        0x5F, 0x4F, 0x50, 0x82, 0x55, 0x81, 0xBF, 0x1F, 0x00, 0x4F, 0x0D, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x8E, 0x8F, 0x28,
+        0x1F, 0x96, 0xB9, 0xA3, 0xFF,
+    ],
+    gc: [0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0xFF],
+    attr: [
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x0C, 0x00, 0x0F, 0x08,
+        0x00,
+    ],
+};
+
 fn seq_write<P: PortIo>(ports: &P, index: u8, value: u8) {
     ports.outb(SEQ_ADDR, index);
     ports.outb(SEQ_DATA, value);
@@ -177,6 +195,12 @@ pub fn set_mode_13h<P: PortIo>(ports: &P) {
 /// Programs mode 12h (640 × 480 × 16, planar).
 pub fn set_mode_12h<P: PortIo>(ports: &P) {
     set_mode_registers(ports, &MODE_12H);
+}
+
+/// Programs mode 03h (80 × 25 text). The font in plane 2 and the DAC entries are separate: `text::load_font` and
+/// `text::set_text_palette`; protected mode has no BIOS to do them.
+pub fn set_mode_03h<P: PortIo>(ports: &P) {
+    set_mode_registers(ports, &MODE_03H);
 }
 
 /// Makes attribute palette entry n select DAC entry n for n in 0 to 15 (what the BIOS does not do in the EGA-compatible modes),
