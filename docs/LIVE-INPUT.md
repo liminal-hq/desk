@@ -46,7 +46,7 @@ The same live paths run headless in the checks, with input injected through the 
 5. **The pointer stays relative.** The guest reads a PS/2 mouse (native) or INT 33h mickeys (DOS) and integrates the deltas, as today. In a window that means the emulator captures the desktop's pointer on a click and releases it on a hotkey. An absolute pointer (QEMU's `vmmouse`, a USB tablet) is not built ([questions](#questions-for-the-owner)).
 6. **Keyboard window management is core behaviour**, in `desk-wm`, scripted and golden-tested like the pointer: Alt+Tab (release picks, no overlay yet), Shift+Alt+Tab, Alt+F4, Tab and Shift+Tab.
 7. **The cursor's damage is coalesced.** The compositor remembers where the cursor was last presented and damages only that and where it is now at the next frame, so a burst of mouse reports between two frames costs two sprite rectangles, not a trail.
-8. **Native frames are paced by the PIT; DOS frames by the poll.** Natively a frame is presented when the shell is dirty and at least one tick (10 ms at 100 Hz) has passed since the last present, and the loop halts otherwise. Under DOS the loop presents after each poll that left the shell dirty, as it does now.
+8. **Native frames are paced by the PIT; DOS frames by the poll.** Natively a frame is presented when the shell is dirty and at least one tick (10 ms at 100 Hz) has passed since the last present, and the loop halts otherwise. Under DOS the loop presents after each poll that left the shell dirty (today it presents on every iteration).
 9. **The DOS mouse sees quick clicks.** `desk-int33` reads the driver's press and release counters for the left button, so a click shorter than one poll still reaches the shell as a press and a release.
 10. **One launcher, two tracks**: `tools/run-shell.sh native|dos`, which builds what is missing and opens a window. It uses `tools/native-run.sh --window` and `tools/dosrun.sh` with `DOS_WINDOW=1`, both new, so the headless runners stay as they are.
 
@@ -143,7 +143,7 @@ The digests of mark 00 are the scripted `open` frame's, because the set-up is th
 
 The cursor is composited row by row at present time and never enters the back buffer ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#decisions), decision 4); that stays. What changes is the damage a move makes. Today `move_cursor` adds the old and the new sprite rectangle on every call, so twenty packets between two frames add twenty-one rectangles, which `Damage` merges into a trail. With pacing, many moves per frame become the normal case.
 
-`Compositor` keeps `shown: Option<Rect>`, the sprite rectangle the last present drew (`None` before the first frame and while the cursor is hidden). `move_cursor` only records the position; `frame` adds `shown` and the current rectangle to the overlay damage, presents, and sets `shown`. `set_cursor_visible` and `set_cursor_inks` add the current rectangle as today. In every frame of the first window's scenario the cursor moves at most once, so the presented counts the expected transcripts pin (`456` and `608` among them) and every `expect-damage` line stay as they are, which is the check that the change is safe. A new host test moves the cursor fifty times between two frames and expects at most two rectangles and the area of two sprites.
+`Compositor` keeps `shown: Option<Rect>`, the sprite rectangle the last present drew (`None` before the first frame and while the cursor is hidden). `move_cursor` only records the position; `frame` adds `shown` and the current rectangle to the overlay damage, presents, and sets `shown`. `set_cursor_visible(false)` adds `shown` (where the sprite is on screen, which after a move is not the current rectangle); `set_cursor_visible(true)` and `set_cursor_inks` add the current rectangle as today. A failed present leaves `shown` as it was. In every frame of the first window's scenario the cursor moves at most once, so the presented counts the expected transcripts pin (`456` and `608` among them) and every `expect-damage` line stay as they are, which is the check that the change is safe. A new host test moves the cursor fifty times between two frames and expects at most two rectangles and the area of two sprites.
 
 `Compositor::is_dirty()` (scene or overlay damage pending, or the cursor away from `shown`) and `Shell::is_dirty()` give the native loop its condition without presenting to find out.
 
@@ -182,7 +182,7 @@ Nothing new in `desk-wm`: a press of the left button focuses and raises the wind
 | Escape pressed | Summary line, back to text, `exit::success`; QEMU exits with the guest's success code and its window closes | Summary line, the clean-up list (mouse reset, IRQ 1 vector, BIOS keyboard flags, text mode), exit status 0; DOSBox returns to the prompt, and the launcher's batch file closes DOSBox |
 | `timeout=N` | — (the watchdog of `native-run.sh --timeout`, exit 124) | Exit status 4, as today |
 | A panic | The panic line and the failure exit, as in every mode | The runtime's report and status 3, everything restored |
-| Closing the emulator's window | QEMU quits without a guest exit code; `native-run.sh` reports status 2, which the launcher treats as a normal end | DOSBox quits; nothing is restored inside DOS, which no longer exists |
+| Closing the emulator's window | QEMU quits without a guest exit code; `native-run.sh` reports status 2, which the launcher reports as a note rather than an error, naming both causes, because a reset or triple fault under `-no-reboot` gives the same status | DOSBox quits; nothing is restored inside DOS, which no longer exists |
 | QEMU's or DOSBox's own hotkeys | Ctrl+Alt+Q in QEMU's GTK window quits QEMU (to confirm) | Ctrl+F9 kills DOSBox (to confirm) |
 
 Closing the last window does not end the session: the desktop stays, with nothing to focus, and Escape still ends it. Ctrl+Alt+Delete ends nothing: under DOS with the BIOS keyboard handler replaced it is a key, as spike B recorded, and the SPEC's "asks first" waits for a dialog.
@@ -205,7 +205,7 @@ qemu-system-i386 -cpu 486 -m 16 -drive if=floppy,format=raw,file=dist/native-she
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -monitor none -vga std
 ```
 
-Depth 4 uses `-vga cirrus` and an image made with `--video text`, as the scripted checks do.
+Depth 4 uses `-vga cirrus` and an image made with `--video text`, as the scripted checks do. With `--demo`, the monitor socket that `--inject` sets up takes the place of `-monitor none`.
 
 ### DOSBox Staging
 
@@ -235,7 +235,7 @@ tools/run-shell.sh dos    [--depth 8|4] [--nomouse] [--demo]
 - **dos** builds `dist/shell/SHELL.EXE` if it is missing (`shell/dos/build.sh`) and runs `DOS_WINDOW=1 DOS_TIMEOUT=0 tools/dosrun.sh dist/shell SHELL.EXE depth8|depth4`, with `builtin_dos_mouse_driver = off` for `--nomouse`. It needs DOSBox Staging in `vendor/` (`tools/setup.sh`).
 - **`--demo`** plays the live scenario into the window (`frames.py live` through the monitor for native; its keys through `AUTOTYPE` for DOS), so a person can watch what the checks do.
 - **Requirements.** A desktop session (`DISPLAY` or `WAYLAND_DISPLAY`) and, for native, `qemu-system-i386` on the host: the Docker route of `native-run.sh` stays headless, and the launcher says so and stops when QEMU is missing ([questions](#questions-for-the-owner)).
-- **`tools/native-run.sh --window DISPLAY`** replaces `-display none` with the display named, keeps the serial file and tails it to standard output, and turns status 2 (QEMU closed without a guest code) into a note rather than an error when the window was closed. Without `--window` nothing changes.
+- **`tools/native-run.sh --window DISPLAY`** replaces `-display none` with the display named, keeps the serial file and tails it to standard output, and turns status 2 (QEMU closed without a guest code) into a note rather than an error; the note says the window was closed or the guest reset or triple-faulted, since the status cannot tell them apart, and points at the transcript's last lines. Without `--window` nothing changes.
 - **`tools/dosrun.sh` with `DOS_WINDOW=1`** keeps `DISPLAY` and `WAYLAND_DISPLAY`, lets SDL choose its video driver, and writes the settings above; `DOS_TIMEOUT=0` disables the timeout (`timeout 0` waits for ever). Without it nothing changes.
 
 ## Keeping the scripted checks deterministic
@@ -276,7 +276,7 @@ Between a mouse step and a key step, either way round, the QEMU script sleeps 0.
 ### `frames.py live` and `frames.py marks`
 
 ```text
-frames.py live SCENARIO --qemu > FILE          the monitor script for native-inject.py, ending with `sendkey esc`
+frames.py live SCENARIO --qemu > FILE          the monitor script for native-inject.py, starting with `wait shell: mark 00` and the first frame's screendump, ending with `sendkey esc`
 frames.py live SCENARIO --autotype             the arguments for DOS_AUTOTYPE (`-w 3 -p 0.3 ... f12 ... esc`)
 frames.py live SCENARIO --xdotool [--quick] > FILE    the script for xvfb-dos.sh; --quick makes each adjacent press and release one `click 1`
 frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]
@@ -299,7 +299,7 @@ A section in `tools/native-test.sh` after the scripted shell checks, at both dep
 ### Hosted: `AUTOTYPE` in CI, `xdotool` opt-in
 
 - **Always on**, in `shell/dos/check.sh`, replacing the interactive step's written-in digest: `DOS_AUTOTYPE="$(frames.py live tests/shell/live-keys.scn --autotype)" tools/dosrun.sh dist/shell SHELL.EXE depth8 marks timeout=60`; status 0; `frames.py marks --dumps` and `frames.py check` against `live-keys.sums`; the same at depth 4; and once with `builtin_dos_mouse_driver = off`, which must give the same frames (keyboard only).
-- **Opt-in** (`INPUT_EXTRA=1`, with Docker), `shell/dos/check-xvfb.sh`: `tools/xvfb-dos.sh` (spike B's `xvfb-inner.sh`, generalised to any program, arguments and script, in the `desk-dos-xvfb:1` image) runs `SHELL.EXE depth8 marks` with `frames.py live tests/shell/live.scn --xdotool`, then `marks --dumps` and `check` against `live.sums`; then again with `--quick`, which only passes with the press and release counters, so the counters' task adds it failing first.
+- **Opt-in** (`INPUT_EXTRA=1`, with Docker), `shell/dos/check-xvfb.sh`: `tools/xvfb-dos.sh` (spike B's `xvfb-inner.sh`, generalised to any program, arguments and script, in the `desk-dos-xvfb:1` image) runs `SHELL.EXE depth8 marks` with `frames.py live tests/shell/live.scn --xdotool`, then `marks --dumps` and `check` against `live.sums`; then again with `--quick`, which only passes with the press and release counters. The counters' task (L4) comes before this check exists, so its failing-first evidence is spike B's `xdotool click` row; the `--quick` run arrives with the Xvfb check (L8), on top of the counters.
 
 `marks` on DOS: at each F12 (and at mark 00) the program reads the frame buffer and the DAC back, as `dump` does, prints the mark line and writes `M00.RAW` and `M00.PAL` and so on, then prints `shell: readback ... equal` as the scripted run does. Without `marks` F12 prints the mark line only.
 
@@ -317,7 +317,7 @@ Each must fail, and the check says so when it does not:
 | DOS | `AUTOTYPE` without one key of `type "desk"` | `marks --dumps` and `check` |
 | DOS | One pixel changed in an `M` dump | `check` |
 | DOS | A transcript with one mark line removed | `marks` (a missing mark) |
-| DOS, opt-in | `--quick` clicks before the counters (the task's first commit) | `check` (`focus` differs) |
+| DOS, opt-in | Spike B's `xdotool click` before the counters (L4's first commit) | spike B's `check-xvfb.sh` (the click is lost) |
 | Tools | A live scenario whose set-up differs from the first window's | `frames.py live` and the host test |
 | Tools | A live scenario with a lone `key LeftAlt down` | `frames.py live` refuses it |
 
@@ -347,7 +347,7 @@ Each has a default the plan follows unless the owner says otherwise.
 
 - **Mouse and key ordering across two rings.** Natively the mouse and the keys arrive in different rings, drained in a fixed order, so a key injected just after a mouse burst could be handled first if the packets were still in QEMU. The pauses between bursts and before marks, and the extra mouse drain before a mark, cover it; the negative runs show the checks would notice.
 - **QEMU folding mouse events** (spike C: a press and release arriving before the guest read the previous packet came out as one). The 0.1 second pause after each mouse command is what made spike C's runs repeatable; the live script keeps it.
-- **`AUTOTYPE` timing.** Keys are paced (`-p 0.3`), not synchronised with marks; a very slow CI run could still be reading the ring when F12 arrives, but the ring is in order, so F12 is handled after every key before it. Only a ring overflow (64 bytes, sixteen paced keys at most in flight) could break it, and the decoder's recovery would show in the transcript.
+- **`AUTOTYPE` timing.** Keys are paced (`-p 0.3`), not synchronised with marks; a very slow CI run could still be reading the ring when F12 arrives, but the ring is in order, so F12 is handled after every key before it. Only a ring overflow (64 bytes: thirty-two plain keys, each a press and a release byte, at most in flight) could break it, and the decoder's recovery would show in the transcript.
 - **Host shortcuts.** Alt+Tab and Alt+F4 go to the desktop unless the emulator holds the keyboard grab; on Wayland that depends on the compositor. The automated runs are unaffected (QEMU's monitor and Xvfb without a window manager); a person may find Alt+F4 closing QEMU.
 - **GTK or SDL missing from the host's QEMU build.** Some distributions split the display modules into a separate package. The launcher tries `gtk`, then `sdl`, and says what to install, without installing it.
 - **Coalesced cursor damage** is a change to a merged, tested crate. Its safety argument is the unchanged first-window transcripts; if one changes, the task stops.

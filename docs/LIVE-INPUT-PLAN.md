@@ -21,7 +21,7 @@ The task-by-task plan for building [`LIVE-INPUT.md`](LIVE-INPUT.md): the core's 
 
 ## Order, parallelism and the stack
 
-At most two builders work at once. The pull requests form **one linear stack**, in the order L1 to L9, each based on the one before; `gh stack submit` pushes the chain and keeps each PR's base the previous branch. Two tasks of a wave touch disjoint files, so they are built in parallel from the previous wave's tip, and the second of the pair is rebased onto the first before it is submitted (a rebase with no conflicts, because the files do not overlap). Nothing is merged without the owner's go-ahead; when the bottom of the stack merges, the stack is rebased on `main` by the next `gh stack submit`, never squashed.
+At most two builders work at once. The pull requests form **one linear stack**, in the order L1 to L9, each based on the one before; `gh stack submit` pushes the chain and keeps each PR's base the previous branch. Two tasks of a wave touch mostly disjoint files, so they are built in parallel from the previous wave's tip, and the second of the pair is rebased onto the first before it is submitted. The code does not overlap, but the documents can: L5 and L6 both edit [`FIRST-WINDOW.md`](FIRST-WINDOW.md) (different sections), and any task may correct [`LIVE-INPUT.md`](LIVE-INPUT.md), so the rebase resolves any conflict in those documents by keeping both changes. Nothing is merged without the owner's go-ahead; when the bottom of the stack merges, the stack is rebased on `main` by the next `gh stack submit`, never squashed.
 
 | Wave | Tasks, in parallel | Depends on | Size (new lines, roughly, tests included) |
 |---|---|---|---|
@@ -53,7 +53,7 @@ main
 - **Missing tools run in Docker**, never installed on the host: the CI image `ghcr.io/liminal-hq/ci-dos` (its digest is in `.github/workflows/ci.yml`) has Rust, DJGPP, DOSBox Staging and CWSDPMI, with QEMU and NASM added as the workflow adds them; `desk-dos-xvfb:1` and `desk-native-qemu:1` are built by the scripts that use them. Docker leaves root-owned files in a mounted tree: run containers with `--user "$(id -u):$(id -g)"`, and delete anything root-owned through a container. Do not prune Docker images or volumes. The disk is tight: delete `dist/` captures a task no longer needs.
 - **The pinned files do not change**: `tests/shell/first-window.scn`, `first-window.sums`, `golden/first-window/`, `expected-dos-8.txt`, `expected-dos-4.txt`, `tests/native/expected-shell-8.txt` and `-4.txt`. A task that needs to change one has found a regression and stops to report it.
 - **The rules of `shell/`** ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#rules-carried-over)): `no_std` + `alloc`, `#![forbid(unsafe_code)]`, no float, no compare-and-swap, no external crates, no clocks or randomness in the core.
-- **Fix a bug with a check that fails before the fix**: L4's `--quick` run and L1's coalescing test are written first and seen failing.
+- **Fix a bug with a check that fails before the fix**: L4's spike B `xdotool click` row and L1's coalescing test are written first and seen failing.
 - **Verify before the PR**: the task's acceptance commands, `python3 -I tools/check-docs.py`, `tools/check-headers.sh`, and `tools/check.sh` (in the CI image where the host lacks a tool) where the task touches what it runs. The PR's test plan says exactly what ran and what did not.
 - **Update the documents the task changes** in the same branch ([`LIVE-INPUT.md`](LIVE-INPUT.md#what-changes-in-other-documents)), and correct `LIVE-INPUT.md` where the code chose differently.
 
