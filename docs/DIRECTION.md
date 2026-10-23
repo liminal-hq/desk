@@ -73,7 +73,7 @@ What it implies:
 | Emulator | Hosted track | Native track | Notes |
 |---|---|---|---|
 | DOSBox Staging, headless | Yes | No | Emulates DOS, not PC hardware; the CI target for the hosted track |
-| js-dos (browser) | Yes, later | No | DOSBox in the browser; waits for the linear frame buffer question (`OPEN-QUESTIONS.md`) |
+| js-dos (browser) | Yes | No | DOSBox in the browser; the programs and the VBE linear frame buffer work in headless Chromium (`S5-JSDOS.md`) |
 | QEMU, `-cpu 486` | Only by booting a DOS image | Yes | The first target for the native track; scriptable and headless |
 | 86Box | Optional | Yes | Closer to period hardware, including specific sound and video cards |
 | Bochs | Optional | Yes | Slow but careful; its debugger helps with boot code |

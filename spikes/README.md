@@ -7,9 +7,9 @@ Small experiments that decide the architecture. Spikes s1 to s5 below belong to 
 - **s2-vbe**: VBE 2.0 linear frame buffer and VGA mode 12h from Rust.
 - **s3-mouse**: INT 33h from Rust.
 - **s4-handoff**: `DESK.COM` hands the machine to a real-mode program and takes it back.
-- **s5-jsdos**: does the browser build work with the linear frame buffer?
+- **s5-jsdos**: do our DOS programs run in the browser through js-dos 8, and does the browser build work with the VBE linear frame buffer? **Done: yes** (`docs/S5-JSDOS.md`; the browser run is opt-in: `tools/check-jsdos.sh`, or `JSDOS=1 tools/check.sh`).
 - **s6-ttf**: can an integer rasteriser draw a real TrueType face at 14 px and 24 px on a 486 within the frame budget, and how does it look beside the bitmap faces? Later than the others; see `docs/OPEN-QUESTIONS.md`, "Reading TrueType fonts".
 
-The hosted walking skeleton that proves the build toolchain is done (`docs/TOOLCHAIN.md`), and so are the native boot skeleton (`docs/NATIVE-BOOT.md`) and `s1-dxe3`; the next hosted spike is `s2-vbe`.
+The hosted walking skeleton that proves the build toolchain is done (`docs/TOOLCHAIN.md`), and so are the native boot skeleton (`docs/NATIVE-BOOT.md`), `s1-dxe3`, `d0-rust-dos` and `s5-jsdos`; the next hosted spike is `s2-vbe`.
 
 Spike code is experimental and may be thrown away; it is labelled `spike` and `experimental` on GitHub.
