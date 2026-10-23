@@ -1,0 +1,16 @@
+[package]
+name = "desk-gfx"
+description = "The shell's graphics core: rectangles, the back buffer, sprites, damage, the compositor and frame digests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+
+[features]
+std = ["desk-hal/std"]
+
+[dev-dependencies]
+desk-vga = { path = "../../hal/drivers/vga" }

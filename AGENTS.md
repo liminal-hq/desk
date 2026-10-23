@@ -142,6 +142,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 ## Code Conventions
 
 - **Rust (`core/`, `sdk/`):** `no_std` with `alloc`; no floating-point maths from `std`; no `unsafe` without a one-line justification of what makes it sound. Only integers, pointers and lengths cross the Rust and C boundary, never structs passed by value.
+- **Rust (`shell/`):** `no_std` + `alloc` (`std` only behind a feature or in tests), `#![forbid(unsafe_code)]`, `#![deny(clippy::float_arithmetic)]`, no compare-and-swap (`shell/clippy.toml`), no external crates, and no clocks or randomness: a frame is a function of the steps that led to it. Tests that need random input use a fixed-seed integer generator. The crates build for the host and for `kernel/i486-desk-none.json` and `spikes/d0-rust-dos/dos-elf.json`, as `tools/check.sh` does (`docs/FIRST-WINDOW.md`).
 - **C (`c/`, `launcher/`):** C99 for DJGPP, one concern per file, `volatile` for anything an interrupt handler touches, no allocation in an interrupt handler.
 - **DOS limits (hosted track):** file names are 8.3; every hooked interrupt vector (IRQ 0, IRQ 1, the mouse callback) is restored on exit and before a handoff; the screen goes back to text mode before a handoff.
 - **Rendering:** the Desk owns the palette. Fades and dims go through the DAC, never through the frame buffer; per-pixel work stays free of floating point.
@@ -170,6 +171,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 - `launcher/` — `DESK.COM`, the hosted track's real-mode launcher
 - `sdk/` — the app interface: the C header and a Rust wrapper
 - `hal/` — the shared hardware abstraction layer: one Cargo workspace of `no_std` crates (the traits, drivers written once against them, and the mock platform their host tests use), built for both tracks' targets (`docs/HAL.md`)
+- `shell/` — the shared core's first piece, the first window (`docs/FIRST-WINDOW.md`): one Cargo workspace of `no_std` + `alloc` crates (`desk-gfx` so far: rectangles, the back buffer, damage, the compositor and frame digests), tested on the host and built for both tracks' targets; the hosted program and the kernel's shell mode only wire it up
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
 - `tools/` — repository checks, the DOS build pipeline (`setup`, `fetch-tools`, `build`, `coff2go32`, `dosrun`) and scripts

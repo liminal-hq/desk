@@ -1,0 +1,16 @@
+[package]
+name = "desk-wm"
+description = "The shell's window manager: windows with z-order and focus, hit testing, title-bar dragging, the close box and the damage each change reports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+desk-gfx = { path = "../gfx" }
+desk-font = { path = "../font" }
+desk-ui = { path = "../ui" }
+
+[features]
+std = ["desk-hal/std", "desk-gfx/std", "desk-ui/std"]

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
-# and lints, the HAL's host tests and cross builds, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
+# and lints, the HAL's and the shell's host tests and cross builds, the frame tools' tests, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
 # checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 # JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
@@ -44,6 +44,18 @@ step "HAL: host tests and no_std builds"
 (cd hal && cargo test --locked --quiet)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+
+# The shell's crates (desk-gfx and those that follow): host tests and the same two cross builds as the HAL's. See docs/FIRST-WINDOW.md.
+step "Shell: host tests and no_std builds"
+(cd shell && cargo fmt --check)
+(cd shell && cargo clippy --locked --all-targets -- -D warnings)
+(cd shell && cargo test --locked --quiet)
+(cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
+(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
+
+step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
+python3 -I tools/test_frames.py
 
 step "Build DESK.EXE"
 tools/build.sh

@@ -89,7 +89,7 @@ shell/                          one Cargo workspace; no default target, so `carg
 ├── shell/      desk-shell      Shell (events, cursor, frame loop), the scenario parser and runner
 └── dos/        (own workspace, excluded) the hosted program SHELL.EXE on rt and dos-elf.json
 kernel/src/shell.rs             the native wiring, a `shell` test mode
-tests/shell/                    first-window.scn, first-window.sums, golden/first-window/*.png, expected DOS transcripts
+tests/shell/                    first-window.scn, first-window.sums, golden/first-window/*.png, README.md, expected DOS transcripts
 tools/frames.py                 PNG writing and reading, digests, checks and diffs for captures
 ```
 
@@ -101,7 +101,7 @@ Dependencies, all by path, no external crates:
 | `desk-font` | Core | nothing |
 | `desk-ui` | Core | `desk-gfx`, `desk-font`, `desk-hal`, `desk-kbd` (`char_for`, the pure key map the core already uses to decode keys) |
 | `desk-wm` | Core | `desk-gfx`, `desk-font`, `desk-ui`, `desk-hal` |
-| `desk-shell` | Core | all of the above |
+| `desk-shell` | Core | all of the above (so far `desk-hal`, `desk-gfx`, `desk-ui` for `Depth`, and `desk-kbd` for `char_for`) |
 | `desk-present` | Platform-side, shared | `desk-gfx`, `desk-hal`, `desk-vga` |
 
 The core crates never depend on `desk-present`; the platforms and the host tests do.
@@ -196,10 +196,12 @@ pub struct CursorLayer { pub x: i32, pub y: i32, pub visible: bool, pub sprite: 
 
 pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer */ }
 impl Compositor {
-    pub fn new(width: u32, height: u32, background: u8) -> Compositor;   // the first frame damages the whole screen
+    pub fn new(width: u32, height: u32, background: u8) -> Result<Compositor, HalError>;   // refuses zero or a width above MAX_WIDTH (1280); the first frame damages the whole screen
     pub fn damage(&mut self, r: Rect);                                   // scene damage
     pub fn move_cursor(&mut self, x: i32, y: i32);                       // overlay damage: old and new sprite rects
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]);
+    pub fn set_cursor_visible(&mut self, visible: bool);                 // overlay damage: the sprite rectangle
+    pub fn cursor(&self) -> &CursorLayer;
     /// Repaints every scene-damage rect through `paint` (with the surface clipped to it), then presents the union of the
     /// scene and overlay damage, aligned to the presenter, compositing the cursor into each row on the way.
     pub fn frame<P: Present>(&mut self, out: &mut P, paint: impl FnMut(&mut Surface, Rect)) -> Result<FrameStats, HalError>;
@@ -210,13 +212,18 @@ impl Compositor {
 pub struct FrameStats { pub repainted: u32, pub presented: u32, pub rects: u8 }
 ```
 
-`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros.
+`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
 
 ### Digests
 
 ```rust
 pub fn crc32(bytes: &[u8]) -> u32;                // IEEE, as zlib's crc32, bitwise or with a const table
+pub struct Crc32 { /* new, update, finish: the same sum in pieces */ }
 pub struct FrameDigest { pub width: u32, pub height: u32, pub index: u32, pub colour: u32 }
+impl FrameDigest {
+    pub fn of(surface: &Surface, palette: &[Rgb6]) -> FrameDigest;
+    pub fn from_rows(width: u32, height: u32, palette: &[Rgb6], row: impl FnMut(u32, &mut [u8])) -> FrameDigest;
+}
 ```
 
 `index` is the CRC-32 of the indices row by row; `colour` is the CRC-32 of each pixel's `Rgb6` as three bytes `r g b` (each 0–63), row by row. See [Goldens and frame digests](#goldens-and-frame-digests).
@@ -230,20 +237,26 @@ impl<'a> LinearPresent<'a> {
     pub fn new(region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // as Linear8::new
 }
 
-/// VGA mode 12h: four planes at A0000h. Spans are 8-pixel aligned, so every byte written is whole and nothing is read.
-pub struct PlanarPresent<'a, P: PortIo> { /* sink: VgaPlanes<'a, P>, width, height, pitch, planes: [[u8; 160]; 4] */ }
-impl<'a, P: PortIo> PlanarPresent<'a, P> {
-    pub fn new(ports: &'a P, region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>;
+/// VGA mode 12h through any PlaneSink. Spans are 8-pixel aligned, so every byte written is whole and nothing is read.
+pub struct PlanarPresent<S: PlaneSink> { /* sink, width, height, pitch, planes: [[u8; 160]; 4] */ }
+impl<'a, P: PortIo> PlanarPresent<VgaPlanes<'a, P>> {
+    pub fn new(ports: &'a P, region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // pitch = bytes per plane row
+}
+impl<S: PlaneSink> PlanarPresent<S> {
+    pub fn with_sink(sink: S, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // width a multiple of 8, at most 1280
+    pub fn sink(&self) -> &S;
 }
 
-/// Splits 8-pixel groups of indices into plane bytes: bit p of pixel i goes to bit (7 - i) of plane p. Pure; the heart of the
-/// planar presenter, tested on its own.
-pub fn planarise(pixels: &[u8], planes: &mut [[u8; 160]; 4]) -> usize;
+/// Splits 8-pixel groups of indices into plane bytes: bit p of pixel i goes to bit (7 - i) of plane p. Returns the bytes written
+/// per plane (pixels.len() / 8). Pure; the heart of the planar presenter, tested on its own.
+pub fn planarise(pixels: &[u8], planes: &mut [[u8; MAX_PLANE_BYTES]; 4]) -> usize; // MAX_PLANE_BYTES = 160
 
-/// Where plane bytes go: the VGA (map mask, then the region), or four Vecs in a test.
+/// Where plane bytes go: the VGA (VgaPlanes: map mask, then the region), or four Vecs in a test. begin and end default to Ok.
 pub trait PlaneSink {
+    fn begin(&mut self) -> Result<(), HalError> { Ok(()) }
     fn select(&mut self, plane: u8) -> Result<(), HalError>;
     fn write(&mut self, offset: usize, bytes: &[u8]) -> Result<(), HalError>;
+    fn end(&mut self) -> Result<(), HalError> { Ok(()) }
 }
 
 /// Capture: the frame buffer read back as indices, through desk-vga's Linear8 or Planar16 read_row, for the DOS dumps.
@@ -251,7 +264,7 @@ pub fn read_back_linear(region: &mut MmioRegion, width: u32, height: u32, pitch:
 pub fn read_back_planar<P: PortIo>(ports: &P, region: &mut MmioRegion, width: u32, height: u32, pitch: u32, out: &mut [u8]) -> Result<(), HalError>;
 ```
 
-- **Planar `begin`** sets, every frame, everything the spans rely on: graphics controller mode (write mode 0), data rotate 0 with replace, enable set/reset 0 (so the CPU byte is written), bit mask `FFh`. It must not trust earlier state: `desk_vga::Planar16` (used by the read-back) turns set/reset on while it lives. Each span then does, for each plane, one sequencer map-mask write (`1 << p`) and one `write_bytes` of `width / 8` bytes; `end` restores the map mask to `0Fh`.
+- **Planar `begin`** (`PlaneSink::begin`, which `VgaPlanes` implements, so a test sink can observe the frame) sets, every frame, everything the spans rely on: graphics controller mode (write mode 0), data rotate 0 with replace, enable set/reset 0 (so the CPU byte is written), bit mask `FFh`. It must not trust earlier state: `desk_vga::Planar16` (used by the read-back) turns set/reset on while it lives. Each span then does, for each plane, one sequencer map-mask write (`1 << p`) and one `write_bytes` of `width / 8` bytes; `end` restores the map mask to `0Fh`.
 - **Cost of a full mode 12h frame**: 4 × 38,400 byte writes and 4 × 480 map-mask writes; a cursor move is two 24 × 19 areas at most.
 - **Linear spans** use `MmioRegion::write_bytes` (one volatile byte store each). Spike D's recommendation to copy words ([`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#hal-feedback)) is a later `hal/` change that speeds this up without changing a pixel.
 
@@ -278,7 +291,7 @@ pub struct Glyph<'a> { pub code: u32, pub advance: u8, pub height: u8, pub strid
 impl Glyph<'_> { pub fn bit(&self, x: u32, y: u32) -> bool; }
 ```
 
-A face loaded at run time (`Vec<u8>` from a file on DOS) becomes `'static` with `Vec::leak`; the faces live as long as the shell. `desk-font` has no drawing code: `desk-ui` draws glyph rows with `Surface::mono`.
+A face loaded at run time (`Vec<u8>` from a file on DOS) becomes `'static` with `Vec::leak`; the faces live as long as the shell. `FontError::Truncated` carries offset 0 when the file ends inside the 8-byte header and the glyph's starting offset when it ends inside a glyph; `glyph_or_fallback` returns an empty glyph of advance 0 for a face that has neither the character nor `?`. `desk-font` has no drawing code: `desk-ui` draws glyph rows with `Surface::mono`.
 
 ## desk-ui: theme roles, text and window chrome
 
@@ -293,6 +306,7 @@ pub enum Role { Desktop, Chrome, Content, Raised, Line, Border, TextMuted, TextS
 
 pub struct Theme { /* depth, slots: [u8; Role::COUNT] */ }
 impl Theme { pub const fn afterglow(depth: Depth) -> Theme; pub fn slot(&self, r: Role) -> u8; pub fn depth(&self) -> Depth; }
+impl Role { pub const COUNT: usize = 15; pub const ALL: [Role; 15]; }   // in the table's order
 
 pub fn palette(depth: Depth) -> [Rgb6; 256];   // entries the depth does not use are black
 pub const DESK16: [Rgb6; 16];                  // PALETTE.md's 16-colour set, the home spike D asked for
@@ -351,12 +365,13 @@ All measurements are from the window's **outer box** `(x, y, w, h)`, which exclu
 pub const TITLE_HEIGHT: u32 = 22; pub const HALO: i32 = 3; pub const BOX: u32 = 18;
 pub struct ChromeLayout { pub outer: Rect, pub extent: Rect /* outer.inflate(HALO) */, pub title_bar: Rect, pub title_text: Rect,
                           pub buttons: [Rect; 3], pub rule: Rect, pub content: Rect }
-impl ChromeLayout { pub fn new(outer: Rect) -> ChromeLayout; }
+impl ChromeLayout { pub fn new(outer: Rect) -> ChromeLayout; pub fn button(&self, c: Control) -> Rect; }
+pub const MIN_WIDTH: u32 = 120; pub const MIN_HEIGHT: u32 = 40;
 pub enum Control { Minimise, Maximise, Close }
 pub fn paint_chrome(s: &mut Surface, t: &Theme, title_font: &Font, l: &ChromeLayout, title: &str, focused: bool);
 ```
 
-The minimum outer size is 120 × 40. `extent` is what a window owns on screen in either focus state, so a focus change never has to know what the other state looked like.
+The minimum outer size is 120 × 40 (`MIN_WIDTH`, `MIN_HEIGHT`): `ChromeLayout::new` widens a smaller box to it, so a layout is never degenerate, and `title_text` is the room for the title, 14 rows high (the cell of Desk Title) from `x + 8` to 8 pixels before the minimise box. The icons are `Icon`s (`MINIMISE`, `MAXIMISE`, `CLOSE`: ten rows of two bytes in the `.DFN` row form, drawn with `Surface::mono`). `extent` is what a window owns on screen in either focus state, so a focus change never has to know what the other state looked like.
 
 ### Widgets
 
@@ -364,6 +379,8 @@ The minimum outer size is 120 × 40. `extent` is what a window owns on screen in
 pub enum Widget { Label(Label), TextLine(TextLine) }
 pub struct Label { pub at: (i32, i32), pub text: String, pub role: Role }
 pub struct TextLine { pub at: (i32, i32), pub width: u32, pub text: String, pub max_chars: u16 }
+impl TextLine { pub fn new(at: (i32, i32), width: u32, max_chars: u16) -> TextLine; pub fn bounds(&self) -> Rect; }
+pub const FIELD_HEIGHT: u32 = 20; pub const CARET_HEIGHT: u32 = 12;
 impl Widget {
     pub fn bounds(&self, font: &Font) -> Rect;                       // relative to the content area
     pub fn paint(&self, s: &mut Surface, t: &Theme, font: &Font, origin: (i32, i32), focused: bool);
@@ -372,7 +389,7 @@ impl Widget {
 }
 ```
 
-`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; the caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
 
 ## desk-wm: windows, focus and damage
 
@@ -380,12 +397,15 @@ impl Widget {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)] pub struct WindowId(pub u16);
 pub struct WindowSpec<'s> { pub name: &'s str, pub outer: Rect, pub title: &'s str }
 pub struct Window { pub id: WindowId, pub name: String, pub outer: Rect, pub title: String, pub widgets: Vec<Widget>, pub focus_widget: Option<usize> }
+impl Window { pub fn layout(&self) -> ChromeLayout; pub fn extent(&self) -> Rect; }
 pub enum Hit { Title, Control(Control), Content, Ring }
 
-pub struct Wm { /* windows: Vec<Window> bottom to top, focused: Option<WindowId>, drag: Option<Drag>, screen: Rect, buttons: u8 */ }
+pub struct Wm { /* windows: Vec<Window> bottom to top (the last is the focused one), drag: Option<Drag>, armed: Option<WindowId>, screen: Rect, buttons: u8, next_id: u16 */ }
 impl Wm {
     pub fn new(screen: Rect) -> Wm;
-    pub fn open(&mut self, spec: WindowSpec, damage: &mut Damage) -> WindowId;   // on top, focused
+    pub fn windows(&self) -> &[Window];                                          // bottom to top
+    pub fn focused(&self) -> Option<WindowId>;                                   // always the top window
+    pub fn open(&mut self, spec: WindowSpec, damage: &mut Damage) -> WindowId;   // on top, focused; a box under the minimum size is widened
     pub fn close(&mut self, id: WindowId, damage: &mut Damage);
     pub fn focus(&mut self, id: WindowId, damage: &mut Damage);                  // focus and raise
     pub fn by_name(&self, name: &str) -> Option<WindowId>;
@@ -404,18 +424,19 @@ Behaviour and the damage each change reports (the rows are the damage-accounting
 
 | Change | Damage |
 |---|---|
-| Open | the new window's `extent` |
-| Close | the closed window's `extent` |
+| Open | the new window's `extent`, and the extent of the window that loses focus (its rings and title bar change; none when it is the first window) |
+| Close | the closed window's `extent`, and, when it was the focused one, the extent of the window that becomes the top (its focus appearance changes; none when it was the last window) |
 | Focus of the window already on top | none: focus always raises, so the top window is already the focused one |
-| Focus that raises | the raised window's `extent`, and the previously focused window's title bar and rings |
+| Focus that raises | the raised window's `extent`, and the previously focused window's title bar and rings (the title bar and the four rings are added as the previous window's whole `extent`, which `Damage` would merge them into) |
 | Drag by (dx, dy) | old `extent` ∪ new `extent`, merged by `Damage` |
-| A key into a text field | the field's bounds, offset to the screen |
+| A key into a text field | the rectangle `Widget::key` returns (the old and new text and caret, inside the field), offset to the screen and cut to the content area |
 | Pointer motion with no drag | none (the cursor is overlay damage, added by the shell) |
 
+- **Hit testing** goes through the windows from the top: a control box first, then the rest of the title bar (`Title`), then the rule and the content (`Content`), then the ring. The ring is the three pixels around a focused window and only the one-pixel hairline around an unfocused one, since that is all an unfocused window paints; the rest belongs to what lies beneath.
 - **Press** (left button goes down) on a window: focus and raise; on `Title`, start a drag; on `Control(Close)`, arm the close box. **Release**: end the drag; close the window if the close box was armed and the pointer is still over it. Minimise and maximise are inert.
-- **Dragging** moves the window by the pointer's motion, clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
-- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window.
-- **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed.
+- **Dragging** keeps the point of the title bar that was pressed under the pointer (so a window held at a clamp follows the pointer back), clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
+- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`) and adds the damage for the widget.
+- **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed. `paint` clips to `clip` itself and puts the surface's clip back, paints each window's widgets inside its content area only, and changes no pixel outside `clip`.
 
 ## desk-shell: events, frames and scenarios
 
@@ -424,11 +445,19 @@ pub enum Event { Pointer(MouseEvent), PointerTo(i32, i32), Key(KeyEvent) }   // 
 
 pub struct Shell<'f> { /* compositor: Compositor, wm: Wm, theme: Theme, fonts: Fonts<'f>, pointer: (i32, i32), buttons: u8 */ }
 impl<'f> Shell<'f> {
-    pub fn new(width: u32, height: u32, depth: Depth, fonts: Fonts<'f>) -> Shell<'f>;   // cursor at the centre
+    pub fn new(width: u32, height: u32, depth: Depth, fonts: Fonts<'f>) -> Result<Shell<'f>, HalError>;   // cursor at the centre; InvalidArgument for a size the compositor refuses
     pub fn handle(&mut self, e: Event);
     pub fn frame<P: Present>(&mut self, out: &mut P) -> Result<FrameStats, HalError>;
     pub fn digest(&self) -> FrameDigest;
-    pub fn wm(&mut self) -> &mut Wm;
+    pub fn wm(&mut self) -> &mut Wm;                       // for looking: a change made through it is not damaged
+    // Changes that report their damage to the compositor, by window name (the bool is false when there is no such window):
+    pub fn open(&mut self, name: &str, outer: Rect, title: &str) -> WindowId;
+    pub fn close(&mut self, name: &str) -> bool;
+    pub fn focus(&mut self, name: &str) -> bool;
+    pub fn label(&mut self, window: &str, x: i32, y: i32, text: &str) -> bool;
+    pub fn field(&mut self, window: &str, x: i32, y: i32, width: u32) -> bool;   // also the window's focused widget
+    pub fn damage_all(&mut self);                          // the next frame repaints and presents the whole screen
+    pub fn back(&self) -> &Surface;  pub fn pointer(&self) -> (i32, i32);  pub fn depth(&self) -> Depth;
 }
 
 pub mod scenario {
@@ -436,18 +465,26 @@ pub mod scenario {
     pub enum Step { Open { name: String, outer: Rect, title: String }, Label { window: String, x: i32, y: i32, text: String },
                     Field { window: String, x: i32, y: i32, width: u32 }, Close(String), Focus(String),
                     Event(Event), Type(String), Frame(FrameName), ExpectDamage { depth: Depth, max_pixels: u32, max_rects: Option<u8> } }
-    pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);
+    pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);       // FrameName::new(&str) -> Option, as_str()
     pub struct ParseError { pub line: u32, pub kind: ParseErrorKind }
+    pub enum ParseErrorKind { /* one variant per kind of malformed line, each carrying the text at fault */ }
     pub fn parse(text: &str) -> Result<Scenario, ParseError>;
+    pub fn type_events(text: &str) -> Result<Vec<Event>, char>;   // what a `type` step does; Err is the first character no key types
+    pub fn key_code(name: &str) -> Option<KeyCode>;               // a scenario's key name
     /// Runs every step; after each Frame step's frame has been presented, calls `capture(name, &shell, stats)`.
     pub fn run<P: Present>(sc: &Scenario, depth: Depth, shell: &mut Shell, out: &mut P,
                            capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>) -> Result<(), RunError>;
+    /// One step's effect on the shell, everything but presenting (`Frame` and `ExpectDamage` do nothing): what `run` applies, and what the incremental-versus-full test steps through.
+    pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError>;
+    pub enum RunError { UnknownWindow(String), Untypable(char), Present(HalError), DepthMismatch, DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
 }
 ```
 
 - **The frame loop** on a platform: drain the input source into `handle`, call `frame`, then wait: `hlt` until the next interrupt natively; under DOS the loop simply polls again, since the INT 33h mouse is polled once per iteration ([`B-DOS-INPUT.md`](B-DOS-INPUT.md)). A frame with no damage writes nothing.
 - **The pointer**: `Pointer` events add the motion (`dy` positive is down, as the HAL says), clamp to the screen, and move the cursor; `PointerTo` sets it (scenarios use it for clarity). Button changes go to `Wm::pointer`.
-- **Scenario frames**: `run` calls `frame` after every step that can change the picture, so a `Frame` step captures exactly what is on the screen, and an `ExpectDamage` step checks the stats of the frame just presented (host only; the platforms skip it).
+- **What the parser checks.** Besides the line's own shape, `parse` refuses: a first line other than `desk-scenario 1`; `screen` or `depths` twice or after a step (a step with no `screen` before it is `MissingScreen`, and a file with no `depths` line runs at both depths); a name that is not 1 to 8 characters of `a-z`, `0-9` and `-`; a frame name used twice or that is a prefix of another; a window name that is used before it is opened, after it is closed or opened twice; a key name that is not a `KeyCode` variant's name (case matters); a `type` string with a character outside printable ASCII; and `move` offsets outside `i16`. The error carries the line number, counted from 1. `ParseError`'s `Display` prints `line N: KIND`.
+- **What a step becomes.** The parser keeps the button state and the modifier state, so `press` and `release` give `Pointer` events whose `buttons` are the state afterwards, `move` keeps them, and `key` events carry the modifiers after the event, as the HAL reports them. `type_events` expands each character into a key down and a key up with `desk_kbd::char_for` as the oracle, preferring the unshifted key; a capital or a shifted symbol is wrapped in Left Shift down and up (so `type "aB"` is six events). `Step::Type` keeps the string, and `run` expands it with `type_events`.
+- **Scenario frames**: `run` presents one frame at each `Frame` step, not after every step, and then calls `capture`; the damage of every step since the previous frame is still pending, so the frame shows exactly what the steps lead to, and an `ExpectDamage` step checks the stats of the last frame presented, which therefore covers everything since the frame before it (host only; the platforms skip it). An `ExpectDamage` step with no frame before it is `RunError::NoFrame`.
 
 ## The scenario format
 
@@ -470,7 +507,7 @@ A UTF-8 text file, one step per line, `#` starts a comment, blank lines are igno
 | `frame NAME` | Capture the screen as frame NAME |
 | `expect-damage DEPTH PIXELS [RECTS]` | At DEPTH only, the frame just presented wrote at most PIXELS pixels in at most RECTS rectangles (host only; the bound is per depth because depth 4 widens damage to 8-pixel columns) |
 
-The first window's scenario, as the shell task writes it (the coordinates are its to choose; the goldens are what matters):
+The first window's scenario, as committed in `tests/shell/first-window.scn` (which also carries a comment above each stage):
 
 ```
 desk-scenario 1
@@ -527,21 +564,22 @@ The native transcripts live with the others, in `tests/native/expected-shell-*.t
 
 ```
 frames.py png RAW PAL WIDTH HEIGHT OUT.png         a raw index dump and a 768-byte 6-bit DAC dump to an indexed PNG
-frames.py digest FILE [PAL]                        WIDTHxHEIGHT INDEX COLOUR of a PNG, a PPM (INDEX is "-"), or a RAW with its PAL
-frames.py check SUMS DEPTH DIR                     every frame NAME of SUMS at DEPTH has a capture in DIR (NAME.ppm, NAME.png, or
+frames.py digest FILE [PAL WIDTH HEIGHT]           WIDTHxHEIGHT INDEX COLOUR of a PNG, a PPM (INDEX is "-"), or a RAW with its PAL and size
+frames.py check SUMS DEPTH DIR [--golden DIR]      every frame NAME of SUMS at DEPTH has a capture in DIR (NAME.ppm, NAME.png, or
                                                    NAME.RAW with NAME.PAL; names compared without case) with the same COLOUR
                                                    digest, and the same INDEX where the capture has indices; writes NAME.diff.png
-                                                   and prints the bounding box and count of differing pixels on a mismatch
+                                                   and prints the bounding box and count of differing pixels on a mismatch,
+                                                   against the golden PNG (by default golden/SUMSNAME/NAME-DEPTH.png beside SUMS)
 frames.py transcript SUMS DEPTH FILE               the "shell: frame NAME ..." lines of a transcript carry the SUMS digests
 frames.py goldens SUMS DIR                         every PNG in DIR matches its SUMS line and every SUMS line has a PNG
-frames.py same DIR_A DIR_B                         two capture sets hold the same frames with equal COLOUR digests
-frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A
+frames.py same DIR_A DIR_B [--size WxH]            two capture sets hold the same frames with equal COLOUR digests (the size of RAW dumps, 640x480 by default)
+frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A (exit status 0 once written; 1 if the sizes differ)
 frames.py inject SCENARIO > FILE                   the QEMU monitor script for the native run (below)
 ```
 
-The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
+A RAW has no size of its own, so `digest` takes it on the command line and `check` takes it from the SUMS line. Exit status is 0 on success, 1 on a failed check or an unreadable input, 2 on a usage error, as `tools/native-shot.py` does; `tools/test_frames.py` holds the tests. The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
 
-**Recording.** `tools/shell-goldens.sh` runs the host scenario test with `DESK_FRAMES_RECORD=1`, which writes each frame's `RAW` and `PAL` into `shell/target/frames/` and a new `.sums`, then converts them to the golden PNGs. A change that moves a pixel is a deliberate re-record in the same branch, and the reviewer looks at the PNGs. Without the variable the test compares and, on a mismatch, writes the dumps and names the `frames.py diff` command to run.
+**Recording.** `tools/shell-goldens.sh` runs the host scenario test with `DESK_FRAMES_RECORD=1`, which writes each frame's `RAW` and `PAL` (`NAME-DEPTH.RAW`, `NAME-DEPTH.PAL`) into `shell/target/frames/SCENARIO/` and a new `.sums`, then converts them to the golden PNGs; it starts from clean, so a removed frame leaves no stale PNG. `tests/shell/README.md` says the same for people who find the files first. A change that moves a pixel is a deliberate re-record in the same branch, and the reviewer looks at the PNGs. Without the variable the test compares and, on a mismatch, writes the dumps and prints, for each frame that differs, the `frames.py png` command that makes a PNG of the new frame and the `frames.py diff` command that shows it against the golden.
 
 ## Host tests
 
@@ -549,12 +587,12 @@ All in `cargo test` in `shell/`, so `tools/check.sh` runs them:
 
 - **The goldens.** Every scenario at every depth through `MemoryPresent`: each frame's digests equal the `.sums` line.
 - **Incremental equals full.** After every step of every scenario, the damage-driven front buffer equals a second shell's front buffer redrawn in full from the same state. This is the test that catches a missing damage rect.
-- **Through the real presenters.** The same scenario through `LinearPresent` over a `Vec`-backed `MmioRegion`, and through `PlanarPresent` over a four-plane `PlaneSink` model, produce front buffers whose digests equal the `.sums`. The planar presenter's register writes are also checked against `desk-hal-mock`'s `MockPortBus` log.
+- **Through the real presenters.** (`shell/shell/tests/scenarios.rs`; `desk-present` is a dev-dependency of `desk-shell`.) The runner itself drives `MemoryPresent`, which is where the `expect-damage` steps are checked; the other presenters step the scenario with `apply` and `Shell::frame` (the runner's `capture` has no access to the presenter it is running into) and read their pixels back after each frame, the linear one through `read_back_linear` over a region with a pitch wider than the screen. The same scenario through `LinearPresent` over a `Vec`-backed `MmioRegion`, and through `PlanarPresent` over a four-plane `PlaneSink` model, produce front buffers whose digests equal the `.sums`. The planar presenter's register writes are also checked against `desk-hal-mock`'s `MockPortBus` log.
 - **Damage accounting**, with `MemoryPresent`'s counts:
   - the first frame writes exactly `width × height` pixels; a frame with no events writes none;
   - a cursor move writes at most the area of the old and new 12 × 19 sprite rectangles (456 pixels when they are apart, their bounding box when they overlap), and repaints nothing into the back buffer;
   - at depth 4 the same move writes at most the rectangles widened to 8-pixel columns;
-  - a focus change that raises a window writes at most the raised window's `extent` plus the previously focused window's title bar and ring areas (`extent` minus `content`), as the damage table says;
+  - a focus change that raises a window writes the raised window's `extent` plus the previously focused window's `extent` (their bounding box when they overlap), as the damage table says: the previous window's title bar and four rings touch, so `Damage` merges them into its whole `extent` and the content is written with them;
   - a drag writes at most the union of the old and new extents, plus the cursor;
   - a key into a field writes at most the field's bounds;
   - `Damage`'s invariants (inside the bounds, disjoint, at most 16, covering) hold over 10,000 random adds from a fixed-seed generator.
