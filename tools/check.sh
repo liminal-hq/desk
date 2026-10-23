@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
 # and lints, the HAL's and the shell's host tests and cross builds, the frame tools' tests, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
-# checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
+# checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, the shell on DOS, then the native boot test under QEMU.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 # JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
 #
@@ -120,6 +120,9 @@ if [ -n "${INPUT_EXTRA:-}" ]; then
   step "Spike b-dos-input (opt-in, INPUT_EXTRA=1): the mouse moved and clicked by xdotool under Xvfb"
   spikes/b-dos-input/check-xvfb.sh
 fi
+
+step "Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens"
+shell/dos/check.sh
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
