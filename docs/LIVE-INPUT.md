@@ -2,7 +2,7 @@
 
 The design for driving the first window ([`FIRST-WINDOW.md`](FIRST-WINDOW.md)) with real input on both tracks: the native kernel in a QEMU window, on the PS/2 keyboard and mouse drivers of spike C ([`C-INPUT.md`](C-INPUT.md)), and `SHELL.EXE` in a DOSBox window, on the IRQ 1 handler and the INT 33h mouse of spike B ([`B-DOS-INPUT.md`](B-DOS-INPUT.md)). It covers the live loop and its timing, the cursor, keyboard focus and text entry, pointer capture in the emulators, the ways out, the launchers a person runs, and how the live paths are tested automatically against golden frames without disturbing the scripted checks. The task-by-task build plan is [`LIVE-INPUT-PLAN.md`](LIVE-INPUT-PLAN.md); it replaces T12 of [`FIRST-WINDOW-PLAN.md`](FIRST-WINDOW-PLAN.md).
 
-> **Status.** A design, written on 2026-10-23 against `main` at `44f0265`, where the whole first-window stack is merged. Nothing in it is built. The facts about QEMU's and DOSBox Staging's options and hotkeys are from their documentation as remembered, not re-checked here; the launcher task confirms each against QEMU 11.1 and the DOSBox Staging in `vendor/` and corrects this document. When the code disagrees with this document, the code wins and this document is corrected in the same branch.
+> **Status.** A design, written on 2026-10-23 against `main` at `44f0265`, where the whole first-window stack is merged, and corrected as each task of [`LIVE-INPUT-PLAN.md`](LIVE-INPUT-PLAN.md) was built; the launcher task checked the options and hotkeys against QEMU 11.1.2 and the DOSBox Staging 0.83 in the CI image and says where it could not. When the code disagrees with this document, the code wins and this document is corrected in the same branch.
 
 ## Contents
 
@@ -184,7 +184,7 @@ Nothing new in `desk-wm`: a press of the left button focuses and raises the wind
 | `timeout=N` | — (the watchdog of `native-run.sh --timeout`, exit 124) | Exit status 4, as today |
 | A panic | The panic line and the failure exit, as in every mode | The runtime's report and status 3, everything restored |
 | Closing the emulator's window | QEMU quits without a guest exit code; `native-run.sh` reports status 2, which the launcher reports as a note rather than an error, naming both causes, because a reset or triple fault under `-no-reboot` gives the same status | DOSBox quits; nothing is restored inside DOS, which no longer exists |
-| QEMU's or DOSBox's own hotkeys | Ctrl+Alt+Q in QEMU's GTK window quits QEMU (to confirm) | Ctrl+F9 kills DOSBox (to confirm) |
+| QEMU's or DOSBox's own hotkeys | Ctrl+Alt+Q in QEMU's GTK window quits QEMU (confirmed under Xvfb: QEMU ended with no guest exit code) | Ctrl+F9 kills DOSBox (DOSBox's documented hotkey, not tried) |
 
 Closing the last window does not end the session: the desktop stays, with nothing to focus, and Escape still ends it. Ctrl+Alt+Delete ends nothing: under DOS with the BIOS keyboard handler replaced it is a key, as spike B recorded, and the SPEC's "asks first" waits for a dialog.
 
@@ -195,8 +195,8 @@ A relative mouse cannot follow the desktop's pointer: the guest only learns how 
 ### QEMU
 
 - **Device.** The PS/2 mouse that the `pc` machine's 8042 always has, read by `desk-i8042`. The machine also creates a `vmmouse` behind the VMware back door (`vmport` defaults to on), which stays inert until a guest enables it, so the PS/2 path is unaffected. No `-device` flag is needed, and `-device usb-tablet` would add a device the kernel cannot read.
-- **Display.** `-display gtk` by default (the toolkit most Linux desktops have), `-display sdl` as the alternative. With a relative guest mouse, a click in GTK's window grabs the pointer and the keyboard, Ctrl+Alt+G releases them, and the title bar says so; SDL releases with Ctrl+Alt. Grab on hover (`-display gtk,grab-on-hover=on`) is left off, so moving across the window on the way somewhere else does not trap the pointer.
-- **Scale.** The window shows 640 × 480 at one host pixel per guest pixel (`zoom-to-fit=off`), so a relative count is one desktop pixel. Whether QEMU scales relative motion when the window is zoomed is not known and is measured by the launcher task.
+- **Display.** `-display gtk` by default (the toolkit most Linux desktops have), `-display sdl` as the alternative. With a relative guest mouse, a click in GTK's window grabs the pointer and the keyboard, Ctrl+Alt+G releases them, and the title bar says so; SDL's window is released by the same Ctrl+Alt+G (from QEMU's documentation; the SDL window's title bar could not be read under Xvfb, but its demo run played the whole scenario). Grab on hover (`-display gtk,grab-on-hover=on`) is left off, so moving across the window on the way somewhere else does not trap the pointer.
+- **Scale.** The window shows 640 × 480 at one host pixel per guest pixel (`zoom-to-fit=off`), so a relative count is one desktop pixel. A window enlarged to twice its size on an X server with no window manager kept the guest picture at 640 × 480 and moved the arrow one pixel per count, so whether QEMU scales relative motion when it zooms a picture to fit was not measured; with `zoom-to-fit=off` it does not arise. Measured on QEMU 11.1.2's GTK display under Xvfb: a click grabs (the title bar then reads "Press Ctrl+Alt+G to release grab"), `xdotool mousemove_relative -- -200 -170` from the centre moved the arrow to (120, 70), and Ctrl+Alt+G released the grab.
 - **Keyboard.** QEMU sends the guest scancodes for the physical keys pressed, so the guest's US layout applies whatever the desktop's layout is: on a French desktop the key labelled A types `q`. On Wayland, the keyboard grab needs the compositor's permission (GNOME asks once).
 - **The recommended command**, which `tools/native-run.sh --window gtk` assembles from the headless arguments:
 
@@ -211,8 +211,8 @@ Depth 4 uses `-vga cirrus` and an image made with `--video text`, as the scripte
 ### DOSBox Staging
 
 - **Device.** DOSBox's built-in INT 33h driver, as spike B used; `[mouse] builtin_dos_mouse_driver = off` gives the keyboard-only run.
-- **Capture.** `mouse_capture = onclick`: a click in the window captures the pointer, Ctrl+F10 or the middle button releases it (`mouse_middle_release = true`, Staging's default), and SDL then delivers relative motion, which the built-in driver turns into mickeys one for one. `mouse_raw_input = true` keeps the desktop's pointer acceleration out of the counts.
-- **Keyboard.** DOSBox forwards keys to the emulated controller while its window has focus; Alt+Tab and Alt+F4 go to the desktop unless Staging captures system shortcuts (`[sdl] keyboard_capture`, to confirm).
+- **Capture.** `mouse_capture = onclick`: a click in the window captures the pointer, Ctrl+F10 or the middle button releases it (`mouse_middle_release = true`, Staging's default; both option names exist in the Staging in `vendor/`, the release itself was not tried), and SDL then delivers relative motion, which the built-in driver turns into mickeys one for one. `mouse_raw_input = true` keeps the desktop's pointer acceleration out of the counts.
+- **Keyboard.** DOSBox forwards keys to the emulated controller while its window has focus; Alt+Tab and Alt+F4 go to the desktop unless Staging captures system shortcuts (`[sdl] keyboard_capture`, an option the Staging in `vendor/` has; its effect on a real desktop was not tried). Under Xvfb with no window manager both reach DOSBox, which is how the Xvfb checks send them.
 - **The recommended settings**, which `tools/dosrun.sh` with `DOS_WINDOW=1` writes (everything else as the headless runs):
 
 ```text
