@@ -3,6 +3,17 @@
 version = 4
 
 [[package]]
+name = "desk-font"
+version = "0.0.0"
+
+[[package]]
+name = "desk-gfx"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
 name = "desk-hal"
 version = "0.0.0"
 
@@ -25,13 +36,19 @@ dependencies = [
 name = "desk-kernel"
 version = "0.1.0"
 dependencies = [
+ "desk-font",
+ "desk-gfx",
  "desk-hal",
  "desk-i8042",
  "desk-kbd",
  "desk-pic",
  "desk-pit",
+ "desk-present",
  "desk-serial",
+ "desk-shell",
+ "desk-ui",
  "desk-vga",
+ "desk-wm",
 ]
 
 [[package]]
@@ -49,6 +66,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-present"
+version = "0.0.0"
+dependencies = [
+ "desk-gfx",
+ "desk-hal",
+ "desk-vga",
+]
+
+[[package]]
 name = "desk-serial"
 version = "0.0.0"
 dependencies = [
@@ -56,8 +82,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-shell"
+version = "0.0.0"
+dependencies = [
+ "desk-font",
+ "desk-gfx",
+ "desk-hal",
+ "desk-kbd",
+ "desk-ui",
+ "desk-wm",
+]
+
+[[package]]
+name = "desk-ui"
+version = "0.0.0"
+dependencies = [
+ "desk-font",
+ "desk-gfx",
+ "desk-hal",
+ "desk-kbd",
+]
+
+[[package]]
 name = "desk-vga"
 version = "0.0.0"
 dependencies = [
  "desk-hal",
+]
+
+[[package]]
+name = "desk-wm"
+version = "0.0.0"
+dependencies = [
+ "desk-font",
+ "desk-gfx",
+ "desk-hal",
+ "desk-ui",
 ]
