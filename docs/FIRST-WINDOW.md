@@ -196,10 +196,12 @@ pub struct CursorLayer { pub x: i32, pub y: i32, pub visible: bool, pub sprite: 
 
 pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer */ }
 impl Compositor {
-    pub fn new(width: u32, height: u32, background: u8) -> Compositor;   // the first frame damages the whole screen
+    pub fn new(width: u32, height: u32, background: u8) -> Result<Compositor, HalError>;   // refuses zero or a width above MAX_WIDTH (1280); the first frame damages the whole screen
     pub fn damage(&mut self, r: Rect);                                   // scene damage
     pub fn move_cursor(&mut self, x: i32, y: i32);                       // overlay damage: old and new sprite rects
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]);
+    pub fn set_cursor_visible(&mut self, visible: bool);                 // overlay damage: the sprite rectangle
+    pub fn cursor(&self) -> &CursorLayer;
     /// Repaints every scene-damage rect through `paint` (with the surface clipped to it), then presents the union of the
     /// scene and overlay damage, aligned to the presenter, compositing the cursor into each row on the way.
     pub fn frame<P: Present>(&mut self, out: &mut P, paint: impl FnMut(&mut Surface, Rect)) -> Result<FrameStats, HalError>;
@@ -210,13 +212,18 @@ impl Compositor {
 pub struct FrameStats { pub repainted: u32, pub presented: u32, pub rects: u8 }
 ```
 
-`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros.
+`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
 
 ### Digests
 
 ```rust
 pub fn crc32(bytes: &[u8]) -> u32;                // IEEE, as zlib's crc32, bitwise or with a const table
+pub struct Crc32 { /* new, update, finish: the same sum in pieces */ }
 pub struct FrameDigest { pub width: u32, pub height: u32, pub index: u32, pub colour: u32 }
+impl FrameDigest {
+    pub fn of(surface: &Surface, palette: &[Rgb6]) -> FrameDigest;
+    pub fn from_rows(width: u32, height: u32, palette: &[Rgb6], row: impl FnMut(u32, &mut [u8])) -> FrameDigest;
+}
 ```
 
 `index` is the CRC-32 of the indices row by row; `colour` is the CRC-32 of each pixel's `Rgb6` as three bytes `r g b` (each 0–63), row by row. See [Goldens and frame digests](#goldens-and-frame-digests).

@@ -12,6 +12,8 @@ See `AGENTS.md` for the authoritative contributor conventions — most important
 
 Design and spikes, with two walking skeletons: the hosted DOS program built by `tools/build.sh` and run headless in DOSBox, and the native boot sector and Rust kernel run in QEMU by `tools/native-test.sh`. `docs/` holds the working design, written before any code, so treat its numbers and formats as targets. `design/` is reference only (do not port its code). When a spike produces a result, record it in `docs/` and let the design follow.
 
+`shell/` is the shared core's first piece (`docs/FIRST-WINDOW.md`): a Cargo workspace of `no_std` + `alloc` crates, starting with `desk-gfx`. The rules there: `#![forbid(unsafe_code)]`, no floating-point maths, no compare-and-swap (`shell/clippy.toml`), no external crates, and no clocks or randomness, so a frame is a function of the steps that led to it. `tools/check.sh` runs its host tests and builds it for both 486 targets.
+
 ## Commands
 
 ```bash
