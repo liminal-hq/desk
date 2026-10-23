@@ -22,7 +22,7 @@
 
 ## Project Status
 
-Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is a graphical shell for MS-DOS: windows, files and small apps on a 486, with any DOS program run full-screen and the Desk resuming afterwards. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: there is no code yet, and the documents in `docs/` are targets, not measurements.
+Desk (`liminal-hq/desk`, a working name; see `docs/NAMING.md`) is a graphical shell for MS-DOS: windows, files and small apps on a 486, with any DOS program run full-screen and the Desk resuming afterwards. It is the spiritual successor to Lieutenant Fizz for DOS (`ScottMorris/lieutenant-fizz-dos`) and applies what that port taught about Rust on DOS. The project is at the design-and-spikes stage: the only code is the walking skeleton (a small Rust and C program that proves the DOS toolchain), and the documents in `docs/` are targets, not measurements.
 
 ## Source of Truth
 
@@ -125,10 +125,13 @@ Add labels to every PR when it is created and keep them accurate as scope change
 
 ## Local Tooling
 
-The stack will be **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs. None of that is installed or scripted yet: the toolchain scripts are written, for this project, with the first spike that needs them. Do not install system packages to get a build working without asking.
+The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs. `docs/TOOLCHAIN.md` describes the pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
 
 ```bash
-tools/check.sh                           # everything the CI runs
+tools/setup.sh                           # once: Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI in vendor/
+tools/check.sh                           # everything the CI runs: checks, build, headless run
+tools/build.sh                           # dist/DESK.EXE and dist/CWSDPMI.EXE
+tools/dosrun.sh dist DESK.EXE            # run a DOS program headless; prints its output, returns its exit status
 tools/check-headers.sh                   # licence headers on source, script and workflow files
 python3 -I tools/check-docs.py           # markdown style and links
 python3 -I tools/build-hero.py [name] > assets/hero.svg    # rebuild the README banner
@@ -147,7 +150,7 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 ## Testing
 
 - Verify relevant changes before considering work complete, and state exactly what was and was not run.
-- `tools/check.sh` is the pre-PR gate and what the CI runs. DOS builds, headless DOSBox runs and frame checksums join it as the code that needs them arrives.
+- `tools/check.sh` is the pre-PR gate and what the CI runs. It already builds `DESK.EXE` and runs it headless; frame checksums join it as the code that needs them arrives.
 - Fix a bug with a check that fails before the fix.
 - Say plainly what could not be verified: nothing here has run on real hardware, and audio cannot be checked headless.
 
@@ -161,13 +164,14 @@ Treat the scripts as the source of truth for exact commands. Use scratch space u
 
 - `docs/` — the working design (spec, SDK, formats, handoff, palette, app guidelines, open questions, naming)
 - `design/` — boards and prototypes from the design brainstorm, reference only
-- `core/` — the shell in Rust (`no_std`)
-- `c/` — the hardware layer in C for DJGPP
+- `core/` — the shell in Rust (`no_std`), with the DOS target specification `dos.json`; today the skeleton's one function
+- `c/` — the hardware layer in C for DJGPP; today `main`, result output and the panic exit
 - `launcher/` — `DESK.COM`, the real-mode launcher
 - `sdk/` — the app interface: the C header and a Rust wrapper
 - `spikes/` — experiments that decide the architecture
 - `tests/dos/` — test programs of our own for headless DOS runs
-- `tools/` — repository checks and scripts
+- `tools/` — repository checks, the DOS build pipeline (`setup`, `fetch-tools`, `build`, `coff2go32`, `dosrun`) and scripts
+- `vendor/` and `dist/` — the downloaded DOS tools and the build output; neither is committed
 - `assets/` — the README banner
 - `.github/` — workflows, templates, dependency updates and release-note grouping
 
