@@ -143,7 +143,7 @@ impl Compositor {
     }
 
     /// Repaints every scene-damage rectangle through `paint` (with the surface clipped to it), then presents the union of the scene
-    /// and overlay damage, aligned to the presenter, compositing the cursor into each row on the way. An idle frame (no damage)
+    /// and overlay damage, aligned to the presenter, compositing the cursor into each row on the way. An idle frame (no damage, and the cursor where it was last presented)
     /// calls nothing and returns zeros.
     ///
     /// Refused with `InvalidArgument`, before anything is painted, when the presenter's size differs from the compositor's or its

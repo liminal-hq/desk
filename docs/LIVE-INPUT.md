@@ -119,7 +119,7 @@ pub mod live {
 }
 ```
 
-The mark numbers are always two digits, so no mark's line starts with another's (`native-inject.py` waits by substring, and strips trailing spaces from its `wait` lines); a session refuses a hundredth mark with a line that says so, and goes on. Mark 00 is printed after the set-up's first frame, before any input is read: it is the live scenario's first frame.
+The mark numbers are always two digits, so no mark's line starts with another's (`native-inject.py` waits by substring, and strips trailing spaces from its `wait` lines); a session refuses a 101st mark with a line that says so, and goes on. Mark 00 is printed after the set-up's first frame, before any input is read: it is the live scenario's first frame.
 
 **Transcript lines**, the same on both tracks apart from the platform's own preamble:
 

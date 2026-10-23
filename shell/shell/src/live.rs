@@ -77,7 +77,7 @@ pub fn mark_line(n: u32, depth: Depth, d: &FrameDigest) -> String {
     )
 }
 
-/// The line that says a hundredth mark was asked for and not printed.
+/// The line that says a mark past the hundred was asked for and not printed.
 pub fn marks_full_line() -> String {
     format!("shell: mark refused, a session prints at most {MAX_MARKS}")
 }
