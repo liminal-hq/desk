@@ -17,6 +17,7 @@
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof)
 // - `vga`      mode 13h and the frame buffer (hardware proof)
+// - `hal`      the DOS platform's implementations of the HAL traits: `DosBios` (real-mode calls) and `DosDisplay` (VGA and VBE)
 //
 // Single-threaded, with one exception: interrupt handlers, which touch only `static`s and never allocate or call DOS.
 #![no_std]
@@ -28,6 +29,7 @@ pub mod dos;
 pub mod dpmi;
 pub mod env;
 pub mod fpu;
+pub mod hal;
 pub mod heap;
 pub mod io;
 #[cfg(target_os = "windows")]

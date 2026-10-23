@@ -1,0 +1,70 @@
+avga: read 256 DAC entries through 3C7/3C9: true
+avga: power-up palette checksum 0x02c317a1
+avga: wrote 256 entries through 3C8/3C9: true
+avga: read back equals written: true
+avga: original palette restored: true
+avga: a range past entry 255 is refused: true
+avga: mode 13h by registers, from video mode 0x03
+avga: registers read back equal the table: true
+avga: 13h direct: frame buffer checksum 0x5c0f1f16, picture in memory 0x5c0f1f16
+avga: 13h direct: checksums match: true
+avga: wrote M13.RAW (64000 bytes) and M13.PAL
+avga: 13h direct: fade out ends black: true
+avga: 13h direct: fade in restores the palette: true
+avga: 13h direct: 32 frames, every one synchronised to retrace: true
+avga: 13h direct: the text mode registers are back: true
+avga: back in video mode 0x03
+avga: display offers 37 modes, VBE present
+avga: 13h by INT 10h: BIOS reports mode 13h: true
+avga: 13h by INT 10h: frame buffer 320 x 200 pitch 320 at 0xa0000
+avga: 13h by INT 10h: registers that differ from the table (BIOS/table): seq[0x0]=0x00/0x03
+avga: 13h INT 10h: frame buffer checksum 0x5c0f1f16, picture in memory 0x5c0f1f16
+avga: 13h INT 10h: checksums match: true
+avga: back in video mode 0x03
+avga: mode 12h by registers, from video mode 0x03
+avga: registers read back equal the table: true
+avga: 12h direct: planes read back checksum 0xfaf8b758, picture in memory 0xfaf8b758
+avga: 12h direct: checksums match: true
+avga: 12h direct: pixel probes: true
+avga: wrote M12.RAW (307200 bytes) and M12.PAL
+avga: 12h direct: the text mode registers are back: true
+avga: back in video mode 0x03
+avga: 12h by INT 10h: BIOS reports mode 12h: true
+avga: 12h by INT 10h: 640 x 480 pitch 80 per plane
+avga: 12h by INT 10h: registers that differ from the table (BIOS/table): seq[0x0]=0x00/0x03
+avga: 12h INT 10h: planes read back checksum 0xfaf8b758, picture in memory 0xfaf8b758
+avga: 12h INT 10h: checksums match: true
+avga: 12h INT 10h: pixel probes: true
+avga: back in video mode 0x03
+avga: vbe: version 2.0, 4096 KiB video memory, OEM "S3 Incorporated. Trio64"
+avga: vbe: 59 modes listed
+avga: vbe:   0x100 640x400x8 model 4 linear
+avga: vbe:   0x101 640x480x8 model 4 linear
+avga: vbe:   0x102 800x600x4 model 3 banked
+avga: vbe:   0x103 800x600x8 model 4 linear
+avga: vbe:   0x104 1024x768x4 model 3 banked
+avga: vbe:   0x105 1024x768x8 model 4 linear
+avga: vbe:   0x106 1280x1024x4 model 3 banked
+avga: vbe:   0x107 1280x1024x8 model 4 banked
+avga: vbe:   0x120 1600x1200x8 model 4 banked
+avga: vbe:   0x151 320x240x8 model 4 banked
+avga: vbe:   0x166 400x300x8 model 4 banked
+avga: vbe:   0x177 640x480x4 model 3 banked
+avga: vbe:   0x17c 1280x960x4 model 3 banked
+avga: vbe:   0x17d 1280x960x8 model 4 banked
+avga: vbe:   0x183 1600x1200x4 model 3 banked
+avga: vbe:   0x207 1152x864x8 model 4 banked
+avga: vbe:   0x215 512x384x8 model 4 banked
+avga: vbe: setting the unknown mode 0x1ff gives Err(Platform(1))
+avga: an unknown VBE mode is refused and text mode stays: true
+avga: vbe: using 0x101: pitch 640, frame buffer at physical 0xc0000000, 307200 bytes
+avga: vbe: BIOS reports the VBE mode with the linear bit: true
+avga: vbe 640x480x8: frame buffer checksum 0x5bc65936, picture in memory 0x5bc65936
+avga: vbe 640x480x8: checksums match: true
+avga: wrote VBE.RAW (307200 bytes) and VBE.PAL
+avga: vbe 640x480x8: fade out ends black: true
+avga: vbe 640x480x8: fade in restores the palette: true
+avga: vbe 640x480x8: 32 frames, every one synchronised to retrace: true
+avga: back in video mode 0x03
+avga: all checks held
+avga: after the clean-up list the video mode is 0x03

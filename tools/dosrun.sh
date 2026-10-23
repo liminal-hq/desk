@@ -14,6 +14,9 @@
 # the command outlived DOS_TIMEOUT seconds (default 60), and 125 when DOSBox itself failed, in which case its log is printed to
 # standard error. Set DOS_VERBOSE=1 to always see DOSBox's log.
 #
+# The emulated video card is `svga_s3` (VESA BIOS extensions, a linear frame buffer). A program that must see another card sets
+# DOS_MACHINE (for example `vgaonly`, which has no VBE) for that run only; the default is unchanged.
+#
 # DOSBox needs no display: SDL_VIDEODRIVER=dummy gives it a video driver that draws nowhere, and SDL_AUDIODRIVER=dummy the same
 # for audio. The environment's DISPLAY and WAYLAND_DISPLAY are removed so a developer's desktop is never used by accident.
 #
@@ -49,7 +52,7 @@ fullscreen = false
 output = texture
 
 [dosbox]
-machine = svga_s3
+machine = ${DOS_MACHINE:-svga_s3}
 memsize = 16
 
 [cpu]
