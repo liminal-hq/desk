@@ -1,4 +1,4 @@
-// Time: a monotonic tick source, a calibrated delay and the wall clock.
+// Time: a monotonic tick source and a calibrated delay.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -11,7 +11,6 @@
 use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::irq::SharedIrqService;
-use crate::HalError;
 
 /// A reading of a monotonic tick counter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,22 +76,6 @@ impl SharedIrqService for TickCounter {
     fn on_irq(&self) {
         self.tick();
     }
-}
-
-/// A calendar date and time as the machine keeps it (local time: neither the CMOS clock nor DOS knows the time zone).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DateTime {
-    pub year: u16,
-    pub month: u8,
-    pub day: u8,
-    pub hour: u8,
-    pub minute: u8,
-    pub second: u8,
-}
-
-/// The wall clock: the CMOS real-time clock natively, INT 21h AH=2Ah/2Ch under DOS. Not monotonic: the user can set it.
-pub trait WallClock {
-    fn now(&self) -> Result<DateTime, HalError>;
 }
 
 #[cfg(test)]

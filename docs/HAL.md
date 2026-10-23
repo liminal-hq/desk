@@ -188,7 +188,7 @@ pub trait IrqRegistry {
   - **Locked memory under DPMI.** The handler, its context, the ring, every `static` it touches and the stack it runs on must not be paged out: CWSDPMI can page, and a page fault inside an interrupt handler is fatal. `rt` locks the whole image (DPMI 0600h on `__image_start..__image_end`) before hooking, which covers code, `.data`, `.bss` and its own stack; a `Box::leak`ed context is in the heap and is **not** covered, so the DOS platform's `register` locks the context's pages too (or contexts live in `static`s).
   - **Re-entry.** The platform guarantees a handler is never re-entered: natively the IDT gates are interrupt gates (IF cleared on entry) and the EOI is sent after the handler; under DPMI the host delivers hardware interrupts with interrupts disabled and the stub does not enable them.
 
-### Time (built)
+### Time (built; the wall clock is a sketch)
 
 ```rust
 pub struct Ticks(pub u32);
@@ -202,6 +202,7 @@ pub trait Clock {
 pub trait Delay { fn delay_us(&self, us: u32); }
 pub struct TickCounter { /* AtomicU32 */ }                // tick() is fetch_add (lock xadd)
 
+// sketch: arrives with its first implementation (CMOS natively, INT 21h under DOS)
 pub struct DateTime { pub year: u16, pub month: u8, pub day: u8, pub hour: u8, pub minute: u8, pub second: u8 }
 pub trait WallClock { fn now(&self) -> Result<DateTime, HalError>; }
 ```

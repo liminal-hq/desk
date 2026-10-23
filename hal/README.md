@@ -4,7 +4,7 @@ The shared hardware abstraction layer and the drivers written once against it: o
 
 | Crate | Directory | What it is |
 |---|---|---|
-| `desk-hal` | `hal/` | The traits and types: `PortIo`, `InterruptController`, `IrqRegistry` and `IrqHandler`, `Clock`, `Delay`, `WallClock`, `DebugOut`, `SpscRing`, `MmioRegion`, `HalError`, and `x86::RawPorts` (the real `in` and `out` instructions, x86 targets only) |
+| `desk-hal` | `hal/` | The traits and types: `PortIo`, `InterruptController`, `IrqRegistry`, `IrqHandler`, `IrqService` and `SharedIrqService`, `Clock`, `Delay`, `DebugOut`, `SpscRing`, `MmioRegion`, `HalError`, and `x86::RawPorts` (the real `in` and `out` instructions, x86 targets only) |
 | `desk-serial` | `drivers/serial/` | The 16550 UART, equivalent to `kernel/src/serial.rs` at COM1 and 115,200 baud |
 | `desk-pit` | `drivers/pit/` | The 8254 timer: channel 0 rate, the counter latch, and `PitClock` |
 | `desk-pic` | `drivers/pic/` | The two 8259s: native initialisation, masking, end-of-interrupt, spurious checks |
