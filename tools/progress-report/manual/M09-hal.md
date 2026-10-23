@@ -41,13 +41,13 @@ A [port](term:port-io) access is an `in` or `out` instruction that the compiler 
 
 First, the methods are safe. A value that implements `PortIo`, a [port bus](term:port-bus), is the capability to touch hardware, and the dangerous step is making one. The only real implementation, [`RawPorts`](sym:hal/hal/src/x86.rs::RawPorts), is a zero-sized `Copy` struct with a private field, so it can be made only by `RawPorts::new`, which is an `unsafe fn` whose doc comment says what the caller promises: that it runs where `in` and `out` are permitted (ring 0, or a DPMI client with I/O permission) and that it takes responsibility for which drivers get the bus. Every `unsafe` block in `x86.rs` carries a one-line `SAFETY:` comment that points back to that contract. The alternative, an `unsafe fn outb`, would put an `unsafe` block with no local justification on every register write of every driver; the document rejects it for exactly that reason (`docs/HAL.md`, "Decisions" 3 and "Alternatives considered"). The result is visible in a search: the serial, PIC and PIT drivers contain the word `unsafe` zero times (see the commands at the end).
 
-Second, the methods take `&self`, not `&mut self`. Several drivers can then share one bus, and `RawPorts` is `Copy`, so a driver can own its own copy. There is also a blanket `impl PortIo for &P`, so a driver generic over `P: PortIo` can be handed `&bus` while another driver holds the same bus. The kernel's `PORTS` is one `static RawPorts` made once, with a `SAFETY:` line saying the kernel runs in ring 0, and the three drivers are `static`s built from copies of it.
+Second, the methods take `&self`, not `&mut self`. Several drivers can then share one bus, and `RawPorts` is `Copy`, so a driver can own its own copy. There is also a blanket `impl PortIo for &P`, so a driver generic over `P: PortIo` can be handed `&bus` while another driver holds the same bus. The kernel's `PORTS` is one `static RawPorts` made once, with a `SAFETY:` line saying the kernel runs in ring 0, and the PIC and the UART are `static`s built from copies of it (the `PitClock` needs no bus: the timer is programmed through `Pit::new(PORTS)` when it is needed).
 
 The trait's header comment also states the ordering rule. Each access is performed exactly once, in program order; the `asm!` blocks in `x86.rs` omit `nomem` on purpose, so the compiler treats each as possibly reading and writing memory and does not move ordinary loads and stores across it. A driver that fills a [DMA](term:dma) buffer and then starts the transfer with a port write therefore needs no explicit fence on this platform, and a platform that cannot promise that must say so. `x86` is compiled only where `target_arch = "x86"`, so a host build has no port instructions and a host test cannot touch hardware by accident.
 
 ### Memory-mapped regions
 
-Some devices are addresses, not ports: the VGA window at `0xA0000` and the linear frame buffer. [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion) is a raw pointer and a length. Its constructor `MmioRegion::new` is the `unsafe` step (the region must stay mapped and no Rust reference may cover it), and everything after is safe and checked. `read8`, `write8`, `read32` and `write32` fail with `HalError::InvalidArgument` if the access falls outside the length or, for 32-bit accesses, is not aligned to 4 (`check` computes both with `checked_add`, so an offset of `usize::MAX` is refused rather than wrapping). All stores are volatile. `write_bytes` copies one volatile byte at a time and is the reference a faster path must match; `fill8` writes the unaligned head and tail bytewise and the aligned middle a 32-bit word at a time, which cuts the bus writes to a quarter and was added by the native VGA spike. The platform makes the region (`kernel/src/gfx.rs` builds one over `0xA0000`, 64 KiB; `rt::hal::DosDisplay` builds one over the same window through DPMI, or over a mapped [linear frame buffer](term:lfb)).
+Some devices are addresses, not ports: the VGA window at `0xA0000` and the linear frame buffer. [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion) is a raw pointer and a length. Its constructor `MmioRegion::new` is the `unsafe` step (the region must stay mapped and no Rust reference may cover it), and everything after is safe and checked. `read8`, `write8`, `read32` and `write32` fail with `HalError::InvalidArgument` if the access falls outside the length or, for 32-bit accesses, is not aligned to 4 (`check` adds the offset and the size with `checked_add`, so an offset of `usize::MAX` is refused rather than wrapping, and tests the alignment of the address, base plus offset, not of the offset alone). All stores are volatile. `write_bytes` copies one volatile byte at a time and is the reference a faster path must match; `fill8` writes the unaligned head and tail bytewise and the aligned middle a 32-bit word at a time, which cuts the bus writes to a quarter and was added by the native VGA spike. The platform makes the region (`kernel/src/gfx.rs` builds one over `0xA0000`, 64 KiB; `rt::hal::DosDisplay` builds one over the same window through DPMI, or over a mapped [linear frame buffer](term:lfb)).
 
 ### Interrupts and the ring
 
@@ -173,7 +173,7 @@ id: hal.ring
 label: SpscRing carries keyboard bytes and mouse packets from interrupt to core in the kernel
 state: built-verified
 evidence: sym:kernel/src/input.rs::KEY_BYTES, test:tests/native/expected-input.txt::input: IRQ 1 and IRQ 12 handlers registered
-note: QEMU only, with keys sent through its monitor. A full ring drops and counts; the drop path is host-tested, not exercised in QEMU.
+note: QEMU only, with keys sent through its monitor; the committed transcript, not rerun for this chapter. A full ring drops and counts; the drop path is host-tested, not exercised in QEMU.
 
 id: hal.irq-native
 label: The native IrqRegistry: gates, a handler table, EOI after the handler
@@ -184,7 +184,7 @@ id: hal.mmio-native
 label: MmioRegion over the VGA window in the kernel's graphics tour
 state: built-verified
 evidence: sym:kernel/src/gfx.rs::vga_window, test:tests/native/expected-gfx-vbe.txt::gfx: vbe picture: frame buffer checksum 0x5bc65936
-note: QEMU only. The unaligned head and tail paths of fill8 are host-tested.
+note: QEMU only; the committed transcript, not rerun for this chapter. The unaligned head and tail paths of fill8 are host-tested.
 
 id: hal.mock
 label: The mock platform: scripted bus, device models, MockIrq, MockClock and MockDelay
@@ -208,7 +208,7 @@ id: hal.native-bios
 label: NativeBios implements the Bios trait through the real-mode trampoline
 state: built-verified
 evidence: sym:kernel/src/bios.rs::NativeBios, test:tests/native/expected-bios.txt::bios: real-mode trampoline at 0x10000
-note: The whole round trip is the subject of M8.
+note: The committed transcript, not rerun for this chapter. The whole round trip is the subject of M8.
 
 id: hal.step1
 label: Migration step 1: the kernel runs on the shared drivers
