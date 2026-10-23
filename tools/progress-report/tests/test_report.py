@@ -1039,5 +1039,23 @@ class BootChaptersTests(unittest.TestCase):
         self.assertTrue(any("has no line" in p for p in neg.check(main, image, test, run, enum, codes, negatives=bad)))
 
 
+def load_chapter_tests():
+    """Each manual chapter may keep its own checks in tests/test_chapter_NAME.py (self-contained, a plain unittest module); their test
+    cases are picked up here so that the one command, `python3 -I tools/progress-report/tests/test_report.py`, runs them all."""
+    import glob
+    import importlib.util
+    for path in sorted(glob.glob(os.path.join(HERE, "test_chapter_*.py"))):
+        name = os.path.basename(path)[:-3]
+        spec = importlib.util.spec_from_file_location(name, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        for attr, obj in vars(mod).items():
+            if isinstance(obj, type) and issubclass(obj, unittest.TestCase) and obj.__module__ == name:
+                globals()[name + "_" + attr] = obj
+
+
+load_chapter_tests()
+
+
 if __name__ == "__main__":
     unittest.main()
