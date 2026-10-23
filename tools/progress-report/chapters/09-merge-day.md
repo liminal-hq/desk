@@ -10,7 +10,7 @@ By late evening there were seven open pull requests and every one of them warned
 
 For each pull request the recipe was the same, and the history keeps it. Merge `main` into the branch (a commit titled "Merge main into …" whose body lists the conflicts), then merge the pull request into `main` with a merge commit. The first merge, #3 at 22:41, had nothing to resolve. Every later one did, and the six resolution notes are the real record of what was kept: below, the merge-day replay, drawn from `git log` and the commits' own messages.
 
-<!-- explainer mergeday -->
+<!-- explainer mergeday 3 1 2 6 5 4 7 -->
 
 The conflicts, all of them, in one table. They are the message bodies of the six "Merge main into" commits.
 

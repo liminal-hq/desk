@@ -18,6 +18,7 @@ import re
 import shutil
 import sys
 
+USAGE = "usage: build.py [--data FILE] [--out DIR] [--chapters DIR] [--pages DIR] [--no-assets] [--check]"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -62,7 +63,10 @@ def load_chapters(directory):
         meta["blocks"] = mdlite.parse_blocks(body)
         meta.setdefault("n", "")
         meta.setdefault("section", "journey")
-        meta["prs"] = [int(x) for x in meta.get("prs", [])]
+        try:
+            meta["prs"] = [int(x) for x in meta.get("prs", [])]
+        except ValueError:
+            raise mdlite.MdError("%s: prs must be pull request numbers" % name)
         chapters.append(meta)
     ids = [c["id"] for c in chapters]
     if len(set(ids)) != len(ids):
@@ -114,24 +118,14 @@ def document(title, body, description=DESCRIPTION):
             '<link rel="stylesheet" href="site.css">\n</head>\n<body>\n%s\n<script src="site.js" defer></script>\n</body>\n</html>\n') % (esc(title), esc(description), body)
 
 
-NAV_IDS = set()
-
-
-def site_header(current):
+def site_header(current, ids):
     def link(i, href, text):
-        if i != "index" and i not in NAV_IDS:
+        if i != "index" and i not in ids:
             return ""
         return '<a href="%s"%s>%s</a>' % (href, ' aria-current="page"' if current == i else "", text)
     return ('<a class="skip" href="#main">Skip to the content</a>\n<header class="site"><div class="wrap site-in"><a class="brand" href="index.html">Desk Progress Report</a>'
             '<nav aria-label="Site">%s%s%s%s</nav></div></header>' % (link("index", "index.html", "Contents"), link("path", "path.html", "The path"),
                                                                    link("findings", "findings.html", "Findings"), link("archive", "archive.html", "How this is made")))
-
-
-def _old_site_header(current):
-    return ('<a class="skip" href="#main">Skip to the content</a>\n<header class="site"><div class="wrap site-in"><a class="brand" href="index.html">Desk Progress Report</a>'
-            '<nav aria-label="Site"><a href="index.html"%s>Contents</a><a href="path.html"%s>The path</a><a href="findings.html"%s>Findings</a><a href="archive.html"%s>How this is made</a></nav></div></header>' % (
-                ' aria-current="page"' if current == "index" else "", ' aria-current="page"' if current == "path" else "",
-                ' aria-current="page"' if current == "findings" else "", ' aria-current="page"' if current == "archive" else ""))
 
 
 def site_footer(data, prev, nxt):
@@ -175,7 +169,7 @@ def facts_strip(data, keys):
     for k in keys:
         m = data["metrics"][k]
         cells.append('<div class="fact"><b class="num">%s</b><span>%s</span><details><summary>how measured</summary><p>%s</p></details></div>' % (
-            esc(num(m["value"])), esc(m["label"]), inline(m["how"], Ctx())))
+            esc(num(m["value"]) if m["value"] is not None else "not available"), esc(m["label"]), inline(m["how"], Ctx())))
     return '<div class="facts">%s</div>' % "".join(cells)
 
 
@@ -189,8 +183,6 @@ class Site:
     def __init__(self, data, chapters, pages_dir, out, assets=True):
         self.data, self.chapters, self.pages_dir, self.out, self.assets = data, chapters, pages_dir, out, assets
         self.ids = [c["id"] for c in chapters]
-        NAV_IDS.clear()
-        NAV_IDS.update(self.ids)
         self.repo_url = ((data.get("repo") or {}).get("url") or "https://github.com/liminal-hq/desk")
         self.ctx = Ctx(values_of(data), self.ids, self.repo_url, data["prs"])
         self.shelf_counts = {"catalogued": 0, "uncatalogued": 0, "wish": 0}
@@ -212,7 +204,7 @@ class Site:
                 if xid == "pipeline":
                     return ex.pipeline(d, ctx)
                 if xid == "mergeday":
-                    return ex.mergeday(d, ctx)
+                    return ex.mergeday(d, ctx, [int(a) for a in args[1:]])
                 raise mdlite.MdError("unknown explainer %s in %s" % (xid, chapter["id"]))
             if name == "figure":
                 fid = args[0]
@@ -256,7 +248,7 @@ class Site:
         main = ('<main id="main" class="wrap chapter"><article><header class="chead"><div class="eyebrow">%s</div><h1>%s</h1><p class="lead">%s</p></header>'
                 '<div class="prose">%s</div>%s</article></main>') % (esc(" · ".join(eyebrow)), esc(c["title"]), inline(c["summary"], self.ctx), body, evidence)
         title = "%s · %s" % (TITLE, c["title"])
-        return c["id"] + ".html", document(title, site_header(c["id"] if c["id"] in ("path", "findings", "archive") else "") + main + site_footer(self.data, prev, nxt))
+        return c["id"] + ".html", document(title, site_header(c["id"] if c["id"] in ("path", "findings", "archive") else "", self.ids) + main + site_footer(self.data, prev, nxt))
 
     @staticmethod
     def date_label(iso):
@@ -272,8 +264,8 @@ class Site:
         last_html = ("<code>%s</code>, %s %s: %s" % (last["mergeCommit"], ex.day_label(last["mergedAt"]), ex.hhmm(last["mergedAt"]), esc(last["title"]))) if last else "none"
         panel = ('<dl class="status"><div><dt>Is there an operating system?</dt><dd><b>No.</b> There is a boot-to-kernel skeleton and a hosted skeleton on DOS, both run in emulators.</dd></div>'
                  '<div><dt>Last merge into main</dt><dd>%s</dd></div><div><dt>CI on the merge commits</dt><dd>%s</dd></div>'
-                 '<div><dt>On real hardware</dt><dd><b>Not tried.</b> Every run so far was in QEMU or DOSBox Staging.</dd></div>'
-                 '<div><dt>Open branches</dt><dd>Only <code>main</code>.</dd></div></dl>') % (last_html, esc(str(d["metrics"]["ciGreen"]["value"])))
+                 '<div><dt>On real hardware</dt><dd><b>Not tried.</b> Every run so far was in QEMU or DOSBox Staging (the list under Not verified says what that leaves open).</dd></div>'
+                 '<div><dt>Pull requests merged</dt><dd>%s, as merge commits, from <code>%s</code>.</dd></div></dl>') % (last_html, esc(str(d["metrics"]["ciGreen"]["value"])), esc(num(d["metrics"]["prs"]["value"])), esc(d["ref"]))
         # the shelves summary comes from the chapters, so render them first
         for i in range(len(self.chapters)):
             self.pages.update([self.render_chapter(i)])
@@ -297,7 +289,7 @@ class Site:
             order = {"done": 0, "done-emu": 1, "progress": 2, "review": 3, "planned": 4, "research": 5, "decision": 6}
             lis = "".join('<li>%s<span>%s</span></li>' % (ex.state_icon(n["state"], 16), esc(n["label"] + ((" · #%d" % n["pr"]) if n.get("pr") else ""))) for n in sorted(ns, key=lambda n: order[n["state"]]))
             cols.append('<section class="track"><h3>%s</h3><ul class="state-list">%s</ul><p class="next"><b>Next:</b> %s</p></section>' % (esc(info["label"]), lis, esc(info["next"])))
-        used = [s for s in ["done", "done-emu", "progress", "planned", "research", "decision"] if any(n["state"] == s for n in road["nodes"])]
+        used = ex.used_states(road["nodes"])
         nv = gather.read_json(os.path.join(HERE, "not-verified.json"))
         notver = "".join("<li><b>%s</b> %s</li>" % (esc(x["what"]), inline(x["why"], ctx)) for x in nv)
         hero = self.directive({"id": "index"})("figure", ["hero"])
@@ -310,12 +302,16 @@ class Site:
                 '<section aria-labelledby="h-cols"><h2 id="h-cols">Three columns of status</h2><div class="glance">%s</div>%s</section>'
                 '<section aria-labelledby="h-nums"><h2 id="h-nums">Headline numbers</h2><p class="sub col">Each number is computed by the generator from the repository or <code>gh</code>. The test figures are counts of test declarations and expected transcripts, not an official total.</p>%s</section>'
                 '<section aria-labelledby="h-nv"><h2 id="h-nv">Not verified</h2><p class="sub col">What nobody has checked yet. Anything in the archive that depends on one of these stays on the uncatalogued shelf.</p><ul class="notver">%s</ul></section>'
-                '</main>') % (site_header("index"), hero, esc(d["generated"][:10]), intro, panel, "".join(sh), "".join(toc), "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), notver)
+                '</main>') % (site_header("index", self.ids), hero, esc(d["generated"][:10]), intro, panel, "".join(sh), "".join(toc), "".join(cols), ex.legend(used), facts_strip(d, HEADLINE), notver)
         return body
 
     def write(self):
         out = self.out
-        shutil.rmtree(out, ignore_errors=True)
+        if os.path.exists(out):
+            # Only a directory this tool wrote (it holds our manifest) or an empty one is cleared; anything else is somebody's files.
+            if os.listdir(out) and not os.path.exists(os.path.join(out, "manifest.json")):
+                raise ValueError("refusing to clear %s: it is not empty and has no manifest.json from an earlier build" % out)
+            shutil.rmtree(out)
         os.makedirs(os.path.join(out, "_publish"))
         index_body = self.render_index()
         footer = site_footer(self.data, None, self.chapters[0] if self.chapters else None)
@@ -361,7 +357,12 @@ class Site:
                 blob = f.read()
             entries.append({"path": p, "bytes": len(blob), "sha256": hashlib.sha256(blob).hexdigest()})
         published = {p: p for p in paths if p not in ("index.html", "_publish/index.html", "manifest.json")}
-        rel = os.path.relpath(out, gather.ROOT) if out.startswith(gather.ROOT) else out
+        try:
+            inside = os.path.commonpath([os.path.abspath(out), gather.ROOT]) == gather.ROOT
+        except ValueError:
+            inside = False
+        rel = os.path.relpath(out, gather.ROOT) if inside else os.path.abspath(out)
+        total_bytes = sum(e["bytes"] for e in entries)
         manifest = {
             "title": TITLE, "artifact": ARTIFACT_URL, "description": DESCRIPTION,
             "publish": {
@@ -370,7 +371,7 @@ class Site:
                 "notes": "Omit icon and title on a republish. file_path is the index as a fragment (the Artifact skeleton supplies the doctype and head); every other page is a full document served as it is.",
             },
             "limits": {"perFileBytes": 16 * 1024 * 1024, "filesPerPublish": 255, "totalBytesPerPublish": 64 * 1024 * 1024},
-            "totals": {"files": len(entries) + 1, "bytes": sum(e["bytes"] for e in entries)},
+            "totals": {"files": len(entries), "bytes": total_bytes, "note": "every file written except manifest.json itself"},
             "files": entries,
         }
         with open(os.path.join(out, "manifest.json"), "w", encoding="utf-8") as f:
@@ -468,22 +469,22 @@ def main(argv):
             "--pages": os.path.join(HERE, "pages")}
     flags, i = set(), 1
     while i < len(argv):
-        if argv[i] in opts:
+        if argv[i] in opts and i + 1 < len(argv):
             opts[argv[i]] = argv[i + 1]
             i += 2
         elif argv[i] in ("--no-assets", "--check"):
             flags.add(argv[i])
             i += 1
         else:
-            print(__doc__, file=sys.stderr)
+            print(USAGE, file=sys.stderr)
             return 2
-    data = gather.read_json(opts["--data"]) if opts["--data"] else gather.gather()
-    chapters = load_chapters(opts["--chapters"])
-    site = Site(data, chapters, opts["--pages"], opts["--out"], assets="--no-assets" not in flags)
     try:
+        data = gather.read_json(opts["--data"]) if opts["--data"] else gather.gather()
+        chapters = load_chapters(opts["--chapters"])
+        site = Site(data, chapters, opts["--pages"], opts["--out"], assets="--no-assets" not in flags)
         files = site.write()
-    except (mdlite.MdError, ValueError) as e:
-        print("build: %s" % e, file=sys.stderr)
+    except (mdlite.MdError, ValueError, KeyError, OSError) as e:
+        print("build: %s: %s" % (type(e).__name__, e), file=sys.stderr)
         return 1
     print("wrote %d pages to %s" % (len([f for f in files if f.endswith(".html")]), opts["--out"]))
     if "--check" in flags:
@@ -493,7 +494,7 @@ def main(argv):
         if problems:
             return 1
         print("check: ok")
-    for w in data.get("warnings", []):
+    for w in list(data.get("warnings", [])) + ["missing: " + m for m in data.get("missing", [])]:
         print("warning: " + w, file=sys.stderr)
     return 0
 

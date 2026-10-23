@@ -11,6 +11,19 @@
 import html
 import re
 
+LINK_RX = r"(\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))"
+LINK_PART = re.compile(r"^\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)$")
+
+
+class Raw(str):
+    """Text that is already HTML and must not go through the inline reader."""
+
+
+def neutral(s):
+    """Data text (a PR title, a branch name) made safe to pass through the inline reader as plain text."""
+    return str(s).replace("{{", "{\u200b{").replace("`", "'").replace("*", "\u2217").replace("[", "(").replace("]", ")")
+
+
 SHELF_NAMES = {"catalogued": "catalogued", "uncatalogued": "uncatalogued", "wish list": "wish"}
 
 
@@ -90,9 +103,9 @@ def _text(s, ctx):
 
 def inline(s, ctx):
     out = []
-    for i, part in enumerate(re.split(r"(\[[^\]]+\]\([^)\s]+\))", s)):
+    for i, part in enumerate(re.split(LINK_RX, s)):
         if i % 2:
-            m = re.match(r"\[([^\]]+)\]\(([^)\s]+)\)$", part)
+            m = LINK_PART.match(part)
             target = m.group(2)
             ext = ' target="_blank" rel="noopener"' if re.match(r"^(https?://|pr:|commit:|repo:)", target) else ""
             out.append('<a href="%s"%s>%s</a>' % (esc(ctx.href(target)), ext, _text(m.group(1), ctx)))

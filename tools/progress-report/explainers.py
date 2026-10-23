@@ -10,24 +10,33 @@
 import datetime
 import os
 import re
+import sys
 
-from mdlite import esc, inline
+from mdlite import Raw, esc, inline, neutral
 
-EDT = datetime.timezone(datetime.timedelta(hours=-4))
+try:
+    from zoneinfo import ZoneInfo
+    LOCAL = ZoneInfo("America/Toronto")
+except Exception:  # no tz database on this machine: the offset of the day the project began (EDT)
+    LOCAL = datetime.timezone(datetime.timedelta(hours=-4))
+
+
+def when(iso):
+    return datetime.datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(LOCAL)
 
 
 def hhmm(iso):
-    return datetime.datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(EDT).strftime("%H:%M")
+    return when(iso).strftime("%H:%M")
 
 
 def day_label(iso):
-    d = datetime.datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(EDT)
+    d = when(iso)
     return "%d %s %d" % (d.day, d.strftime("%B"), d.year)
 
 
 def stepper(xid, label, stage, steps, caption, ctx, cls=""):
     items = "".join(
-        '<li class="x-step" data-i="%d"><h4 class="x-title">%s</h4><div class="x-text">%s</div></li>' % (i, inline(s[0], ctx), inline(s[1], ctx))
+        '<li class="x-step" data-i="%d"><h4 class="x-title">%s</h4><div class="x-text">%s</div></li>' % (i, s[0] if isinstance(s[0], Raw) else inline(s[0], ctx), s[1] if isinstance(s[1], Raw) else inline(s[1], ctx))
         for i, s in enumerate(steps))
     return (
         '<figure class="x %s" data-x="%s" data-n="%d" role="group" aria-label="%s">'
@@ -55,25 +64,39 @@ def console(lines, steps, label, highlight=True):
 
 # ---- the boot sequence ---------------------------------------------------------------------------------------------------------
 
+def _native_check():
+    import importlib.util
+    import gather
+    path = os.path.join(gather.ROOT, "tools", "native-check.py")
+    spec = importlib.util.spec_from_file_location("native_check", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def expected_matches(expected, actual_lines):
-    """True when the captured transcript satisfies tests/native/expected.txt (its {N:a..b} and {HEX} patterns, '...' for a gap)."""
-    def rx(line):
-        out = ""
-        for part in re.split(r"(\{N:\d+\.\.\d+\}|\{HEX\})", line):
-            m = re.match(r"\{N:(\d+)\.\.(\d+)\}", part)
-            out += r"(\d+)" if m else (r"(?:0x)?[0-9a-fA-F]+" if part == "{HEX}" else re.escape(part))
-        return re.compile("^" + out + "$")
-    pos = 0
-    for line in expected.splitlines():
-        if line == "...":
-            continue
-        r = rx(line)
-        while pos < len(actual_lines) and not r.match(actual_lines[pos]):
-            pos += 1
-        if pos >= len(actual_lines):
+    """True when the transcript satisfies an expected file, by the rules and matcher of tools/native-check.py (its {N:lo..hi},
+    {HEX} and {ANY} tokens, and '...' for any number of lines)."""
+    nc = _native_check()
+    exp = [None if l == "..." else nc.compile_line(l) for l in (x.rstrip("\r\n").rstrip() for x in expected.splitlines())]
+    act = [x.rstrip("\r\n").rstrip() for x in actual_lines]
+    seen = set()
+
+    def walk(e, a):
+        if (e, a) in seen:
             return False
-        pos += 1
-    return True
+        seen.add((e, a))
+        if e == len(exp):
+            return a == len(act)
+        if exp[e] is None:
+            return any(walk(e + 1, k) for k in range(a, len(act) + 1))
+        return a < len(act) and nc.line_matches(exp[e], act[a]) and walk(e + 1, a + 1)
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(10000)
+    try:
+        return walk(0, 0)
+    finally:
+        sys.setrecursionlimit(old)
 
 
 def parse_map(lines):
@@ -99,11 +122,14 @@ def boot(D, ctx, serial, expected):
         raise ValueError("expected six E820 entries in the transcript, found %d" % len(entries))
     kernel_bytes = D["measured"].get("nativeKernelBytes")
     stage2 = D["measured"].get("nativeStage2Bytes")
-    usable_kib = sum((e - s) // 1024 for s, e, k in entries if k == "usable" and s < 0x1000000)
     m = re.search(r"usable RAM (\d+) KiB", serial)
-    low_usable = [(s, e) for s, e, k in entries if k == "usable"]
+    if not (entries[0][2] == "usable" and entries[0][0] == 0 and entries[3][2] == "usable" and entries[3][0] == 0x100000
+            and entries[5][1] == 0x100000000 and all(entries[i][1] <= entries[i + 1][0] for i in range(5))):
+        raise ValueError("the E820 map in the transcript no longer has the shape the boot explainer's prose describes "
+                         "(usable low memory, reserved sliver, ROM, usable extended memory, reserved, reserved at the top); update explainers.boot")
+    usable = [(s, e) for s, e, k in entries if k == "usable"]
     # The kernel counts whole 1 KiB; the sum of the printed entries must equal what it reports.
-    total_usable = sum((e - s) // 1024 for s, e in low_usable)
+    total_usable = sum((e - s) // 1024 for s, e in usable)
     if not m or int(m.group(1)) != total_usable:
         raise ValueError("usable RAM in the transcript (%s) is not the sum of its usable entries (%d KiB)" % (m and m.group(1), total_usable))
     img = re.search(r"kernel image (0x[0-9a-f]+)-(0x[0-9a-f]+)", serial)
@@ -310,8 +336,13 @@ def pipeline(D, ctx):
 
 # ---- merge day -------------------------------------------------------------------------------------------------------------------
 
-def mergeday(D, ctx):
-    prs = sorted(D["prs"], key=lambda p: p["mergedAt"])
+def mergeday(D, ctx, numbers=None):
+    """The replay of the given pull requests (all of them when none are named), in the order they were merged."""
+    by = {p["number"]: p for p in D["prs"]}
+    for n in numbers or []:
+        if n not in by:
+            raise ValueError("merge day names pull request #%s, which is not among the merged pull requests" % n)
+    prs = sorted([by[n] for n in numbers] if numbers else D["prs"], key=lambda p: p["mergedAt"])
     sync_by_hash = {s["hash"]: s for s in D["sync"]}
     items = []
     for p in prs:
@@ -343,7 +374,7 @@ def mergeday(D, ctx):
                 i, xs - 5, ys - 5, sy["hash"], esc(sy["branch"]), xs + 8, ys - 8, hhmm(sy["date"])))
             conflicts = "; ".join("%s" % c["text"] for c in sy["conflicts"]) or "no conflicts recorded"
             clean = (" Merged cleanly: %s." % ", ".join("`%s`" % c for c in sy["clean"])) if sy["clean"] else ""
-            steps.append(("Merge main into `%s`" % sy["branch"], "At %s, `%s`. Conflicts resolved: %s.%s" % (hhmm(sy["date"]), sy["hash"], conflicts, clean)))
+            steps.append((Raw("Merge main into <code>%s</code>" % esc(sy["branch"])), "At %s, `%s`. Conflicts resolved: %s.%s" % (hhmm(sy["date"]), sy["hash"], neutral_keep_code(conflicts), clean)))
         i = len(steps)
         xm, ym = X(p["mergedAt"]), lane["main"]
         if sy:
@@ -351,18 +382,23 @@ def mergeday(D, ctx):
         g.append('<g data-from="%d"><circle cx="%g" cy="%d" r="7" class="m-merge"><title>%s PR #%d</title></circle><text x="%g" y="%d" text-anchor="middle" font-size="11" class="d-text2">#%d · %s</text></g>' % (
             i, xm, ym, p["mergeCommit"], p["number"], xm, ym - 14, p["number"], hhmm(p["mergedAt"])))
         steps.append(("PR #%d merged" % p["number"], "At %s, `%s`: %s. The pull request had %d commits and CI on the merge commit was %s." % (
-            hhmm(p["mergedAt"]), p["mergeCommit"], p["title"], p["commitCount"], p["ci"])))
+            hhmm(p["mergedAt"]), p["mergeCommit"], neutral(p["title"]), p["commitCount"], p["ci"])))
     g.append("</svg>")
     cap = ("Every point is a real commit: merges of <code>main</code> into a branch (squares) come from <code>git log --merges</code> and the merge commits on main (circles) from <code>git log --first-parent</code>; "
-           "times are the authors' (Eastern Daylight Time). The conflict notes are the merge commits' own messages. The order is the order they were merged, not the order of their numbers.")
+           "times are the authors' (Eastern time). The conflict notes are the merge commits' own messages. The order is the order they were merged, not the order of their numbers.")
     return stepper("mergeday", "Merge day replay", "".join(g), steps, cap, ctx, "x-wide")
+
+
+def neutral_keep_code(text):
+    """A merge note is markdown written by the project (its backticks are meant); only the placeholder syntax is defused."""
+    return text.replace("{{", "{\u200b{")
 
 
 def conflicts_table(D, ctx):
     rows = []
     for s in D["sync"]:
         for c in s["conflicts"]:
-            rows.append("<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td></tr>" % (s["hash"], hhmm(s["date"]), esc(s["branch"]), inline(c["text"], ctx)))
+            rows.append("<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td></tr>" % (s["hash"], hhmm(s["date"]), esc(s["branch"]), inline(neutral_keep_code(c["text"]), ctx)))
     return ('<div class="tbl"><table><thead><tr><th scope="col">Merge</th><th scope="col">Time</th><th scope="col">Branch</th><th scope="col">How the conflict was resolved</th></tr></thead><tbody>%s</tbody></table></div>' % "".join(rows))
 
 
@@ -386,12 +422,24 @@ def faces_figure(D):
 def tree_layout(roadmap):
     nodes = roadmap["nodes"]
     nb = {n["id"]: n for n in nodes}
-    depth = {}
+    for n in nodes:
+        if n["state"] not in STATE_LABEL:
+            raise ValueError("roadmap step %s has an unknown state %r" % (n["id"], n["state"]))
+        for d in n["deps"]:
+            if d not in nb:
+                raise ValueError("roadmap step %s depends on %r, which is not a step" % (n["id"], d))
+    if "desk" not in nb:
+        raise ValueError("the roadmap needs a root step with the id 'desk'")
+    depth, visiting = {}, set()
 
     def dep(i):
+        if i in visiting:
+            raise ValueError("the roadmap has a dependency cycle through %s" % i)
         if i not in depth:
+            visiting.add(i)
             n = nb[i]
             depth[i] = max(dep(d) for d in n["deps"]) + 1 if n["deps"] else 0
+            visiting.discard(i)
         return depth[i]
     for n in nodes:
         dep(n["id"])
@@ -430,6 +478,11 @@ def state_icon(state, size=14):
     return '<svg %s width="%d" height="%d" viewBox="0 0 14 14" aria-hidden="true" focusable="false">%s</svg>' % (c, size, size, body)
 
 
+def used_states(nodes):
+    """The states in use, in the legend's order."""
+    return [s for s in STATE_LABEL if any(n["state"] == s for n in nodes)]
+
+
 def legend(states):
     return '<ul class="legend" aria-label="Legend">%s</ul>' % "".join("<li>%s%s</li>" % (state_icon(s), esc(STATE_LABEL[s])) for s in states)
 
@@ -438,7 +491,7 @@ def tree(D):
     r = D["roadmap"]
     nodes = r["nodes"]
     nb, depth = tree_layout(r)
-    bands = ["foundations", "hosted", "convergence", "native", "games"]
+    bands = [b["id"] for b in r["branches"]]
     binfo = {b["id"]: b for b in r["branches"]}
     children = {}
     for n in nodes:
@@ -459,7 +512,7 @@ def tree(D):
         cols = {}
         for n in ns:
             cols.setdefault(depth[n["id"]], []).append(n)
-        maxrows = max(len(c) for c in cols.values())
+        maxrows = max([len(c) for c in cols.values()] or [0])
         bandy[b] = (y, HEAD + maxrows * RP + 2)
         for c in sorted(cols):
             def py(n):
@@ -529,10 +582,7 @@ def tree(D):
                 "crit" if n.get("critical") else "", esc(n["id"]), " crit" if n.get("critical") else "", state_icon(n["state"], 16), esc(n["label"] + pr), esc(STATE_SHORT[n["state"]]),
                 esc(n["what"]), esc(n["why"]), esc(", ".join(needs) or "nothing"), esc(", ".join(kids) or "nothing yet"), esc(n["evidence"])))
         lis.append('<div class="vband"><h3><span>%s</span><span class="muted">%d of %d done</span></h3><ol>%s</ol></div>' % (esc(binfo[b]["label"]), d, a, "".join(items)))
-    used = []
-    for s in ["done", "done-emu", "progress", "planned", "research", "decision"]:
-        if any(n["state"] == s for n in nodes):
-            used.append(s)
+    used = used_states(nodes)
     detail = '<div class="detail" id="treeDetail" aria-live="polite"><div class="muted">Choose a step in the tree to read what it is, why it matters, what it needs and what it unlocks.</div></div>'
     nodedata = {n["id"]: {"label": n["label"], "state": STATE_SHORT[n["state"]], "pr": n.get("pr"), "critical": bool(n.get("critical")), "what": n["what"], "why": n["why"],
                           "needs": [nb[k]["label"] for k in n["deps"]], "unlocks": [nb[k]["label"] for k in children.get(n["id"], [])], "evidence": n["evidence"],

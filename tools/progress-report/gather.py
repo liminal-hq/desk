@@ -18,6 +18,7 @@ import struct
 import subprocess
 import sys
 
+USAGE = "usage: gather.py [--ref REF] [--out FILE] [--offline] [--update-snapshot] [--dry-run]"
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 
@@ -49,6 +50,26 @@ class Repo:
         b = self.show_bytes(path, ref)
         return None if b is None else b.decode("utf-8", errors="replace")
 
+    def blobs(self, paths):
+        """{path: bytes} for many files of the ref, read through one `git cat-file --batch` process."""
+        out = {}
+        if not paths:
+            return out
+        p = subprocess.run(["git", "cat-file", "--batch"], cwd=self.root, input="".join("%s:%s\n" % (self.ref, x) for x in paths).encode("utf-8"),
+                           capture_output=True)
+        buf, pos = p.stdout, 0
+        for path in paths:
+            nl = buf.index(b"\n", pos)
+            head = buf[pos:nl].split()
+            if len(head) == 3 and head[1] == b"blob":
+                size = int(head[2])
+                out[path] = buf[nl + 1:nl + 1 + size]
+                pos = nl + 1 + size + 1
+            else:
+                out[path] = None
+                pos = nl + 1
+        return out
+
     def paths(self):
         if self._paths is None:
             out = self.git("ls-tree", "-r", "-l", self.ref)
@@ -63,10 +84,7 @@ class Repo:
         return sorted(p for p in self.paths() if rx.search(p))
 
     def lines(self, pattern):
-        total = 0
-        for p in self.matching(pattern):
-            total += (self.show(p) or "").count("\n")
-        return total
+        return sum((b or b"").count(b"\n") for b in self.blobs(self.matching(pattern)).values())
 
     def is_shallow(self):
         return self.git("rev-parse", "--is-shallow-repository", check=False).strip() == "true"
@@ -154,7 +172,7 @@ def history(repo):
                 added += int(a)
                 deleted += int(d)
         prs.append({
-            "number": number, "title": re.sub(r"\s*\(#\d+\)$", "", entry["subject"]), "mergeCommit": entry["hash"],
+            "number": number, "title": re.sub(r"\s*\(#\d+\)$", "", entry["subject"]), "mergeCommit": entry["hash"], "mergeFull": entry["full"],
             "mergedAt": entry["date"], "commits": commits, "commitCount": len(commits), "kinds": kinds,
             "added": added, "deleted": deleted,
         })
@@ -262,10 +280,12 @@ def faces_history(repo):
 def tree_facts(repo):
     paths = repo.paths()
     fonts = []
-    for p in repo.matching(r"^fonts/generated/[^/]+\.(otf|ttf|dfn)$"):
+    font_paths = repo.matching(r"^fonts/generated/[^/]+\.(otf|ttf|dfn)$")
+    font_blobs = repo.blobs([p for p in font_paths if p.endswith((".otf", ".ttf"))])
+    for p in font_paths:
         entry = {"file": os.path.basename(p), "path": p, "size": paths[p]}
         if p.endswith((".otf", ".ttf")):
-            blob = repo.show_bytes(p)
+            blob = font_blobs[p]
             entry["glyphs"] = glyph_count(blob)
             if p.endswith(".ttf"):
                 entry["kernPairs"] = kern_pairs(blob)
@@ -286,9 +306,9 @@ def tree_facts(repo):
         "requestedPlanned": int(m_all.group(2)) if m_all else None,
     }
     tests = {"bunDeclarations": 0, "bunFiles": 0}
-    for p in repo.matching(r"^fonts/test/.*\.test\.ts$"):
+    for p, blob in repo.blobs(repo.matching(r"^fonts/test/.*\.test\.ts$")).items():
         tests["bunFiles"] += 1
-        tests["bunDeclarations"] += len(re.findall(r"^\s*(?:test|it)\(", repo.show(p) or "", flags=re.M))
+        tests["bunDeclarations"] += len(re.findall(r"^\s*(?:test|it)\(", (blob or b"").decode("utf-8", errors="replace"), flags=re.M))
     tests["nativeTranscripts"] = len(repo.matching(r"^tests/native/.*\.txt$"))
     tests["s1Transcripts"] = len(repo.matching(r"^spikes/s1-dxe3/expected/.*\.txt$"))
     tests["d0Transcripts"] = len(repo.matching(r"^spikes/d0-rust-dos/expected/.*\.txt$"))
@@ -342,7 +362,7 @@ def gh_data(offline):
     if not offline and gh_available():
         prs = gh_json("pr", "list", "--state", "all", "--limit", "100", "--json",
                       "number,title,headRefName,baseRefName,createdAt,mergedAt,additions,deletions,changedFiles,labels,url")
-        runs = gh_json("run", "list", "--branch", "main", "--limit", "60", "--json",
+        runs = gh_json("run", "list", "--branch", "main", "--limit", "200", "--json",
                        "conclusion,headSha,displayTitle,createdAt,url,workflowName,event")
         repo = gh_json("repo", "view", "--json", "description,repositoryTopics,url,visibility")
         if prs is not None and runs is not None:
@@ -401,7 +421,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
     ci_by_sha = {}
     for r in gh["runs"]:
         if r.get("workflowName") == "CI" or r.get("workflowName") is None:
-            ci_by_sha.setdefault(r["headSha"][:7], r["conclusion"])
+            ci_by_sha.setdefault(r["headSha"], r["conclusion"])
     for p in prs:
         g = gh_by_num.get(p["number"], {})
         p["createdAt"] = g.get("createdAt")
@@ -410,7 +430,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         p["branch"] = g.get("headRefName")
         p["base"] = g.get("baseRefName")
         p["ghAdditions"], p["ghDeletions"], p["ghChangedFiles"] = g.get("additions"), g.get("deletions"), g.get("changedFiles")
-        concl = ci_by_sha.get(p["mergeCommit"])
+        concl = ci_by_sha.get(p["mergeFull"])
         p["ci"] = "passing" if concl == "success" else ("failing" if concl else "unknown")
     roadmap = load_roadmap()
     progress, warnings = resolve_roadmap(roadmap, prs)
@@ -444,7 +464,11 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         a = datetime.datetime.fromisoformat(day0["date"])
         b = datetime.datetime.fromisoformat(first_parent[0]["date"])
         metrics["daySpan"]["value"] = round((b - a).total_seconds() / 3600, 1)
-    shelves = {"catalogued": 0, "uncatalogued": 0, "wish": 0}
+    # Numbers scraped from prose documents fail soft by nature; say so loudly when a document's wording has moved.
+    missing = [k for k, m in metrics.items() if m["value"] is None]
+    missing += ["docSizes." + k for k in ("DESK.EXE", "HELLO.EXE", "CWSDPMI.EXE", "solo/HELLO.EXE", "CWSDSTUB.EXE") if k not in facts["docSizes"]
+                and repo.show("docs/D0-RUST-DOS.md") is not None]
+    missing += ["emoji." + k for k in ("pixel", "vector", "requested", "requestedDone") if emoji.get(k) is None and repo.show("docs/EMOJI.md") is not None]
     return {
         "generated": now, "ref": ref, "head": first_parent[0]["hash"] if first_parent else None,
         "shallow": repo.is_shallow(),
@@ -452,7 +476,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         "repo": gh.get("repo"), "main": {"log": first_parent, "files": facts["files"]},
         "prs": prs, "sync": sync, "fonts": facts["fonts"], "emoji": emoji, "tests": tests, "loc": loc,
         "docSizes": facts["docSizes"], "measured": measured, "faces": faces_history(repo), "transcripts": transcripts(repo),
-        "roadmap": roadmap, "progress": progress, "warnings": warnings, "metrics": metrics, "shelves": shelves,
+        "roadmap": roadmap, "progress": progress, "warnings": warnings, "missing": sorted(set(missing)), "metrics": metrics,
     }
 
 
@@ -463,6 +487,7 @@ def summary(data):
     for k, m in data["metrics"].items():
         lines.append("  %-12s %-8s %s" % (k, m["value"], m["label"]))
     lines += ["warning: " + w for w in data["warnings"]]
+    lines += ["MISSING: " + m for m in data["missing"]]
     return "\n".join(lines)
 
 
@@ -472,32 +497,37 @@ def main(argv):
     flags = set()
     i = 0
     while i < len(args):
-        if args[i] in opts:
+        if args[i] in opts and i + 1 < len(args):
             opts[args[i]] = args[i + 1]
             i += 2
         elif args[i] in ("--offline", "--update-snapshot", "--dry-run"):
             flags.add(args[i])
             i += 1
         else:
-            print(__doc__, file=sys.stderr)
+            print(USAGE, file=sys.stderr)
             return 2
     dry = "--dry-run" in flags
     ref = opts["--ref"]
     if dry and ref == "main":
         # The dry run reads whatever is checked out, so it also works in a CI clone that has no local `main`.
         ref = "HEAD"
-    data = gather(ROOT, ref, offline="--offline" in flags, dry_run=dry)
+    offline = "--offline" in flags
     if "--update-snapshot" in flags:
-        if data["sources"]["gh"] != "gh":
+        if not gh_available():
             print("cannot update the snapshot: gh is not available or not signed in", file=sys.stderr)
             return 1
-        gh, _, _ = gh_data(False)
+        fresh, source, _ = gh_data(False)
+        if source != "gh":
+            print("cannot update the snapshot: the gh queries failed", file=sys.stderr)
+            return 1
         with open(os.path.join(HERE, "snapshots", "gh.json"), "w", encoding="utf-8") as f:
-            json.dump({"capturedAt": data["generated"], "data": gh}, f, indent=1, sort_keys=True)
+            json.dump({"capturedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "data": fresh}, f, indent=1, sort_keys=True)
             f.write("\n")
+        offline = True  # the data below is read back from the snapshot just written, so the two cannot differ
+    data = gather(ROOT, ref, offline=offline, dry_run=dry)
     if dry:
         print(summary(data))
-        return 0
+        return 1 if data["missing"] else 0
     text = json.dumps(data, indent=1, ensure_ascii=False)
     if opts["--out"]:
         os.makedirs(os.path.dirname(os.path.abspath(opts["--out"])), exist_ok=True)

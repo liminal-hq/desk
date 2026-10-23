@@ -119,6 +119,23 @@ class GatherTests(unittest.TestCase):
             for m in data["metrics"].values():
                 self.assertTrue(m["how"])
 
+    def test_blobs_are_read_in_one_batch(self):
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            repo = gather.Repo(d, "main")
+            got = repo.blobs(["a.txt", "docs/x.md", "nope.txt"])
+            self.assertEqual(got["a.txt"], b"one\n")
+            self.assertEqual(got["docs/x.md"], b"x\n")
+            self.assertIsNone(got["nope.txt"])
+            self.assertEqual(repo.lines(r"\.txt$"), 3)
+
+    def test_a_document_that_no_longer_yields_its_number_is_reported_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            make_repo(d)
+            data = gather.gather(d, "main", offline=True)
+            self.assertIn("emojiPixel", data["missing"])
+            self.assertEqual(data["prs"][0]["mergeFull"], git(d, "rev-parse", "main").strip())
+
     def test_dry_run_survives_a_shallow_clone(self):
         with tempfile.TemporaryDirectory() as d:
             make_repo(d)
@@ -182,6 +199,54 @@ class BuildTests(unittest.TestCase):
             self.assertTrue(any("anchor #nope" in x for x in problems))
 
 
+class RobustnessTests(unittest.TestCase):
+    def test_link_targets_may_contain_parentheses(self):
+        out = mdlite.inline("[Foo](https://en.wikipedia.org/wiki/Foo_(bar)) then [x](https://e.com)", mdlite.Ctx())
+        self.assertIn('href="https://en.wikipedia.org/wiki/Foo_(bar)"', out)
+        self.assertIn('href="https://e.com"', out)
+
+    def test_data_text_is_neutralised(self):
+        self.assertEqual(mdlite.inline(mdlite.neutral("a {{x}} `b` *c* [d](e)"), mdlite.Ctx()).count("<"), 0)
+
+    def test_times_follow_the_real_clock_change(self):
+        if not hasattr(ex.LOCAL, "key"):
+            self.skipTest("no tz database on this machine")
+        self.assertEqual(ex.hhmm("2026-10-22T20:59:50Z"), "16:59")
+        self.assertEqual(ex.hhmm("2026-11-02T12:00:00Z"), "07:00")
+
+    def test_roadmap_is_validated(self):
+        base = [{"id": "desk", "branch": "root", "state": "progress", "deps": []}]
+        with self.assertRaises(ValueError):
+            ex.tree_layout({"nodes": base + [{"id": "a", "branch": "b", "state": "done", "deps": ["nope"]}]})
+        with self.assertRaises(ValueError):
+            ex.tree_layout({"nodes": base + [{"id": "a", "branch": "b", "state": "done", "deps": ["b"]}, {"id": "b", "branch": "b", "state": "done", "deps": ["a"]}]})
+        with self.assertRaises(ValueError):
+            ex.tree_layout({"nodes": base + [{"id": "a", "branch": "b", "state": "bogus", "deps": []}]})
+
+    def test_merge_day_rejects_an_unknown_pull_request(self):
+        with self.assertRaises(ValueError):
+            ex.mergeday({"prs": [], "sync": []}, mdlite.Ctx(), [99])
+
+    def test_build_does_not_clear_a_directory_it_did_not_make(self):
+        with tempfile.TemporaryDirectory() as d:
+            wr(os.path.join(d, "precious.txt"), "keep me\n")
+            chapters = build.load_chapters(os.path.join(HERE, "fixture", "chapters"))
+            with tempfile.TemporaryDirectory() as r:
+                make_repo(r)
+                data = gather.gather(r, "main", offline=True)
+            site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), d, assets=False)
+            with self.assertRaises(ValueError):
+                site.write()
+            self.assertTrue(os.path.exists(os.path.join(d, "precious.txt")))
+
+    def test_command_lines_fail_cleanly(self):
+        self.assertEqual(build.main(["build.py", "--out"]), 2)
+        self.assertEqual(gather.main(["gather.py", "--ref"]), 2)
+        with tempfile.TemporaryDirectory() as d:
+            wr(os.path.join(d, "00-bad.md"), "---\nid: bad\ntitle: T\nsummary: S\nprs: [x]\n---\ntext\n")
+            self.assertEqual(build.main(["build.py", "--chapters", d, "--out", os.path.join(d, "out"), "--data", os.path.join(TOOL, "snapshots", "gh.json")]), 1)
+
+
 REAL = os.path.join(TOOL, "chapters")
 
 
@@ -220,9 +285,12 @@ class RealContentTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ex.boot(D, mdlite.Ctx(), serial.replace("boot complete", "boot failed"), expected)
 
-    def test_expected_pattern_matcher(self):
-        self.assertTrue(ex.expected_matches("a {N:1..32}\n...\nb {HEX}", ["a 5", "x", "b 0x1f"]))
+    def test_expected_pattern_matcher_follows_native_check(self):
+        self.assertTrue(ex.expected_matches("a {N:1..32}\n...\nb {HEX}\n{ANY}", ["a 5", "x", "b 0x1f", "anything"]))
         self.assertFalse(ex.expected_matches("a\nb", ["b", "a"]))
+        self.assertFalse(ex.expected_matches("usable {N:14000..16384} KiB", ["usable 5 KiB"]), "the range must be honoured")
+        self.assertFalse(ex.expected_matches("at {HEX}", ["at 1f"]), "{HEX} needs the 0x prefix")
+        self.assertFalse(ex.expected_matches("a\nb", ["a", "extra", "b"]), "lines may only be skipped at '...'")
 
 
 if __name__ == "__main__":
