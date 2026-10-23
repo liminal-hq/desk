@@ -223,6 +223,158 @@ fn motion_survives_a_failed_button_read() {
     assert_eq!(mi.poll(), None);
 }
 
+// ---- Clicks shorter than one poll: the press and release counters ----
+
+fn edges(mi: &mut MouseInput<Int33Model>) -> Vec<(i16, i16, u8)> {
+    std::iter::from_fn(|| mi.poll()).map(|e| (e.dx, e.dy, e.buttons)).collect()
+}
+
+#[test]
+fn the_wrapper_reads_and_clears_the_press_and_release_counters() {
+    let m = Mouse::detect(Int33Model::wheel_mouse()).unwrap();
+    m.bios.move_by(10, 4);
+    m.bios.click(MouseEvent::LEFT);
+    m.bios.click(MouseEvent::LEFT);
+    m.bios.click(MouseEvent::RIGHT);
+    let p = m.presses(0).unwrap();
+    assert_eq!((p.count, p.x, p.y), (2, 330, 104), "the position at the last press");
+    assert_eq!(m.presses(0).unwrap().count, 0, "a read clears the count");
+    assert_eq!(m.releases(0).unwrap().count, 2);
+    assert_eq!(m.presses(1).unwrap().count, 1, "per button");
+    assert_eq!(m.releases(2).unwrap().count, 0);
+    let calls = m.bios.calls();
+    assert!(calls.contains(&func::PRESSES) && calls.contains(&func::RELEASES));
+    // A button the driver does not have counts nothing.
+    let two = Mouse::detect(Int33Model::two_button()).unwrap();
+    two.bios.press(MouseEvent::MIDDLE);
+    assert_eq!(two.presses(2).unwrap().count, 0);
+}
+
+#[test]
+fn a_click_inside_one_poll_is_a_press_then_a_release() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 1), (0, 0, 0)]);
+    assert_eq!(mi.poll(), None, "and nothing is left over for the next poll");
+}
+
+#[test]
+fn a_release_and_a_press_inside_one_poll_while_held_is_a_release_then_a_press() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.press(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 1)]);
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 0), (0, 0, 1)]);
+    mi.mouse().bios.release(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 0)]);
+}
+
+#[test]
+fn a_click_with_motion_puts_the_motion_and_the_wheel_on_the_first_event() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.move_by(7, -2);
+    mi.mouse().bios.scroll(1);
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    let all: Vec<MouseEvent> = std::iter::from_fn(|| mi.poll()).collect();
+    assert_eq!(
+        all,
+        [
+            MouseEvent {
+                dx: 7,
+                dy: -2,
+                buttons: 1,
+                wheel: 1
+            },
+            MouseEvent {
+                dx: 0,
+                dy: 0,
+                buttons: 0,
+                wheel: 0
+            },
+        ]
+    );
+}
+
+#[test]
+fn two_clicks_in_one_poll_are_reported_as_one() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 1), (0, 0, 0)]);
+    assert_eq!(mi.poll(), None);
+}
+
+#[test]
+fn the_other_buttons_keep_the_state_only_reading() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.click(MouseEvent::RIGHT);
+    mi.mouse().bios.click(MouseEvent::MIDDLE);
+    assert_eq!(mi.poll(), None, "a right or middle click between polls is not seen");
+    // A click of the left with the right held keeps the right's bit on both events.
+    mi.mouse().bios.press(MouseEvent::RIGHT);
+    assert_eq!(edges(&mut mi), [(0, 0, 2)]);
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 3), (0, 0, 2)]);
+}
+
+#[test]
+fn an_edge_the_state_shows_is_the_states_not_the_counters() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse());
+    mi.mouse().bios.press(MouseEvent::LEFT);
+    assert_eq!(
+        edges(&mut mi),
+        [(0, 0, 1)],
+        "one press event, though one press was counted too"
+    );
+    mi.mouse().bios.release(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 0)]);
+    // Up, a whole click, then down again inside one poll: the state's press; the click inside is folded away.
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    mi.mouse().bios.press(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 1)]);
+}
+
+#[test]
+fn a_driver_that_answers_the_counters_with_zeros_changes_nothing() {
+    let mut mi = mouse_input(Int33Model::wheel_mouse().without_counters());
+    mi.mouse().bios.click(MouseEvent::LEFT);
+    assert_eq!(mi.poll(), None, "no counters, so the quick click is lost, as before");
+    mi.mouse().bios.press(MouseEvent::LEFT);
+    mi.mouse().bios.move_by(3, 3);
+    assert_eq!(edges(&mut mi), [(3, 3, 1)]);
+    mi.mouse().bios.release(MouseEvent::LEFT);
+    assert_eq!(edges(&mut mi), [(0, 0, 0)]);
+}
+
+#[test]
+fn clicks_from_before_the_input_existed_are_not_reported() {
+    let model = Int33Model::wheel_mouse();
+    let mouse = Mouse::detect(model).unwrap();
+    mouse.bios.click(MouseEvent::LEFT);
+    let mut mi = MouseInput::new(mouse);
+    assert_eq!(mi.poll(), None);
+}
+
+#[test]
+fn a_driver_that_fails_the_counter_calls_still_reports_motion_and_state() {
+    struct NoCounters(Int33Model);
+    impl Bios for NoCounters {
+        fn int(&self, vector: u8, regs: &mut BiosRegs, buffer: Option<&mut [u8]>) -> Result<(), HalError> {
+            if matches!(regs.eax as u16, 0x0005 | 0x0006) {
+                return Err(HalError::Timeout);
+            }
+            self.0.int(vector, regs, buffer)
+        }
+        fn read_low(&self, segment: u16, offset: u16, out: &mut [u8]) -> Result<(), HalError> {
+            self.0.read_low(segment, offset, out)
+        }
+    }
+    let mut mi = MouseInput::new(Mouse::detect(NoCounters(Int33Model::wheel_mouse())).unwrap());
+    mi.mouse().bios.0.move_by(2, 1);
+    mi.mouse().bios.0.press(MouseEvent::LEFT);
+    assert_eq!(mi.poll().map(|e| (e.dx, e.dy, e.buttons)), Some((2, 1, 1)));
+}
+
 // ---- The whole path ----
 
 #[derive(Clone, Copy)]

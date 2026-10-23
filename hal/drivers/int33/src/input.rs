@@ -17,16 +17,29 @@ use crate::{Mouse, Position};
 /// down positive), the same button bits. When a poll sees several packets' worth of motion they arrive as one event with the sum, which the
 /// core, integrating deltas, cannot tell apart from several events.
 ///
-/// What it cannot see is a button pressed and released between two polls; the core polls once per frame, which is a few
-/// milliseconds, and the driver's press counters (functions 0005h and 0006h) are the fix if that matters.
+/// A left button pressed and released between two polls leaves the same state before and after, so the state alone loses the click.
+/// The driver's press and release counters for the left button (functions 0005h and 0006h, read on every poll, which clears them)
+/// show it, and the poll then reports the edge the state hides: up with a press and a release counted is a press event and then a
+/// release event; down with a release and a press counted is a release event and then a press event. The motion and the wheel go
+/// on the first of the two and the second has none. More than one click inside a poll is reported as one. An edge that the state
+/// itself shows (up, then down) is the state's, whatever the counters say. A driver that does not count (zeros) changes nothing.
 pub struct MouseInput<B: Bios> {
     mouse: Mouse<B>,
     buttons: u8,
+    /// The second event of a poll that reported two.
+    pending: Option<MouseEvent>,
 }
 
 impl<B: Bios> MouseInput<B> {
     pub fn new(mouse: Mouse<B>) -> MouseInput<B> {
-        MouseInput { mouse, buttons: 0 }
+        // Counts from before this input existed (a click while the program was starting) are not clicks of this session.
+        let _ = mouse.presses(LEFT_INDEX);
+        let _ = mouse.releases(LEFT_INDEX);
+        MouseInput {
+            mouse,
+            buttons: 0,
+            pending: None,
+        }
     }
 
     /// The driver, for the calls the platform makes at set-up and clean-up (ranges, reset).
@@ -34,9 +47,12 @@ impl<B: Bios> MouseInput<B> {
         &self.mouse
     }
 
-    /// The next report, if the mouse moved, a button changed or the wheel turned since the last call. A driver that stops answering
-    /// reads as a mouse that is not moving.
+    /// The next report, if the mouse moved, a button changed or the wheel turned since the last call; a poll that saw a click inside
+    /// it reports two, one per call. A driver that stops answering reads as a mouse that is not moving.
     pub fn poll(&mut self) -> Option<MouseEvent> {
+        if let Some(e) = self.pending.take() {
+            return Some(e);
+        }
         let (dx, dy) = self.mouse.motion().ok()?;
         // The motion counters are already cleared, so a failed read of the buttons must not throw the motion away: keep the buttons.
         let state = self.mouse.position().unwrap_or(Position {
@@ -45,10 +61,35 @@ impl<B: Bios> MouseInput<B> {
             x: 0,
             y: 0,
         });
-        if dx == 0 && dy == 0 && state.wheel == 0 && state.buttons == self.buttons {
+        // Read both counters every poll, whatever the state says, so they never hold a click over to the next poll.
+        let presses = self.mouse.presses(LEFT_INDEX).map_or(0, |e| e.count);
+        let releases = self.mouse.releases(LEFT_INDEX).map_or(0, |e| e.count);
+        let was = self.buttons & MouseEvent::LEFT != 0;
+        let is = state.buttons & MouseEvent::LEFT != 0;
+        // The state of the buttons after the first event of a hidden click, and the state the poll ends in.
+        let hidden = match (was, is, presses > 0, releases > 0) {
+            (false, false, true, true) => Some(state.buttons | MouseEvent::LEFT),
+            (true, true, true, true) => Some(state.buttons & !MouseEvent::LEFT),
+            _ => None,
+        };
+        if dx == 0 && dy == 0 && state.wheel == 0 && state.buttons == self.buttons && hidden.is_none() {
             return None;
         }
         self.buttons = state.buttons;
+        if let Some(first) = hidden {
+            self.pending = Some(MouseEvent {
+                dx: 0,
+                dy: 0,
+                buttons: state.buttons,
+                wheel: 0,
+            });
+            return Some(MouseEvent {
+                dx,
+                dy,
+                buttons: first,
+                wheel: state.wheel,
+            });
+        }
         Some(MouseEvent {
             dx,
             dy,
@@ -57,6 +98,9 @@ impl<B: Bios> MouseInput<B> {
         })
     }
 }
+
+/// The driver's index for the left button in functions 0005h and 0006h.
+const LEFT_INDEX: u8 = 0;
 
 /// The hosted platform's `InputSource`.
 ///
