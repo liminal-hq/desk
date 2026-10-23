@@ -37,6 +37,8 @@ pub struct Wm {
     // An Alt+Tab in progress: how far down the stacking order (0 is the top, the focused window) the window that Alt's release will
     // focus is. Anything that changes the stacking order or the set of windows ends it.
     cycle: Option<usize>,
+    // Alt+F4 has closed a window and F4 has not come up since: its typematic repeats must not close the next one too.
+    closing: bool,
 }
 
 impl Wm {
@@ -49,6 +51,7 @@ impl Wm {
             buttons: 0,
             next_id: 0,
             cycle: None,
+            closing: false,
         }
     }
 
@@ -230,6 +233,10 @@ impl Wm {
             (KeyCode::Tab, true) if alt => return self.step_cycle(shift),
             (KeyCode::LeftAlt | KeyCode::RightAlt, false) if !alt => {
                 if let Some(id) = self.cycling() {
+                    // Focus moved by the keyboard ends a title-bar drag and disarms a close box: the pointer's gesture was on a
+                    // window that is no longer the focused one.
+                    self.drag = None;
+                    self.armed = None;
                     self.focus(id, damage);
                 }
                 self.cycle = None;
@@ -240,11 +247,15 @@ impl Wm {
                 return;
             }
             (KeyCode::F4, true) if alt && self.cycle.is_none() => {
-                if let Some(id) = self.focused() {
-                    self.close(id, damage);
+                if !self.closing {
+                    self.closing = true;
+                    if let Some(id) = self.focused() {
+                        self.close(id, damage);
+                    }
                 }
                 return;
             }
+            (KeyCode::F4, false) => self.closing = false,
             (KeyCode::Tab, true) if e.modifiers.0 & (Modifiers::CTRL.0 | Modifiers::GUI.0) == 0 => {
                 return self.step_field(shift, fonts, damage);
             }

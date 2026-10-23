@@ -229,8 +229,11 @@ fn alt_f4_closes_the_focused_window() {
     assert!(send(&mut wm, ev(KeyCode::F4, true, Modifiers::NONE)).is_empty());
     assert_eq!(order(&wm), [a, b]);
     // Closing the last windows leaves nothing and does not fail.
-    send(&mut wm, ev(KeyCode::F4, true, ALT));
-    send(&mut wm, ev(KeyCode::F4, true, ALT));
+    for _ in 0..2 {
+        send(&mut wm, ev(KeyCode::F4, false, ALT));
+        send(&mut wm, ev(KeyCode::F4, true, ALT));
+    }
+    send(&mut wm, ev(KeyCode::F4, false, ALT));
     assert!(send(&mut wm, ev(KeyCode::F4, true, ALT)).is_empty());
     assert_eq!(wm.focused(), None);
 }
@@ -371,4 +374,52 @@ fn other_keys_still_reach_the_focused_widget() {
     assert!(!d.is_empty());
     // Escape with no cycle is the widget's, which ignores it.
     assert!(send(&mut wm, key(KeyCode::Escape)).is_empty());
+}
+
+#[test]
+fn holding_alt_f4_closes_one_window_not_one_per_repeat() {
+    let (mut wm, [a, b, _]) = three();
+    alt_down(&mut wm);
+    send(&mut wm, ev(KeyCode::F4, true, ALT));
+    for _ in 0..5 {
+        assert!(
+            send(&mut wm, ev(KeyCode::F4, true, ALT)).is_empty(),
+            "a typematic repeat closes nothing"
+        );
+    }
+    assert_eq!(order(&wm), [a, b]);
+    // After F4 comes up, the next press closes the next window.
+    send(&mut wm, ev(KeyCode::F4, false, ALT));
+    send(&mut wm, ev(KeyCode::F4, true, ALT));
+    assert_eq!(order(&wm), [a]);
+}
+
+#[test]
+fn alt_tab_during_a_drag_ends_the_drag_and_disarms_the_close_box() {
+    let (mut wm, [a, _, c]) = three();
+    let mut d = damage();
+    // Press on C's title bar (a drag begins), then Alt+Tab to the window under it and release Alt.
+    wm.pointer(300, 160, LEFT, &mut d);
+    alt_down(&mut wm);
+    tab(&mut wm, ALT);
+    tab(&mut wm, ALT);
+    alt_up(&mut wm);
+    assert_eq!(wm.focused(), Some(a));
+    let before = wm.windows().iter().find(|w| w.id == c).unwrap().outer;
+    let mut d = damage();
+    wm.pointer(340, 190, LEFT, &mut d);
+    assert!(d.is_empty(), "the motion no longer drags the window that lost the focus");
+    assert_eq!(wm.windows().iter().find(|w| w.id == c).unwrap().outer, before);
+    // A close box armed before the focus moved does not close on release either.
+    let (mut wm, [a, _, c]) = three();
+    let close = Rect::new(C.x1 - 26 + 3, C.y0 + 2 + 3, 1, 1);
+    wm.pointer(close.x0, close.y0, LEFT, &mut d);
+    alt_down(&mut wm);
+    tab(&mut wm, ALT);
+    tab(&mut wm, ALT);
+    alt_up(&mut wm);
+    let mut d = damage();
+    wm.pointer(close.x0, close.y0, 0, &mut d);
+    assert!(wm.windows().iter().any(|w| w.id == c), "the armed close box was dropped");
+    assert_eq!(wm.focused(), Some(a));
 }
