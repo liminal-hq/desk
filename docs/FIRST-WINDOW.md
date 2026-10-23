@@ -237,20 +237,26 @@ impl<'a> LinearPresent<'a> {
     pub fn new(region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // as Linear8::new
 }
 
-/// VGA mode 12h: four planes at A0000h. Spans are 8-pixel aligned, so every byte written is whole and nothing is read.
-pub struct PlanarPresent<'a, P: PortIo> { /* sink: VgaPlanes<'a, P>, width, height, pitch, planes: [[u8; 160]; 4] */ }
-impl<'a, P: PortIo> PlanarPresent<'a, P> {
-    pub fn new(ports: &'a P, region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>;
+/// VGA mode 12h through any PlaneSink. Spans are 8-pixel aligned, so every byte written is whole and nothing is read.
+pub struct PlanarPresent<S: PlaneSink> { /* sink, width, height, pitch, planes: [[u8; 160]; 4] */ }
+impl<'a, P: PortIo> PlanarPresent<VgaPlanes<'a, P>> {
+    pub fn new(ports: &'a P, region: &'a mut MmioRegion, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // pitch = bytes per plane row
+}
+impl<S: PlaneSink> PlanarPresent<S> {
+    pub fn with_sink(sink: S, width: u32, height: u32, pitch: u32) -> Result<Self, HalError>; // width a multiple of 8, at most 1280
+    pub fn sink(&self) -> &S;
 }
 
-/// Splits 8-pixel groups of indices into plane bytes: bit p of pixel i goes to bit (7 - i) of plane p. Pure; the heart of the
-/// planar presenter, tested on its own.
-pub fn planarise(pixels: &[u8], planes: &mut [[u8; 160]; 4]) -> usize;
+/// Splits 8-pixel groups of indices into plane bytes: bit p of pixel i goes to bit (7 - i) of plane p. Returns the bytes written
+/// per plane (pixels.len() / 8). Pure; the heart of the planar presenter, tested on its own.
+pub fn planarise(pixels: &[u8], planes: &mut [[u8; MAX_PLANE_BYTES]; 4]) -> usize; // MAX_PLANE_BYTES = 160
 
-/// Where plane bytes go: the VGA (map mask, then the region), or four Vecs in a test.
+/// Where plane bytes go: the VGA (VgaPlanes: map mask, then the region), or four Vecs in a test. begin and end default to Ok.
 pub trait PlaneSink {
+    fn begin(&mut self) -> Result<(), HalError> { Ok(()) }
     fn select(&mut self, plane: u8) -> Result<(), HalError>;
     fn write(&mut self, offset: usize, bytes: &[u8]) -> Result<(), HalError>;
+    fn end(&mut self) -> Result<(), HalError> { Ok(()) }
 }
 
 /// Capture: the frame buffer read back as indices, through desk-vga's Linear8 or Planar16 read_row, for the DOS dumps.
@@ -258,7 +264,7 @@ pub fn read_back_linear(region: &mut MmioRegion, width: u32, height: u32, pitch:
 pub fn read_back_planar<P: PortIo>(ports: &P, region: &mut MmioRegion, width: u32, height: u32, pitch: u32, out: &mut [u8]) -> Result<(), HalError>;
 ```
 
-- **Planar `begin`** sets, every frame, everything the spans rely on: graphics controller mode (write mode 0), data rotate 0 with replace, enable set/reset 0 (so the CPU byte is written), bit mask `FFh`. It must not trust earlier state: `desk_vga::Planar16` (used by the read-back) turns set/reset on while it lives. Each span then does, for each plane, one sequencer map-mask write (`1 << p`) and one `write_bytes` of `width / 8` bytes; `end` restores the map mask to `0Fh`.
+- **Planar `begin`** (`PlaneSink::begin`, which `VgaPlanes` implements, so a test sink can observe the frame) sets, every frame, everything the spans rely on: graphics controller mode (write mode 0), data rotate 0 with replace, enable set/reset 0 (so the CPU byte is written), bit mask `FFh`. It must not trust earlier state: `desk_vga::Planar16` (used by the read-back) turns set/reset on while it lives. Each span then does, for each plane, one sequencer map-mask write (`1 << p`) and one `write_bytes` of `width / 8` bytes; `end` restores the map mask to `0Fh`.
 - **Cost of a full mode 12h frame**: 4 × 38,400 byte writes and 4 × 480 map-mask writes; a cursor move is two 24 × 19 areas at most.
 - **Linear spans** use `MmioRegion::write_bytes` (one volatile byte store each). Spike D's recommendation to copy words ([`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#hal-feedback)) is a later `hal/` change that speeds this up without changing a pixel.
 
