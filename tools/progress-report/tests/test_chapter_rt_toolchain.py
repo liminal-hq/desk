@@ -239,8 +239,9 @@ class ToolchainChapterTests(unittest.TestCase):
         for needle in ("build-djgpp v3.4", "0.83.0", "CWSDPMI r7"):
             self.assertIn(needle, self.raw)
 
-    def test_the_target_comparison_is_a_table_until_the_explainer_lands(self):
-        self.assertNotIn("<!-- explainer m-targets -->", self.raw)
+    def test_the_target_comparison_is_a_table_and_an_explainer(self):
+        self.assertIn("<!-- explainer m-targets -->", self.raw)
+        self.assertIn("| `linker-flavor` |", self.raw)
         self.assertIn("figure std-sizes", self.raw)
 
 

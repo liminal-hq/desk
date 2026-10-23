@@ -72,6 +72,8 @@ The table lists every field that appears in at least one of the three files, 26 
 
 Eight fields are the same in all three files: `arch`, `cpu`, `max-atomic-width`, `panic-strategy`, `relocation-model`, `target-pointer-width`, `disable-redzone` and `dynamic-linking`. They are the facts about the machine and the policy that do not depend on the output format. Everything else follows from one choice: whether the output is ELF or the MinGW-flavoured COFF. The kernel file and `dos-elf.json` are close relatives, with the same triple, the same data layout and the same linker, and `docs/RUST-TARGETS.md` calls the second simpler than the COFF target "in every way that mattered": no section folding, no relocation patching, no weak-external objects to drop, no `_alloca`. `core/dos.json` is the odd one, and the rest of the toolchain's history is the story of moving off it.
 
+<!-- explainer m-targets -->
+
 ### Building `core` and `alloc`: `-Zbuild-std` and the memory functions
 
 All three builds ask cargo for `build-std = ["core", "alloc", "compiler_builtins"]` and `json-target-spec = true`. Two of them add `build-std-features = ["compiler-builtins-mem"]`: `kernel/.cargo/config.toml` and `spikes/d0-rust-dos/.cargo/config.toml`, which `shell/dos` repeats. The feature makes the `compiler_builtins` crate provide `memcpy`, `memmove`, `memset` and `memcmp`, which the compiler calls for copies and comparisons and which nothing else supplies when there is no C library (the comment in the d0 config says so). `core/.cargo/config.toml` does not set it, because on that path DJGPP's C library supplies them; and a fourth, quite different, request, `["std", "panic_abort"]`, belongs to spike E. The same crate supplies the helpers the 32-bit target has no instruction for, such as 64-bit division. On the legacy path the converter drops the crate's objects, because of their weak externals, and DJGPP's `libc` and `libgcc` supply those functions instead ([M17](chapter:m-rt), legacy section).
@@ -286,8 +288,17 @@ def: A file that tells the linker which output sections to make, where each star
 id: m19-std-sizes
 reuse: std-sizes
 at: figure std-sizes
+
+id: m19-targets
+kind: explainer
+track: shared
+title: Three target files, field by field
+alt: A step-through of the fields of the three Rust target files the project uses, grouped by what they say, with the rows that differ marked and the reason a document gives where there is one.
+caption: kernel/i486-desk-none.json, dos-elf.json and core/dos.json side by side.
+at: explainer m-targets
+thumb: steps
 ```
 
 ## Revisions
 
-- 2026-10-23: first written, against `44f0265`. The target table was computed from the three files; the build, the packer output and the bootstrap error were run on the host and in the CI image. Found while writing: `docs/RUST-TARGETS.md` calls `elf2bin.py` a linker and still lists the first target's files as living on other branches; `docs/E-STD-STUBS.md` gives the shim as 450 lines in one place and 330 in another. The target-comparison explainer (`m-targets`) is to be added in place of the table when its module lands.
+- 2026-10-23: first written, against `44f0265`. The target table was computed from the three files; the build, the packer output and the bootstrap error were run on the host and in the CI image. Found while writing: `docs/RUST-TARGETS.md` calls `elf2bin.py` a linker and still lists the first target's files as living on other branches; `docs/E-STD-STUBS.md` gives the shim as 450 lines in one place and 330 in another. The target-comparison explainer (`m-targets`) now follows the table.

@@ -72,6 +72,8 @@ It allocates that many zero bytes, writes the header (the height is the face's `
 
 Because the size is a formula, a file can be checked without reading its glyphs' pictures: walk the records using each width and the walk must end exactly at the end of the file. For all four files it does, and the chapter's tests do it.
 
+<!-- explainer m-dfn -->
+
 ### TrueType in the Windows 3.1 era
 
 [TrueType](term:truetype) is the outline font format that Apple developed and Microsoft added to Windows 3.1. The `.ttf` files here are written for the oldest rasterisers that read it, by `fonts/src/ttf.ts` and not by a general-purpose library, because a library writes whatever tables a modern system wants and the old systems are strict. `docs/FONTS.md` ("TrueType for Windows 3.1, 95, NT 3.5x and OS/2 Warp") sets the constraints:
@@ -356,8 +358,12 @@ at: figure font-matrix
 id: m18-coverage
 reuse: emoji-coverage
 at: figure emoji-coverage
+
+id: m18-dfn
+reuse: m14-dfn
+at: explainer m-dfn
 ```
 
 ## Revisions
 
-- 2026-10-23: first written, against `44f0265`. Every number from the `.dfn` and `.dem` files was read from the files, and the chapter's tests check them. `bun build.ts --check` and `bun test` (436 tests) were run on the host; `fonts/validate.sh` was not. The `m-dfn` explainer (a glyph read out of `ui.dfn` field by field) and the font figure are being prepared on another branch and are to be added here; this chapter uses the log's `font-matrix` and `emoji-coverage` figures meanwhile. Found while writing: the header comment of `fonts/build.ts` and the doc comment of `buildModern` say the outline faces are "Regular and Bold", where `docs/FONTS.md` and the 24 generated files have four styles each.
+- 2026-10-23: first written, against `44f0265`. Every number from the `.dfn` and `.dem` files was read from the files, and the chapter's tests check them. `bun build.ts --check` and `bun test` (436 tests) were run on the host; `fonts/validate.sh` was not. The `m-dfn` explainer (a glyph read out of `ui.dfn` field by field) is drawn here by reuse from M14, beside the log's `font-matrix` and `emoji-coverage` figures. Found while writing: the header comment of `fonts/build.ts` and the doc comment of `buildModern` say the outline faces are "Regular and Bold", where `docs/FONTS.md` and the 24 generated files have four styles each.
