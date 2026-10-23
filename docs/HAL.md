@@ -61,8 +61,8 @@ hal/                          one Cargo workspace; no default target, so `cargo 
 │   ├── serial/               desk-serial         16550 UART                               built
 │   ├── pit/                  desk-pit            8254 timer, PitClock                     built
 │   ├── pic/                  desk-pic            two 8259s                                built
-│   ├── i8042/                desk-i8042          keyboard controller, PS/2 mouse          spike C
-│   ├── kbd/                  desk-kbd            scancode set 1 decoder, key map          spike C
+│   ├── i8042/                desk-i8042          keyboard controller, PS/2 mouse          built (spike C)
+│   ├── kbd/                  desk-kbd            scancode set 1 decoder, key map          built (spike C)
 │   ├── vga/                  desk-vga            DAC, retrace, mode 13h/12h registers      spike A, then D
 │   ├── vgatext/              desk-vgatext        80x25 text console (from kernel/vga.rs)   migration step 1
 │   ├── dma8237/              desk-dma8237        ISA DMA controller                        sound milestone
@@ -77,7 +77,7 @@ kernel/src/hal.rs                   kernel::hal     the native platform         
 
 **Why the real platforms are not crates in `hal/`.** The DOS platform is DPMI calls, the interrupt stub and the clean-up list, all of which are `rt`; the native platform is the IDT, the frame allocator and the boot information, all of which are the kernel. A separate `platform/dos` crate would only re-export `rt`, and would not build for the host, which would split the workspace's `cargo test`. If Lieutenant Fizz Episode 2 or the `liminal-hq/dos-rs` idea in `DIRECTION.md` wants `rt` and its platform without Desk, they move together.
 
-Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic` and `desk-hal-mock`. Nothing else in the repository depends on them yet.
+Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic`, `desk-kbd`, `desk-i8042` and `desk-hal-mock`. The native kernel depends on them (migration step 1, done with spike C); nothing else does yet.
 
 ## The surfaces
 
@@ -253,7 +253,9 @@ pub trait Display {
 - Fades and dims go through the DAC, never the frame buffer (`AGENTS.md`), so `set_palette` is in the trait from the start.
 - The core sees `Display` and a `FrameBuffer`; it never sees INT 10h, a VBE info block or a DPMI selector.
 
-### Input (sketch; spikes C and B build it)
+### Input (built by spike C for the kernel; spike B adds the DOS mouse adapter)
+
+Spike C built this and changed it a little; the result and the feedback are in [`C-INPUT.md`](C-INPUT.md). The sketch below is the original; the built types are in `hal/hal/src/input.rs`: `KeyEvent` is `{ code, pressed, modifiers }`, `MouseEvent` has a `wheel: i8`, and the handlers test the controller's source bit before reading a byte.
 
 ```rust
 pub type Scancode = u8;                      // raw scancode set 1 byte, as port 0x60 delivers it with translation on

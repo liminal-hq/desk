@@ -5,7 +5,7 @@
 //
 // - `MockPortBus` records every port access in order, answers reads from a strict script, from per-port queues, or from device
 //   models attached to port ranges, and returns a floating bus (all ones) for anything else, as an empty ISA slot does.
-// - `devices` holds small models of real chips (the 16550, the 8254), just enough to check what a driver programs.
+// - `devices` holds small models of real chips (the 16550, the 8254, the 8042 with a keyboard and a mouse in `ps2`), just enough to check what a driver programs.
 // - `VgaModel` is the VGA's register file at 0x3C0..=0x3DF (attribute controller, sequencer, graphics controller, CRTC, DAC).
 // - `MockBios` answers real-mode calls from a script, for the VBE layer.
 // - `MockIrq` is an interrupt controller and handler registry with a `raise` that delivers an interrupt the way a platform does.
@@ -20,12 +20,14 @@ extern crate alloc;
 pub mod bus;
 pub mod devices;
 pub mod irq;
+pub mod ps2;
 pub mod time;
 pub mod vga;
 pub mod video;
 
 pub use bus::{Access, Device, MockPortBus, Width};
 pub use irq::MockIrq;
+pub use ps2::I8042Model;
 pub use time::{MockClock, MockDelay};
 pub use vga::VgaModel;
 pub use video::MockBios;

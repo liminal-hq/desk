@@ -10,7 +10,9 @@
 # Positive: the normal boot, plus three loader variants (A20 through the fast gate, A20 through the keyboard controller, and the
 # E801 memory map fallback) that exercise code a normal QEMU boot would skip. Negative: a wrong expected transcript must be
 # rejected; a divide error, a general protection fault, an invalid opcode, a panic and a masked timer must each end the run with
-# a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Skips (exit 0, with a message) only
+# a failure status and the expected dump; a hung kernel must end by the watchdog timeout. Keyboard and mouse: input injected through
+# the QEMU monitor must appear decoded in the transcript, and the negative variants (a missing event, a masked IRQ 1, a kernel
+# waiting for input that never comes) must fail. Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -71,5 +73,34 @@ done
 tools/native-image.sh --test-mode hang --out dist/native-hang.img > /dev/null
 run hang dist/native-hang.img 124 "" 5
 rm -f dist/native-hang.img
+
+echo "== Keyboard and mouse"
+# Input played through the QEMU monitor (tests/native/input.inject): the transcript has to show every injected key and mouse
+# event, decoded. Negative: an event missing from the injected input fails the comparison; a masked IRQ 1 delivers no keys (the
+# kernel gives up and reports it); a kernel that waits for input that never comes is ended by the watchdog.
+run_input() {
+  local name=$1 image=$2 want=$3 expected=$4 script=$5 timeout=${6:-30} got=0
+  tools/native-run.sh --timeout "$timeout" --inject "$script" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = "$want" ] || { cat "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected $want"; }
+  if [ -n "$expected" ]; then
+    python3 -I tools/native-check.py "$expected" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  fi
+  echo "native: ok — $name (exit $got)"
+}
+tools/native-image.sh --test-mode input --out dist/native-input.img > /dev/null
+run_input input dist/native-input.img 0 tests/native/expected-input.txt tests/native/input.inject
+grep -v ctrl-alt-delete tests/native/input.inject > "$work/input-short.inject"
+run_input input-missing-event dist/native-input.img 0 "" "$work/input-short.inject"
+if python3 -I tools/native-check.py tests/native/expected-input.txt "$work/input-missing-event.txt" > /dev/null 2>&1; then
+  fail "a transcript with a missing key event was accepted"
+fi
+echo "native: ok — a transcript with a missing event is rejected"
+rm -f dist/native-input.img
+tools/native-image.sh --test-mode input-masked --out dist/native-input-masked.img > /dev/null
+run_input input-masked dist/native-input-masked.img 1 tests/native/expected-input-masked.txt tests/native/input.inject
+rm -f dist/native-input-masked.img
+tools/native-image.sh --test-mode input-idle --out dist/native-input-idle.img > /dev/null
+run_input input-idle dist/native-input-idle.img 124 "" tests/native/input-idle.inject 5
+rm -f dist/native-input-idle.img
 
 printf 'native: all checks passed\n'

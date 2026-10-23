@@ -12,12 +12,13 @@ mod console;
 mod exit;
 mod fpu;
 mod gdt;
+mod hal;
 mod heap;
 mod idt;
+mod input;
 mod memory;
 mod pic;
 mod pit;
-mod port;
 mod serial;
 mod sync;
 mod vga;
@@ -84,6 +85,9 @@ enum TestMode {
     Panic = 4,
     Hang = 5,
     NoTick = 6,
+    Input = 7,
+    InputMasked = 8,
+    InputIdle = 9,
 }
 
 impl TestMode {
@@ -95,6 +99,9 @@ impl TestMode {
             4 => TestMode::Panic,
             5 => TestMode::Hang,
             6 => TestMode::NoTick,
+            7 => TestMode::Input,
+            8 => TestMode::InputMasked,
+            9 => TestMode::InputIdle,
             _ => TestMode::Normal,
         }
     }
@@ -155,6 +162,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     fpu::demo();
 
     run_test_mode(mode);
+    input_section(mode);
     println!("boot complete");
     exit::success()
 }
@@ -180,10 +188,31 @@ fn timer_demo() {
     assert!(elapsed >= TICK_WAIT);
 }
 
+/// The keyboard and mouse section, after the checks above. A normal boot sets the devices up and goes on. The input test modes
+/// then wait for events that the run script injects (`docs/C-INPUT.md`): `Input` waits for Escape, `InputMasked` leaves IRQ 1
+/// masked so the wait must fail, and `InputIdle` waits long enough that the run script's watchdog ends the run.
+fn input_section(mode: TestMode) {
+    let fault = if mode == TestMode::InputMasked { input::Fault::KeyboardMasked } else { input::Fault::None };
+    let Some(mut ps2) = input::init(fault) else {
+        if mode == TestMode::Normal {
+            return;
+        }
+        panic!("input: no keyboard controller, so the input test cannot run");
+    };
+    let timeout_ticks = match mode {
+        TestMode::Input => 1500,
+        TestMode::InputMasked => 500,
+        TestMode::InputIdle => 100_000,
+        _ => return,
+    };
+    println!("input: ready");
+    input::run(&mut ps2, timeout_ticks);
+}
+
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

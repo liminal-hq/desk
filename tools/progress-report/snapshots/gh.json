@@ -1,0 +1,510 @@
+{
+ "capturedAt": "2026-10-22T23:22:10-04:00",
+ "data": {
+  "prs": [
+   {
+    "additions": 2858,
+    "baseRefName": "main",
+    "changedFiles": 47,
+    "createdAt": "2026-10-22T22:14:06Z",
+    "deletions": 3,
+    "headRefName": "spike/d0-rust-dos",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "e99695",
+      "description": "Spike/proof-of-concept work, not a committed direction",
+      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
+      "name": "experimental"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": "2026-10-23T03:11:00Z",
+    "number": 7,
+    "title": "Run spike d0: a pure Rust DOS program with no C layer",
+    "url": "https://github.com/liminal-hq/desk/pull/7"
+   },
+   {
+    "additions": 2394,
+    "baseRefName": "main",
+    "changedFiles": 43,
+    "createdAt": "2026-10-22T21:57:08Z",
+    "deletions": 6,
+    "headRefName": "feat/native-skeleton",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "094999",
+      "description": "Build tooling and packaging updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q7_7Q",
+      "name": "build"
+     },
+     {
+      "color": "0e8a16",
+      "description": "Continuous integration workflows and checks",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Anw",
+      "name": "ci"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     }
+    ],
+    "mergedAt": "2026-10-23T02:55:46Z",
+    "number": 6,
+    "title": "Add a native walking skeleton: NASM boot sector and a Rust kernel in QEMU",
+    "url": "https://github.com/liminal-hq/desk/pull/6"
+   },
+   {
+    "additions": 345,
+    "baseRefName": "main",
+    "changedFiles": 12,
+    "createdAt": "2026-10-22T21:37:31Z",
+    "deletions": 40,
+    "headRefName": "docs/direction",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "ededed",
+      "description": "Maintenance and housekeeping",
+      "id": "LA_kwDOVTolZM8AAAAC-q8AQQ",
+      "name": "chore"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-10-23T03:01:41Z",
+    "number": 5,
+    "title": "Record the direction: a native Rust OS for old hardware",
+    "url": "https://github.com/liminal-hq/desk/pull/5"
+   },
+   {
+    "additions": 1978,
+    "baseRefName": "main",
+    "changedFiles": 46,
+    "createdAt": "2026-10-22T21:33:12Z",
+    "deletions": 21,
+    "headRefName": "spike/s1-dxe3",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "e99695",
+      "description": "Spike/proof-of-concept work, not a committed direction",
+      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
+      "name": "experimental"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "5319e7",
+      "description": "The app SDK: the C ABI and the Rust wrapper",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Ltw",
+      "name": "sdk"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": "2026-10-23T03:06:11Z",
+    "number": 4,
+    "title": "Run spike s1-dxe3: load Rust modules as DXE3 files",
+    "url": "https://github.com/liminal-hq/desk/pull/4"
+   },
+   {
+    "additions": 931,
+    "baseRefName": "main",
+    "changedFiles": 26,
+    "createdAt": "2026-10-22T20:59:50Z",
+    "deletions": 22,
+    "headRefName": "feat/walking-skeleton",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "094999",
+      "description": "Build tooling and packaging updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q7_7Q",
+      "name": "build"
+     },
+     {
+      "color": "0e8a16",
+      "description": "Continuous integration workflows and checks",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Anw",
+      "name": "ci"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": "2026-10-23T02:41:06Z",
+    "number": 3,
+    "title": "Add the DOS toolchain and a headless walking skeleton",
+    "url": "https://github.com/liminal-hq/desk/pull/3"
+   },
+   {
+    "additions": 18325,
+    "baseRefName": "main",
+    "changedFiles": 94,
+    "createdAt": "2026-10-22T19:54:46Z",
+    "deletions": 158,
+    "headRefName": "feat/emoji",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Palette, fonts, icons and app guidelines",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OKA",
+      "name": "design-system"
+     }
+    ],
+    "mergedAt": "2026-10-23T02:50:02Z",
+    "number": 2,
+    "title": "Add the Desk emoji set, colour fonts and .DEM format",
+    "url": "https://github.com/liminal-hq/desk/pull/2"
+   },
+   {
+    "additions": 10681,
+    "baseRefName": "main",
+    "changedFiles": 112,
+    "createdAt": "2026-10-22T16:46:06Z",
+    "deletions": 6,
+    "headRefName": "feat/fonts",
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "0e8a16",
+      "description": "Continuous integration workflows and checks",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Anw",
+      "name": "ci"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Palette, fonts, icons and app guidelines",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OKA",
+      "name": "design-system"
+     }
+    ],
+    "mergedAt": "2026-10-23T02:45:09Z",
+    "number": 1,
+    "title": "Add the Desk pixel and outline font families",
+    "url": "https://github.com/liminal-hq/desk/pull/1"
+   }
+  ],
+  "repo": {
+   "description": "A calm graphical shell for MS-DOS \u2014 windows, files and small apps on a 486, with any DOS program a double-click away. Rust + DJGPP C. Design and spikes.",
+   "repositoryTopics": [
+    {
+     "name": "desktop-environment"
+    },
+    {
+     "name": "djgpp"
+    },
+    {
+     "name": "dos"
+    },
+    {
+     "name": "dosbox"
+    },
+    {
+     "name": "gui"
+    },
+    {
+     "name": "liminal-hq"
+    },
+    {
+     "name": "ms-dos"
+    },
+    {
+     "name": "no-std"
+    },
+    {
+     "name": "retro-computing"
+    },
+    {
+     "name": "rust"
+    },
+    {
+     "name": "vesa"
+    },
+    {
+     "name": "vga"
+    }
+   ],
+   "url": "https://github.com/liminal-hq/desk",
+   "visibility": "PUBLIC"
+  },
+  "runs": [
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T03:11:02Z",
+    "displayTitle": "Run spike d0: a pure Rust DOS program with no C layer (#7)",
+    "event": "push",
+    "headSha": "6c563f0688986e1d685dc3349dce71ad08ab5245",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39893632327",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T03:06:14Z",
+    "displayTitle": "Run spike s1-dxe3: load Rust modules as DXE3 files (#4)",
+    "event": "push",
+    "headSha": "6a3c564fe1c9aee3d0b9689981b053ecf0e2d0f4",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39893197566",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T03:01:44Z",
+    "displayTitle": "Record the direction: a native Rust OS for old hardware (#5)",
+    "event": "push",
+    "headSha": "f550bcb3f3b67d03ab2dc6a83a9442e0a3f37fbc",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39892774579",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T02:55:49Z",
+    "displayTitle": "Add a native walking skeleton: NASM boot sector and a Rust kernel in \u2026",
+    "event": "push",
+    "headSha": "491ed55bd14a4a855804fa97a03104bc62ba40ed",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39892241573",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T02:50:05Z",
+    "displayTitle": "Add the Desk emoji set, colour fonts and .DEM format (#2)",
+    "event": "push",
+    "headSha": "af0b1714013995531f2d90284d602832e59d9c47",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39891720644",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T02:45:12Z",
+    "displayTitle": "Add the Desk pixel and outline font families (#1)",
+    "event": "push",
+    "headSha": "eb2bd1a339d575587506364cb23c1cc697398747",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39891285526",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T02:41:09Z",
+    "displayTitle": "Add the DOS toolchain and a headless walking skeleton (#3)",
+    "event": "push",
+    "headSha": "12c1c9a53c19ecb6c9d4d38cccff969e58f523d8",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39890911707",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-22T14:46:13Z",
+    "displayTitle": "Initial Commit",
+    "event": "push",
+    "headSha": "a4b0d86e87fbca2c3e910f898bfda477730a241a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39798593866",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-22T14:42:14Z",
+    "displayTitle": "chore: remove the Dependabot configuration",
+    "event": "push",
+    "headSha": "f68a6d5436cd864d788dffcb0c9b253a4858558e",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39797989092",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-22T14:41:33Z",
+    "displayTitle": "github_actions in /. - Update #1645450510",
+    "event": "dynamic",
+    "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39797889448",
+    "workflowName": "Dependabot Updates"
+   },
+   {
+    "conclusion": "failure",
+    "createdAt": "2026-10-22T14:41:33Z",
+    "displayTitle": "cargo in /. - Update #1645450513",
+    "event": "dynamic",
+    "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39797889410",
+    "workflowName": "Dependabot Updates"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-10-22T14:41:29Z",
+    "displayTitle": "Initial Commit",
+    "event": "push",
+    "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39797879922",
+    "workflowName": "CI"
+   }
+  ]
+ }
+}

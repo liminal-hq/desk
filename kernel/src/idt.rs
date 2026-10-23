@@ -42,19 +42,34 @@ isr_common:
     hlt
     jmp 2b
 
-    .global irq0_stub
-irq0_stub:
+    .section .rodata.irq_stubs, "a"
+    .balign 4
+    .global irq_stubs
+irq_stubs:
+
+    .macro irq_stub n
+    .section .text.isr, "ax"
+irq_stub\n:
     pushad
     cld
-    call timer_irq
+    push \n
+    call irq_dispatch
+    add esp, 4
     popad
     iretd
+    .section .rodata.irq_stubs, "a"
+    .long irq_stub\n
+    .endm
+
+    .irp n, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+    irq_stub \n
+    .endr
 "#
 );
 
 extern "C" {
     static isr_table: [u32; 32];
-    fn irq0_stub();
+    static irq_stubs: [u32; 16];
 }
 
 #[repr(C, packed)]
@@ -82,6 +97,19 @@ fn gate(handler: u32) -> Gate {
     Gate { offset_low: handler as u16, selector: gdt::KERNEL_CODE, zero: 0, flags: 0x8E, offset_high: (handler >> 16) as u16 }
 }
 
+/// The vector of the first hardware interrupt line (the PIC is remapped to it).
+pub const IRQ_BASE: u8 = 0x20;
+
+/// Points the gate of hardware interrupt line `line` (0 to 15) at its stub. Call with interrupts off.
+pub fn set_irq_gate(line: u8) {
+    // SAFETY: the table lives for the whole run; the caller has interrupts off on a single processor, so no interrupt reads the
+    // entry while it is written, and a gate is written in one step before the line is unmasked.
+    unsafe {
+        let idt = &mut *core::ptr::addr_of_mut!(IDT);
+        idt[usize::from(IRQ_BASE + line)] = gate(irq_stubs[usize::from(line)]);
+    }
+}
+
 /// Fills the table with the 32 exception gates and the timer gate (vector 0x20), then loads it.
 pub fn init() {
     // SAFETY: single processor with interrupts off; nothing else touches IDT before `lidt` makes it live.
@@ -90,7 +118,7 @@ pub fn init() {
         for (v, slot) in idt.iter_mut().take(32).enumerate() {
             *slot = gate(isr_table[v]);
         }
-        idt[0x20] = gate(irq0_stub as *const () as u32);
+        idt[0x20] = gate(irq_stubs[0]);
         let ptr = Pointer { limit: (core::mem::size_of::<[Gate; 256]>() - 1) as u16, base: idt.as_ptr() as u32 };
         asm!("lidt [{0}]", in(reg) &ptr);
     }
@@ -174,9 +202,4 @@ extern "C" fn exception_handler(f: &Frame) -> ! {
     println!("CR0 {:#010x}  CR2 {:#010x}  CR3 {:#010x}", cr(0), cr(2), cr(3));
     println!("halting with a failure status");
     exit::failure()
-}
-
-#[no_mangle]
-extern "C" fn timer_irq() {
-    crate::pit::tick();
 }

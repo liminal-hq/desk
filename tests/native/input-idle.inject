@@ -1,0 +1,2 @@
+# Waits for the kernel to be ready and then sends nothing, so the kernel waits in vain and the run script's watchdog must end the run.
+wait input: ready
