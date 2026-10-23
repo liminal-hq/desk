@@ -53,6 +53,11 @@ impl Irq {
 
 /// The interrupt controller: masking and end-of-interrupt. Implemented by the 8259 driver for both platforms (under DOS without
 /// re-initialising it), and by the mock.
+///
+/// `mask` and `unmask` are a read-modify-write of a mask register shared by every line on the controller, so an interrupt handler
+/// (ours, the BIOS's or a TSR's) that changes the mask between the read and the write would have its change lost. Callers outside
+/// interrupt context call them with interrupts off (the platform's critical section); a driver has no way to turn interrupts off
+/// itself, by design.
 pub trait InterruptController {
     /// Stops the line from interrupting.
     fn mask(&self, irq: Irq);

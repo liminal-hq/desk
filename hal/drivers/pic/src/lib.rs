@@ -91,6 +91,8 @@ impl<P: PortIo> Pic8259<P> {
     }
 }
 
+/// `mask`, `unmask` and `set_mask` read and write the shared mask registers without turning interrupts off; see the contract on
+/// `InterruptController` (the caller holds the platform's critical section).
 impl<P: PortIo> InterruptController for Pic8259<P> {
     fn mask(&self, irq: Irq) {
         let (port, bit) = Self::line(irq);
