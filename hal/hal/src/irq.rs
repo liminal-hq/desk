@@ -5,8 +5,10 @@
 //
 // A handler is a function pointer plus a context pointer, never a closure: the platform's assembly stub has to call it from an
 // interrupt with nothing but two words it stored at registration, and under a DPMI host both words and everything they reach must
-// sit in locked memory. `IrqHandler::from_static` builds the pair from a `&'static mut T`, so ordinary driver code needs no
-// `unsafe`: the context moves to the handler for good, and the handler is the only code that touches it.
+// sit in locked memory. Two safe constructors cover driver code without `unsafe`: `IrqHandler::from_static` takes a
+// `&'static mut T` (state only the handler touches, such as a ring's producer: the context moves to the handler for good), and
+// `IrqHandler::from_shared` takes a `&'static T` (state that is all atomics, such as a tick counter, which can simply be a
+// `static`). A platform with no allocator and mutable handler state uses `from_raw` over a static it owns.
 //
 // Rules for a handler (`docs/HAL.md`, "Interrupts"): no allocation, no lock the core might hold, bounded work, no DOS or BIOS
 // call, no floating point, and anything shared with the core goes through an atomic or an `SpscRing`. The platform guarantees a
@@ -81,6 +83,13 @@ pub trait IrqService {
     fn on_irq(&mut self);
 }
 
+/// Interrupt work whose state is all shared with the core through atomics, so it needs only `&self`: the context can be a plain
+/// `static`, and nothing is leaked or moved.
+pub trait SharedIrqService: Sync {
+    /// Runs in interrupt context; see the rules at the top of this module.
+    fn on_irq(&self);
+}
+
 /// A registered handler: what a platform's interrupt stub calls. Two words, so the stub can keep it in a locked table.
 #[derive(Clone, Copy, Debug)]
 pub struct IrqHandler {
@@ -88,9 +97,10 @@ pub struct IrqHandler {
     ctx: *mut (),
 }
 
-// SAFETY: an `IrqHandler` is built either by `from_static`, from a `&'static mut T` with `T: Send` whose ownership passes to the
-// handler, or by `from_raw`, whose caller promises the same. Moving the two words to the interrupt context is therefore moving a
-// `Send` value, and the platform never runs the handler twice at once.
+// SAFETY: an `IrqHandler` is built by `from_static`, from a `&'static mut T` with `T: Send` whose ownership passes to the
+// handler; by `from_shared`, from a `&'static T` with `T: Sync`, used only through `&T`; or by `from_raw`, whose caller promises
+// the same. Moving the two words to the interrupt context is therefore moving a `Send` value, and the platform never runs the
+// handler twice at once.
 unsafe impl Send for IrqHandler {}
 // SAFETY: as above; shared references to the pair only allow copying the two words, and `call` is `unsafe` with the
 // one-caller-at-a-time contract.
@@ -102,6 +112,12 @@ unsafe fn trampoline<T: IrqService>(ctx: *mut ()) {
     svc.on_irq();
 }
 
+unsafe fn shared_trampoline<T: SharedIrqService>(ctx: *mut ()) {
+    // SAFETY: `ctx` came from the `&'static T` given to `from_shared` and is only used as a shared reference; `T: Sync`.
+    let svc = unsafe { &*(ctx as *const T) };
+    svc.on_irq();
+}
+
 impl IrqHandler {
     /// The handler for a driver's interrupt-side state. The `&'static mut` moves the state to the handler: the core keeps no
     /// reference to it, so anything the two share has to be inside it behind a shared `&'static` (an atomic, a ring's producer).
@@ -110,6 +126,15 @@ impl IrqHandler {
         IrqHandler {
             func: trampoline::<T>,
             ctx: svc as *mut T as *mut (),
+        }
+    }
+
+    /// The handler for interrupt work whose state is shared with the core through atomics (`TickCounter`). The core keeps its own
+    /// `&'static` to the same value.
+    pub fn from_shared<T: SharedIrqService + 'static>(svc: &'static T) -> IrqHandler {
+        IrqHandler {
+            func: shared_trampoline::<T>,
+            ctx: svc as *const T as *mut (),
         }
     }
 
@@ -129,7 +154,8 @@ impl IrqHandler {
     ///
     /// Only the platform's dispatch calls this, and never twice at once for the same handler (interrupts are off while it runs).
     pub unsafe fn call(&self) {
-        // SAFETY: the pair was built by `from_static` or `from_raw` under their contracts; the caller rules out re-entry.
+        // SAFETY: the pair was built by `from_static`, `from_shared` or `from_raw` under their contracts; the caller rules out
+        // re-entry.
         unsafe { (self.func)(self.ctx) }
     }
 }
@@ -193,5 +219,20 @@ mod tests {
             h.call();
         }
         assert_eq!(SHARED.load(Ordering::Acquire), 2);
+    }
+
+    #[test]
+    fn a_shared_handler_needs_only_a_static() {
+        struct Hits(AtomicU32);
+        impl SharedIrqService for Hits {
+            fn on_irq(&self) {
+                self.0.fetch_add(1, Ordering::Release);
+            }
+        }
+        static HITS: Hits = Hits(AtomicU32::new(0));
+        let h = IrqHandler::from_shared(&HITS);
+        // SAFETY: the test is the only caller.
+        unsafe { h.call() };
+        assert_eq!(HITS.0.load(Ordering::Acquire), 1);
     }
 }

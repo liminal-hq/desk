@@ -27,7 +27,7 @@ Spike H: one design that lets the same driver code (the 16550 serial port, the P
 1. **Two edges, one crate.** `desk-hal` has a *lower edge* that drivers use (port I/O, interrupts, memory-mapped regions and DMA memory, a tick source) and an *upper edge* that the Desk core uses (display, input queues, clock, sound, storage, debug output). `DIRECTION.md` called the lower edge "the port-I/O and IRQ abstraction" and the upper edge "the HAL"; they are kept in one small crate so the types they share (`Irq`, `HalError`, `MmioRegion`, `SpscRing`) have one home.
 2. **Drivers are generic over traits, not trait objects.** A driver is `Serial16550<P: PortIo>`; a binary has exactly one platform, so monomorphisation costs no code size and leaves no vtable on the interrupt path. The mock is just another `P`.
 3. **The capability is the value.** `PortIo` methods are safe; making a real port bus (`x86::RawPorts::new`) is `unsafe`, once per platform. Drivers get a bus, a base port and nothing else.
-4. **Interrupt handlers are a function pointer and a context pointer**, built safely from a `&'static mut T` whose ownership moves to the handler. They talk to the core only through atomics and lock-free single-producer, single-consumer rings. The platform sends the end-of-interrupt, never the driver.
+4. **Interrupt handlers are a function pointer and a context pointer**, built safely from a `&'static mut T` whose ownership moves to the handler, or from a `&'static T` whose state is all atomics. They talk to the core only through atomics and lock-free single-producer, single-consumer rings. The platform sends the end-of-interrupt, never the driver.
 5. **No compare-and-swap anywhere.** Loads, stores, `swap` (`xchg`) and `fetch_add` (`lock xadd`) only. A 486 has `CMPXCHG`, but DOSBox's `cputype = 486` rejects it ([`D0-RUST-DOS.md`](D0-RUST-DOS.md)), so CI would not run code that uses it. `hal/clippy.toml` enforces this.
 6. **Platforms live with their environment.** The DOS platform becomes a module of `rt`, the native platform a module of the kernel, and only the portable crates (traits, drivers, mock) live in `hal/`. Everything in `hal/` builds for the host, so `cargo test` runs there.
 
@@ -155,11 +155,13 @@ pub trait InterruptController {
     fn is_spurious(&self, irq: Irq) -> bool { false }
 }
 
-pub trait IrqService { fn on_irq(&mut self); }      // a driver's interrupt-side half
+pub trait IrqService { fn on_irq(&mut self); }      // a driver's interrupt-side half, state only it touches
+pub trait SharedIrqService: Sync { fn on_irq(&self); }  // interrupt work over atomics shared with the core
 
 pub struct IrqHandler { func: unsafe fn(*mut ()), ctx: *mut () }
 impl IrqHandler {
     pub fn from_static<T: IrqService + Send + 'static>(svc: &'static mut T) -> IrqHandler;
+    pub fn from_shared<T: SharedIrqService + 'static>(svc: &'static T) -> IrqHandler;
     pub const unsafe fn from_raw(func: unsafe fn(*mut ()), ctx: *mut ()) -> IrqHandler;
     pub unsafe fn call(&self);                      // the platform's dispatch only
 }
@@ -172,7 +174,7 @@ pub trait IrqRegistry {
 }
 ```
 
-- **Registration is a function pointer plus a context pointer**, two words the platform's assembly stub can keep in a locked table. `from_static` builds them from a `&'static mut T` (typically `Box::leak` at start-up, or a `static mut` the platform owns): the `&'static mut` moves to the handler, so nothing else can touch the handler's state, and anything the core shares with it sits behind a separate `&'static` (an atomic counter, an `SpscRing`). The trampoline `trampoline::<T>` is monomorphised, so there is no `dyn` and no closure.
+- **Registration is a function pointer plus a context pointer**, two words the platform's assembly stub can keep in a locked table. Two safe constructors cover driver code. `from_static` takes a `&'static mut T` (typically `Box::leak` at start-up) for state only the handler touches, such as a ring's producer and a packet being assembled: the `&'static mut` moves to the handler, so nothing else can touch it, and anything the core shares with it sits behind a separate `&'static` (an atomic counter, an `SpscRing`). `from_shared` takes a `&'static T` whose state is all atomics (`TickCounter`), which can be a plain `static` with no allocation. A platform with no allocator and mutable handler state uses `from_raw` over a static it owns, inside its own audited `unsafe`. The trampolines are monomorphised, so there is no `dyn` and no closure.
 - **Who sends the end-of-interrupt.** The platform, after the handler returns, according to `Chain`: `Chain::None` means the platform sends it (natively always; under DOS for lines Desk owns outright, the keyboard and the PS/2 mouse); `Chain::Previous` means the previous owner runs next and sends it (under DOS, the BIOS timer handler, which also keeps the DOS clock; the d0 IRQ 0 hook already works this way). A driver never sends one: the kernel's `pit::tick` did, and under DOS chaining that would acknowledge a second, unrelated interrupt.
 - **Spurious interrupts.** For IRQ 7 and 15 the platform asks `is_spurious` first; `desk-pic` reads the in-service register. A spurious IRQ 7 gets no end-of-interrupt; a spurious IRQ 15 gets one on the master only (`Pic8259::eoi_master`), because the master did see IRQ 2.
 - **Masking is a read-modify-write** of a register every line shares, so the core calls `mask` and `unmask` inside the platform's "interrupts off" critical section; otherwise a handler (ours, the BIOS's, a TSR's) that changes the mask in between has its change lost. Drivers cannot turn interrupts off, so this is a rule for the platform and the core.
@@ -411,7 +413,7 @@ From what exists (the kernel's `port.rs`, `serial.rs`, `pic.rs`, `pit.rs`, `vga.
 - `kernel/src/port.rs`: deleted. A `pub static PORTS: RawPorts = unsafe { RawPorts::new() };` (or a `const`) in a new `kernel/src/hal.rs`, with the `SAFETY:` line "the kernel runs in ring 0".
 - `kernel/src/serial.rs`: becomes `Serial16550::new(PORTS, COM1)`; `serial::init()` is `SERIAL.init(115_200).unwrap()`; `console.rs` writes through it. Same port writes (tested: `init_matches_the_kernel_byte_for_byte`).
 - `kernel/src/pic.rs`: becomes `Pic8259::new(PORTS)`; `init()` is `PIC.init(REMAPPED_BASES, 0xFFFE)` (same writes and delays, tested); `mask_timer()` is `PIC.mask(Irq::TIMER)`; `eoi_master()` is `PIC.eoi(Irq::TIMER)`, called by the dispatch, not by the timer code.
-- `kernel/src/pit.rs`: becomes `static CLOCK: PitClock`, `Pit::new(PORTS).program_periodic(100)` (same writes, tested) and `CLOCK.set_divisor(divisor)`; `pit::ticks()` is `CLOCK.now().0`. The `pit: channel 0 at 100 Hz` line keeps its text.
+- `kernel/src/pit.rs`: becomes `static CLOCK: PitClock`, `Pit::new(PORTS).program_periodic(100)` (same writes, tested), `CLOCK.set_divisor(divisor)` and `IrqHandler::from_shared(CLOCK.counter())` registered on IRQ 0; `pit::ticks()` is `CLOCK.now().0`. The `pit: channel 0 at 100 Hz` line keeps its text.
 - `kernel/src/idt.rs`: `irq0_stub` calls a `dispatch(0)` that calls the registered `IrqHandler` and then `PIC.eoi`, instead of `timer_irq`; `kernel::hal` implements `IrqRegistry` over a 16-entry table. Gates for IRQ 1–15 come with spike C.
 - `kernel/src/vga.rs`: moves to `desk-vgatext` over an `MmioRegion` at `B8000h` (optional in this step).
 - Acceptance: `tests/native/expected.txt` unchanged, every negative mode unchanged (`notick` now masks through `Pic8259`).

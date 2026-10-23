@@ -34,7 +34,7 @@ pub mod time;
 pub mod x86;
 
 pub use error::HalError;
-pub use irq::{InterruptController, Irq, IrqHandler, IrqRegistry, IrqService};
+pub use irq::{InterruptController, Irq, IrqHandler, IrqRegistry, IrqService, SharedIrqService};
 pub use mmio::MmioRegion;
 pub use port::PortIo;
 pub use ring::SpscRing;

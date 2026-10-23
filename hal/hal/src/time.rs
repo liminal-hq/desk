@@ -10,7 +10,7 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use crate::irq::IrqService;
+use crate::irq::SharedIrqService;
 use crate::HalError;
 
 /// A reading of a monotonic tick counter.
@@ -71,9 +71,10 @@ impl TickCounter {
     }
 }
 
-/// The tick counter as an interrupt service: what a timer driver registers when nothing else is needed per tick.
-impl IrqService for &'static TickCounter {
-    fn on_irq(&mut self) {
+/// The tick counter as an interrupt service: what a timer driver registers (with `IrqHandler::from_shared`) when nothing else is
+/// needed per tick.
+impl SharedIrqService for TickCounter {
+    fn on_irq(&self) {
         self.tick();
     }
 }
@@ -121,9 +122,12 @@ mod tests {
     #[test]
     fn the_counter_as_a_service_ticks() {
         static C: TickCounter = TickCounter::new();
-        let mut svc: &'static TickCounter = &C;
-        svc.on_irq();
-        svc.on_irq();
+        let h = crate::IrqHandler::from_shared(&C);
+        // SAFETY: the test is the only caller.
+        unsafe {
+            h.call();
+            h.call();
+        }
         assert_eq!(C.now(), Ticks(2));
     }
 }

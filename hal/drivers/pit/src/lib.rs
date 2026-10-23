@@ -13,7 +13,6 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use desk_hal::irq::IrqService;
 use desk_hal::time::{Clock, TickCounter, Ticks};
 use desk_hal::{HalError, PortIo};
 
@@ -125,6 +124,11 @@ impl PitClock {
         }
     }
 
+    /// The tick counter, which is the IRQ 0 work: register it with `IrqHandler::from_shared(CLOCK.counter())`.
+    pub fn counter(&self) -> &TickCounter {
+        &self.counter
+    }
+
     /// Records the divisor channel 0 was programmed with (the BIOS rate is `MAX_DIVISOR`), so the clock reports the real rate.
     /// Call before registering the handler. `InvalidArgument`, and nothing recorded, outside `MIN_DIVISOR..=MAX_DIVISOR`.
     pub fn set_divisor(&self, divisor: u32) -> Result<(), HalError> {
@@ -142,14 +146,6 @@ impl Clock for PitClock {
     }
     fn millihertz(&self) -> u32 {
         self.millihertz.load(Ordering::Relaxed)
-    }
-}
-
-/// The IRQ 0 work: one tick. The handler's state is just the shared reference, so `IrqHandler::from_static` takes a leaked
-/// `&'static mut &'static PitClock` (or a `static mut` the platform owns).
-impl IrqService for &'static PitClock {
-    fn on_irq(&mut self) {
-        self.counter.tick();
     }
 }
 
@@ -254,8 +250,8 @@ mod tests {
         let divisor = Pit::new(&bus).program_periodic(100).unwrap();
         CLOCK.set_divisor(divisor).unwrap();
         assert_eq!(CLOCK.millihertz(), 99_998);
-        let state: &'static mut &'static PitClock = Box::leak(Box::new(&CLOCK));
-        irq.register(Irq::TIMER, IrqHandler::from_static(state), Chain::None).unwrap();
+        irq.register(Irq::TIMER, IrqHandler::from_shared(CLOCK.counter()), Chain::None)
+            .unwrap();
         let start = CLOCK.now();
         for _ in 0..25 {
             assert!(irq.raise(Irq::TIMER));
@@ -268,7 +264,7 @@ mod tests {
             "the platform, not the driver, sends the end-of-interrupt"
         );
         assert_eq!(
-            irq.register(Irq::TIMER, IrqHandler::from_static(Box::leak(Box::new(&CLOCK))), Chain::None),
+            irq.register(Irq::TIMER, IrqHandler::from_shared(CLOCK.counter()), Chain::None),
             Err(HalError::Busy)
         );
         irq.unregister(Irq::TIMER).unwrap();
