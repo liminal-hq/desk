@@ -1,0 +1,2 @@
+# Match the 130-column line length the repository uses for comments and scripts.
+max_width = 130

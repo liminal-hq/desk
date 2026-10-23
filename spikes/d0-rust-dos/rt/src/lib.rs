@@ -15,21 +15,27 @@
 // - `mem`      memcpy and friends for the COFF (stage 1) build only; the ELF build gets them from compiler_builtins
 // - `panic`    the panic handler: report, run the clean-up list, exit with status 3
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
+// - `irq`      the interrupt registry: a stub per IRQ line that calls a Rust `IrqHandler`, and the end-of-interrupt
+// - `bios_kbd` the BIOS keyboard state in the data area (lock flags, type-ahead buffer), for a program that takes IRQ 1
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof)
 // - `vga`      mode 13h and the frame buffer (hardware proof)
+// - `hal`      the DOS platform's implementations of the HAL traits: `DosBios` (real-mode calls) and `DosDisplay` (VGA and VBE)
 //
 // Single-threaded, with one exception: interrupt handlers, which touch only `static`s and never allocate or call DOS.
 #![no_std]
 
 extern crate alloc;
 
+pub mod bios_kbd;
 pub mod cleanup;
 pub mod dos;
 pub mod dpmi;
 pub mod env;
 pub mod fpu;
+pub mod hal;
 pub mod heap;
 pub mod io;
+pub mod irq;
 #[cfg(target_os = "windows")]
 mod mem;
 mod panic;

@@ -1,0 +1,18 @@
+[package]
+name = "desk-pit"
+description = "The 8254 PIT driver, written once against the HAL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+
+[features]
+# Only for host builds; see `desk-hal`.
+std = ["desk-hal/std"]
+
+[dev-dependencies]
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { workspace = true, features = ["std"] }

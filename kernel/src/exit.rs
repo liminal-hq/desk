@@ -3,8 +3,9 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::port::outb;
+use crate::hal::PORTS;
 use core::arch::asm;
+use desk_hal::PortIo;
 
 const DEBUG_EXIT: u16 = 0xF4;
 
@@ -13,7 +14,7 @@ const SUCCESS: u8 = 0x10; // status 33
 const FAILURE: u8 = 0x11; // status 35
 
 fn stop(code: u8) -> ! {
-    outb(DEBUG_EXIT, code);
+    PORTS.outb(DEBUG_EXIT, code);
     // Real hardware has no such device: halt for good.
     loop {
         // SAFETY: stops the CPU.

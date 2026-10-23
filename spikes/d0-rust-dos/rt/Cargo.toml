@@ -5,3 +5,8 @@ edition = "2021"
 publish = false
 description = "A Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87"
 license = "Apache-2.0 OR MIT"
+
+[dependencies]
+desk-hal = { path = "../../../hal/hal" }
+desk-pic = { path = "../../../hal/drivers/pic" }
+desk-vga = { path = "../../../hal/drivers/vga" }

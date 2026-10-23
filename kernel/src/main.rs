@@ -8,19 +8,26 @@
 
 extern crate alloc;
 
+mod bios;
+mod biostest;
 mod console;
 mod exit;
 mod fpu;
+mod gfx;
 mod gdt;
+mod hal;
 mod heap;
 mod idt;
+mod input;
 mod memory;
 mod pic;
 mod pit;
-mod port;
+#[path = "../../spikes/a-vga-vbe/prog/src/scene.rs"]
+mod scene;
 mod serial;
 mod sync;
 mod vga;
+mod video;
 
 use alloc::format;
 use alloc::string::String;
@@ -68,7 +75,12 @@ pub struct BootInfo {
     test_mode: u32,
     map_source: u32,
     map_count: u32,
-    _reserved: [u32; 3],
+    /// Boot information version: 1 adds the next two fields (they were reserved before, and the loader did not write them).
+    version: u32,
+    /// Address of the 32-byte video block (see `video.rs`), 0 for none.
+    video: u32,
+    /// Address of the BIOS 8x16 font (4096 bytes), 0 for none.
+    font: u32,
     // E820-style entries follow at offset 32.
 }
 
@@ -84,6 +96,12 @@ enum TestMode {
     Panic = 4,
     Hang = 5,
     NoTick = 6,
+    Input = 7,
+    InputMasked = 8,
+    InputIdle = 9,
+    Gfx = 10,
+    Bios = 11,
+    BiosSolo = 12,
 }
 
 impl TestMode {
@@ -95,6 +113,12 @@ impl TestMode {
             4 => TestMode::Panic,
             5 => TestMode::Hang,
             6 => TestMode::NoTick,
+            7 => TestMode::Input,
+            8 => TestMode::InputMasked,
+            9 => TestMode::InputIdle,
+            10 => TestMode::Gfx,
+            11 => TestMode::Bios,
+            12 => TestMode::BiosSolo,
             _ => TestMode::Normal,
         }
     }
@@ -132,7 +156,16 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     memory::free_frame(b);
     assert_eq!(memory::free_frames(), free_before);
     println!("frames: alloc and free of two frames ok");
+    bios::init().expect("the BIOS trampoline");
+    println!(
+        "bios: real-mode trampoline at {:#x}, bounce buffer {:#x} ({} bytes), stack {:#x}",
+        bios::LOW_BASE,
+        bios::BOUNCE_BASE,
+        bios::BOUNCE_LEN,
+        bios::stack_base()
+    );
     heap::init();
+    let video = video::init(info);
 
     let v: Vec<u32> = (1..=10).map(|x| x * x).collect();
     let sum: u32 = v.iter().sum();
@@ -155,6 +188,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     fpu::demo();
 
     run_test_mode(mode);
+    input_section(mode, &video, info);
     println!("boot complete");
     exit::success()
 }
@@ -180,10 +214,44 @@ fn timer_demo() {
     assert!(elapsed >= TICK_WAIT);
 }
 
+/// The keyboard and mouse section, after the checks above. A normal boot sets the devices up and goes on. The input test modes
+/// then wait for events that the run script injects (`docs/C-INPUT.md`): `Input` waits for Escape, `InputMasked` leaves IRQ 1
+/// masked so the wait must fail, and `InputIdle` waits long enough that the run script's watchdog ends the run. `Gfx` hands the
+/// devices to the graphics tour.
+fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
+    let fault = if mode == TestMode::InputMasked { input::Fault::KeyboardMasked } else { input::Fault::None };
+    let Some(mut ps2) = input::init(fault) else {
+        if mode == TestMode::Normal {
+            return;
+        }
+        panic!("input: no keyboard controller, so the input test cannot run");
+    };
+    if mode == TestMode::Bios || mode == TestMode::BiosSolo {
+        println!("input: ready");
+        biostest::run(info, video, ps2, mode == TestMode::BiosSolo);
+        return;
+    }
+    if mode == TestMode::Gfx {
+        // The graphics tour (`gfx.rs`, `docs/D-NATIVE-VGA.md`) needs the keyboard and mouse for the window and for the run script's
+        // acknowledgements of its screenshots.
+        println!("input: ready");
+        gfx::tour(video, ps2);
+        return;
+    }
+    let timeout_ticks = match mode {
+        TestMode::Input => 1500,
+        TestMode::InputMasked => 500,
+        TestMode::InputIdle => 100_000,
+        _ => return,
+    };
+    println!("input: ready");
+    input::run(&mut ps2, timeout_ticks);
+}
+
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

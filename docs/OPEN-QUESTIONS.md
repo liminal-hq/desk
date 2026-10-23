@@ -64,7 +64,7 @@ Native track and the shared core (details in `DIRECTION.md#open-questions`):
 - Filesystem: FAT12 and FAT16 for floppies, and perhaps one of our own.
 - Boot media, and whether the loader is ours.
 - Early disk access: the BIOS or our own floppy and IDE drivers.
-- Switching to real mode or V86 to call the BIOS, and whether it is worth it.
+- Switching to real mode or V86 to call the BIOS, and whether it is worth it. A real-mode trampoline is built and works in QEMU and Bochs (spike n3, `N3-BIOS-PATH.md`); V86 is the later upgrade.
 - Graphics driver strategy: VBE through the BIOS before switching, V86 calls, or native drivers for specific cards.
 - Sound hardware detection without DOS or `BLASTER`.
 - Input: our own PS/2 keyboard and mouse drivers.

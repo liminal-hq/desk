@@ -1,6 +1,7 @@
 #!/bin/bash
-# Everything the CI runs: licence headers, markdown style and links, the font build check (skipped where bun is not set up), Rust format
-# and lints, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos checks, then the native boot test under QEMU.
+# Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
+# and lints, the HAL's host tests and cross builds, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
+# checks, the a-vga-vbe checks, the b-dos-input checks, then the native boot test under QEMU.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
@@ -19,6 +20,10 @@ tools/check-headers.sh
 step "Markdown style and links"
 python3 -I tools/check-docs.py
 
+step "Progress report generator: unit tests and a dry run of the data gather"
+python3 -I tools/progress-report/tests/test_report.py
+python3 -I tools/progress-report/gather.py --dry-run
+
 step "Fonts"
 if command -v bun >/dev/null && [ -d fonts/node_modules ]; then
   (cd fonts && bun build.ts --check && bun test)
@@ -29,6 +34,15 @@ fi
 step "Rust format and lints"
 (cd core && cargo fmt --check)
 (cd core && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
+# The shared HAL and drivers: host tests against the mock port bus, then the no_std crates built for the kernel's target and for the
+# pure-Rust DOS target (cargo check; clippy for the kernel target, where the x86 port instructions are compiled).
+step "HAL: host tests and no_std builds"
+(cd hal && cargo fmt --check)
+(cd hal && cargo clippy --locked --all-targets -- -D warnings)
+(cd hal && cargo test --locked --quiet)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 
 step "Build DESK.EXE"
 tools/build.sh
@@ -73,6 +87,19 @@ spikes/s1-dxe3/run.sh
 
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
 spikes/d0-rust-dos/check.sh
+
+step "Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime"
+spikes/a-vga-vbe/check.sh
+
+step "Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE"
+spikes/b-dos-input/check.sh
+
+# The mouse needs a pointer. DOSBox has no scripted injection, so this drives the SDL window under a virtual X server with xdotool, in a
+# container built from tools/docker/Dockerfile.dos-xvfb. Off by default: the CI image has no X server or Docker, and the run takes about half a minute.
+if [ -n "${INPUT_EXTRA:-}" ]; then
+  step "Spike b-dos-input (opt-in, INPUT_EXTRA=1): the mouse moved and clicked by xdotool under Xvfb"
+  spikes/b-dos-input/check-xvfb.sh
+fi
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
