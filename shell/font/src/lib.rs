@@ -88,7 +88,7 @@ impl<'a> Font<'a> {
         if baseline > height {
             return Err(FontError::BaselineOutOfCell);
         }
-        let mut index = Vec::with_capacity(usize::from(count));
+        let mut index = Vec::with_capacity(usize::from(count).min((bytes.len() - HEADER_LEN) / 5));
         let mut at = HEADER_LEN;
         let mut previous: Option<u32> = None;
         for glyph in 0..count {
