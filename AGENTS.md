@@ -125,7 +125,7 @@ Add labels to every PR when it is created and keep them accurate as scope change
 
 ## Local Tooling
 
-The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **NASM** and **QEMU** (`-cpu 486`), with 86Box and Bochs to follow. `docs/TOOLCHAIN.md` describes the hosted pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
+The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Zbuild-std`, with `RUSTC_BOOTSTRAP=1` set by `tools/build.sh`), **C** (DJGPP's cross-compiler) and **DOSBox Staging** for headless runs of the hosted track; the native track adds **NASM** and **QEMU** (`-cpu 486`), with Bochs and 86Box as opt-in Docker runs (`docs/NATIVE-EMULATORS.md`). `docs/TOOLCHAIN.md` describes the hosted pipeline. The DOS tools live in `vendor/` (not committed): `tools/setup.sh` links it to `DOS_TOOLCHAIN` in the CI image or downloads the tools. Do not install system packages to get a build working without asking.
 
 ```bash
 tools/setup.sh                           # once: Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI in vendor/

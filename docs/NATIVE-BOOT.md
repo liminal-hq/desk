@@ -1,6 +1,6 @@
 # Native boot
 
-The native track's walking skeleton: a floppy image whose boot sector loads a protected-mode Rust kernel, which runs headless in QEMU as a 486 and is checked by `tools/check.sh`. It proves the toolchain and the boot path end to end; it is not a desktop. Nothing here has run on real hardware.
+The native track's walking skeleton: a floppy image whose boot sector loads a protected-mode Rust kernel, which runs headless in QEMU as a 486 and is checked by `tools/check.sh`. It proves the toolchain and the boot path end to end; it is not a desktop. Nothing here has run on real hardware. The same image also boots in Bochs and 86Box (see [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md)).
 
 ## Contents
 
@@ -27,8 +27,8 @@ The native track's walking skeleton: a floppy image whose boot sector loads a pr
 2. **Stage 1 reads the rest.** With INT 13h AH=02 it reads stage 2 (17 sectors) to `0000:7E00`, then the kernel to physical `0x10000`. Reads are CHS (a 1.44 MB floppy is 80 cylinders, 2 heads, 18 sectors per track), go up to the end of a track at a time, never cross a 64 KiB physical boundary (the floppy DMA cannot), retry five times with a controller reset between tries and, on failure, print `Disk read error` and stop. The kernel is staged below 1 MiB because real mode cannot address memory above it.
 3. **Stage 2: output.** `boot/stage2.asm` starts COM1 and prints each step to both the screen and the serial port, so a headless run records the loader too.
 4. **A20.** The 8086 wrapped addresses at 1 MiB and the PC keeps that until the A20 gate is opened. Stage 2 tests the gate (a byte written at `0000:0500` shows up at `FFFF:0510` when it is closed), then tries the fast gate (port `0x92`), then the keyboard controller (commands `0xD0` and `0xD1` on port `0x64`), re-testing after each, and stops with a message if none worked.
-5. **Memory map.** Only the BIOS knows what RAM exists, and only in real mode. Stage 2 walks INT 15h AX=E820 (up to 32 entries of 24 bytes, ignoring empty entries and ACPI 3.0 entries marked "ignore"). If E820 is missing it falls back to INT 15h AX=E801 and rewrites the answer in the same entry format (conventional memory from INT 12h, 1 to 16 MiB, and above 16 MiB), so the kernel parses one format.
-6. **Boot information block.** Stage 2 writes a block at physical `0x500`: magic `DESK`, boot drive, test mode, map source (1 E820, 2 E801), entry count, then the entries from offset 32. The kernel receives its address in EAX.
+5. **Memory map.** Only the BIOS knows what RAM exists, and only in real mode. Stage 2 walks INT 15h AX=E820 (up to 32 entries of 24 bytes, ignoring empty entries and ACPI 3.0 entries marked "ignore"). If E820 is missing it falls back to INT 15h AX=E801 and rewrites the answer in the same entry format (conventional memory from INT 12h, 1 to 16 MiB, and above 16 MiB), so the kernel parses one format; if E801 is missing too (a BIOS from before 1994) it uses INT 15h AH=88, the KiB above 1 MiB, in the same format.
+6. **Boot information block.** Stage 2 writes a block at physical `0x500`: magic `DESK`, boot drive, test mode, map source (1 E820, 2 E801, 3 AH=88), entry count, then the entries from offset 32. The kernel receives its address in EAX.
 7. **Protected mode.** Stage 2 loads a three-entry GDT (null, flat 4 GiB code at `0x08`, flat 4 GiB data at `0x10`), sets CR0.PE and far-jumps to a 32-bit code segment, which also flushes the prefetch queue. Interrupts stay off throughout.
 8. **Kernel copy and jump.** In protected mode the kernel is copied from `0x10000` to `0x100000` (1 MiB), the stack is set and stage 2 jumps to the kernel's first byte.
 9. **Kernel start-up.** `_start` (a `global_asm!` stub in `kernel/src/main.rs`) points ESP at a 64 KiB stack in `.bss`, clears `.bss` (the flat image does not contain it) and calls `kmain(boot_info)`. `kmain` then brings up the serial port, the VGA text screen, the GDT, the IDT, the PIC and the PIT, in that order, and the demonstrations follow.
@@ -82,14 +82,14 @@ The x87 is enabled with CR0.EM clear (run x87 instructions instead of trapping t
 
 ## Running it and the CPU model
 
-`tools/native-run.sh` runs `qemu-system-i386 -cpu 486 -m 16 -drive if=floppy,format=raw,file=IMAGE -display none -serial file:LOG -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -monitor none` under `timeout`. `-cpu 486` makes QEMU's CPU model reject instructions a 486 lacks (it has no CPUID, TSC, CMOV, MMX or SSE), so a stray newer instruction fails in the run instead of on a real machine. It is an approximation: QEMU's translation is not cycle-accurate and models few of a real 486's quirks. The guest ends the run by writing to the `isa-debug-exit` port, which makes QEMU exit with `(value << 1) | 1`: status 33 for success and 35 for failure. `-no-reboot` turns a triple fault into a QEMU exit instead of a reboot loop. The script maps the statuses to its own exit codes (0 success, 1 guest failure, 2 other exit, 124 timeout, 3 no QEMU or Docker). It uses the host's QEMU, or Docker with an `ubuntu:24.04` image (`tools/docker/Dockerfile.native-qemu`, built once as `desk-native-qemu:1`); set `DESK_NATIVE_BACKEND=docker` to force Docker.
+`tools/native-run.sh` runs `qemu-system-i386 -cpu 486 -m 16 -drive if=floppy,format=raw,file=IMAGE -display none -serial file:LOG -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -monitor none` under `timeout`. `-cpu 486` makes QEMU's CPU model reject some instructions a 486 lacks (CMOV and CMPXCHG8B, for example), so a stray newer instruction can fail in the run instead of on a real machine; it does not reject RDTSC, RDMSR, MMX or a CR4 access, which the Bochs 486 does (see [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md)). It is an approximation: QEMU's translation is not cycle-accurate and models few of a real 486's quirks. The guest ends the run by writing to the `isa-debug-exit` port, which makes QEMU exit with `(value << 1) | 1`: status 33 for success and 35 for failure. `-no-reboot` turns a triple fault into a QEMU exit instead of a reboot loop. The script maps the statuses to its own exit codes (0 success, 1 guest failure, 2 other exit, 124 timeout, 3 no QEMU or Docker). It uses the host's QEMU, or Docker with an `ubuntu:24.04` image (`tools/docker/Dockerfile.native-qemu`, built once as `desk-native-qemu:1`); set `DESK_NATIVE_BACKEND=docker` to force Docker.
 
 ## The checks
 
 `tools/native-test.sh` runs, in order:
 
-- **Loader variants.** Stage 2 rebuilt with `-DA20_TEST=1` (the gate is closed first, so the fast-gate code runs), `-DA20_TEST=2` (the fast gate is also skipped, so the keyboard-controller code runs) and `-DNO_E820` (so the E801 fallback runs). Each must boot and print the matching loader line.
-- **Normal boot.** The transcript must match `tests/native/expected.txt` line by line. `tools/native-check.py` allows `{N:lo..hi}` (a number in range, for the memory total and entry counts), `{HEX}`, `{ANY}` and a lone `...` line for any number of lines (the BIOS-dependent memory map).
+- **Loader variants.** Stage 2 rebuilt with `-DA20_TEST=1` (the gate is closed first, so the fast-gate code runs), `-DA20_TEST=2` (the fast gate is also skipped, so the keyboard-controller code runs), `-DNO_E820` (so the E801 fallback runs) and `-DNO_E820 -DNO_E801` (so the AH=88 fallback runs). Each must boot and print the matching loader line.
+- **Normal boot.** The transcript must match `tests/native/expected.txt` line by line. `tools/native-check.py` allows `{N:lo..hi}` (a number in range, for the memory total and entry counts), `{HEX}`, `{BITS:mask=value}` (a hex number whose masked bits match, for CR0), `{ANY}` and a lone `...` line for any number of lines (the BIOS-dependent memory map).
 - **A wrong expectation fails.** `tests/native/wrong-expected.txt` differs in one number and must be rejected.
 - **Deliberate faults.** Test modes patched into the image make the kernel divide by zero (`div0`), load a bad segment selector (`gp`), execute `ud2` (`ud`), panic (`panic`) or mask the timer (`notick`). Each must end with exit code 1 and the expected exception dump or panic message.
 - **A hang.** In `hang` mode the kernel stops with interrupts off; the run must end by the five-second watchdog (exit 124).
@@ -108,8 +108,8 @@ Verified: the whole chain above, including each negative check and the three loa
 Not verified:
 
 - Anything on real hardware, a real floppy drive or a real 486. QEMU's `-cpu 486` is an approximation.
-- 86Box or Bochs, which model old hardware more closely, were not tried.
+- 86Box and Bochs were tried afterwards: see [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) for what they showed (one loader bug, fixed) and what they did not.
 - Booting from a hard disk or IDE (the loader assumes the 1.44 MB floppy geometry of 18 sectors and 2 heads).
-- BIOSes other than SeaBIOS: the E820 and E801 paths and the keyboard-controller A20 path were exercised only against QEMU, and the E801 and A20 paths only through the test builds.
+- BIOSes other than SeaBIOS in QEMU: Bochs's three BIOS images and an AMIBIOS of 1993 in 86Box also boot it (`NATIVE-EMULATORS.md`); the E801 and keyboard-controller A20 paths still run only through the test builds.
 - A machine with an 8086-style A20 wrap that needs INT 15h AX=2401 or other chipset-specific methods, or one with no FPU.
 - Memory above 256 MiB, and the speed of the allocators.

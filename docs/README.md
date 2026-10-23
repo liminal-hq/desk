@@ -19,6 +19,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
+| [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) | Spike G: the native image in Bochs (a 486 build, three BIOS images) and 86Box (an AMIBIOS 486 board), how to run them in Docker, the results table, the loader bug they found and what is not verified |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
 
