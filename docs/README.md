@@ -19,6 +19,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
 | [`HAL.md`](HAL.md) | Spike H: the hardware abstraction layer and the shared drivers, the platforms, the concurrency and `unsafe` rules, the migration plan and the contracts for the next spikes; the reference crates are in `hal/` |
+| [`C-INPUT.md`](C-INPUT.md) | Spike C: the keyboard and PS/2 mouse in the native kernel, the 8042 tables and set-up sequences, the event contracts, the interrupt hand-off, the QEMU input tests and what real hardware may do differently |
 | [`NATIVE-BOOT.md`](NATIVE-BOOT.md) | The native track's boot path and Rust kernel skeleton: boot flow, image layout, target, memory, interrupts and how QEMU checks it |
 | [`NAMING.md`](NAMING.md) | The working name and the candidates |
 | [`FONTS.md`](FONTS.md) | The four bitmap faces: metrics, grid conventions, adding a glyph and building |
