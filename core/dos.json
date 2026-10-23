@@ -1,0 +1,23 @@
+{
+  "llvm-target": "i486-pc-windows-gnu",
+  "arch": "x86",
+  "os": "windows",
+  "vendor": "pc",
+  "env": "gnu",
+  "binary-format": "coff",
+  "is-like-windows": true,
+  "cpu": "i486",
+  "features": "-mmx,-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx",
+  "data-layout": "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:32-n8:16:32-a:0:32-S32",
+  "target-endian": "little",
+  "target-pointer-width": 32,
+  "target-c-int-width": 32,
+  "max-atomic-width": 32,
+  "panic-strategy": "abort",
+  "relocation-model": "static",
+  "disable-redzone": true,
+  "frame-pointer": "may-omit",
+  "stack-probes": { "kind": "none" },
+  "executables": false,
+  "dynamic-linking": false
+}
