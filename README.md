@@ -41,13 +41,13 @@ It is the spiritual successor to [Lieutenant Fizz for DOS](https://github.com/Sc
 3. The shared Desk core running on the native hardware layer.
 4. Bundled FreeDOS for DOS programs.
 
-The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one in [`docs/DIRECTION.md`](docs/DIRECTION.md#milestones), and [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md) says what is decided and what is not.
+What is done, in flight and planned, item by item, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one in [`docs/DIRECTION.md`](docs/DIRECTION.md#milestones), and [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md) says what is decided and what is not.
 
 ## Repository
 
 | Folder | What it holds |
 |---|---|
-| `docs` | The working design: direction, spec (the hosted track's), SDK, file formats, handoff, palette, app guidelines, open questions, naming |
+| `docs` | The working design: direction, roadmap, spec (the hosted track's), SDK, file formats, handoff, palette, app guidelines, open questions, naming |
 | `design` | Boards and prototypes from the design brainstorm, kept as reference only |
 | `core` | The OS-independent shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
 | `c` | The hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit |
