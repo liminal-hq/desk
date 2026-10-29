@@ -6,13 +6,28 @@ A trackable list of what the project has done, what is in flight and what is pla
 
 ## Contents
 
+- [Path to the first OS milestone](#path-to-the-first-os-milestone)
 - [How to read it](#how-to-read-it)
 - [Past: merged into main](#past-merged-into-main)
 - [Current: in flight on open pull requests](#current-in-flight-on-open-pull-requests)
 - [Future: planned, in the owner's order](#future-planned-in-the-owners-order)
+- [Future: the path to an OS](#future-the-path-to-an-os)
+- [Reuse and vendoring](#reuse-and-vendoring)
 - [Future: ideas and blocked items](#future-ideas-and-blocked-items)
 - [Decisions waiting on the owner](#decisions-waiting-on-the-owner)
 - [How to keep this current](#how-to-keep-this-current)
+
+## Path to the first OS milestone
+
+The first OS milestone is: the native kernel boots, opens a window, and runs a separate program loaded from disk (R80). Until that works the native track is a kernel with a shell inside it, not an operating system. The order below is the owner's; each step names its items.
+
+1. Finish and verify live input (R47).
+2. The module loader spike: an executable format and loaders for both tracks (R48).
+3. A floppy or IDE driver and a read-only FAT filesystem (R74, R75; spike R50).
+4. A system-call boundary between the kernel and apps (R77).
+5. The first separate app running from disk (R76, R79, R80).
+
+Paging and per-task address spaces (R51, R78), sound and timing for Fizz (R81), DOS programs under the kernel (R49) and real hardware (R64) follow or run beside this path; none of them blocks it.
 
 ## How to read it
 
@@ -123,7 +138,7 @@ A second linear stack on #38, with the state of the work in `MANUAL-STATUS.md` (
 | R47 | Finish and verify live input | `planned` | The live-input stack is merged in order, and its checks pass from clean clones of `main` and in the CI image; the Not verified list of #54 is re-read and shortened where it can be | R26 to R36, #33 to #54 |
 | R48 | Module loader spike | `planned` | Our own executable format and a loader: a packer that turns the linked Rust ELF into it, one loader for the native kernel and one DOS stub, so a module runs on both tracks without DJGPP's loader. Ends with a result document in `docs/` | [`DIRECTION.md`](DIRECTION.md) (native milestone 6; "What stays valid and what changes"), [`S1-DXE3.md`](S1-DXE3.md) |
 | R49 | Candidate spike: FreeDOS in a V86 task under the native kernel | `planned` | The kernel runs FreeDOS in a V86 task or boots into it, which is how DOS programs run on the native OS. Candidate; the order among the four is open | [`DIRECTION.md`](DIRECTION.md) ("DOS programs: bundle FreeDOS"), [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md) |
-| R50 | Candidate spike: native floppy and IDE | `planned` | Own floppy and IDE drivers in the kernel instead of INT 13h through the trampoline, the first step to a filesystem. Candidate | [`DIRECTION.md`](DIRECTION.md) (native milestone 5, "Early disk access") |
+| R50 | Candidate spike: native floppy and IDE | `planned` | Own floppy and IDE drivers in the kernel instead of INT 13h through the trampoline, the first step to a filesystem (follow-on work: R74, R75). Candidate | [`DIRECTION.md`](DIRECTION.md) (native milestone 5, "Early disk access") |
 | R51 | Candidate spike: paging | `planned` | The kernel turns on paging, which memory protection and V86 both need. Candidate | [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md), [`DIRECTION.md`](DIRECTION.md) ("Memory protection") |
 | R52 | Candidate spike: Lieutenant Fizz Episode 2 as a native Rust DOS game | `planned` | A game as a plain Rust DOS program on the shared runtime and drivers, with no gcc-built C layer. Candidate | [`DIRECTION.md`](DIRECTION.md) ("Rust for DOS: shared machinery") |
 | R53 | Promote `rt` to a top-level crate | `planned` | `spikes/d0-rust-dos/rt` becomes `rt/` with `rt::hal` as the hosted platform (HAL migration step 2) | [`HAL.md`](HAL.md) (migration plan), [`D0-RUST-DOS.md`](D0-RUST-DOS.md) |
@@ -137,6 +152,38 @@ A second linear stack on #38, with the state of the work in `MANUAL-STATUS.md` (
 | R61 | Hosted track: handoff, core apps, release | `planned` | The handoff to DOS programs and back (`DESK.COM`, `DESK.RUN`), then Files, Programs and Settings, then optional apps and a release | [`SPEC.md`](SPEC.md) (milestones), [`HANDOFF.md`](HANDOFF.md), [`DIRECTION.md`](DIRECTION.md) |
 | R62 | Native track: filesystem, shared core with apps, sound | `planned` | A filesystem the kernel reads, the shared core with the core apps on the native HAL, and OPL and Sound Blaster sound | [`DIRECTION.md`](DIRECTION.md) (native milestones 5, 7, 8) |
 | R63 | The native track in the browser | `planned` | The same disk image booting in v86 | [`DIRECTION.md`](DIRECTION.md) (native milestone 9) |
+
+## Future: the path to an OS
+
+Items that the first OS milestone needs and that no earlier section tracks. Candidate spikes already listed (R48 to R52) and the real-hardware run (R64) are linked, not repeated. Each item says what it depends on and whether something could be reused; see [Reuse and vendoring](#reuse-and-vendoring), where every candidate is still to be assessed.
+
+| Id | Title | Status | Outcome | Depends on | Could we vendor or reuse something? |
+|---|---|---|---|---|---|
+| R74 | Block device trait and the floppy and IDE/ATA drivers | `planned` | A block-device trait in the HAL and floppy and IDE/ATA drivers in the native kernel, tested in QEMU against a disk image; the spike is R50, and INT 13h through the trampoline (R14) is the stopgap | R50, [`HAL.md`](HAL.md) | Possibly: an ATA driver from a Rust OS project; to be assessed |
+| R75 | A filesystem | `planned` | Read-only FAT12 and FAT16 first, so DOS-compatible disks work and FreeDOS can share them, then a writable one; whether a filesystem of our own is wanted for the system volume stays open | R74 | Possibly: a Rust FAT crate; to be assessed |
+| R76 | Load a separate program from disk | `planned` | The native kernel reads an executable from a disk image and runs it, using the format and loader of R48 | R48, R74, R75 | Only the format is ours; see R48 |
+| R77 | Tasks, a scheduler and a system-call boundary | `planned` | A task model, a cooperative scheduler first, and a system-call interface between the kernel and apps; preemption is an open question in [`DIRECTION.md`](DIRECTION.md) | R76 | Design ideas only; to be assessed |
+| R78 | Per-task address spaces | `idea` | Each task gets its own address space on the 486's MMU; flat and shared memory is the alternative. The paging spike is R51 | R51, R77 | Possibly: paging code in a Rust OS project; to be assessed |
+| R79 | The app interface made real | `planned` | [`SDK.md`](SDK.md) is design only; this turns it into a stable API so an app can be built separately from the kernel and run through the system calls | R77, R48 | No; it is the project's own interface |
+| R80 | First separate app from disk (the first OS milestone) | `planned` | Boot, open a window, and run a program loaded from disk. This is the definition of the first OS milestone | R47, R48, R74 to R77, R79 | Not applicable |
+| R81 | Sound and timing for Fizz Episode 2 | `planned` | A Sound Blaster or PC speaker driver and a stable timer that the Fizz game needs, then the game itself (R52). The broader sound work is in R62 | R52, R62 | Possibly: the OPL and Sound Blaster notes in [`S5-JSDOS.md`](S5-JSDOS.md) are ours; any driver code to be assessed |
+
+DOS programs under the native kernel (V86 mode with FreeDOS bundled) stay at R49 and are optional for the first milestone.
+
+## Reuse and vendoring
+
+Nothing is vendored, and nothing here has been checked for compatibility. The project's licence is Apache-2.0 OR MIT; for each candidate the first thing to check is its licence and whether it is compatible with that dual licence, and every candidate below is **to be assessed**. A decision to vendor or depend on outside code needs the owner, a `NOTICE` entry (`NOTICE` already lists third-party material), and an exception to the rule in `AGENTS.md` that `shell/` takes no external crates (the kernel and `hal/` are not under that rule, but the same owner decision applies).
+
+Where licences were looked up, on 2026-10-29 with a web fetch of each project's own page:
+
+| Candidate | For | Licence as stated on its page | Notes |
+|---|---|---|---|
+| [`rust-fatfs`](https://github.com/rafalh/rust-fatfs) (the `fatfs` crate) | R75 | MIT (its README links `LICENSE.txt`) | States `no_std` support with `default-features = false` and FAT12, FAT16 and FAT32. Maintenance and whether it fits a kernel with no OS I/O traits not checked; to be assessed |
+| [Theseus](https://github.com/theseus-os/Theseus) | R74, R77, R78 | MIT (its README) | A Rust OS. Whether it has a usable ATA driver crate was not established from the page; to be assessed |
+| [Redox](https://gitlab.redox-os.org/redox-os/redox) | R74, R75, R77 | MIT (stated on its page) | A Rust OS. Which components could be reused, and under what licence each one is, was not checked; to be assessed |
+| [FreeDOS kernel](https://github.com/FDOS/kernel) | R49 | GPL v2 (its README says "GPL v2"; its About says "GPL v2 or later") | Copyleft; bundling it affects the licence of what ships, as [`DIRECTION.md`](DIRECTION.md) already warns. Other FreeDOS programs have their own licences, not checked |
+
+I am not confident of any other project's existence or licence, so none is listed. A source for the floppy controller and a Sound Blaster driver was not looked up.
 
 ## Future: ideas and blocked items
 
