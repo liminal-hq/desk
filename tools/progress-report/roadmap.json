@@ -541,7 +541,7 @@
    "deps": [
     "kernel"
    ],
-   "what": "R77: preemptive on native in three stages (ring-0 preemption on PIT slices, then paging and ring 3, then system calls); cooperative on hosted, where DOS is not reentrant. The SDK defines preemptive semantics.",
+   "what": "R77: preemptive on native in three stages (ring-0 preemption on PIT slices, then paging and ring 3 for protection, then system calls on the protected task); cooperative on hosted, where DOS is not reentrant. The SDK defines preemptive semantics.",
    "why": "Shapes the app ABI and the core's event loop.",
    "evidence": "Decided by the owner on 2026-11-11; docs/APP-MODEL.md. Follows the loader spike (R48); nothing built."
   },
@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications proposed, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
+   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
@@ -620,7 +620,7 @@
    "deps": [
     "threads"
    ],
-   "what": "R142: fully configurable priorities (32 levels as a target, a system band, ceilings, ageing, 10 ms slices); on hosted they order the cooperative ready list.",
+   "what": "R142: fully configurable priorities (32 levels as a target, a system band, ceilings, ageing, 10 ms slices, basic priority inheritance); on hosted they order the cooperative ready list.",
    "why": "Input and the compositor stay responsive while apps work.",
    "evidence": "docs/APP-MODEL.md; nothing built."
   },
@@ -646,7 +646,7 @@
     "loader",
     "sched"
    ],
-   "what": "R144: kind 2 of the loader's container with its own extension (.DKX proposed), loaded as a new task.",
+   "what": "R144: kind 2 of the loader's container with its own extension (.DKX, decided), loaded as a new task.",
    "why": "An app is a program, not a plug-in.",
    "evidence": "docs/LOADER.md, docs/APP-MODEL.md; the spike writes and refuses them."
   },

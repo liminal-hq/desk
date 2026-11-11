@@ -139,7 +139,7 @@ So the spike removes the loader and the panic path from the reasons to keep C, a
 
 ## Recommendation
 
-**An own container: one image linked at `0x0040_0000` with static code, a table of absolute words to relocate, named import slots resolved against a table the core registers, three entry offsets, a `kind` (module, app, library), a reserved export table, a format version, an SDK version and a CRC-32; one container with two extensions, `.DMD` for a module (and later a library) and `.DKX` for an application ([question 1](#questions-for-the-owner)); packed from the linked ELF by a Rust host tool; loaded by one `no_std` Rust function that does no `unsafe`, called by a few lines of platform code in the kernel and in a Rust-only DOS host.** The same file runs on both tracks.
+**An own container: one image linked at `0x0040_0000` with static code, a table of absolute words to relocate, named import slots resolved against a table the core registers, three entry offsets, a `kind` (module, app, library), a reserved export table, a format version, an SDK version and a CRC-32; one container with two extensions, `.DMD` for a module (and later a library) and `.DKX` for an application (decided, [Decisions](#decisions)); packed from the linked ELF by a Rust host tool; loaded by one `no_std` Rust function that does no `unsafe`, called by a few lines of platform code in the kernel and in a Rust-only DOS host.** The same file runs on both tracks.
 
 Why: it is the smallest format that relocates (so the platform chooses the address), refuses a damaged or mismatched file before any of it runs, names a missing service, and survives the move to paging and system calls unchanged. It keeps the build to `cargo`, `rust-lld` and a tool of our own, and it keeps the load algorithm host-testable, because loading is writing words into a byte slice.
 
@@ -302,7 +302,7 @@ When the spike's result is in (the plan's last task):
 
 ## Decisions
 
-Recorded by the owner on 2026-11-11 after reading the first version of this design. Each was a question here; the one-line reason is the owner's or the design's.
+Recorded by the owner on 2026-11-11 after reading the first version of this design. Each was a question here (decision 13 was answered after the others); the one-line reason is the owner's or the design's.
 
 1. **Our own container, packed from the ELF.** It is the smallest format that relocates, names missing services and has room for Desk's fields; ELF PIE remains the fallback if the packer proves fragile.
 2. **One format on both tracks, the same file byte for byte.** An app is built once.
@@ -316,7 +316,8 @@ Recorded by the owner on 2026-11-11 after reading the first version of this desi
 10. **Native CPU-fault containment stays optional** in the spike: it does not block the result.
 11. **No OS asset-pack container.** The OS is files; data packing is the apps' own business.
 12. **Native is preemptive, hosted is cooperative; threads, wait and wake, configurable priorities, the window system as a task and the main-loop app shape** are decided in [`APP-MODEL.md`](APP-MODEL.md#decisions), outside R48's scope.
+13. **Applications are `.DKX`** (a Desk executable), on the same container with kind 2; `.DMD` stays the module extension. It is 8.3, reads as an executable, and avoids `.DXE` (DJGPP's), `.DEX` (Android's Dalvik), `.DAP` (Desk's app package) and `.APP`. The magic is `DMD1` for every kind, so a renamed file is still recognised by its `kind`.
 
 ## Questions for the owner
 
-1. **The application extension.** Default: **`.DKX`** ("Desk executable"): 8.3, reads as an executable, and no common use is known to the author (not checked exhaustively). Alternative: `.DKA` ("Desk app"). Avoided: `.DXE` (DJGPP's modules), `.DEX` (Android's Dalvik format), `.DAP` (Desk's own app package, [`FORMATS.md`](FORMATS.md)), `.APP` (dBase and FoxPro applications on DOS, and macOS bundles), `.DXA` (a game video format) and `.DPX` (an image format). The extension is a name only: the magic is `DMD1` for every kind, so a renamed file is still recognised by its `kind`.
+None remain for the format: the application extension was the last, and it is decided (decision 13). The open items of the app model are in [`APP-MODEL.md`](APP-MODEL.md#questions-for-the-owner) and of the `std` target in [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner).

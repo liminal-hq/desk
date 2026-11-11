@@ -36,14 +36,17 @@ Recorded by the owner on 2026-11-11, each with its reason in one line.
 5. **Fully configurable priorities**, chosen over a few fixed levels. The owner wants the control; the costs are set out under [Priorities](#priorities).
 6. **The window system is a separate system task that apps reach by messages**, in the manner of X11, Wayland and Windows. A crashing app cannot take the compositor with it.
 7. **An app is a main loop that blocks for events**, with a small runtime library keeping the `app_start`, `app_event`, `app_stop` callback shape for those who want it. A loop is the natural shape for threads and blocking calls; callbacks remain a convenience.
-8. **One container, two extensions; libraries documented, not built; the packer in Rust; `std` later through a platform layer of our own; no OS asset-pack container.** See [`LOADER.md`](LOADER.md#decisions).
+8. **One container, two extensions (`.DMD` modules, `.DKX` applications); libraries documented, not built; the packer in Rust; `std` later through a platform layer of our own; no OS asset-pack container.** See [`LOADER.md`](LOADER.md#decisions).
+9. **Basic priority inheritance for the futex-style locks**: a low-priority holder runs at the priority of the highest-priority waiter while it holds the lock. Without it a high-priority thread can wait indefinitely behind a medium one ([Priorities](#priorities)).
+10. **Native stage order: paging and ring 3 first, then the system-call boundary.** Protection first, so a crash stays inside its task; the system calls then arrive on a working protected task as small stubs resolved by the same named imports.
+11. **The defaults of the first version of this design are accepted**: 32 levels with the policy under [Priorities](#priorities), a 10 ms slice, ageing, the thread limits, the 32-byte message records, the window system's first native stage in the kernel's address space, thread-local keys first ([Questions](#questions-for-the-owner) lists them with their values).
 
 ## Vocabulary
 
 | Word | Meaning on Desk |
 |---|---|
 | **Module** | A `.DMD` file of kind 1: code placed into the address space of whoever loads it and called directly. The loader spike's subject; the hosted Desk's apps until tasks exist; later, drivers or extensions of the core |
-| **Application** | A file of kind 2 (`.DKX` proposed, [`LOADER.md`](LOADER.md#questions-for-the-owner)): loaded as a new task, entered at `desk_main` |
+| **Application** | A file of kind 2 (`.DKX`, a Desk executable): loaded as a new task, entered at `desk_main` |
 | **Library** | A file of kind 3, reserved: code loaded once that satisfies other files' imports. Not built |
 | **Task** | What the kernel isolates and accounts for: an address space (the shared one until R78), its threads, its memory ledger, its handles and windows, its priority ceiling. One running application is one task. Unix would call it a process |
 | **Thread** | What the scheduler runs: a stack, saved registers, the x87 state, a priority, a thread-local block. Every task has at least one; the first runs `desk_main` |
@@ -89,10 +92,10 @@ The rule that follows: an app's binary depends on layer 1's names and layer 2's 
 | Stage | What is built | What it protects against | What it does not |
 |---|---|---|---|
 | 1. Preemption in ring 0 | Tasks and threads in the kernel's address space, a software context switch (save the general registers and `ESP`, switch stacks, restore) driven by the PIT at 100 Hz, the scheduler, wait and wake, sleep and timers | A runaway loop: the thread loses the CPU and its task can be killed | Memory damage: every task still shares the kernel's flat ring-0 space, as a module does today |
-| 2. Paging and ring 3 (R78, with the paging spike R51) | Page tables per task, the image mapped at its link base (relocation becomes a no-op), read-only text, a guard page under every stack, ring-3 code and data segments, a TSS with a ring-0 stack per thread | A wild write and a stack overflow stay inside their task, which is killed cleanly | Calls into the kernel are still plain calls from ring 3, which cannot work: stage 2 and 3 land together, or stage 2 uses call gates as an interim |
-| 3. The system-call boundary (R77) | `int 0x80` (or a call gate) with a numbered table; the import names resolve to stubs that load the number and trap; arguments checked and copied by the kernel | An app can no longer call kernel internals or pass a pointer into kernel memory | Nothing new about scheduling; the semantics apps see are the stage-1 ones |
+| 2. Paging and ring 3 (R78, with the paging spike R51) | Page tables per task, the image mapped at its link base (relocation becomes a no-op), read-only text, a guard page under every stack, ring-3 code and data segments, a TSS with a ring-0 stack per thread | A wild write and a stack overflow stay inside their task, which is killed cleanly | The calls into the kernel are not yet a stable boundary: the import stubs trap through one interim gate into the same kernel functions, without a numbered table or full argument checking |
+| 3. The system-call boundary (R77) | `int 0x80` (or a call gate) with a numbered table on the working protected task; the import names resolve to small stubs that load the number and trap; arguments checked and copied by the kernel | An app can no longer call kernel internals or pass a pointer into kernel memory | Nothing new about scheduling; the semantics apps see are the stage-1 ones |
 
-Each stage keeps the API the previous one exposed, which is the point of fixing the semantics now: an app built against stage 1 runs on stage 3 unchanged, because its imports are names, not addresses ([`LOADER.md`](LOADER.md#address-space-assumptions)).
+The order is the owner's: protection first, so a crash stays inside its task, then the system calls arrive on a working protected task as small stubs resolved by the same named imports. Each stage keeps the API the previous one exposed, which is the point of fixing the semantics now: an app built against stage 1 runs on stage 3 unchanged, because its imports are names, not addresses ([`LOADER.md`](LOADER.md#address-space-assumptions)).
 
 **Killing a runaway task.** In stage 1 the kernel removes the task's threads from every queue at a point where none of them is inside the kernel (preemption only happens with the preemption counter at zero, so an interrupted thread is never mid-service), frees its memory through its ledger, closes its handles and tells the window system, which closes its windows. In stage 2 the same, plus its page tables. Locks inside the dead task die with it; a lock shared with another task would be abandoned held, which is why tasks share nothing but messages and explicitly shared buffers.
 
@@ -116,7 +119,7 @@ fn desk_wake(addr: *const u32, count: u32) -> u32;
 ```
 
 - **In the kernel**, the check of `*addr == expected` and the enqueue happen with interrupts off (one CPU, so that is atomic with respect to every wake). Waiters are kept in a small hash table keyed by address, each bucket a list in priority order. `addr` is a task address: in stage 2 the key becomes (task, address), or the physical address for a buffer two tasks share.
-- **In the library**: a mutex is one `u32` and three states (unlocked, locked, contended); condition variables, semaphores, read-write locks, `Once` and channels are written over it. A mutex can be built with exchange only (lock: `swap(1)`, and if that saw a non-zero value, `swap(2)` and wait while it does not return 0; unlock: `swap(0)`, and if that saw 2, wake one), which keeps the library free of `CMPXCHG`; `std`'s own locks use compare-and-swap, which is the subject of a question in [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner).
+- **In the library**: a mutex is one `u32`; condition variables, semaphores, read-write locks, `Once` and channels are written over it. Without inheritance a mutex needs only exchange (lock: `swap(1)`, and if that saw a non-zero value, `swap(2)` and wait while it does not return 0; unlock: `swap(0)`, and if that saw 2, wake one); with the decided basic inheritance the word holds the owner's thread id and a waiters bit, and the contended paths go through the kernel ([Priorities](#priorities)). Either way the library stays free of `CMPXCHG`; `std`'s own locks use compare-and-swap, which is the subject of a question in [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner).
 - **On hosted**, `desk_wait` with an unchanged value parks the green thread and switches; `desk_wake` moves waiters to the ready list. The same semantics, without a kernel.
 
 ## Priorities
@@ -130,9 +133,15 @@ fn desk_wake(addr: *const u32, count: u32) -> u32;
 **What full configurability costs, honestly.**
 
 - **Starvation.** Strict priorities mean a busy thread at 20 starves every thread below it forever. The default mitigation is ageing: a ready thread that has not run for 1 second (100 ticks) is raised one level per further second, up to its task's ceiling, and drops back when it runs. It costs a scan of the lower queues once a second. Without ageing, configurable priorities let one app silently freeze others; with it, the configuration is a preference, not an absolute.
-- **Priority inversion.** With futex locks the kernel does not know who holds a lock (the lock word says "locked", not by whom), so a high-priority thread waiting on a lock held by a low-priority thread, while a medium-priority thread runs, waits as long as the medium one likes. Priority inheritance fixes that but needs the lock word to hold the owner's thread id and a kernel call on every contended acquire (Linux's priority-inheriting futexes), and with exchange only, without compare-and-swap, the uncontended path becomes harder to write. Default: **no priority inheritance in stage 1.** The system is arranged so the inversion that matters cannot happen: the input thread and the compositor share no lock with any app; they talk to apps only through message queues, and a queue's lock is held for a few instructions with interrupts off, not across a block. Inversion remains possible between threads of one app, where the app's author controls both sides. If a measured case appears, inheritance can be added to the kernel's mutex without changing the wait and wake ABI.
+- **Priority inversion and basic inheritance (decided).** With futex locks the kernel does not know who holds a lock unless the lock word says, so a high-priority thread waiting on a lock held by a low-priority thread, while a medium-priority thread runs, would wait as long as the medium one likes. The decision is **basic priority inheritance**: while a thread holds a lock that a higher-priority thread waits on, it runs at the waiter's priority, and drops back when it releases the lock. What it costs:
+  - **The lock word holds the owner.** A locked mutex stores the holder's thread id (with a waiters bit), not just "locked", so the kernel can find whom to boost. The library's lock writes its own id; with exchange only (no compare-and-swap) the uncontended acquire is `swap(own id)` and a contended one falls into the kernel, which rewrites the word under interrupts off, so the fast path stays one instruction and the cost is on the contended path.
+  - **The wait and wake path.** A contended `desk_wait` on a lock word becomes a lock-wait: the kernel reads the owner from the word, records that the waiter waits on it, and if the waiter's priority is higher, raises the owner's effective priority and moves it to that ready queue. On release the owner calls into the kernel only if the waiters bit is set; the kernel hands the lock to the highest waiter, wakes it, and recomputes the old owner's effective priority from the locks it still holds. That is two small lists per thread (locks held, lock waited on) and a recomputation over the locks held, which is short when a thread holds few locks.
+  - **The scheduler.** Each thread has a base priority and an effective one; the ready queues use the effective one, ageing works on the base, and a priority change of a thread that holds locks propagates to nothing beyond its own effective value.
+  - **What "basic" means.** One level: the owner is raised to its direct waiters' highest priority. **No transitive chains in the first cut**: if the owner itself waits on another lock, that lock's owner is not raised. Chains are rare when locks are held briefly and not nested, they need a walk with a depth limit and a deadlock check, and they can be added later without changing the ABI. Only the SDK's mutex inherits; semaphores, condition variables and channels do not (they have no single owner), and condition variables re-acquire their mutex, which inherits.
+  - **Hosted.** Priorities mean run-queue order only, so inheritance is ordering only: when a green thread blocks on a lock held by a lower-priority green thread, the holder's effective priority is raised in the ready list, so it runs before the medium ones at the next switch point and releases the lock sooner. The same lock word and the same code serve both tracks.
+  The system is still arranged so the inversion that matters most cannot happen: the input thread and the compositor share no lock with any app and talk to apps through message queues, whose lock is held for a few instructions with interrupts off.
 - **Protecting input and compositor latency.** Their place in the system band, ceilings that keep apps below them, no shared locks, and interrupts that wake them directly: the keyboard and mouse interrupts fill the input ring and wake the input thread, which preempts whatever app is running.
-- **Complexity.** Thirty-two queues, a bitmap, ageing and ceilings are a few hundred lines in the scheduler. The simpler fixed-levels design would have been perhaps half that; the difference is the cost of the owner's choice, and it is small.
+- **Complexity.** Thirty-two queues, a bitmap, ageing, ceilings and basic inheritance are a few hundred lines in the scheduler and the wait table. The simpler fixed-levels design would have been perhaps half that; the difference is the cost of the owner's choice, and it is small.
 
 **On the hosted track**, priorities order the ready list the cooperative scheduler picks from at each switch point: the highest ready green thread runs next, so after any blocking call the window service (high) runs before an app worker (low). They never preempt, and ageing is applied the same way at switch points. A priority on hosted is therefore a promise about order, not about latency.
 
@@ -187,7 +196,7 @@ The runtime library also provides `desk::run(App { start, event, stop })`, which
 | Kind | Extension | Loaded as | Imports resolve to | Entry | Built in |
 |---|---|---|---|---|---|
 | 1 module | `.DMD` | Placed in the caller's address space and called | The caller's functions | `app_start`, `app_event`, `app_stop` | R48 |
-| 2 application | `.DKX` (proposed) | A new task, its first thread at `desk_main` | Stubs: plain calls before ring 3, system calls after | `desk_main` | R144, on R77 |
+| 2 application | `.DKX` | A new task, its first thread at `desk_main` | Stubs: plain calls before ring 3, system calls after | `desk_main` | R144, on R77 |
 | 3 library | `.DMD` | Placed once, shared by the files that import from it | Other libraries' exports, then the system's | None; an export table | R145, an idea |
 
 The container, the relocation and the binding are the same for all three ([`LOADER.md`](LOADER.md#format-specification-sketch-dmd)); only what the loader's caller does with the result differs.
@@ -217,14 +226,14 @@ The container, the relocation and the binding are the same for all three ([`LOAD
 
 | Part | Built | Designed | Open |
 |---|---|---|---|
-| The file format and loader | Nothing (R48 is planned in [`LOADER-PLAN.md`](LOADER-PLAN.md)) | [`LOADER.md`](LOADER.md) | The application extension |
-| Tasks and the preemptive scheduler (R77, R142) | Nothing; the kernel has a PIT at 100 Hz and interrupt-safe heap and frames | Here: three stages, 32 levels, ageing, 10 ms slices | The number of levels and the default policy, ageing, priority inheritance |
-| Threads and wait and wake (R141) | Nothing | Here | Threads per task; the default stack size |
-| Per-task spaces and ring 3 (R78) | Nothing; the paging spike R51 is planned | Stage 2 here | Whether stage 2 uses call gates before R77's system calls |
+| The file format and loader | Nothing (R48 is planned in [`LOADER-PLAN.md`](LOADER-PLAN.md)) | [`LOADER.md`](LOADER.md) | — |
+| Tasks and the preemptive scheduler (R77, R142) | Nothing; the kernel has a PIT at 100 Hz and interrupt-safe heap and frames | Here: three stages, 32 levels, ageing, 10 ms slices, basic priority inheritance | — (defaults accepted) |
+| Threads and wait and wake (R141) | Nothing | Here | — (defaults accepted) |
+| Per-task spaces and ring 3 (R78) | Nothing; the paging spike R51 is planned | Stage 2 here, before the system calls (decided) | The interim gate's form |
 | The system-call boundary (R77) | Nothing | Stage 3 here | `int 0x80` or a call gate; the numbering |
-| The window system as a task (R143) | The compositor and window manager as crates (`shell/`), called directly by the shell | Here: requests, events, queues, the hosted and native first stages | The message format; whether the first native stage is in the shell's address space |
+| The window system as a task (R143) | The compositor and window manager as crates (`shell/`), called directly by the shell | Here: requests, events, queues, the hosted and native first stages | Retained requests or client buffers first |
 | The app shape and runtime library (R79) | Nothing | Here | Whether `fn main` or `desk_main` is the entry once `std` arrives |
-| Applications as files (R144) | Nothing | [`LOADER.md`](LOADER.md) (kind 2) | The extension |
+| Applications as files (R144) | Nothing | [`LOADER.md`](LOADER.md) (kind 2, `.DKX`, decided) | — |
 | Shared libraries (R145) | Nothing | Concept only, here | Everything; not time yet |
 | `std` for apps (R146) | The experiment E (`spikes/e-std-stubs/`, DOSBox only) | [`DESK-STD.md`](DESK-STD.md) | [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner) |
 | Hosted cooperative threads | Nothing; `SHELL.EXE` is one loop | Here | The watchdog idea, untested |
@@ -247,20 +256,24 @@ Not rewritten now; R79 (and R48's result for the format) make these edits.
 **[`FORMATS.md`](FORMATS.md):**
 
 - The container's header (96 bytes, [`LOADER.md`](LOADER.md#format-specification-sketch-dmd)), its tables and the `kind` values.
-- Both extensions: `.DMD` for modules and libraries, `.DKX` (proposed) for applications; `APP.INF` names the one the app ships.
+- Both extensions: `.DMD` for modules and libraries, `.DKX` for applications; `APP.INF` names the one the app ships.
 
 ## Questions for the owner
 
-Each has the default the design takes.
+**Decided** (see [Decisions](#decisions)): the application extension (`.DKX`), basic priority inheritance, and the native stage order (paging and ring 3, then system calls).
 
-1. **The number of priority levels and the default policy.** Default: 32 levels (0 to 31), a system band of 24 to 31, apps from 8 to 23 at 16 by default and workers at 12, a task ceiling of 23.
-2. **The time slice.** Default: 10 ms, one PIT tick at the kernel's existing 100 Hz.
-3. **Ageing against starvation.** Default: on, one level per second of waiting after the first second, up to the task's ceiling.
-4. **Priority inheritance.** Default: not in stage 1; the system shares no locks between bands, and inheritance can be added to the kernel's mutex later without changing the ABI.
-5. **Threads per task.** Default: no hard limit in the design; a target of 64 per task and 256 in the system, with 16 KiB default stacks.
-6. **The message format between apps and the window system.** Default: fixed 32-byte records (opcode, window handle, serial, five integers) with a payload area for strings and pixels, one queue per direction per client.
-7. **Whether the first native stage of the window system is in-process.** Default: yes, a task in the kernel's address space, reached only through the queues, so it moves out with stage 2 without an API change.
-8. **Retained drawing requests or client buffers first.** Default: requests first (no shared memory needed); client buffers when stage 2 can share pages.
-9. **Stage 2 before stage 3.** Default: they land together (ring 3 code cannot call the kernel without a gate); call gates as an interim only if paging is ready long before the system-call table.
-10. **The application extension.** Default `.DKX`, alternative `.DKA` ([`LOADER.md`](LOADER.md#questions-for-the-owner)).
-11. **The entry once `std` arrives.** Default: `desk_main` stays the file's entry, and a `std` app's `fn main` is called from it through `lang_start` ([`DESK-STD.md`](DESK-STD.md#questions-for-the-owner)).
+**Defaults accepted by the owner**, as the design builds them:
+
+1. **Priority levels and policy:** 32 levels (0 to 31), a system band of 24 to 31 (input 27, compositor 26), apps from 8 to 23 at 16 by default and workers at 12, a task ceiling of 23, background work at 0 to 7.
+2. **The time slice:** 10 ms, one PIT tick at the kernel's existing 100 Hz.
+3. **Ageing:** on, one level per second of waiting after the first second, up to the task's ceiling.
+4. **Threads per task:** no hard limit in the design; a target of 64 per task and 256 in the system, with 16 KiB default stacks.
+5. **The message format:** fixed 32-byte records (opcode, window handle, serial, five integers) with a payload area for strings and pixels, one queue per direction per client.
+6. **The window system's first native stage:** a task in the kernel's address space, reached only through the queues, moving out with stage 2 without an API change.
+7. **Thread-local storage:** keys first, native thread-locals later with a TLS segment in the format.
+
+**Still open**, each with its default:
+
+1. **The entry once `std` arrives.** Default: `desk_main` stays the file's entry, and a `std` app's `fn main` is called from it through `lang_start` ([`DESK-STD.md`](DESK-STD.md#questions-for-the-owner)).
+2. **Retained drawing requests or client buffers first.** Default: requests first (no shared memory needed); client buffers when stage 2 can share pages.
+3. **The interim gate in stage 2.** Default: one software-interrupt vector that the import stubs use to reach the existing kernel functions, replaced by stage 3's numbered table.
