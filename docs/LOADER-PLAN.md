@@ -17,7 +17,6 @@ The task-by-task plan for building [`LOADER.md`](LOADER.md), roadmap item R48: t
 - [M6. Several modules, unload, leaks and a missing import, on both tracks](#m6-several-modules-unload-leaks-and-a-missing-import-on-both-tracks)
 - [M7. A contained panic on both tracks](#m7-a-contained-panic-on-both-tracks)
 - [M8. CPU faults in a module, natively (optional)](#m8-cpu-faults-in-a-module-natively-optional)
-- [M10. The hosted CMPXCHG trap in rt](#m10-the-hosted-cmpxchg-trap-in-rt)
 - [M9. The result](#m9-the-result)
 - [Definition of done](#definition-of-done)
 
@@ -35,13 +34,13 @@ At most two tasks run at once. A wave starts when everything it depends on is me
 | 2 | M3 packing, the guest crate and `hello` | M1, M2 | 600 |
 | 3 | M4 native hello ∥ M5 hosted hello | M3 | 350 ∥ 450 |
 | 4 | M6 several modules, unload, leaks, a missing import | M4, M5 | 900 |
-| 5 | M7 a contained panic ∥ M10 the hosted `CMPXCHG` trap | M6; M10 also M5 | 500 ∥ 350 |
+| 5 | M7 a contained panic | M6 | 500 |
 | 6 | M8 native CPU faults (optional) | M7 | 300 |
 | 7 | M9 the result | M7, and M8 if it is built | 250 and documents |
 
 **The first "hello from a loaded program"** is M4, at the end of wave 3: the kernel prints the module's line on serial in QEMU. M5 gives the same line from the same file in DOSBox in the same wave. Nothing before M4 runs code in an emulator; M1 to M3 make sure what M4 loads is right before it runs.
 
-Branches: `feat/module-format` (M1), `feat/module-elf` (M2), `feat/module-pack` (M3), `feat/module-native` (M4), `feat/module-dos` (M5), `feat/module-lifecycle` (M6), `feat/module-panic` (M7), `feat/module-faults` (M8), `docs/module-result` (M9), `feat/rt-cmpxchg-trap` (M10, numbered after M9 because it was added later; it runs in wave 5).
+Branches: `feat/module-format` (M1), `feat/module-elf` (M2), `feat/module-pack` (M3), `feat/module-native` (M4), `feat/module-dos` (M5), `feat/module-lifecycle` (M6), `feat/module-panic` (M7), `feat/module-faults` (M8), `docs/module-result` (M9).
 
 Shared files between tasks of one wave: M1 and M2 both create `module/Cargo.toml` (whichever merges second adds its member when it rebases; the first creates the workspace with the `[workspace.package]` table of `shell/Cargo.toml`) and both add to the same `tools/check.sh` step. M4 and M5 both add to `tools/check.sh` (different steps) and both edit [`LOADER.md`](LOADER.md) only if the code chose differently (the second rebases, keeping both changes).
 
@@ -51,7 +50,7 @@ Shared files between tasks of one wave: M1 and M2 both create `module/Cargo.toml
 - **Work in a git worktree** under `.claude/worktrees/` on the task's branch off `origin/main`, never in the main checkout.
 - **Missing tools run in Docker**, never installed on the host: the CI image `ghcr.io/liminal-hq/ci-dos` (its digest is in `.github/workflows/ci.yml`) has Rust 1.98.0 with `rust-src`, QEMU, NASM, DJGPP, DOSBox Staging and CWSDPMI. Run containers with `--user "$(id -u):$(id -g)"` and a writable `HOME` and `CARGO_HOME`. Do not prune Docker images or volumes.
 - **The rules of the crates** ([`LOADER.md`](LOADER.md#where-the-code-lives-and-its-rules)): `desk-module` and `desk-module-host` follow `shell/`'s rules (`no_std` + `alloc`, `#![forbid(unsafe_code)]`, `#![deny(clippy::float_arithmetic)]`, no compare-and-swap through a `clippy.toml` copied from `shell/`, no external crates, no clocks or randomness); `dmdpack` is `std` and `#![forbid(unsafe_code)]`; `unsafe` elsewhere carries a one-line `SAFETY:` comment saying what makes it sound.
-- **No module is refused for containing `CMPXCHG`** (decided, [`LOADER.md`](LOADER.md#decisions)): the packer does not scan for it and the loaders do not check; the hosted track emulates it (M10).
+- **No module is refused for containing `CMPXCHG`** (decided, [`LOADER.md`](LOADER.md#decisions)): the packer does not scan for it and the loaders do not check. The spike's own crates and modules stay under the compare-and-swap ban, so every check here runs under DOSBox's strict normal core; `std` apps, later, run under its dynamic core ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track)).
 - **The service table stays at four functions** (`desk_log`, `desk_panic`, `desk_alloc`, `desk_free`) plus whatever a test needs to be missing. The SDK is R79's; a task that wants a fifth service stops and asks.
 - **The pinned files do not change**: `tests/native/expected.txt` and every existing `tests/native/expected-*.txt`, the shell goldens and their transcripts. Module code prints only in the module test modes. A task that needs to change a pinned file has found a regression and stops to report it.
 - **Fix a bug with a check that fails before the fix.** Every rejection path is a test that feeds a crafted input and expects that error, and each new emulator check has a negative run that must fail.
@@ -218,7 +217,7 @@ pub struct Lines;                   // a `core::fmt::Write` that sends each line
 - `dmdpack cross` passes for `HELLO.DMD` against the `0x0080_0000` build, and fails (exit 1, naming the first differing offset) against a copy of the second build with one relocated word changed, and against a `HELLO.DMD` packed from an ELF linked without `--emit-relocs`: such an ELF has no relocation sections, the packer cannot tell that from a module with no absolute words, and the cross check is what catches it.
 - `dmdpack pack` refuses a link at `0x0080_0000` without `--link-base`, and refuses an object file (`ET_REL`).
 - `file -b -m tools/desk.magic` names the packer's first outputs exactly, so the magic file stays right when the header changes: `dist/modules/HELLO.DMD` gives `Desk loadable image, version 1, module (.DMD), i486 flat, SDK 1, 96-byte header`, `dist/modules/APPMAIN.DKX` gives `Desk loadable image, version 1, application (.DKX), i486 flat, SDK 1, 96-byte header`, and a copy of `HELLO.DMD` with its first byte changed gives `data`. The lines are in `tests/module/file-magic.txt` and the check compares them with `diff`. `file` is in the CI image (`file-5.45`, checked on 2026-11-11); on a host without it the check runs in the image, as the other Docker steps do, and no host install is needed.
-- `module/guest` and `module/mods` pass `cargo fmt --check` and `clippy -D warnings` for the module target; the disassembly of `HELLO.DMD`'s ELF has no `cmpxchg` (checked once by `llvm-objdump` or `objdump` in the CI image, stated in the PR).
+- `module/guest` and `module/mods` pass `cargo fmt --check` and `clippy -D warnings` for the module target; the disassembly of `HELLO.DMD`'s ELF has no `cmpxchg` and no `cli` or `sti` (apps never mask interrupts: [`APP-MODEL.md`](APP-MODEL.md#decisions)) (checked once by `llvm-objdump` or `objdump` in the CI image, stated in the PR).
 
 **Depends on**: M1, M2. **Parallel with**: nothing (wave 2). **Labels**: `enhancement`, `rust`, `build`, `apps`, `sdk`, `spike`.
 
@@ -399,34 +398,6 @@ extern "C" {
 
 **Risks.** The exception frame in ring 0 has no saved `ESP`; the escape restores the guard's `ESP`, which abandons the frame correctly only because no privilege change happened. A fault inside a service called by the module has its `EIP` in the kernel, so it is not contained, which is the safe answer; the PR says so.
 
-## M10. The hosted CMPXCHG trap in rt
-
-**Goal.** The invalid-opcode handler that emulates dword `CMPXCHG` on the hosted track, moved from the fault-delivery experiment ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track)) into `rt`, installed by `DMDRUN.EXE`, and proved by a module that uses `compare_exchange` directly, so the decision that no app is refused for containing `CMPXCHG` rests on a committed check. It is `rt` work that R146 needs; it lives in R48 because `DMDRUN.EXE` is the first program that loads code it did not compile.
-
-**Files.** `spikes/d0-rust-dos/rt/src/ud.rs` (the handler, its stack and context, the trampoline that restores `EAX` and the flags, and `install`/`uninstall` through DPMI 0203h, registered on the clean-up list), `spikes/d0-rust-dos/rt/src/lib.rs`; `module/mods/casmod/` (a module whose `app_start` runs `compare_exchange` and `compare_exchange_weak` in the forms the experiment covered and a 5,000-round lock loop, with an `allow` and a one-line reason against the compare-and-swap ban, which is the point of the module); `module/dos/src/main.rs` (install the handler before the first load; a `notrap` argument that skips it); `module/dos/check.sh`; `kernel/src/module.rs` (the kernel also embeds and runs `CASMOD.DMD`); `tests/module/scenarios.txt` (its lines); `tests/module/expected-dos-casmod.txt`; `docs/D0-RUST-DOS.md` and `docs/DESK-STD.md` (the handler as built).
-
-**API.**
-
-```rust
-// rt::ud
-/// Installs the invalid-opcode handler that emulates `[lock] cmpxchg dword [mem], r32` and `cmpxchg r32, r32` and resumes.
-/// Anything else that raises exception 6 is reported (the bytes and EIP) and ends the program with status 4: CWSDPMI gives
-/// no previous handler to chain to.
-pub fn install() -> Result<(), dpmi::Error>;
-pub fn emulated() -> u32;   // count, for the transcript
-```
-
-**Acceptance.**
-
-- In DOSBox (`tools/dosrun.sh`: `cputype = 486`, `core = normal`): `DMDRUN.EXE CASMOD.DMD` prints the module's lines equal to `tests/module/expected-dos-casmod.txt`, including `casmod: 5000 acquisitions` and the result of every form, and `rt` reports a non-zero emulated count; the same file's lines equal what the kernel prints for it in QEMU (`-cpu 486`, where the instruction runs and the count is 0), so one file behaves the same on both tracks.
-- Negative: `DMDRUN.EXE notrap CASMOD.DMD` must exit non-zero without the module's result lines; a module that executes `ud2` (or a `66`-prefixed `cmpxchg`, which the handler does not emulate) must end with the handler's report and status 4, not hang or return to DOS silently.
-- `DMDRUN.EXE HELLO.DMD` and the M6 scenarios are unchanged (the handler is invisible when nothing traps).
-- The PR reports the cost per emulated instruction measured the experiment's way, and says it is rough (DOSBox at `cycles = max`).
-
-**Depends on**: M5, M6 (the shared scenario file). **Parallel with**: M7. **Labels**: `enhancement`, `dos`, `rust`, `spike`.
-
-**Risks.** The cases the experiment did not cover: a fault inside the handler, interrupts during it, locking its code and data (which matters only if the host pages), and the `66` prefix; the handler is not re-entrant (one static context), which is right for a cooperative runtime and must be revisited if anything ever runs it at interrupt time. `push ds` in `global_asm!` pushes 2 bytes, which the experiment found shifting its frame offsets: take the offsets from the experiment's source, not from the DPMI specification alone.
-
 ## M9. The result
 
 **Goal.** The spike's written result and the documents brought up to date with what was built.
@@ -435,7 +406,7 @@ pub fn emulated() -> u32;   // count, for the transcript
 
 **Acceptance.** `tools/check.sh` passes in full in the CI image; the documents pass `tools/check-docs.py`; the "not verified" list is written first and covers at least everything in [What the spike will not prove](LOADER.md#what-the-spike-will-and-will-not-prove).
 
-**Depends on**: M7 and M10, and M8 if it is built. **Labels**: `documentation`, `design-docs`, `spike`, `rust`.
+**Depends on**: M7, and M8 if it is built. **Labels**: `documentation`, `design-docs`, `spike`, `rust`.
 
 **Risks.** None new; this is where an unverified claim is most tempting.
 
@@ -445,6 +416,5 @@ The spike is done when, on `main`:
 
 - `tools/check.sh` runs the format's and the host crate's tests, builds and packs the test modules, runs the cross check, loads them in the native kernel in QEMU and in `DMDRUN.EXE` in DOSBox, and compares the two tracks' module lines, all passing in the CI image;
 - every rejection path has a host test, and the emulator runs refuse a damaged, a truncated and a mismatched module;
-- a module that uses `compare_exchange` directly runs in DOSBox's 486 core through `rt`'s trap and prints what it prints natively, so no file is refused for containing `CMPXCHG`;
 - the same `HELLO.DMD` prints the same lines on both tracks and at four different addresses on each; an application file, a library kind and an export table are refused; two instances keep their own state; 200 rounds leave memory as before; a missing import is named and refused; a panic is contained on both tracks;
 - [`LOADER.md`](LOADER.md) has its result section and the documents it lists are updated.

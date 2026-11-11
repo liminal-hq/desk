@@ -17,6 +17,8 @@ The design of what a program is on Desk: the vocabulary, the layers an app talks
 - [Thread-local storage](#thread-local-storage)
 - [The FPU and the kernel's own mutual exclusion](#the-fpu-and-the-kernels-own-mutual-exclusion)
 - [The window system as a task](#the-window-system-as-a-task)
+  - [Hung apps and never waiting](#hung-apps-and-never-waiting)
+  - [Shared buffers: requirements](#shared-buffers-requirements)
 - [The shape of an app](#the-shape-of-an-app)
 - [File kinds](#file-kinds)
 - [Shared libraries: documented, not built](#shared-libraries-documented-not-built)
@@ -39,8 +41,16 @@ Recorded by the owner on 2026-11-11, each with its reason in one line.
 8. **One container, two extensions (`.DMD` modules, `.DKX` applications); libraries documented, not built; the packer in Rust; `std` later through a platform layer of our own; no OS asset-pack container.** See [`LOADER.md`](LOADER.md#decisions).
 9. **Basic priority inheritance for the futex-style locks**: a low-priority holder runs at the priority of the highest-priority waiter while it holds the lock. Without it a high-priority thread can wait indefinitely behind a medium one ([Priorities](#priorities)).
 10. **Native stage order: paging and ring 3 first, then the system-call boundary.** Protection first, so a crash stays inside its task; the system calls then arrive on a working protected task as small stubs resolved by the same named imports.
-11. **An interrupt-masking lock fallback, through one helper on both tracks**, so DOSBox's 486 mode, which rejects `CMPXCHG`, keeps working: locks reach compare-and-swap through an imported `desk_cas32`, which the native kernel uses too (with `lock cmpxchg` or interrupt masking), so one file behaves the same everywhere; any other `CMPXCHG` on hosted is emulated by `rt` from an invalid-opcode handler, verified in emulators at roughly 20 times the cost of a `swap`, so no app is refused for containing it ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track), with the test tables).
+11. **`std` apps keep inline `lock cmpxchg`**, which a real 486 has: DOSBox's 486 mode rejects dword `CMPXCHG` only in its normal and simple cores, so `std` apps' DOSBox runs use `core = dynamic`, and the strict normal core stays for `shell/`, `hal/` and the existing checks. No helper is imported. The owner first chose a helper and a trap and simplified after a fourth experiment ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track), with the tables).
 12. **The defaults of the first version of this design are accepted**: 32 levels with the policy under [Priorities](#priorities), a 10 ms slice, ageing, the thread limits, the 32-byte message records, the window system's first native stage in the kernel's address space, thread-local keys first ([Questions](#questions-for-the-owner) lists them with their values).
+13. **A hung app is marked, shown and closable.** An app that has not handled an event for 5 seconds is marked hung, its window says so, and Close terminates its task; the user is never left with a window that cannot be got rid of ([Hung apps](#hung-apps-and-never-waiting)).
+14. **The window system only posts messages to apps and never waits on them.** No synchronous call goes from the window system into an app, so a stuck app cannot stall the screen, the pointer or any other app.
+15. **Small messages are copied; large data lives in shared memory**, as in Wayland. Copying keeps tasks apart, and copying a 300 KiB pixel buffer per frame would cost more than the frame ([Shared buffers](#shared-buffers-requirements)).
+16. **`cli` is allowed in stage 1 kernel code, never offered by the SDK, and banned in apps** by a review rule and a check of the test modules' code; stage 2 (ring 3) makes it impossible. An app that masks interrupts defeats preemption and the input path.
+17. **One task per DOS box (R49).** A DOS program run under the native kernel is one task, so it is scheduled, stopped and killed like any other.
+18. **Priority inheritance through messages is decided together with the file service.** It matters first when a high-priority app waits on a service's reply, and the file service is the first such service to design.
+19. **No per-program special cases.** The system treats every app by the same rules; a compatibility list is a maintenance trap and hides bugs.
+20. **Path resolution is per task.** Each task has its own current directory and view of the path model (R125), so one app's state cannot change another's file names.
 
 ## Vocabulary
 
@@ -120,7 +130,7 @@ fn desk_wake(addr: *const u32, count: u32) -> u32;
 ```
 
 - **In the kernel**, the check of `*addr == expected` and the enqueue happen with interrupts off (one CPU, so that is atomic with respect to every wake). Waiters are kept in a small hash table keyed by address, each bucket a list in priority order. `addr` is a task address: in stage 2 the key becomes (task, address), or the physical address for a buffer two tasks share.
-- **In the library**: a mutex is one `u32`; condition variables, semaphores, read-write locks, `Once` and channels are written over it. Without inheritance a mutex needs only exchange (lock: `swap(1)`, and if that saw a non-zero value, `swap(2)` and wait while it does not return 0; unlock: `swap(0)`, and if that saw 2, wake one); with the decided basic inheritance the word holds the owner's thread id and a waiters bit, and the contended paths go through the kernel ([Priorities](#priorities)). Either way the library stays free of inline `CMPXCHG`, and where a compare-and-swap is wanted it calls `desk_cas32` (decided: [`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track)); `std`'s own locks use compare-and-swap, which is the subject of a question in [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner).
+- **In the library**: a mutex is one `u32`; condition variables, semaphores, read-write locks, `Once` and channels are written over it. Without inheritance a mutex needs only exchange (lock: `swap(1)`, and if that saw a non-zero value, `swap(2)` and wait while it does not return 0; unlock: `swap(0)`, and if that saw 2, wake one); with the decided basic inheritance the word holds the owner's thread id and a waiters bit, and the contended paths go through the kernel ([Priorities](#priorities)). Either way the SDK's own library stays free of `CMPXCHG`, so it also runs under DOSBox's strict normal core; `std`'s locks use it inline ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track)); `std`'s own locks use compare-and-swap, which is the subject of a question in [`DESK-STD.md`](DESK-STD.md#questions-for-the-owner).
 - **On hosted**, `desk_wait` with an unchanged value parks the green thread and switches; `desk_wake` moves waiters to the ready list. The same semantics, without a kernel.
 
 ## Priorities
@@ -156,22 +166,40 @@ Every thread has a thread-local block. Two mechanisms, staged:
 ## The FPU and the kernel's own mutual exclusion
 
 - **Lazy x87 save.** On a switch the kernel sets `CR0.TS` instead of saving the x87; the first x87 instruction of the new thread raises `#NM` (device not available), whose handler saves the previous owner's state with `FNSAVE` (108 bytes; the 486 has no `FXSAVE`), restores this thread's with `FRSTOR`, clears `TS` and returns. Threads that never touch the x87, which is most of them under the integer-only rules of the core, never pay. A new thread starts with `FNINIT` and the core's control word. Whether the SDK promises the x87 to apps at all is R138's open decision; this mechanism serves either answer.
+- **`cli` and apps (decided).** Kernel code in stage 1 may use `cli` and `sti` for its short sections, as above. The SDK never offers interrupt masking, and apps must not use it: in stage 1 an app runs in ring 0 and could, so a review rule and a check of the test modules' disassembly ban it; in stage 2 an app runs in ring 3, where `cli` faults (with the I/O privilege level kept at 0), so it becomes impossible. An app that needs mutual exclusion uses the SDK's locks.
 - **Mutual exclusion in the kernel is not spinlocks.** On one CPU a spinning thread waits for a holder that cannot run while it spins. The kernel uses two tools: **interrupts off** for the short sections an interrupt handler also touches (the ready queues, the wait table, the input rings: the kernel already does this, `kernel/src/sync.rs`), and a **preemption-disable counter** for longer sections that only threads touch, during which interrupts are still serviced but the PIT does not switch threads; the switch it wanted happens when the counter returns to zero. A kernel service that must wait releases both and blocks through the scheduler.
 
 ## The window system as a task
 
 **The shape.** The window system is a system task that owns the screen, the palette, the pointer and the input focus. Apps never draw to the frame buffer: they send it requests and receive events, as X11, Wayland and Windows' window manager do. The `desk_window_*`, `desk_fill`, `desk_text` and related calls of [`SDK.md`](SDK.md) become client requests in the runtime library.
 
-- **Requests** (app to window system): create a window (title, size, flags) and get its handle; set its title; show, close; describe its menus, toolbar and controls; and drawing. Drawing is either retained requests (`fill`, `line`, `text`, `blit` in a request buffer, executed by the window system against the window's back buffer) or a client buffer the app draws into and then presents with a damage rectangle; the first stage uses requests, because they need no shared memory.
+- **Requests** (app to window system): create a window (title, size, flags) and get its handle; set its title; show, close; describe its menus, toolbar and controls; and drawing. Drawing is either retained requests (`fill`, `line`, `text`, `blit` in a request buffer, executed by the window system against the window's back buffer) or a client buffer the app draws into and then presents with a damage rectangle; small drawing requests are copied like any message, and pixel buffers live in shared memory (decided: [Shared buffers](#shared-buffers-requirements)).
 - **Events** (window system to app): the `DeskEvent` records of [`SDK.md`](SDK.md) (paint, mouse, key, char, menu, control, resize, focus, close), queued per app and read by `next_event()`.
-- **Replies**: a request that returns a value (a new window's handle) is answered on the app's event queue with a matching serial number, and the library call waits for it.
-- **Transport**: one message queue per direction per client, each a ring of fixed-size records with a variable-size payload area, guarded by the kernel's wait and wake. The message format is an open question ([below](#questions-for-the-owner)); the default is fixed 32-byte records with an opcode, a window handle, a serial number and five integer arguments, and strings or pixels in a payload area the record points into.
+- **Replies**: a request that returns a value (a new window's handle) is answered on the app's event queue with a matching serial number, and the library call in the app waits for it. Only the app ever waits for a reply; the window system never does ([below](#hung-apps-and-never-waiting)).
+- **Transport**: one message queue per direction per client, each a ring of fixed-size records with a variable-size payload area, guarded by the kernel's wait and wake. The message format is an open question ([below](#questions-for-the-owner)); the default is fixed 32-byte records with an opcode, a window handle, a serial number and five integer arguments, and strings in a payload area the record points into; large data is not in the queue at all, but in a shared buffer the record names by handle.
 
 **A crash.** When an app's task dies (a panic, a fault, a kill), the window system receives a "client gone" notice, destroys the client's windows and repaints what they covered. Its own state is not touched, because nothing of the app's runs in it.
 
 **Native, first stage.** The window system runs as a task in the shell's (the kernel's) address space, in ring 0, with the message queues in shared memory that both sides reach by pointer. It is already a separate task with its own threads and its own state, and apps already reach it only through the queues, so when stage 2 gives it an address space of its own, only the transport changes (the queues become pages shared between two address spaces, or the kernel copies the records), not the API. Until stage 2 a wild write in an app can still damage it, as everything else.
 
 **Hosted.** The window system is a cooperative service in the same DOS process: a high-priority green thread running the same code over the same queues. A request is a push onto its queue and a wake, and it runs at the app's next switch point. A panic in an app is contained by the guard and turns into the same "client gone" notice; a wild write is not contained, as on native stage 1.
+
+### Hung apps and never waiting
+
+- **The window system only posts.** Every message from the window system to an app is put on the app's queue and the window system carries on; it never calls into an app and never blocks on an app's queue or reply. A full queue is the app's problem: the window system coalesces what can be coalesced (motion, paint, resize) and, if the queue stays full, treats the app as hung.
+- **Questions become requests with a reply the system does not block on.** "May this window close?" is a `close` event the app answers, when it likes, with a `close-window` request (or with nothing, if it wants to keep the window and ask the user to save). The window system keeps drawing everything else meanwhile. The same pattern serves "save before shutdown?", drag and drop ("do you accept this?"), the clipboard ("give me your data"): an event out, a request back, and a timeout or a hung mark if the request never comes.
+- **Hung.** An app that has events waiting and has not taken one for 5 seconds is marked hung. Its window is drawn with the hung look (a dimmed client area and "Not responding" in the title, a design detail for `HIG.md`), it can still be moved and covered, because the window system draws its frame from the last buffer it has, and its Close button offers to end the task, which the kernel does as for any kill. If the app takes an event again, the mark goes. On hosted the cooperative runtime can see the same condition only at a switch point, so a hosted app stuck in a loop without calls is not marked (the runaway-loop limit of the hosted track); an app blocked elsewhere (a long file read in the UI thread) is marked as on native.
+
+### Shared buffers: requirements
+
+What the decision that large data lives in shared memory requires, without designing the mechanism:
+
+- **Ownership and lifetime.** A shared buffer belongs to the task that created it; it is handed to the window system by a handle in a message, and the window system holds a reference while it uses it. The buffer lives until both the owner has released it and the window system has dropped its reference, so neither side can free memory the other is reading. Each buffer has one owner for accounting (it counts against the owner's memory, in its ledger).
+- **When the owner stops or is killed.** The kernel drops the owner's references; the window system keeps its own until it has a replacement for the screen (it may keep showing the last frame of a dying window until the window is gone), then drops it and the memory is freed. A killed task can never leave a buffer that nothing can free.
+- **What the compositor may assume about the contents.** Nothing beyond the bytes being readable: an app can write a buffer while the compositor reads it, so the compositor must tolerate torn or garbage pixels (it only copies them to the screen, never interprets them as structure) and must take sizes and strides from its own record of the buffer, not from the buffer. An app that wants tear-free updates double-buffers: it draws into one buffer and presents it, then draws into the other, and reuses a buffer only after the window system says it has finished with it (a release message, as Wayland's).
+- **The paging stage.** With per-task spaces (stage 2) a shared buffer is the same physical pages mapped into both tasks' spaces, which needs page-aligned buffers and a mapping call in the system-call set; the pages are writable by the owner and, to stop the compositor ever writing an app's memory, read-only for the compositor.
+- **Stage 1, one address space.** Sharing is a no-op: the handle names memory both tasks can already reach, and the same ownership and release rules apply unchanged, so code written for stage 1 keeps working when stage 2 makes the sharing real.
+- **Hosted.** The same: one DOS address space, buffers from the heap, the same handles, ownership and release messages, with the cooperative runtime ensuring that the window service and the app never run at once, so a buffer is never written while it is being read (an app still double-buffers, to keep the code the same as on native).
 
 ## The shape of an app
 
@@ -232,7 +260,7 @@ The container, the relocation and the binding are the same for all three ([`LOAD
 | Threads and wait and wake (R141) | Nothing | Here | — (defaults accepted) |
 | Per-task spaces and ring 3 (R78) | Nothing; the paging spike R51 is planned | Stage 2 here, before the system calls (decided) | The interim gate's form |
 | The system-call boundary (R77) | Nothing | Stage 3 here | `int 0x80` or a call gate; the numbering |
-| The window system as a task (R143) | The compositor and window manager as crates (`shell/`), called directly by the shell | Here: requests, events, queues, the hosted and native first stages | Retained requests or client buffers first |
+| The window system as a task (R143) | The compositor and window manager as crates (`shell/`), called directly by the shell | Here: requests, events, queues, hung apps, shared-buffer requirements, the hosted and native first stages | Small drawing requests beside shared buffers |
 | The app shape and runtime library (R79) | Nothing | Here | Whether `fn main` or `desk_main` is the entry once `std` arrives |
 | Applications as files (R144) | Nothing | [`LOADER.md`](LOADER.md) (kind 2, `.DKX`, decided) | — |
 | Shared libraries (R145) | Nothing | Concept only, here | Everything; not time yet |
@@ -261,7 +289,7 @@ Not rewritten now; R79 (and R48's result for the format) make these edits.
 
 ## Questions for the owner
 
-**Decided** (see [Decisions](#decisions)): the application extension (`.DKX`), basic priority inheritance, and the native stage order (paging and ring 3, then system calls).
+**Decided** (see [Decisions](#decisions)): the application extension (`.DKX`), basic priority inheritance, the native stage order (paging and ring 3, then system calls), hung apps, never waiting on apps, copied messages with shared buffers for large data, `cli`, one task per DOS box, priority inheritance through messages decided with the file service, no per-program special cases, and per-task path resolution.
 
 **Defaults accepted by the owner**, as the design builds them:
 
@@ -276,5 +304,5 @@ Not rewritten now; R79 (and R48's result for the format) make these edits.
 **Still open**, each with its default:
 
 1. **The entry once `std` arrives.** Default: `desk_main` stays the file's entry, and a `std` app's `fn main` is called from it through `lang_start` ([`DESK-STD.md`](DESK-STD.md#questions-for-the-owner)).
-2. **Retained drawing requests or client buffers first.** Default: requests first (no shared memory needed); client buffers when stage 2 can share pages.
+2. **Drawing requests beside shared buffers.** Large data is decided (shared buffers); open is whether the small retained drawing requests (`fill`, `line`, `text`) stay as well. Default: yes, copied like any message, for apps that draw little.
 3. **The interim gate in stage 2.** Default: one software-interrupt vector that the import stubs use to reach the existing kernel functions, replaced by stage 3's numbered table.
