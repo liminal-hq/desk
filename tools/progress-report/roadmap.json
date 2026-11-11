@@ -15,19 +15,19 @@
   {
    "id": "hosted",
    "label": "Hosted track (Desk on DOS)",
-   "next": "Live input into SHELL.EXE, then the launcher bar and menus; decide whether to retire the C layer and promote rt to a top-level crate.",
-   "blocker": "Owner decision on retiring the C layer; the mouse path of the shell is unverified."
+   "next": "The launcher bar and menus on the first window; decide whether to retire the C layer and promote rt to a top-level crate.",
+   "blocker": "Owner decision on retiring the C layer; the mouse path of the shell is checked only against DOSBox's own driver."
   },
   {
    "id": "convergence",
    "label": "Convergence (shared)",
-   "next": "Live input into the shell on both tracks, then widgets and menus on the first window's core.",
+   "next": "Re-check live input from clean clones of main and in the CI image, then widgets and menus on the first window's core.",
    "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (the anatomy page of the Desk)."
   },
   {
    "id": "native",
    "label": "Native track (own kernel)",
-   "next": "Live input on the native shell mode; then the executable-format spike (planned after live input); a V86 monitor if FreeDOS needs it.",
+   "next": "Re-check live input on the native shell-live mode; then the executable-format spike (planned after live input); a V86 monitor if FreeDOS needs it.",
    "blocker": "Scheduling, paging and system calls are open decisions; no user mode exists in the kernel."
   },
   {
@@ -706,14 +706,41 @@
    "id": "liveinput",
    "label": "Live input into the shell",
    "branch": "convergence",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "shell",
     "ndesk"
    ],
-   "what": "Keys and the mouse reaching the shell through each platform's own input path (QEMU sendkey and mouse_move; DOSBox AUTOTYPE and a real INT 33h mouse).",
-   "why": "The first window is moved by scripted events today; this tests the input path, not the pixels.",
-   "evidence": "docs/FIRST-WINDOW-PLAN.md T12 (optional); not started"
+   "what": "Keys and the mouse reaching the shell through each platform's own input path (QEMU sendkey and mouse_move; DOSBox AUTOTYPE and a real INT 33h mouse). Built and merged: the native shell-live mode, the hosted live loop, window-manager keys, INT 33h click counters, launchers.",
+   "why": "The first window is moved by scripted events in the golden runs; this tests the input path, not the pixels.",
+   "evidence": "docs/LIVE-INPUT.md Result; PRs #33, #34, #37, #39, #43, #44, #49, #50, #53 and #54 merged on 2026-11-11 (roadmap item R47). The measured runs were by the author and have not been repeated from clean clones of main or in the CI image; the Not verified list of #54 has not been re-read. DOSBox's built-in mouse driver and QEMU only; nothing ran on real hardware.",
+   "prs": [
+    33,
+    34,
+    37,
+    39,
+    43,
+    44,
+    49,
+    50,
+    53,
+    54
+   ]
+  },
+  {
+   "id": "breakup",
+   "label": "Integration analysis and repository breakup",
+   "branch": "foundations",
+   "state": "progress",
+   "deps": [
+    "desk"
+   ],
+   "what": "An analysis of the boundaries between the hosted and native tracks and a proposal for splitting the repository into two, four or eight; documents only.",
+   "why": "Decides how the shared core, the runtime and the two tracks are owned and released.",
+   "evidence": "PR #65, open for review (roadmap item R82). Nothing is decided; the proposal approves nothing.",
+   "prs": [
+    65
+   ]
   },
   {
    "id": "first-window",
