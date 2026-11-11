@@ -3,6 +3,8 @@
 A trackable list of what the project has done, what is in flight and what is planned or only an idea, with the evidence for each. It is the one place that says where everything stands; [`DIRECTION.md`](DIRECTION.md) says why the project is shaped this way and [`SPEC.md`](SPEC.md) says what the hosted track will be.
 
 > **Status.** Written on 2026-11-11 against `main` at `b8fb9ac`. Every pull request that was open before then was merged into `main` on 2026-11-11 with merge commits: the live-input stack, the Manual stack, the plan for the Manual, the DOS anatomy wording and this roadmap. One pull request is open, #65 (the Rust and DOS integration analysis and the repository breakup proposal, documents only), and it is the only `in progress` item that rests on an open pull request. Every `done` item is merged into `main`. Nothing here has run on real hardware, and Bochs, 86Box and js-dos were not part of the runs behind the live-input and Manual work (their earlier results are in [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) and [`S5-JSDOS.md`](S5-JSDOS.md)). Where the repository does not establish a fact, the entry says so.
+>
+> **Full shell and apps.** R84 to R129 add the owner's original shell and apps design ([`SHELL-DESIGN.md`](SHELL-DESIGN.md)): 46 items, none `done`, 8 `in progress` and 38 `planned`. Of the whole list, 46 items are `done`, 12 `in progress`, 60 `planned`, 9 `idea` and 2 `blocked`. Two of the new items are design proposals for the owner (R125, R126) and three record findings from the owner's hands-on run of the hosted track on FreeDOS in QEMU on 2026-11-11 (R127 to R129), which rest on that run and not on a committed test.
 
 ## Contents
 
@@ -12,6 +14,7 @@ A trackable list of what the project has done, what is in flight and what is pla
 - [Current: in flight](#current-in-flight)
 - [Future: planned, in the owner's order](#future-planned-in-the-owners-order)
 - [Future: the path to an OS](#future-the-path-to-an-os)
+- [Future: the full shell and apps](#future-the-full-shell-and-apps)
 - [Reuse and vendoring](#reuse-and-vendoring)
 - [Future: ideas and blocked items](#future-ideas-and-blocked-items)
 - [Decisions waiting on the owner](#decisions-waiting-on-the-owner)
@@ -23,11 +26,12 @@ The first OS milestone is: the native kernel boots, opens a window, and runs a s
 
 1. Finish and verify live input (R47): the stack is merged; the re-check from clean clones of `main` and in the CI image is still to do.
 2. The module loader spike: an executable format and loaders for both tracks (R48).
-3. A floppy or IDE driver and a read-only FAT filesystem (R74, R75; spike R50).
-4. A system-call boundary between the kernel and apps (R77).
-5. The first separate app running from disk (R76, R79, R80).
+3. Decide the path and mount model and the shared commands (R125, R126), which are proposals, so the filesystem and the app model are written against them.
+4. A floppy or IDE driver and a read-only FAT filesystem (R74, R75; spike R50).
+5. A system-call boundary between the kernel and apps (R77).
+6. The first separate app running from disk (R76, R79, R80).
 
-Paging and per-task address spaces (R51, R78), sound and timing for Fizz (R81), DOS programs under the kernel (R49) and real hardware (R64) follow or run beside this path; none of them blocks it.
+Paging and per-task address spaces (R51, R78), sound and timing for Fizz (R81), DOS programs under the kernel (R49) and real hardware (R64) follow or run beside this path; none of them blocks it. The full shell and apps (R84 to R124) come after the milestone: they need the app model (R79) and, for most apps, the filesystem (R75), but the shell parts that need neither (the widgets, menus, bar and window operations) can be built on the first window's core in parallel.
 
 ## How to read it
 
@@ -40,6 +44,8 @@ Each item has an id (R1, R2 and so on, never reused), a title, a status, the out
 | `planned` | Decided, in a known order, not started |
 | `idea` | Mentioned in a document or by the owner; not decided and not ordered |
 | `blocked` | Cannot proceed until something outside the work happens |
+
+Items R84 to R129 are read slightly differently. Their status follows the inventory of what [`SHELL-DESIGN.md`](SHELL-DESIGN.md#what-is-built) found built: a part with no code is `planned`, a part with some merged code is `in progress` and says which half is merged, and nothing is `done` until it is merged and evidenced. "Depends on" names items (R79 is the app model, R75 the filesystem). A design item says it is a decision for the owner, and a finding says its evidence is the owner's run, not a check.
 
 Three limits apply to every `done` item unless it says otherwise. No code has run on a real 486, a real floppy drive, a real VGA card or a real mouse; "verified" means on the host, in DOSBox Staging, in QEMU (as a 486) or, where stated, in Bochs and 86Box. The emulators model the hardware and are not the hardware. And the design documents were written before the code, so where a document and the code disagree the code wins (see R55).
 
@@ -160,26 +166,118 @@ One pull request is open, #65, and one item has merged work with its checks stil
 | R58 | HAL migration steps 3 to 5 | `planned` | The hosted skeleton and shell written against `Platform`, new drivers landing in `hal/drivers/`, and the core running on both platforms and the mock | [`HAL.md`](HAL.md) (migration plan) |
 | R59 | Tests the Manual found missing | `planned` | A script that runs the `bios-solo` test mode, and a test that makes a floppy read fail so stage 1's retry path runs (it has never run) | `MANUAL-STATUS.md` on #63 |
 | R60 | Remaining emoji | `planned` | 80 sequences still to do: 23 single, 2 VS16 forms, 7 ZWJ sequences and 48 tone families (240 variants by palette substitution), in the order set out in the emoji roadmap | [`EMOJI-ROADMAP.md`](EMOJI-ROADMAP.md) |
-| R61 | Hosted track: handoff, core apps, release | `planned` | The handoff to DOS programs and back (`DESK.COM`, `DESK.RUN`), then Files, Programs and Settings, then optional apps and a release | [`SPEC.md`](SPEC.md) (milestones), [`HANDOFF.md`](HANDOFF.md), [`DIRECTION.md`](DIRECTION.md) |
-| R62 | Native track: filesystem, shared core with apps, sound | `planned` | A filesystem the kernel reads, the shared core with the core apps on the native HAL, and OPL and Sound Blaster sound | [`DIRECTION.md`](DIRECTION.md) (native milestones 5, 7, 8) |
+| R61 | Hosted track: handoff, core apps, release | `planned` | Now an umbrella: the handoff to DOS programs and back is R109, Exit to DOS R110, the installer R111, the core apps R112 to R115 and the optional apps R116 to R124. What stays here is the release itself | [`SPEC.md`](SPEC.md) (milestones), [`HANDOFF.md`](HANDOFF.md), [`DIRECTION.md`](DIRECTION.md) |
+| R62 | Native track: filesystem, shared core with apps, sound | `planned` | A filesystem the kernel reads, the shared core with the core apps (R112 to R115) on the native HAL, and OPL and Sound Blaster sound | [`DIRECTION.md`](DIRECTION.md) (native milestones 5, 7, 8) |
 | R63 | The native track in the browser | `planned` | The same disk image booting in v86 | [`DIRECTION.md`](DIRECTION.md) (native milestone 9) |
 
 ## Future: the path to an OS
 
-Items that the first OS milestone needs and that no earlier section tracks. Candidate spikes already listed (R48 to R52) and the real-hardware run (R64) are linked, not repeated. Each item says what it depends on and whether something could be reused; see [Reuse and vendoring](#reuse-and-vendoring), where every candidate is still to be assessed.
+Items that the first OS milestone needs and that no earlier section tracks. R125 and R126 are design items, proposals for the owner to decide, and they come first in the table because the filesystem (R75) and the app model (R79) are written against them. Candidate spikes already listed (R48 to R52) and the real-hardware run (R64) are linked, not repeated. Each item says what it depends on and whether something could be reused; see [Reuse and vendoring](#reuse-and-vendoring), where every candidate is still to be assessed.
 
 | Id | Title | Status | Outcome | Depends on | Could we vendor or reuse something? |
 |---|---|---|---|---|---|
+| R125 | Design: the path and mount model | `planned` | **Decision for the owner.** A proposal: one generic path type in the core with a canonical stored form; each track presents it its own way (DOS paths on hosted, Unix-style on native); extra volumes under `/mnt` with `/` as the system volume; a virtual `/mnt` and `/dev` that shadow anything of the same name on disk. Settles what the filesystem (R75), the picker (R91) and the app model (R79) are written against. Open questions are under Decisions. The interactive explorer, <https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL>, is not in the repository. | — | Not applicable; the project's own design |
+| R126 | Design: shared commands with aliases | `planned` | **Decision for the owner.** A proposal: one set of commands in the core with Linux names primary and DOS names as aliases; each command returns one structured result and each track formats it its own way. Settles Terminal (R122) and the scripting surface of the app model (R79). Open questions are under Decisions. The interactive explorer, <https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL>, is not in the repository. | R125 | Not applicable; the project's own design |
 | R74 | Block device trait and the floppy and IDE/ATA drivers | `planned` | A block-device trait in the HAL and floppy and IDE/ATA drivers in the native kernel, tested in QEMU against a disk image; the spike is R50, and INT 13h through the trampoline (R14) is the stopgap. The no-external-crates rule may be adapted for the kernel; that would be its own small docs pull request, editing `AGENTS.md` and `CLAUDE.md`, made before any code is vendored | R50, [`HAL.md`](HAL.md) | Possibly: an ATA driver from a Rust OS project; to be assessed |
-| R75 | A filesystem | `planned` | Read-only FAT12 and FAT16 first, so DOS-compatible disks work and FreeDOS can share them, then a writable one; whether a filesystem of our own is wanted for the system volume stays open. The no-external-crates rule may be adapted for the kernel; that would be its own small docs pull request, editing `AGENTS.md` and `CLAUDE.md`, made before any code is vendored | R74 | Possibly: a Rust FAT crate; to be assessed |
+| R75 | A filesystem | `planned` | Read-only FAT12 and FAT16 first, so DOS-compatible disks work and FreeDOS can share them, then a writable one; whether a filesystem of our own is wanted for the system volume stays open. The no-external-crates rule may be adapted for the kernel; that would be its own small docs pull request, editing `AGENTS.md` and `CLAUDE.md`, made before any code is vendored | R74, R125 (proposed) | Possibly: a Rust FAT crate; to be assessed |
 | R76 | Load a separate program from disk | `planned` | The native kernel reads an executable from a disk image and runs it, using the format and loader of R48 | R48, R74, R75 | Only the format is ours; see R48 |
 | R77 | Tasks, a scheduler and a system-call boundary | `planned` | A task model, a cooperative scheduler first, and a system-call interface between the kernel and apps; preemption is an open question in [`DIRECTION.md`](DIRECTION.md) | R76 | Design ideas only; to be assessed |
 | R78 | Per-task address spaces | `idea` | Each task gets its own address space on the 486's MMU; flat and shared memory is the alternative. The paging spike is R51 | R51, R77 | Possibly: paging code in a Rust OS project; to be assessed |
-| R79 | The app interface made real | `planned` | [`SDK.md`](SDK.md) is design only; this turns it into a stable API so an app can be built separately from the kernel and run through the system calls | R77, R48 | No; it is the project's own interface |
+| R79 | The app interface made real | `planned` | [`SDK.md`](SDK.md) is design only; this turns it into a stable API so an app can be built separately from the kernel and run through the system calls | R77, R48, R125 and R126 (proposed) | No; it is the project's own interface |
 | R80 | First separate app from disk (the first OS milestone) | `planned` | Boot, open a window, and run a program loaded from disk. This is the definition of the first OS milestone | R47, R48, R74 to R77, R79 | Not applicable |
 | R81 | Sound and timing for Fizz Episode 2 | `planned` | A Sound Blaster or PC speaker driver and a stable timer that the Fizz game needs, then the game itself (R52). The broader sound work is in R62 | R52, R62 | Possibly: the OPL and Sound Blaster notes in [`S5-JSDOS.md`](S5-JSDOS.md) are ours; any driver code to be assessed |
 
 DOS programs under the native kernel (V86 mode with FreeDOS bundled) stay at R49 and are optional for the first milestone.
+
+## Future: the full shell and apps
+
+The first window ([`FIRST-WINDOW.md`](FIRST-WINDOW.md)) is a window, a cursor and focus. The owner's original design has far more: a launcher bar, menus, dialogs, a dozen apps and an installer. [`SHELL-DESIGN.md`](SHELL-DESIGN.md) describes all of it and compares it with the code; this section turns each unit of it into an item, R84 to R129. What is already merged is not repeated here: the pointer cursor (R20, R27), the window chrome with its stepped halo (R20, R21, R24) and window move, focus and close (R20 to R24, R31, R32). A part that is half built is `in progress` and says which half is merged; a part with no code is `planned`. Nothing in this section is `done`, because none of it is merged yet. The dependencies name items, so an app's list says what it waits for: the app model is R79 and the filesystem is R75. The shell parts are shared by both tracks, so they sit in the convergence lane of the path tree, the apps in the games and apps lane, and the DOS-only parts in the hosted lane. Two design items that must be settled before R75 and R79 (R125, R126) are in [the path to an OS](#future-the-path-to-an-os).
+
+### Shared widgets and dialogs (R84 to R95)
+
+What `desk-ui` has today is Label, TextLine, the chrome and three glyphs ([`SHELL-DESIGN.md`](SHELL-DESIGN.md#what-is-built)); everything the apps need beyond that is here.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R84 | Basic widgets | `in progress` | Label and TextLine are merged (R20). Buttons (primary and outlined), tick boxes, radio buttons, chips and the progress bar are not built. | R20 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts), `shell/ui/src/widget.rs` |
+| R85 | Palette ramps and colour roles | `in progress` | The 16-colour set, the look surfaces and 15 theme roles are merged (R20). The nine-step hue ramps in slots 16 to 96 have no values yet, and the selection, raised and current roles are not used. | R20 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-visual-system), [`PALETTE.md`](PALETTE.md), `shell/ui/src/palette.rs` |
+| R86 | Menu component | `planned` | Popup menus with ticks, icons, hints, separators, disabled items, a bold default, submenus, arrow, Enter and Esc navigation, kept on screen. No menus exist in the code. | R84, R85 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts) |
+| R87 | Lists, trees and panes | `planned` | 18 px rows with selection and current states, sidebars, a details pane and empty states. No list widget exists. | R84 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts) |
+| R88 | Shared app chrome: menu bar, toolbar, tabs, status bar | `planned` | The 18 px menu bar, 26 px toolbar, 22 px tabs (document and section) and 18 px status bar every app shares. [`SDK.md`](SDK.md) describes them; nothing is built. | R84, R86 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts), [`SDK.md`](SDK.md) |
+| R89 | Modal dialogs: confirm and About | `planned` | A modal confirm that names the thing and the consequence with a safe default, and the About box. No dialogs exist in the code. | R20, R84, R92 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts) |
+| R90 | File copy and move progress dialog | `planned` | Title, current file, a bar, bytes and Cancel. It is in the design but not in [`SPEC.md`](SPEC.md) or [`HIG.md`](HIG.md). | R75, R84 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts) |
+| R91 | The shared Open/Save/Folder picker | `planned` | Places, back and up, a path, a list, an 8.3 name field, type filter chips and a replace confirmation, shared by every app that opens or saves a file. | R75, R87, R89 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts) |
+| R92 | App tiles and file-type icons | `planned` | 16 px app glyphs on tinted tiles and 12, 16 and 32 px file-type icons. `desk-ui` has only the three 10 px chrome glyphs. | R85 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-visual-system), `shell/ui/src/icons.rs` |
+| R93 | Clipboard for files and text | `planned` | Cut, copy and paste of files (cut shown dimmed) and text through the app model. | R79 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions) |
+| R94 | Open by kind, file-type associations and Open with | `planned` | Folders open in Files, programs full-screen, documents in their app, with "Always use this"; the Open with dialog picks an installed app. | R75, R79, R89 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions) |
+| R95 | Drag and drop with a ghost | `planned` | Between tabs, windows, the tree and the desktop; the ghost says move, copy or open. | R20, R75, R101 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions) |
+
+### Shell parts (R96 to R108)
+
+The bar, the Desk menu, window operations, the desktop, the looks and the settings the shell reacts to.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R96 | Launcher bar | `planned` | The 30 px bottom bar: the Desk button, a button per window (the focused one sunken; clicking it minimises), the Jax dock and the clock. Out of first-window scope. | R20, R84 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-launcher-bar |
+| R97 | Window operations: minimise, maximise, restore | `planned` | The boxes are drawn but inert by design (R20). This makes them work, with a double-click on the title bar; a maximised window fills the screen above the bar, a minimised one lives in the bar. | R96 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#windows-and-their-chrome |
+| R98 | Resize from edges and corner | `planned` | Grips on the right, bottom and corner, with a minimum size per app; whether every edge gets one is an open question. | R20 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#windows-and-their-chrome |
+| R99 | Window menu and keyboard-only use | `in progress` | Alt+Tab (release to pick), Alt+F4, Tab and the focus caret are merged (R28). The title-bar and Alt+Space window menu, F10, the 2 px focus ring and keyboard move and size are not. The Alt+Tab overlay is R67. | R28, R86, R97 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions), [`LIVE-INPUT.md`](LIVE-INPUT.md) |
+| R100 | The Desk menu | `planned` | Opened by Ctrl+Esc, the Windows key or the Desk button: Files, Terminal, submenus built from installed apps, DOS programs, Settings, About, Exit to DOS; rebuilt on each open. | R79, R86, R96 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-desk-menu |
+| R101 | Desktop icons and the desktop right-click menu | `planned` | A 66 by 56 column-first grid of apps, shortcuts, the DESKTOP folder and drives, with selection and drag; the right-click menu holds New folder, Paste, Wallpaper, Window border, Display and Settings. Fixed grid or free positions is an open question. | R75, R79, R86, R92 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-desktop |
+| R102 | Wallpapers | `in progress` | The Void wallpaper is merged. Horizon (the default), Ember, Dusk sky and Plum need the ramps (R85); the picture wallpaper and the 16-colour three-band versions are not built. | R85 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-visual-system) |
+| R103 | Window borders | `in progress` | The stepped halo is merged (R20, R24). Hairline, gradient rule, dark bevel, chunky 3D and double line are not. | R20, R85 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-window-borders |
+| R104 | The 1993 look | `planned` | The second look: bevels, a top bar, VGA 8 by 16 type and a plum title bar. Later, per [`SPEC.md`](SPEC.md) and [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md). | R85, R103 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-visual-system) |
+| R105 | Toasts | `planned` | One at a time, bottom right above the bar, 240 px wide, a title and one line, for four seconds. Needs a timer and the bar. | R84, R96 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#toasts |
+| R106 | Settings-driven display changes | `in progress` | Both depths render through two presenters (R21, R24). A run-time switch between 640 by 480 at 8 and 4 bits and 800 by 600, from Settings, the right-click menu and at start, is not built; whether a change applies at once or at the next start is an open question. | R10, R13 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#colour-depth-and-screen-size |
+| R107 | Motion setting and DAC fades | `in progress` | The DAC fade exists in the VGA driver (R10) but the shell does not use it. The Motion setting, the fade between the Desk and DOS programs, and stopping Jax when it is off are not built. | R10, R115 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions) |
+| R108 | App crash: close, toast, reopen | `planned` | An app that panics is unloaded and a toast offers Reopen from its autosave. Panic recovery was proved in spike s1 (R6); the shell side is not built. | R6, R79, R105 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#interactions) |
+
+### The hosted handoff and installer (R109 to R111)
+
+R61 is split so that it points at these and at the apps below.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R109 | Handoff: run DOS programs full-screen and come back | `planned` | Fade out, `DESK.RUN`, `DESK.COM` runs the program, `/RESUME`, a Welcome back toast and the Terminal told. Hosted track via [`HANDOFF.md`](HANDOFF.md); on the native track DOS programs come through FreeDOS (R49). | R61, R79, R105 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-handoff, [`HANDOFF.md`](HANDOFF.md) |
+| R110 | Exit to DOS | `planned` | Saves the layout and leaves to a DOS prompt; DESK starts again from there. Hosted track only. | R109 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-shells-parts)#the-handoff |
+| R111 | Installer, text mode and graphical | `planned` | Five steps, a BLASTER test, mouse support and a start-at-boot step that shows the AUTOEXEC change. Hosted track; not on the roadmap as an item before. | R61 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps), [`SPEC.md`](SPEC.md) |
+
+### Core apps (R112 to R115)
+
+Files, Programs and Settings, with Properties, the window Files opens for a file.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R112 | Files | `planned` | The core file manager: tabs, a tree, details, icons and preview views, wildcard search, copy, move, rename, Deleted, Properties and Open with. Core app, [`SPEC.md`](SPEC.md) milestone 4. | R75, R79, R87, R88, R91, R93, R95 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R113 | Properties window | `planned` | Facts and attributes of a file, folder or drive, what it opens with, program settings from the `.DIF`, and Run full-screen. | R94, R112 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R114 | Programs | `planned` | Installed, on A: and DOS programs; install from A: or a `.DAP`, remove, run, program settings. Needs the package format ([`FORMATS.md`](FORMATS.md)). | R48, R75, R79, R87 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R115 | Settings | `planned` | Desktop, Windows, Display, Sound and Jax sections, written to `DESK.INI`. | R79, R88, R102, R103, R106 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+
+### Optional apps (R116 to R124)
+
+Listed in the order of [`SPEC.md`](SPEC.md) milestone 5, Audio Player and Notes first.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R116 | Audio Player | `planned` | MIDI on OPL or MPU-401, WAV and VOC on the Sound Blaster, a library, playlist, loop, shuffle and M3U. Needs sound (R62, R81). | R62, R75, R79 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R117 | Notes | `planned` | Text in tabs with autosave, find and replace, wrap and `[[LINKS]]`. [`SPEC.md`](SPEC.md) milestone 5. | R75, R79, R91 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R118 | Paint | `planned` | 16-colour pictures of 200 by 120, tools, zoom 1 to 6 times, undo, autosave and use as wallpaper. | R75, R79, R102 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R119 | Calculator | `planned` | Standard and 32-bit programmer modes with a history tape. Needs only the app model and the shared chrome. | R79, R88 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R120 | Clock | `planned` | The time, a month calendar and quiet reminders as toasts. Needs the RTC (the BIOS path, R14) and toasts. | R79, R105 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R121 | Inspector | `planned` | System, Memory, Drives and Sound sections, a report and redraw statistics. | R75, R79 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R122 | Terminal | `planned` | Commands over the Desk's files in tabs, with programs run full-screen. Which commands, and per track, depends on R125 and R126. | R75, R79, R109, R125, R126 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R123 | Mines | `planned` | Three levels, a safe first click, marks and best times, with a Jax face. Needs only the app model. | R79 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps) |
+| R124 | Jax companion | `planned` | The mini dock in the bar and a floating box that can be petted and hidden; a still when Motion is off. Whether Jax is core to the look or an optional app is an open question. | R86, R96 | [`SHELL-DESIGN.md`](SHELL-DESIGN.md#the-apps)#jax |
+
+### Findings from the first hands-on run (R127 to R129)
+
+On 2026-11-11 the owner ran the hosted track by hand on FreeDOS in QEMU, an emulator only and nothing on real hardware. Three things came out of it. The evidence for each is that run, not a committed test; none has a check yet, and the run itself is not recorded as verification of the hosted track.
+
+| Id | Title | Status | Outcome | Depends on | Evidence |
+|---|---|---|---|---|---|
+| R127 | Finding: interactive `SHELL.EXE` prints its transcript over the window | `planned` | In interactive mode `SHELL.EXE` prints its `shell: mark 00 …` lines with `println!`, which the DOS console draws onto the graphics screen, visible top left over the window. The shell's own back buffer is clean and moving the pointer repaints it away. The native kernel sends the same lines to serial. The tests redirect output, so none saw it. Planned fix: send the interactive transcript to a file or serial, and add a check. | R23, R32 | Evidence: the owner's hands-on run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only, nothing on real hardware); not a committed test. Code: `shell/dos/src/main.rs`, `shell/shell/src/live.rs` |
+| R128 | Finding: pointer sticks at a screen edge in FreeDOS under QEMU | `in progress` | **Under investigation; the cause is unknown.** After the host mouse leaves the QEMU window and returns, the pointer sticks at a screen edge. The shell clamps the pointer to the screen on every event (`shell/shell/src/shell.rs`), which is a fact about the code, not an established cause. | R32 | Evidence: the owner's hands-on run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only, nothing on real hardware); not a committed test |
+| R129 | Finding: `tools/run-shell.sh native` on a GNOME Wayland desktop | `planned` | QEMU's GTK display only captures the pointer when it runs under XWayland (`GDK_BACKEND=x11`), so the launcher should set that on Wayland sessions. Alt+Tab went to GNOME's switcher instead of the guest, so the keyboard grab was not in effect; the cause is not established. Minimise and maximise did nothing, which is by design in the first window (R97). | R33 | Evidence: the owner's hands-on run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only, nothing on real hardware); not a committed test. Code: [`tools/run-shell.sh`](../tools/run-shell.sh) |
 
 ## Reuse and vendoring
 
@@ -223,6 +321,9 @@ I am not confident of any other project's existence or licence, so none is liste
 - **Retiring the hosted skeleton's C layer and `coff2go32.py`** now that d0 works (R7).
 - **The order of the candidate spikes** (R49 to R52) after the module loader (R48).
 - **The repository breakup** (R82, #65): whether to split the repository at all, and into how many (the proposal sets out two, four and eight and recommends starting with the smallest). Nothing is decided; the proposal approves nothing.
+- **The path and mount model** (R125, a proposal; the interactive explorer is <https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL>). Open: the root and mount layout (is `/` always the system volume, and where do other drives appear), the canonical stored form of a path (and so what `DESK.INI` and file associations store), and the native root.
+- **Shared commands with aliases** (R126, a proposal; the same explorer). Open: the alias table (which DOS names map to which Linux names, and what happens when they differ in meaning), what Terminal is on each track (R122), and the native root again, since the commands act on it.
+- **The open questions of the shell design** ([`SHELL-DESIGN.md`](SHELL-DESIGN.md#open-questions-for-the-owner)): the clock format, the bar height, fixed or free icon positions, wallpaper placement, whether display changes apply at once, the keyboard model, resizing, Lt. Fizz on the desktop, whether Jax is core, and which faces.
 - **What counts as verifying live input** (R47): whether the re-check from clean clones of `main` and in the CI image, and a re-read of #54's Not verified list, are enough to close it, now that the stacks are merged.
 
 ## How to keep this current
