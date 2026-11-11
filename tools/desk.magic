@@ -1,0 +1,21 @@
+# file(1) magic for the Desk loadable image: the one container of docs/LOADER.md, with .DMD modules and .DKX applications.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# usage: file -m tools/desk.magic <file>
+#
+# The first phrase names the container, not a kind, because modules and applications share it; the kind follows. Offsets are
+# the version-1 header's (docs/LOADER.md, "Format specification sketch"): 4 header size, 8 ABI, 10 SDK, 12 kind, all
+# little-endian 16-bit. A change to that table changes this file in the same commit.
+
+0	string		DMD1		Desk loadable image, version 1
+>12	uleshort	1		\b, module (.DMD)
+>12	uleshort	2		\b, application (.DKX)
+>12	uleshort	3		\b, library (reserved)
+>12	uleshort	0		\b, unknown kind 0
+>12	uleshort	>3		\b, unknown kind %u
+>8	uleshort	1		\b, i486 flat
+>8	uleshort	!1		\b, unknown ABI %u
+>10	uleshort	x		\b, SDK %u
+>4	uleshort	x		\b, %u-byte header

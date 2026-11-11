@@ -537,13 +537,13 @@
    "id": "sched",
    "label": "Scheduling model",
    "branch": "native",
-   "state": "decision",
+   "state": "planned",
    "deps": [
     "kernel"
    ],
-   "what": "Cooperative in one address space, or preemptive processes.",
+   "what": "R77: preemptive on native in three stages (ring-0 preemption on PIT slices, then paging and ring 3 for protection, then system calls on the protected task); cooperative on hosted, where DOS is not reentrant. The SDK defines preemptive semantics.",
    "why": "Shapes the app ABI and the core's event loop.",
-   "evidence": "DIRECTION.md open question: scheduling"
+   "evidence": "Decided by the owner on 2026-11-11; docs/APP-MODEL.md. Follows the loader spike (R48); nothing built."
   },
   {
    "id": "disk",
@@ -574,7 +574,7 @@
    "id": "loader",
    "label": "Module format and loader",
    "branch": "native",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "fs",
     "dxe3",
@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "DIRECTION.md; lessons from S1-DXE3.md. The executable-format spike is planned after live input; nothing is built."
+   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
@@ -598,6 +598,84 @@
    "what": "How an app calls the Desk on the native OS.",
    "why": "Native apps and the std platform layer sit on it.",
    "evidence": "RUST-TARGETS.md space (d)"
+  },
+  {
+   "id": "threads",
+   "label": "Threads and wait/wake",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "sched",
+    "loader"
+   ],
+   "what": "R141: kernel threads 1:1 inside tasks on native, cooperative green threads on hosted, one futex-style wait and wake primitive with locks and channels as library code.",
+   "why": "Concurrency on one CPU: a worker reads a floppy while the window stays live.",
+   "evidence": "docs/APP-MODEL.md; nothing built."
+  },
+  {
+   "id": "prio",
+   "label": "Scheduler priorities",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "threads"
+   ],
+   "what": "R142: fully configurable priorities (32 levels as a target, a system band, ceilings, ageing, 10 ms slices, basic priority inheritance); on hosted they order the cooperative ready list.",
+   "why": "Input and the compositor stay responsive while apps work.",
+   "evidence": "docs/APP-MODEL.md; nothing built."
+  },
+  {
+   "id": "winsys",
+   "label": "Window system as a task",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "threads",
+    "core"
+   ],
+   "what": "R143: the compositor as a system task reached by request and event messages; in-process on hosted and in the first native stage, with the same API.",
+   "why": "A crashing app cannot take the compositor with it.",
+   "evidence": "docs/APP-MODEL.md; nothing built."
+  },
+  {
+   "id": "appfmt",
+   "label": "Applications as files",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "loader",
+    "sched"
+   ],
+   "what": "R144: kind 2 of the loader's container with its own extension (.DKX, decided), loaded as a new task.",
+   "why": "An app is a program, not a plug-in.",
+   "evidence": "docs/LOADER.md, docs/APP-MODEL.md; the spike writes and refuses them."
+  },
+  {
+   "id": "sharedlib",
+   "label": "Shared libraries",
+   "branch": "native",
+   "state": "research",
+   "deps": [
+    "appfmt",
+    "paging"
+   ],
+   "what": "R145: a library kind with an export table, loaded once and shared; documented, not time to build.",
+   "why": "Shared code on a 4 to 16 MB machine, once a large shared component exists.",
+   "evidence": "docs/APP-MODEL.md; version 1 of the format reserves the fields."
+  },
+  {
+   "id": "deskstd",
+   "label": "Desk target for std",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "std",
+    "loader",
+    "threads"
+   ],
+   "what": "R146: one target, i486-unknown-desk, over the patched platform layer, with the desk_* functions as import slots; the hosted shim first.",
+   "why": "The crates ecosystem for apps.",
+   "evidence": "docs/DESK-STD.md; std::sync read in the Rust 1.98.0 sources, not built."
   },
   {
    "id": "nsound",
