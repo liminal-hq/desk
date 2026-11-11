@@ -8,6 +8,12 @@ The first window's scripted run and what it is expected to draw (`docs/FIRST-WIN
 - `NAME.sums` — one line per frame and depth, `NAME DEPTH WIDTHxHEIGHT INDEX COLOUR`, the two CRC-32s of the frame in hex: `INDEX` of the palette indices, `COLOUR` of the six-bit `r g b` of every pixel. Every platform's capture must reproduce them.
 - `golden/NAME/FRAME-DEPTH.png` — each frame as an indexed PNG (the platform's palette expanded to 8 bits), for people to look at and for `tools/frames.py diff`. They are checked against the `.sums` by `python3 -I tools/frames.py goldens tests/shell/NAME.sums tests/shell/golden/NAME`, which `tools/check.sh` runs.
 
+## The scenarios
+
+- `first-window.scn` — the first window, scripted (`docs/FIRST-WINDOW.md`). Its sums, goldens and the expected transcripts never change without a regression.
+- `keys.scn` — Alt+Tab, Shift+Alt+Tab, Alt+F4 and Tab between fields, on the first window's set-up.
+- `live.scn` and `live-keys.scn` — the first window played with real input (`docs/LIVE-INPUT.md`): their steps after the first frame are what `tools/frames.py live` turns into mouse and key input for an emulator, and each frame is checked against its golden when the live run prints its mark. The steps before the first frame must equal `first-window.scn`'s (the host test and `frames.py live` both check it).
+
 ## What the host test checks
 
 `shell/shell/tests/scenarios.rs` runs every `.scn` here at every depth it lists, through `MemoryPresent` at both depths, `LinearPresent` over a `Vec`-backed region at depth 8 and `PlanarPresent` over a four-plane model at depth 4. All the presenters must give the same pixels, and their digests must equal the `.sums`.

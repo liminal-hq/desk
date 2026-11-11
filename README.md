@@ -41,13 +41,13 @@ It is the spiritual successor to [Lieutenant Fizz for DOS](https://github.com/Sc
 3. The shared Desk core running on the native hardware layer.
 4. Bundled FreeDOS for DOS programs.
 
-The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one in [`docs/DIRECTION.md`](docs/DIRECTION.md#milestones), and [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md) says what is decided and what is not.
+What is done, in flight and planned, item by item, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). The hosted list is in [`docs/SPEC.md`](docs/SPEC.md#milestones), the native one in [`docs/DIRECTION.md`](docs/DIRECTION.md#milestones), and [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md) says what is decided and what is not.
 
 ## Repository
 
 | Folder | What it holds |
 |---|---|
-| `docs` | The working design: direction, spec (the hosted track's), SDK, file formats, handoff, palette, app guidelines, open questions, naming |
+| `docs` | The working design: direction, roadmap, spec (the hosted track's), SDK, file formats, handoff, palette, app guidelines, open questions, naming |
 | `design` | Boards and prototypes from the design brainstorm, kept as reference only |
 | `core` | The OS-independent shell in Rust (`no_std`) and the DOS target specification; today the walking skeleton's one function |
 | `c` | The hosted track's hardware layer in C for DJGPP; today `main`, result output and the panic exit |
@@ -65,6 +65,8 @@ tools/setup.sh    # once: the pinned Rust pieces, then DJGPP, DOSBox Staging and
 tools/check.sh    # everything the CI runs: checks, then build dist/DESK.EXE and run it in headless DOSBox
 python3 -I tools/build-hero.py > assets/hero.svg    # rebuild the banner
 ```
+
+To play with the first window (windows, a pointer, typing, Alt+Tab) in an emulator window on your desktop, one command per track: `tools/run-shell.sh native` (QEMU, a Rust kernel booting on its own PS/2 drivers; needs QEMU on the host) or `tools/run-shell.sh dos` (DOSBox Staging, after `tools/setup.sh`). Click in the window to give it the mouse, Ctrl+Alt+G (QEMU) or Ctrl+F10 (DOSBox) to take it back, Escape to end. [`docs/LIVE-INPUT.md`](docs/LIVE-INPUT.md) has the details.
 
 [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) explains the build pipeline and what it was checked against. [`AGENTS.md`](AGENTS.md) has the conventions: Canadian English, unwrapped markdown, Conventional Commits, merge commits only.
 

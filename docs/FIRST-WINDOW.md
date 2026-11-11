@@ -195,13 +195,14 @@ pub struct PresentStats { pub frames: u32, pub spans: u32, pub pixels: u32 }
 
 pub struct CursorLayer { pub x: i32, pub y: i32, pub visible: bool, pub sprite: &'static Sprite, pub inks: [u8; 2] }
 
-pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer */ }
+pub struct Compositor { /* back: Surface, scene: Damage, overlay: Damage, cursor: CursorLayer, shown: Option<Rect> */ }
 impl Compositor {
     pub fn new(width: u32, height: u32, background: u8) -> Result<Compositor, HalError>;   // refuses zero or a width above MAX_WIDTH (1280); the first frame damages the whole screen
     pub fn damage(&mut self, r: Rect);                                   // scene damage
-    pub fn move_cursor(&mut self, x: i32, y: i32);                       // overlay damage: old and new sprite rects
+    pub fn move_cursor(&mut self, x: i32, y: i32);                       // records the position; the next frame damages `shown` and the new sprite rect, however many moves came between
     pub fn set_cursor_inks(&mut self, inks: [u8; 2]);
-    pub fn set_cursor_visible(&mut self, visible: bool);                 // overlay damage: the sprite rectangle
+    pub fn set_cursor_visible(&mut self, visible: bool);                 // the next frame damages where the sprite was drawn (hiding) or is now (showing)
+    pub fn is_dirty(&self) -> bool;                                      // scene or overlay damage pending, or the cursor is not where it was last presented
     pub fn cursor(&self) -> &CursorLayer;
     /// Repaints every scene-damage rect through `paint` (with the surface clipped to it), then presents the union of the
     /// scene and overlay damage, aligned to the presenter, compositing the cursor into each row on the way.
@@ -213,7 +214,7 @@ impl Compositor {
 pub struct FrameStats { pub repainted: u32, pub presented: u32, pub rects: u8 }
 ```
 
-`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
+`frame` in order: take the scene damage; for each rect, `set_clip(rect)` and call `paint`; add the overlay damage; align to `out.align()`; `out.begin()`; for each rect and each row, copy the back buffer's span into a stack row buffer, overlay the cursor's pixels that fall in it, and call `out.span`; `out.end()`; clear both damages. An idle frame (no damage, and the cursor where it was last presented) calls nothing and returns zeros. `frame` refuses a presenter whose size differs from the compositor's, or whose alignment does not divide the width, with `InvalidArgument` before painting anything; if the presenter fails part-way, the damage being presented goes back into the scene damage for the next frame. `MemoryPresent::new(width, height, align)` counts `begin` calls as `frames`; `Surface::mono` takes eight arguments (as sketched) and carries an `allow(clippy::too_many_arguments)`. `desk-gfx` has a dev-dependency on `desk-vga` for the arrow test only; the library does not use it.
 
 ### Digests
 
@@ -390,7 +391,7 @@ impl Widget {
 }
 ```
 
-`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and, when its window is focused, a 1 × 12 caret in `Accent` after the text. Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+`TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and a 1 × 12 caret in `Accent` after the text, drawn only while it is the focused widget of the focused window (`Widget::paint`'s `focused` says so). Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
 
 ## desk-wm: windows, focus and damage
 
@@ -414,7 +415,9 @@ impl Wm {
     pub fn hit(&self, x: i32, y: i32) -> Option<(WindowId, Hit)>;               // topmost first
     /// The pointer is now at (x, y) with `buttons`; changes of button state drive focus, drags and the close box.
     pub fn pointer(&mut self, x: i32, y: i32, buttons: u8, damage: &mut Damage);
+    /// Alt+Tab, Shift+Alt+Tab, Alt+F4 and Tab are the window manager's (the table in `LIVE-INPUT.md`); every other key is the focused widget's.
     pub fn key(&mut self, e: KeyEvent, fonts: &Fonts, damage: &mut Damage);
+    pub fn cycling(&self) -> Option<WindowId>;                                   // the window releasing Alt would focus, during an Alt+Tab
     /// Paints the desktop and every window that meets `clip`, bottom to top, onto a surface already clipped to it.
     pub fn paint(&self, s: &mut Surface, clip: Rect, t: &Theme, fonts: &Fonts);
 }
@@ -432,11 +435,15 @@ Behaviour and the damage each change reports (the rows are the damage-accounting
 | Drag by (dx, dy) | old `extent` ∪ new `extent`, merged by `Damage` |
 | A key into a text field | the rectangle `Widget::key` returns (the old and new text and caret, inside the field), offset to the screen and cut to the content area |
 | Pointer motion with no drag | none (the cursor is overlay damage, added by the shell) |
+| A step of an Alt+Tab cycle | none: nothing is drawn while Alt is held |
+| Alt released after a cycle | as a focus that raises, for the window the cycle reached (none when that is the top window) |
+| Alt+F4 | as a close of the focused window |
+| Tab or Shift+Tab to another field | the two fields' carets |
 
 - **Hit testing** goes through the windows from the top: a control box first, then the rest of the title bar (`Title`), then the rule and the content (`Content`), then the ring. The ring is the three pixels around a focused window and only the one-pixel hairline around an unfocused one, since that is all an unfocused window paints; the rest belongs to what lies beneath.
 - **Press** (left button goes down) on a window: focus and raise; on `Title`, start a drag; on `Control(Close)`, arm the close box. **Release**: end the drag; close the window if the close box was armed and the pointer is still over it. Minimise and maximise are inert.
 - **Dragging** keeps the point of the title bar that was pressed under the pointer (so a window held at a clamp follows the pointer back), clamped so the title bar stays reachable: `y >= 0`, `y <= screen height - 22`, and at least 24 pixels of the title bar on screen horizontally.
-- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`) and adds the damage for the widget.
+- **Focus** goes to the window that was opened, raised or clicked; closing the focused window focuses the new top window. Focus always raises, so the focused window is the top one. Whoever adds a widget through `window_mut` sets `focus_widget` (`Wm::key` sends keys only to the focused window's `focus_widget`, and Tab moves it between the fields) and adds the damage for the widget. Alt+Tab keeps `cycle`, how far down the stacking order the target is, and Alt's release focuses it; anything that opens, closes or focuses a window, and any press of the left button, ends the cycle so no stale index survives.
 - **Painting** is the painter's algorithm inside each damage rect: the desktop, then each window whose `extent` meets the rect, bottom to top. Windows are few; occlusion culling waits for a measurement that says it is needed. `paint` clips to `clip` itself and puts the surface's clip back, paints each window's widgets inside its content area only, and changes no pixel outside `clip`.
 
 ## desk-shell: events, frames and scenarios
@@ -576,6 +583,8 @@ frames.py goldens SUMS DIR                         every PNG in DIR matches its 
 frames.py same DIR_A DIR_B [--size WxH]            two capture sets hold the same frames with equal COLOUR digests (the size of RAW dumps, 640x480 by default)
 frames.py diff A B OUT.png                         the differing pixels in red over a dimmed A (exit status 0 once written; 1 if the sizes differ)
 frames.py inject SCENARIO > FILE                   the QEMU monitor script for the native run (below)
+frames.py live SCENARIO --qemu|--autotype|--xdotool [--quick]   a live scenario's input steps for an emulator (`LIVE-INPUT.md`)
+frames.py marks SUMS SCENARIO DEPTH TRANSCRIPT [--dumps DIR]    a live run's `shell: mark NN` lines carry the SUMS digests, in order
 ```
 
 A RAW has no size of its own, so `digest` takes it on the command line and `check` takes it from the SUMS line. Exit status is 0 on success, 1 on a failed check or an unreadable input, 2 on a usage error, as `tools/native-shot.py` does; `tools/test_frames.py` holds the tests. The PNG writer uses `zlib` with filter 0 on every row. The reader accepts 8-bit indexed and 8-bit RGB PNGs, not interlaced, and undoes all five row filters, so a golden re-saved by another tool still reads.
@@ -618,23 +627,24 @@ python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/gol
 `shell/dos/` is its own Cargo workspace (excluded from `shell/`'s, because its default target is `dos-elf.json`), built like spikes A and B: `rt` by path from `spikes/d0-rust-dos/rt`, `rust-lld`, `tools/elf2go32.py` behind DJGPP's stub, `CWSDPMI.EXE` beside it, into `dist/shell/`.
 
 ```
-SHELL.EXE [depth8 | depth4] [scenario] [dump] [fontfile] [corrupt] [timeout=N]
+SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]
 ```
 
 - **Mode.** `depth8` finds a 640 × 480 × 8 linear mode in `DosDisplay::modes()` (`0x101` on DOSBox's S3) and sets it; `depth4` sets mode 12h (`DosDisplay` sets the identity attribute palette). With no VBE (`DOS_MACHINE=vgaonly`) `depth8` says so and falls back to depth 4, so the fallback is tested too. The return to text is on `rt`'s clean-up list.
 - **Palette.** `DosDisplay::set_palette(0, &desk_ui::palette(depth))`.
 - **Presenter.** `LinearPresent` over the `FrameBuffer`'s region, or `PlanarPresent` over `RawPorts` and the region.
 - **`scenario`** runs `first-window.scn` (embedded) with scripted input. At each frame it prints `shell: frame NAME DEPTH WIDTHxHEIGHT INDEX COLOUR` from `Shell::digest`, and with `dump` reads the frame buffer back (`read_back_linear` or `read_back_planar`) and the DAC (`desk_vga::read_palette`) into `NAME.RAW` and `NAME.PAL` in the program's directory, and prints the read-back's digests on a second line, `shell: readback NAME DEPTH WIDTHxHEIGHT INDEX COLOUR equal` (or `DIFFERENT`, which makes the exit status 1), which must equal the first; the read-back's colour digest uses the palette read back from the DAC, so a wrong palette fails it too. The scenario is stepped with `apply` and `Shell::frame` as the host's presenter tests do, with the presenter made again for each frame, because the read-back needs the region the presenter holds. Without `scenario` it runs interactively on `DosInput` (spike B's IRQ 1 handler and INT 33h mouse) until Escape, with the first window's two windows open; `timeout=N` ends it after N seconds (exit status 4), and an argument the program does not know is refused (exit status 5), and `dump` writes the last screen as `SCREEN.RAW` and `SCREEN.PAL`.
+- **`marks`** (live mode only, [`LIVE-INPUT.md`](LIVE-INPUT.md)): at mark 00 and at each F12 it prints `shell: mark NN DEPTH WIDTHxHEIGHT INDEX COLOUR`, reads the frame buffer and the DAC back as `dump` does, prints `shell: readback mark NN ... equal` (or `DIFFERENT`, which makes the exit status 1) and writes `Mnn.RAW` and `Mnn.PAL`, which `frames.py marks --dumps` renames to the frames' names. Without `marks` F12 prints the mark line only. Escape ends the session with `shell: live ended by Escape: K keys, P pointer reports, F frames, X pixels presented, M marks`.
 - **`fontfile`** loads `UI.DFN` and `TITLE.DFN` from the program's directory with `rt::dos::File` instead of the embedded copies; the digests must not change. The build copies the two files and `OFL.txt` (the fonts' licence) into `dist/shell/`.
 - **`corrupt`** flips one pixel of the frame buffer after the `moved` frame is presented: the negative run.
 
-`shell/dos/check.sh` (called from `tools/check.sh`): format and lints; the build; `scenario dump` at depth 8 and at depth 4, each run's dumps moved to `dist/shell/dumps-DEPTH/` afterwards, each transcript against `tests/shell/expected-dos-DEPTH.txt` and `frames.py transcript`; `frames.py check` of the dumps against the goldens; `fontfile` gives the same transcript; `DOS_MACHINE=vgaonly` with `depth8` falls back and matches the depth 4 goldens. The interactive mode is run once with keys typed by `AUTOTYPE` (`desk` reaches the focused field and Escape ends the run; the screen's digest is checked); the mouse is not exercised by the check. Negative runs that must fail: `corrupt` (the read-back reports `DIFFERENT`, exit status 1, and the dumps fail `frames.py check`); the depth 8 dumps checked against the depth 4 sums; a dump with one pixel changed; the sums with one digit changed; a transcript with one digest changed.
+`shell/dos/check.sh` (called from `tools/check.sh`): format and lints; the build; `scenario dump` at depth 8 and at depth 4, each run's dumps moved to `dist/shell/dumps-DEPTH/` afterwards, each transcript against `tests/shell/expected-dos-DEPTH.txt` and `frames.py transcript`; `frames.py check` of the dumps against the goldens; `fontfile` gives the same transcript; `DOS_MACHINE=vgaonly` with `depth8` falls back and matches the depth 4 goldens. The live mode is run with `tests/shell/live-keys.scn` typed by `AUTOTYPE` (`frames.py live --autotype`) at both depths with `marks`: each mark must carry the scenario's digests in order (`frames.py marks`) and each renamed dump must equal the golden (`frames.py check`); once more with the mouse driver taken away (`frames.py same` with the first run), and once without `marks` (the mark lines only, and `dump` writes the last screen). The mouse is not exercised by the check (`shell/dos/check-xvfb.sh`, opt-in, does that). Negative runs that must fail: `corrupt` (the read-back reports `DIFFERENT`, exit status 1, and the dumps fail `frames.py check`); the depth 8 dumps checked against the depth 4 sums; a dump with one pixel changed; the sums with one digit changed; a transcript with one digest changed; and for the live mode, `AUTOTYPE` without one key of the typed word, a live dump with one pixel changed, a transcript with one mark line removed and the depth 8 marks against the depth 4 sums.
 
 DOSBox headless has no screenshot command that a script can use, so the hosted capture is the frame buffer and the DAC as the program reads them back, as spike A's was: what the emulated card holds, not what a monitor shows. The opt-in Xvfb harness from spike B could add a rendered screenshot later.
 
 ### Native: the kernel's `shell` test mode in QEMU
 
-- **The test mode.** `tools/native-image.sh --test-mode shell` (code 13) and `shell-corrupt` (code 14). `kernel/src/shell.rs` runs after input is set up, as `gfx` does.
+- **The test mode.** `tools/native-image.sh --test-mode shell` (code 13), `shell-corrupt` (code 14) and `shell-live` (code 15, the first window on live input: [`LIVE-INPUT.md`](LIVE-INPUT.md)). `kernel/src/shell.rs` runs after input is set up, as `gfx` does.
 - **Mode.** With a loader-set linear frame buffer (`--video vbe`, `video.lfb`), depth 8 over `gfx::lfb_region`; otherwise `desk_vga::set_mode_12h` by registers and depth 4 over the VGA window. The palette goes through `desk_vga::dac::set_palette`.
 - **Fonts and scenario**: `include_bytes!("../../fonts/generated/ui.dfn")` and `title.dfn`, `include_str!("../../tests/shell/first-window.scn")`.
 - **Capture.** At each frame it prints `shell: frame NAME DEPTH WIDTHxHEIGHT INDEX COLOUR`, then `shell: ready NAME`, and waits for a key (the rendezvous `gfx.rs` uses); the QEMU monitor script takes `screendump {out}/NAME.ppm` and sends the key. `frames.py inject` writes that script from the scenario's `frame` lines, so it cannot drift. At the end it prints `shell: done` and restores text mode as the `gfx` tour does.
@@ -650,7 +660,7 @@ DOSBox headless has no screenshot command that a script can use, so the hosted c
 
 ### Both tracks at once
 
-The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/shell-compare.sh` (called from `tools/check.sh` after both runs, or run alone with `--run`) also states it directly: `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4, and for the DOS run with no VBE against native depth 4) must pass, and it must fail for each of the depths swapped, a pixel changed in the DOS dump, a frame missing and a frame swapped for another. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels.
+The pixel-for-pixel claim between the tracks is transitive (each matches the goldens), and `tools/shell-compare.sh` (called from `tools/check.sh` after both runs, or run alone with `--run`) also states it directly: `frames.py same dist/shell/dumps-8 dist/shell-native-8` (and for depth 4, and for the DOS run with no VBE against native depth 4) must pass, and it must fail for each of the depths swapped, a pixel changed in the DOS dump, a frame missing and a frame swapped for another. The live-input runs (QEMU `sendkey` and `mouse_move` against the interactive mode; DOSBox `AUTOTYPE` for keys) are an optional later task: they test the input path, not the pixels. [`LIVE-INPUT.md`](LIVE-INPUT.md) designs them.
 
 ## Rules carried over
 
@@ -683,7 +693,7 @@ Each has a default the plan follows unless the owner says otherwise.
 - **Damage merging overdraws.** Bounding-box merges write more than strictly changed; the accounting tests bound it for the cases that matter.
 - **The 8.3 limit** on capture names is enforced by the scenario parser, not discovered in DOSBox.
 - **Depending on a spike's runtime.** `shell/dos` uses `spikes/d0-rust-dos/rt` by path, as spikes A and B do; when `rt` moves, the path changes in one place.
-- **Test-mode numbers.** The kernel's test modes are a small integer space shared by branches; 13 and 14 must not collide with another open branch.
+- **Test-mode numbers.** The kernel's test modes are a small integer space shared by branches; 13, 14 and 15 must not collide with another open branch.
 - **The cursor's shape is duplicated**: `desk_vga::cursor` keeps its arrow for the spikes, and `desk-gfx` has `ARROW` for the shell. A host test in `desk-gfx` compares the two through a public accessor added to `desk-vga`.
 - **Nothing here runs on real hardware.** QEMU and DOSBox model the VGA well enough for these pictures; real cards, monitors and timing are untested, as in spikes A and D.
 
@@ -705,7 +715,7 @@ Measured on 2026-10-23 on the branch that merges the hosted wiring ([#30](https:
 
 ### Not verified
 
-- **The mouse.** Both runs are scripted: the scenario's pointer moves and drags are events handed to the shell, not motion through INT 33h (DOS) or the PS/2 mouse (native). Keys reached the shell through IRQ 1 on DOS (the interactive run) but not on the native side in this comparison. The live-input task is separate.
+- **The mouse.** Both runs are scripted: the scenario's pointer moves and drags are events handed to the shell, not motion through INT 33h (DOS) or the PS/2 mouse (native). Keys reached the shell through IRQ 1 on DOS (the interactive run) but not on the native side in this comparison. Live input closes this: the mouse and keys through INT 33h and IRQ 1 under DOS and through the PS/2 drivers natively, played into both tracks and held to the goldens, is in the [Result of `LIVE-INPUT.md`](LIVE-INPUT.md#result), with what that still did not verify.
 - **Real hardware.** Nothing ran on a real VGA card, a real monitor or a 486. Real cards, DAC rounding on real parts and timing are untested.
 - **The DOS capture is not a screen capture.** `SHELL.EXE` reads the frame buffer back through the linear mapping (or the four planes) and the DAC through the ports, so it records what the emulated card holds, not what DOSBox draws. QEMU's screendump is the emulator's rendered output. A fault that wrote the same wrong thing into memory and the DAC would agree with itself on DOS and be caught only by the goldens, which come from host code with no VGA in it; the native side is an independent path and agrees with them too.
 - **One emulator per track.** DOSBox Staging with the S3 card and QEMU with the std and Cirrus cards. Bochs and 86Box were not run for this.

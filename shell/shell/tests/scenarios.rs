@@ -308,3 +308,33 @@ fn every_scenario_matches_its_sums_through_every_presenter() {
         "\n{failures}\nIf the change is deliberate, re-record with tools/shell-goldens.sh and look at the PNGs.\n"
     );
 }
+
+/// The steps before a scenario's first `frame`: a live session performs them itself, as the first window's set-up.
+fn setup_of(sc: &Scenario) -> Vec<Step> {
+    sc.steps
+        .iter()
+        .take_while(|s| !matches!(s, Step::Frame(_)))
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn every_live_scenario_starts_from_the_first_windows_setup() {
+    let dir = root().join("tests/shell");
+    let first = parse(&std::fs::read_to_string(dir.join("first-window.scn")).unwrap()).unwrap();
+    let want = setup_of(&first);
+    assert!(!want.is_empty());
+    let mut seen = 0;
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        if !(name.starts_with("live") && name.ends_with(".scn")) {
+            continue;
+        }
+        let sc = parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(setup_of(&sc), want, "{name}: its set-up differs from first-window.scn's");
+        assert_eq!((sc.screen, &sc.depths), (first.screen, &first.depths), "{name}");
+        seen += 1;
+    }
+    assert!(seen >= 2, "live.scn and live-keys.scn are expected");
+}

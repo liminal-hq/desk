@@ -4,8 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 // It answers the functions the driver crate calls the way the Microsoft driver, CTMOUSE and the DOSBox built-in driver do (functions
-// 0000h to 0004h, 0007h, 0008h, 000Bh, 0011h, 0015h, 0021h and 0024h), keeps the position in a range and the motion in counters that a
-// read clears, and records the AX of every call. Tests move the "hardware" with `move_by`, `press`, `release` and `scroll`.
+// 0000h to 0006h, 0007h, 0008h, 000Bh, 0011h, 0015h, 0021h and 0024h), keeps the position in a range and the motion in counters that a
+// read clears, and records the AX of every call. Tests move the "hardware" with `move_by`, `press`, `release`, `click` (a click between two polls) and `scroll`; it counts the presses
+// and releases of each button for functions 0005h and 0006h, and `without_counters` makes it a driver that does not.
 
 use alloc::vec::Vec;
 use core::cell::RefCell;
@@ -37,6 +38,11 @@ struct State {
     buttons: u8,
     mickeys: (i32, i32),
     wheel: i32,
+    /// Presses and releases of each button since the counter was last read, and where the pointer was at the last one.
+    presses: [(u16, i32, i32); 3],
+    releases: [(u16, i32, i32); 3],
+    /// Whether functions 0005h and 0006h count; a driver without them leaves the registers as they came.
+    counts: bool,
     calls: Vec<u16>,
 }
 
@@ -49,6 +55,8 @@ impl State {
         self.y = 100;
         self.mickeys = (0, 0);
         self.wheel = 0;
+        self.presses = [(0, 0, 0); 3];
+        self.releases = [(0, 0, 0); 3];
     }
 
     fn clamp(&mut self) {
@@ -78,6 +86,9 @@ impl Int33Model {
             buttons: 0,
             mickeys: (0, 0),
             wheel: 0,
+            presses: [(0, 0, 0); 3],
+            releases: [(0, 0, 0); 3],
+            counts: true,
             calls: Vec::new(),
         };
         st.reset();
@@ -113,12 +124,48 @@ impl Int33Model {
         st.clamp();
     }
 
-    pub fn press(&self, button: u8) {
-        self.state.borrow_mut().buttons |= button & 7;
+    /// Makes functions 0005h and 0006h answer as a driver that never implemented them: nothing is counted.
+    pub fn without_counters(self) -> Int33Model {
+        self.state.borrow_mut().counts = false;
+        self
     }
 
+    /// Presses the buttons in `button` (bit 0 left, 1 right, 2 middle); each one that was up is counted as a press.
+    pub fn press(&self, button: u8) {
+        let mut st = self.state.borrow_mut();
+        for i in 0..3 {
+            if button & (1 << i) != 0 && st.buttons & (1 << i) == 0 {
+                let (x, y) = (st.x, st.y);
+                let c = &mut st.presses[i];
+                *c = (c.0.saturating_add(1), x, y);
+            }
+        }
+        st.buttons |= button & 7;
+    }
+
+    /// Releases the buttons in `button`; each one that was down is counted as a release.
     pub fn release(&self, button: u8) {
-        self.state.borrow_mut().buttons &= !(button & 7);
+        let mut st = self.state.borrow_mut();
+        for i in 0..3 {
+            if button & (1 << i) != 0 && st.buttons & (1 << i) != 0 {
+                let (x, y) = (st.x, st.y);
+                let c = &mut st.releases[i];
+                *c = (c.0.saturating_add(1), x, y);
+            }
+        }
+        st.buttons &= !(button & 7);
+    }
+
+    /// A click that starts and ends between two polls: a press and a release of `button` (the state ends as it began). Done on a
+    /// button that is already down it is a release and a press.
+    pub fn click(&self, button: u8) {
+        if self.state.borrow().buttons & button & 7 != 0 {
+            self.release(button);
+            self.press(button);
+        } else {
+            self.press(button);
+            self.release(button);
+        }
     }
 
     /// Wheel detents, positive towards the user.
@@ -177,6 +224,20 @@ impl Bios for Int33Model {
                 regs.ebx = u32::from(st.buttons) | w;
                 regs.ecx = st.x as u16 as u32;
                 regs.edx = st.y as u16 as u32;
+            }
+            0x0005 | 0x0006 if st.counts => {
+                let i = (regs.ebx as u16 as usize).min(2);
+                let present = (regs.ebx as u16) < buttons;
+                let (n, x, y) = if ax == 0x0005 { st.presses[i] } else { st.releases[i] };
+                if ax == 0x0005 {
+                    st.presses[i] = (0, x, y);
+                } else {
+                    st.releases[i] = (0, x, y);
+                }
+                regs.eax = st.buttons.into();
+                regs.ebx = if present { n.into() } else { 0 };
+                regs.ecx = x as u16 as u32;
+                regs.edx = y as u16 as u32;
             }
             0x0004 => {
                 st.x = cx;

@@ -28,8 +28,8 @@ fn paint_window(w: &Window, focused: bool, s: &mut Surface, clip: Rect, t: &Them
     // Widgets stay inside the content area.
     s.set_clip(clip.intersect(&l.content));
     let origin = (l.content.x0, l.content.y0);
-    for widget in &w.widgets {
-        widget.paint(s, t, &fonts.ui, origin, focused);
+    for (i, widget) in w.widgets.iter().enumerate() {
+        widget.paint(s, t, &fonts.ui, origin, focused && w.focus_widget == Some(i));
     }
     s.set_clip(clip);
 }
