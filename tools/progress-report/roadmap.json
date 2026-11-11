@@ -21,19 +21,19 @@
   {
    "id": "convergence",
    "label": "Convergence (shared)",
-   "next": "Re-check live input from clean clones of main and in the CI image, then widgets and menus on the first window's core.",
+   "next": "Re-check live input from clean clones of main and in the CI image, then widgets and menus on the first window's core. Then the full shell parts on the first window's core: widgets, menus, the launcher bar and window operations (docs/ROADMAP.md R84 to R108).",
    "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (the anatomy page of the Desk)."
   },
   {
    "id": "native",
    "label": "Native track (own kernel)",
    "next": "Re-check live input on the native shell-live mode; then the executable-format spike (planned after live input); a V86 monitor if FreeDOS needs it.",
-   "blocker": "Scheduling, paging and system calls are open decisions; no user mode exists in the kernel."
+   "blocker": "Scheduling, paging and system calls are open decisions; no user mode exists in the kernel. The path and mount model and the shared commands (R125, R126) are proposals waiting on the owner and come before the filesystem and the app model."
   },
   {
    "id": "games",
    "label": "Games and apps",
-   "next": "Nothing to start until the shared core exists; Fizz Episode 2 is the first customer of the shared drivers, which are now built and merged.",
+   "next": "Nothing to start until the app model exists; the apps of the original design (docs/ROADMAP.md R112 to R124) wait for it and the filesystem. Fizz Episode 2 is the first customer of the shared drivers, which are now built and merged.",
    "blocker": "The shared core."
   }
  ],
@@ -307,11 +307,13 @@
    "branch": "hosted",
    "state": "planned",
    "deps": [
-    "shell"
+    "shell",
+    "toasts",
+    "abi"
    ],
    "what": "DESK.COM, DESK.RUN and /RESUME: run a DOS program and come back.",
    "why": "Any DOS program a double-click away.",
-   "evidence": "docs/HANDOFF.md; SPEC.md milestone 3"
+   "evidence": "docs/HANDOFF.md; SPEC.md milestone 3; docs/ROADMAP.md R109"
   },
   {
    "id": "coreapps",
@@ -323,7 +325,7 @@
    ],
    "what": "The three core apps.",
    "why": "A usable desktop.",
-   "evidence": "SPEC.md milestone 4"
+   "evidence": "SPEC.md milestone 4; split into Files, Programs and Settings (docs/ROADMAP.md R112 to R115)"
   },
   {
    "id": "jsdos",
@@ -561,7 +563,8 @@
    "branch": "native",
    "state": "planned",
    "deps": [
-    "disk"
+    "disk",
+    "pathmodel"
    ],
    "what": "Read the floppy; perhaps a filesystem of our own for the system volume.",
    "why": "Load apps and files; share disks with FreeDOS.",
@@ -588,7 +591,9 @@
    "state": "planned",
    "deps": [
     "loader",
-    "sched"
+    "sched",
+    "pathmodel",
+    "cmds"
    ],
    "what": "How an app calls the Desk on the native OS.",
    "why": "Native apps and the std platform layer sit on it.",
@@ -687,7 +692,7 @@
    ],
    "what": "Audio Player and Notes first, then Paint, Clock, Calc, Mines, Terminal, Inspector.",
    "why": "The prototype's apps, for real.",
-   "evidence": "SPEC.md milestone 5; design/*.dc.html"
+   "evidence": "SPEC.md milestone 5; design/*.dc.html; one step each (docs/ROADMAP.md R116 to R124)"
   },
   {
    "id": "ttf",
@@ -741,6 +746,611 @@
    "prs": [
     65
    ]
+  },
+  {
+   "id": "w-basic",
+   "label": "Basic widgets",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "core"
+   ],
+   "what": "R84: Label and TextLine are merged (R20). Buttons (primary and outlined), tick boxes, radio buttons, chips and the progress bar are not built.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R84; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-palette",
+   "label": "Palette ramps and roles",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "core"
+   ],
+   "what": "R85: The 16-colour set, the look surfaces and 15 theme roles are merged (R20). The nine-step hue ramps in slots 16 to 96 have no values yet, and the selection, raised and current roles are not used.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R85; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-menu",
+   "label": "Menu component",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-basic",
+    "w-palette"
+   ],
+   "what": "R86: Popup menus with ticks, icons, hints, separators, disabled items, a bold default, submenus, arrow, Enter and Esc navigation, kept on screen. No menus exist in the code.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R86; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-lists",
+   "label": "Lists, trees and panes",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-basic"
+   ],
+   "what": "R87: 18 px rows with selection and current states, sidebars, a details pane and empty states. No list widget exists.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R87; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-chrome",
+   "label": "Menu bar, toolbar, tabs, status bar",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-basic",
+    "w-menu"
+   ],
+   "what": "R88: The 18 px menu bar, 26 px toolbar, 22 px tabs (document and section) and 18 px status bar every app shares. SDK.md describes them; nothing is built.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R88; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-dialogs",
+   "label": "Confirm and About dialogs",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "core",
+    "w-basic",
+    "w-icons"
+   ],
+   "what": "R89: A modal confirm that names the thing and the consequence with a safe default, and the About box. No dialogs exist in the code.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R89; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-filejob",
+   "label": "Copy and move progress",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "w-basic"
+   ],
+   "what": "R90: Title, current file, a bar, bytes and Cancel. It is in the design but not in SPEC.md or HIG.md.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R90; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-picker",
+   "label": "Open and Save picker",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "w-lists",
+    "w-dialogs"
+   ],
+   "what": "R91: Places, back and up, a path, a list, an 8.3 name field, type filter chips and a replace confirmation, shared by every app that opens or saves a file.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R91; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "w-icons",
+   "label": "App tiles and file icons",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-palette"
+   ],
+   "what": "R92: 16 px app glyphs on tinted tiles and 12, 16 and 32 px file-type icons. desk-ui has only the three 10 px chrome glyphs.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R92; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "clip",
+   "label": "Clipboard",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "abi"
+   ],
+   "what": "R93: Cut, copy and paste of files (cut shown dimmed) and text through the app model.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R93; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "ftypes",
+   "label": "File types and Open with",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "w-dialogs"
+   ],
+   "what": "R94: Folders open in Files, programs full-screen, documents in their app, with \"Always use this\"; the Open with dialog picks an installed app.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R94; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "dnd",
+   "label": "Drag and drop",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "core",
+    "fs",
+    "deskicons"
+   ],
+   "what": "R95: Between tabs, windows, the tree and the desktop; the ghost says move, copy or open.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R95; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "bar",
+   "label": "Launcher bar",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "core",
+    "w-basic"
+   ],
+   "what": "R96: The 30 px bottom bar: the Desk button, a button per window (the focused one sunken; clicking it minimises), the Jax dock and the clock. Out of first-window scope.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R96; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "winops",
+   "label": "Minimise, maximise, restore",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "bar"
+   ],
+   "what": "R97: The boxes are drawn but inert by design (R20). This makes them work, with a double-click on the title bar; a maximised window fills the screen above the bar, a minimised one lives in the bar.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R97; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "resize",
+   "label": "Window resize",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "core"
+   ],
+   "what": "R98: Grips on the right, bottom and corner, with a minimum size per app; whether every edge gets one is an open question.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R98; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "keys",
+   "label": "Window menu and keyboard use",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "liveinput",
+    "w-menu",
+    "winops"
+   ],
+   "what": "R99: Alt+Tab (release to pick), Alt+F4, Tab and the focus caret are merged (R28). The title-bar and Alt+Space window menu, F10, the 2 px focus ring and keyboard move and size are not. The Alt+Tab overlay is R67.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R99; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "deskmenu",
+   "label": "Desk menu",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "abi",
+    "w-menu",
+    "bar"
+   ],
+   "what": "R100: Opened by Ctrl+Esc, the Windows key or the Desk button: Files, Terminal, submenus built from installed apps, DOS programs, Settings, About, Exit to DOS; rebuilt on each open.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R100; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "deskicons",
+   "label": "Desktop icons and menu",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "w-menu",
+    "w-icons"
+   ],
+   "what": "R101: A 66 by 56 column-first grid of apps, shortcuts, the DESKTOP folder and drives, with selection and drag; the right-click menu holds New folder, Paste, Wallpaper, Window border, Display and Settings. Fixed grid or free positions is an open question.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R101; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "wallp",
+   "label": "Wallpapers",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "w-palette"
+   ],
+   "what": "R102: The Void wallpaper is merged. Horizon (the default), Ember, Dusk sky and Plum need the ramps (R85); the picture wallpaper and the 16-colour three-band versions are not built.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R102; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "borders",
+   "label": "Six window borders",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "core",
+    "w-palette"
+   ],
+   "what": "R103: The stepped halo is merged (R20, R24). Hairline, gradient rule, dark bevel, chunky 3D and double line are not.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R103; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "look93",
+   "label": "The 1993 look",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-palette",
+    "borders"
+   ],
+   "what": "R104: The second look: bevels, a top bar, VGA 8 by 16 type and a plum title bar. Later, per SPEC.md and OPEN-QUESTIONS.md.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R104; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "toasts",
+   "label": "Toasts",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "w-basic",
+    "bar"
+   ],
+   "what": "R105: One at a time, bottom right above the bar, 240 px wide, a title and one line, for four seconds. Needs a timer and the bar.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R105; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "display",
+   "label": "Display changes",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "hvbe",
+    "ngfx"
+   ],
+   "what": "R106: Both depths render through two presenters (R21, R24). A run-time switch between 640 by 480 at 8 and 4 bits and 800 by 600, from Settings, the right-click menu and at start, is not built; whether a change applies at once or at the next start is an open question.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R106; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "motion",
+   "label": "Motion and DAC fades",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "hvbe",
+    "settings"
+   ],
+   "what": "R107: The DAC fade exists in the VGA driver (R10) but the shell does not use it. The Motion setting, the fade between the Desk and DOS programs, and stopping Jax when it is off are not built.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R107; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "crash",
+   "label": "App crash recovery",
+   "branch": "convergence",
+   "state": "planned",
+   "deps": [
+    "dxe3",
+    "abi",
+    "toasts"
+   ],
+   "what": "R108: An app that panics is unloaded and a toast offers Reopen from its autosave. Panic recovery was proved in spike s1 (R6); the shell side is not built.",
+   "why": "Part of the full shell design; both tracks share it.",
+   "evidence": "docs/ROADMAP.md R108; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "exitdos",
+   "label": "Exit to DOS",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "handoff"
+   ],
+   "what": "R110: Saves the layout and leaves to a DOS prompt; DESK starts again from there. Hosted track only.",
+   "why": "Hosted track.",
+   "evidence": "docs/ROADMAP.md R110; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "installer",
+   "label": "Installer",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "R111: Five steps, a BLASTER test, mouse support and a start-at-boot step that shows the AUTOEXEC change. Hosted track; not on the roadmap as an item before.",
+   "why": "Hosted track.",
+   "evidence": "docs/ROADMAP.md R111; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "files",
+   "label": "Files",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "w-lists",
+    "w-chrome",
+    "w-picker",
+    "clip",
+    "dnd"
+   ],
+   "what": "R112: The core file manager: tabs, a tree, details, icons and preview views, wildcard search, copy, move, rename, Deleted, Properties and Open with. Core app, SPEC.md milestone 4.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R112; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "props",
+   "label": "Properties window",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "files",
+    "ftypes"
+   ],
+   "what": "R113: Facts and attributes of a file, folder or drive, what it opens with, program settings from the .DIF, and Run full-screen.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R113; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "programs",
+   "label": "Programs",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "loader",
+    "fs",
+    "abi",
+    "w-lists"
+   ],
+   "what": "R114: Installed, on A: and DOS programs; install from A: or a .DAP, remove, run, program settings. Needs the package format (FORMATS.md).",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R114; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "settings",
+   "label": "Settings",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "abi",
+    "w-chrome",
+    "wallp",
+    "borders"
+   ],
+   "what": "R115: Desktop, Windows, Display, Sound and Jax sections, written to DESK.INI.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R115; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "audio",
+   "label": "Audio Player",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "nsound",
+    "fs",
+    "abi"
+   ],
+   "what": "R116: MIDI on OPL or MPU-401, WAV and VOC on the Sound Blaster, a library, playlist, loop, shuffle and M3U. Needs sound (R62, R81).",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R116; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "notes",
+   "label": "Notes",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "w-picker"
+   ],
+   "what": "R117: Text in tabs with autosave, find and replace, wrap and [[LINKS]]. SPEC.md milestone 5.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R117; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "paint",
+   "label": "Paint",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "wallp"
+   ],
+   "what": "R118: 16-colour pictures of 200 by 120, tools, zoom 1 to 6 times, undo, autosave and use as wallpaper.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R118; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "calc",
+   "label": "Calculator",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "abi",
+    "w-chrome"
+   ],
+   "what": "R119: Standard and 32-bit programmer modes with a history tape. Needs only the app model and the shared chrome.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R119; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "clock",
+   "label": "Clock",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "abi",
+    "toasts"
+   ],
+   "what": "R120: The time, a month calendar and quiet reminders as toasts. Needs the RTC (the BIOS path, R14) and toasts.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R120; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "inspector",
+   "label": "Inspector",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi"
+   ],
+   "what": "R121: System, Memory, Drives and Sound sections, a report and redraw statistics.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R121; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "terminal",
+   "label": "Terminal",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "fs",
+    "abi",
+    "handoff",
+    "pathmodel",
+    "cmds"
+   ],
+   "what": "R122: Commands over the Desk's files in tabs, with programs run full-screen. Which commands, and per track, depends on R125 and R126.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R122; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "mines",
+   "label": "Mines",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "abi"
+   ],
+   "what": "R123: Three levels, a safe first click, marks and best times, with a Jax face. Needs only the app model.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R123; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "jax",
+   "label": "Jax companion",
+   "branch": "games",
+   "state": "planned",
+   "deps": [
+    "w-menu",
+    "bar"
+   ],
+   "what": "R124: The mini dock in the bar and a floating box that can be petted and hidden; a still when Motion is off. Whether Jax is core to the look or an optional app is an open question.",
+   "why": "An app of the original design.",
+   "evidence": "docs/ROADMAP.md R124; docs/SHELL-DESIGN.md. Not merged; no code yet."
+  },
+  {
+   "id": "pathmodel",
+   "label": "Path and mount model",
+   "branch": "convergence",
+   "state": "decision",
+   "deps": [
+    "design"
+   ],
+   "what": "R125: Decision for the owner. A proposal: one generic path type in the core with a canonical stored form; each track presents it its own way (DOS paths on hosted, Unix-style on native); extra volumes under /mnt with / as the system volume; a virtual /mnt and /dev that shadow anything of the same name on disk. Settles what the filesystem (R75), the picker (R91) and the app model (R79) are written against. Open questions are under Decisions. The interactive explorer, https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL, is not in the repository.",
+   "why": "Settles what the filesystem and the app model are written against.",
+   "evidence": "docs/ROADMAP.md R125; a proposal for the owner to decide. Explorer: https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL"
+  },
+  {
+   "id": "cmds",
+   "label": "Shared commands and aliases",
+   "branch": "convergence",
+   "state": "decision",
+   "deps": [
+    "pathmodel"
+   ],
+   "what": "R126: Decision for the owner. A proposal: one set of commands in the core with Linux names primary and DOS names as aliases; each command returns one structured result and each track formats it its own way. Settles Terminal (R122) and the scripting surface of the app model (R79). Open questions are under Decisions. The interactive explorer, https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL, is not in the repository.",
+   "why": "Settles what Terminal and the app model's commands are.",
+   "evidence": "docs/ROADMAP.md R126; a proposal for the owner to decide. Explorer: https://claude.ai/artifact/6F48KzWj7g2VUEJb9BFETL"
+  },
+  {
+   "id": "f-transcript",
+   "label": "SHELL.EXE draws its transcript",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "R127: In interactive mode SHELL.EXE prints its shell: mark 00 … lines with println!, which the DOS console draws onto the graphics screen, visible top left over the window. The shell's own back buffer is clean and moving the pointer repaints it away. The native kernel sends the same lines to serial. The tests redirect output, so none saw it. Planned fix: send the interactive transcript to a file or serial, and add a check.",
+   "why": "Found in the owner's hands-on run.",
+   "evidence": "docs/ROADMAP.md R127. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
+  },
+  {
+   "id": "f-sticky",
+   "label": "Pointer sticks at a screen edge",
+   "branch": "hosted",
+   "state": "progress",
+   "deps": [
+    "shell"
+   ],
+   "what": "R128: Under investigation; the cause is unknown. After the host mouse leaves the QEMU window and returns, the pointer sticks at a screen edge. The shell clamps the pointer to the screen on every event (shell/shell/src/shell.rs), which is a fact about the code, not an established cause. A headless QEMU measurement found the cursor leaves the edge on the first return move on both FreeDOS and the native kernel, so the guest does not reproduce it; the suspect is QEMU's GTK window under XWayland (try -display sdl, grab-on-hover=on).",
+   "why": "Found in the owner's hands-on run.",
+   "evidence": "docs/ROADMAP.md R128. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
+  },
+  {
+   "id": "f-wayland",
+   "label": "Run launcher on Wayland",
+   "branch": "native",
+   "state": "planned",
+   "deps": [
+    "ngfx"
+   ],
+   "what": "R129: QEMU's GTK display only captures the pointer when it runs under XWayland (GDK_BACKEND=x11), so the launcher should set that on Wayland sessions. Alt+Tab went to GNOME's switcher instead of the guest, so the keyboard grab was not in effect; the cause is not established. Minimise and maximise did nothing, which is by design in the first window (R97).",
+   "why": "Found in the owner's hands-on run.",
+   "evidence": "docs/ROADMAP.md R129. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
+  },
+  {
+   "id": "f-speed",
+   "label": "Pointer speed on FreeDOS",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "R130: A headless QEMU measurement put the pointer 1.35 to 2.5 times the host distance on FreeDOS with CuteMouse, and close to one to one on the native kernel. LIVE-INPUT.md says DOSBox's built-in driver gives mickeys one for one; CuteMouse does not. Planned: find the CuteMouse options that set the ratio, say so in the docs, and decide whether SHELL.EXE should scale the mickeys itself.",
+   "why": "Found in a headless measurement after the owner's hands-on run.",
+   "evidence": "docs/ROADMAP.md R130. Evidence: a headless measurement by an agent on 2026-11-11 (emulator only); not a committed test."
   },
   {
    "id": "first-window",
