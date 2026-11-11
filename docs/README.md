@@ -17,6 +17,8 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
 | [`RUST-TARGETS.md`](RUST-TARGETS.md) | How Rust is built for each application space: target specifications, `core`, `alloc` and `std`, and the spikes that track them |
 | [`TOOLCHAIN.md`](TOOLCHAIN.md) | How Desk is built for DOS and checked headless: the Rust target, the object converter, the C glue, DOSBox, and what was verified |
+| [`RUST-DOS-INTEGRATION-ANALYSIS.md`](RUST-DOS-INTEGRATION-ANALYSIS.md) | Methodical assessment of the Rust/DOS integration layers and plans: evidence, lifecycle and ABI gaps, optimisation measurements, architectural concepts and recommended next steps |
+| [`REPOSITORY-BREAKUP-PROPOSAL.md`](REPOSITORY-BREAKUP-PROPOSAL.md) | Three proposed repository structures, from minimal platform extraction to a full layer cake, with ownership maps, dependency rules and migration slips |
 | [`S1-DXE3.md`](S1-DXE3.md) | The result of spike 1: Rust modules as DXE3 files loaded by the core, the commands that work, panics and faults, memory, and what it changes |
 | [`D0-RUST-DOS.md`](D0-RUST-DOS.md) | Spike result: a DOS program in pure Rust with no C layer, its runtime contract, the `rt` crate, the packer, costs and limits |
 | [`S5-JSDOS.md`](S5-JSDOS.md) | Spike result: the DOS programs in the browser through js-dos 8, VBE and the linear frame buffer there, sound, what differs from native DOSBox Staging, timings and the recommended site and bundle layout |
