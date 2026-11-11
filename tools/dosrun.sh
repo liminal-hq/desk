@@ -23,6 +23,10 @@
 # `builtin_dos_mouse_driver = off`, which takes the mouse driver away). DOS_X11=1 keeps the environment's DISPLAY and uses SDL's x11
 # driver instead of the dummy one, for a run under a virtual X server (tools/docker/Dockerfile.dos-xvfb).
 #
+# DOS_CONSOLE=1 leaves the program's standard output on the DOS console instead of redirecting it to a file, as it is when a person runs the
+# program: nothing is captured, so a check reads the exit status and whatever the program wrote to disk. A program that left a graphics
+# mode on while it printed shows its text on the screen, which a check can read back from the frame buffer.
+#
 # DOS_WINDOW=1 opens DOSBox's window on the desktop instead (tools/run-shell.sh uses it): DISPLAY and WAYLAND_DISPLAY are kept, SDL picks its
 # own video driver, the window is not full screen, and a click captures the pointer (`mouse_capture = onclick`, with raw input so the
 # desktop's pointer acceleration stays out of the counts). Closing the window ends the run with a note and status 0. DOS_TIMEOUT=0 waits for ever. Without DOS_WINDOW nothing here changes.
@@ -50,7 +54,7 @@ trap 'rm -rf "$WORK"' EXIT
 {
   echo '@echo off'
   [ -z "${DOS_AUTOTYPE:-}" ] || echo "autotype $DOS_AUTOTYPE"
-  echo "$* > D:\\STDOUT.TXT"
+  if [ -n "${DOS_CONSOLE:-}" ]; then echo "$*"; else echo "$* > D:\\STDOUT.TXT"; fi
   echo 'set RC=0'
   for n in $(seq 1 255); do echo "if errorlevel $n set RC=$n"; done
   echo 'echo %RC%> D:\EXITCODE.TXT'

@@ -20,6 +20,10 @@
 //               check); it implies the read-back.
 // - `timeout=N` interactive mode only: gives up after N seconds without Escape.
 //
+// Every `shell: ...` line is filed in a fixed buffer (`desk_shell::transcript`) and printed after the clean-up list has restored the
+// text mode, because the DOS console draws its text onto the frame buffer while the graphics mode is on. The lines and their order
+// are the same as if they were printed as they happen.
+//
 // Without `scenario` the shell runs live on the keyboard (IRQ 1) and the mouse (INT 33h) until Escape (docs/LIVE-INPUT.md): the
 // scenario's set-up, mark 00, then each poll's input to the shell, a present when it is dirty, F12 for a mark and Escape to end with a
 // summary line. Exit status: 0 success, 1 a read-back differed from the shell's frame or a step failed, 2 the requested video mode was not available, 3 a panic (the
@@ -44,6 +48,7 @@ use desk_int33::{DosInput, Mouse};
 use desk_present::{read_back_linear, read_back_planar, LinearPresent, PlanarPresent};
 use desk_shell::live::{self, Route, Tally};
 use desk_shell::scenario::{apply, parse, Step};
+use desk_shell::transcript::Transcript;
 use desk_shell::{Event, Shell};
 use desk_ui::{palette, Depth};
 use desk_wm::Fonts;
@@ -65,6 +70,20 @@ static KEYS: SpscRing<u8, 64> = SpscRing::new();
 static STATS: IrqStats = IrqStats::new();
 /// The handler's state lives in the program image, not on the heap.
 static KBD_SERVICE: Slot<KbdIrq<RawPorts>> = Slot::new();
+/// Bytes of transcript held until the screen is back in text mode: the longest run's lines (a scenario's, or a session of up to
+/// `live::MAX_MARKS` marks with their read-backs) are about 7,000 bytes, so there is room to spare. When it is full the beginning is kept
+/// and the rest dropped, with a closing `shell: transcript truncated` line (`desk_shell::transcript`).
+const TRANSCRIPT_BYTES: usize = 16384;
+
+/// The shell's transcript. Nothing here calls DOS: while the VBE mode is on, the DOS console would draw each line onto the frame buffer,
+/// over the window. `flush_transcript` prints the lines once the clean-up list has put the text mode back.
+static TRANSCRIPT: Transcript<TRANSCRIPT_BYTES> = Transcript::new();
+
+/// Files a line of the transcript (`println!`'s arguments, without the line end).
+macro_rules! say {
+    ($($arg:tt)*) => { TRANSCRIPT.line(core::format_args!($($arg)*)) };
+}
+
 static ORIGINAL_FLAGS: AtomicU32 = AtomicU32::new(0);
 static MOUSE_IN_USE: AtomicBool = AtomicBool::new(false);
 
@@ -85,6 +104,12 @@ fn bits(depth: Depth) -> u32 {
     } else {
         4
     }
+}
+
+/// Prints the transcript. Registered before anything that changes the screen, so it runs after the video mode is back to text, on the
+/// exit and the panic paths alike.
+fn flush_transcript() {
+    TRANSCRIPT.flush(|line| println!("{line}"));
 }
 
 /// Registered first, so it runs last: says what the video mode is after the rest of the clean-up list has run.
@@ -171,7 +196,7 @@ impl Screen {
 /// Sets the video mode for `want` and loads the palette. Without a 640 x 480 x 8 linear mode, depth 8 says so and gives depth 4.
 /// `None` when no mode could be set (the screen is in text mode).
 fn start_screen(display: &mut DosDisplay, want: Depth) -> Option<Screen> {
-    println!(
+    say!(
         "shell: display offers {} modes, VBE {}",
         display.modes().len(),
         if display.has_vbe() { "present" } else { "absent" }
@@ -185,7 +210,7 @@ fn start_screen(display: &mut DosDisplay, want: Depth) -> Option<Screen> {
         match found {
             Some(m) => id = m.id,
             None => {
-                println!("shell: no 640x480x8 mode with a linear frame buffer; falling back to depth 4");
+                say!("shell: no 640x480x8 mode with a linear frame buffer; falling back to depth 4");
                 depth = Depth::Bits4;
             }
         }
@@ -193,13 +218,13 @@ fn start_screen(display: &mut DosDisplay, want: Depth) -> Option<Screen> {
     let fb = match display.set_mode(id) {
         Ok(fb) => fb,
         Err(e) => {
-            println!("shell: mode {id:#05x} failed: {e}");
+            say!("shell: mode {id:#05x} failed: {e}");
             return None;
         }
     };
-    println!("shell: mode {id:#05x}, depth {}, pitch {}", bits(depth), fb.pitch);
+    say!("shell: mode {id:#05x}, depth {}, pitch {}", bits(depth), fb.pitch);
     if let Err(e) = display.set_palette(0, &palette(depth)) {
-        println!("shell: setting the palette failed: {e}");
+        say!("shell: setting the palette failed: {e}");
         display.restore_text_mode();
         return None;
     }
@@ -223,7 +248,7 @@ fn write_capture(stem: &str, pixels: &[u8], dac: &[Rgb6; 256]) {
     let pal: Vec<u8> = dac.iter().flat_map(|c| [c.r, c.g, c.b]).collect();
     write_file(&alloc::format!("{stem}.PAL"), &pal);
     write_file(&alloc::format!("{stem}.RAW"), pixels);
-    println!("shell: wrote {stem}.RAW ({} bytes) and {stem}.PAL", pixels.len());
+    say!("shell: wrote {stem}.RAW ({} bytes) and {stem}.PAL", pixels.len());
 }
 
 /// The scenario: each frame presented, then (with `verify`) the frame buffer and the DAC read back and held to the shell's digests.
@@ -246,7 +271,7 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
             .and_then(|r| r)
             .map_err(|e| alloc::format!("frame {}: {e}", name.as_str()))?;
         let d = shell.digest();
-        println!(
+        say!(
             "shell: frame {} {} {}x{} {:08x} {:08x}",
             name.as_str(),
             bits(screen.depth),
@@ -268,7 +293,7 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
                 })
                 .and_then(|r| r)
                 .map_err(|e| alloc::format!("{e}"))?;
-            println!("shell: corrupted one pixel after {}", name.as_str());
+            say!("shell: corrupted one pixel after {}", name.as_str());
         }
         if !verify {
             continue;
@@ -284,7 +309,7 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
         });
         let same = back == d;
         ok &= same;
-        println!(
+        say!(
             "shell: readback {} {} {}x{} {:08x} {:08x} {}",
             name.as_str(),
             bits(screen.depth),
@@ -298,7 +323,7 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
             write_capture(&String::from(name.as_str()).to_ascii_uppercase(), &px, &dac);
         }
     }
-    println!("shell: scenario done, {frames} frames");
+    say!("shell: scenario done, {frames} frames");
     Ok(ok)
 }
 
@@ -306,7 +331,7 @@ fn scenario(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, dump: 
 /// NN ... equal`) and goes to `Mnn.RAW` and `Mnn.PAL`. Returns whether the read-back matched (true without `marks`).
 fn mark(display: &DosDisplay, screen: &mut Screen, shell: &Shell, n: u32, readback: bool) -> bool {
     let d = shell.digest();
-    println!("{}", live::mark_line(n, screen.depth, &d));
+    say!("{}", live::mark_line(n, screen.depth, &d));
     if !readback {
         return true;
     }
@@ -317,7 +342,7 @@ fn mark(display: &DosDisplay, screen: &mut Screen, shell: &Shell, n: u32, readba
     let px = match read {
         Ok(px) => px,
         Err(e) => {
-            println!("shell: readback mark {n:02}: {e}");
+            say!("shell: readback mark {n:02}: {e}");
             return false;
         }
     };
@@ -326,7 +351,7 @@ fn mark(display: &DosDisplay, screen: &mut Screen, shell: &Shell, n: u32, readba
         buf.copy_from_slice(&px[start..start + WIDTH as usize]);
     });
     let same = back == d;
-    println!(
+    say!(
         "shell: readback mark {n:02} {} {}x{} {:08x} {:08x} {}",
         bits(screen.depth),
         back.width,
@@ -351,11 +376,11 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
             MOUSE_IN_USE.store(true, Ordering::Relaxed);
             cleanup::register(reset_mouse);
             let _ = m.motion();
-            println!("shell: mouse driver found, {} buttons", m.buttons());
+            say!("shell: mouse driver found, {} buttons", m.buttons());
             Some(m)
         }
         Err(_) => {
-            println!("shell: no mouse driver; keyboard only");
+            say!("shell: no mouse driver; keyboard only");
             None
         }
     };
@@ -374,7 +399,7 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
         .expect("install the IRQ 1 handler");
     let mut input = DosInput::new(rx, locks, mouse);
 
-    println!("shell: live, depth {}", bits(screen.depth));
+    say!("shell: live, depth {}", bits(screen.depth));
     // The scenario's opening steps (up to its first frame), so there is something to move and a field to type in.
     if let Ok(sc) = parse(SCENARIO) {
         for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
@@ -386,7 +411,7 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
     match screen.present(display.ports(), |p| shell.frame(p)).and_then(|r| r) {
         Ok(stats) => tally.frame(&stats),
         Err(e) => {
-            println!("shell: frame failed: {e}");
+            say!("shell: frame failed: {e}");
             return 1;
         }
     }
@@ -421,7 +446,7 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
             match screen.present(display.ports(), |p| shell.frame(p)).and_then(|r| r) {
                 Ok(stats) => tally.frame(&stats),
                 Err(e) => {
-                    println!("shell: frame failed: {e}");
+                    say!("shell: frame failed: {e}");
                     return 1;
                 }
             }
@@ -431,26 +456,26 @@ fn interactive(display: &DosDisplay, screen: &mut Screen, shell: &mut Shell, tim
                 ok &= mark(display, screen, shell, tally.marks, readback);
                 tally.marks += 1;
             } else {
-                println!("{}", live::marks_full_line());
+                say!("{}", live::marks_full_line());
             }
         }
         if end {
-            println!("{}", live::summary_line(&tally));
+            say!("{}", live::summary_line(&tally));
             if input.keys_dropped() > 0 {
-                println!(
+                say!(
                     "shell: {} scancode bytes were dropped by the full key ring",
                     input.keys_dropped()
                 );
             }
             if !ok {
-                println!("shell: FAILED, a read-back differs from the shell's frame");
+                say!("shell: FAILED, a read-back differs from the shell's frame");
             }
             return if ok { 0 } else { 1 };
         }
         if limit.is_some_and(|l| elapsed_ticks(start) > l) {
-            println!("shell: timed out without Escape");
+            say!("shell: timed out without Escape");
             if !ok {
-                println!("shell: FAILED, a read-back differs from the shell's frame");
+                say!("shell: FAILED, a read-back differs from the shell's frame");
             }
             return 4;
         }
@@ -464,12 +489,13 @@ fn main() -> i32 {
         .iter()
         .find_map(|a| a.strip_prefix("timeout=").and_then(|n| n.parse::<u32>().ok()));
     cleanup::register(report);
+    cleanup::register(flush_transcript);
     for a in &args {
         let known = ["depth8", "depth4", "scenario", "dump", "marks", "fontfile", "corrupt"].contains(&a.as_str())
             || a.strip_prefix("timeout=")
                 .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
         if !known {
-            println!("shell: unknown argument {a:?}; usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]");
+            say!("shell: unknown argument {a:?}; usage: SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]");
             return 5;
         }
     }
@@ -480,7 +506,7 @@ fn main() -> i32 {
         Some((u, t)) => (&u[..], &t[..]),
         None => (UI_DFN, TITLE_DFN),
     };
-    println!(
+    say!(
         "shell: faces from {}",
         if files.is_some() {
             "UI.DFN and TITLE.DFN"
@@ -504,12 +530,12 @@ fn main() -> i32 {
         match scenario(&display, &mut screen, &mut shell, has("dump"), has("corrupt")) {
             Ok(true) => 0,
             Ok(false) => {
-                println!("shell: FAILED, a read-back differs from the shell's frame");
+                say!("shell: FAILED, a read-back differs from the shell's frame");
                 1
             }
             Err(e) => {
                 display.restore_text_mode();
-                println!("shell: FAILED, {e}");
+                say!("shell: FAILED, {e}");
                 1
             }
         }
@@ -522,7 +548,7 @@ fn main() -> i32 {
         let read = screen.read(display.ports()).map_err(|e| alloc::format!("{e}"));
         match read.and_then(|px| display.palette(0, &mut dac).map(|()| px).map_err(|e| alloc::format!("{e}"))) {
             Ok(px) => write_capture("SCREEN", &px, &dac),
-            Err(e) => println!("shell: could not read the screen back: {e}"),
+            Err(e) => say!("shell: could not read the screen back: {e}"),
         }
     }
     display.restore_text_mode();

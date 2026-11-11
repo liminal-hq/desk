@@ -13,6 +13,7 @@ pub mod live;
 mod run;
 pub mod scenario;
 mod shell;
+pub mod transcript;
 
 pub use shell::Shell;
 
