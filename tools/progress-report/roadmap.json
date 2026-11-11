@@ -686,9 +686,9 @@
     "sched",
     "winsys"
    ],
-   "what": "R147: a sourced note on what Windows 3.x to ME, AmigaOS, BeOS, OS/2 PM, classic Mac OS, Windows NT, QNX, X11 and Wayland, RISC OS and Plan 9 did well and badly, and what each means for the app model, with a table of lessons against decisions and eight questions for the owner.",
+   "what": "R147: a sourced note on what Windows 3.x to ME, AmigaOS, BeOS, OS/2 PM, classic Mac OS, Windows NT, QNX, X11 and Wayland, RISC OS and Plan 9 did well and badly, and what each means for the app model, with a table of lessons against decisions and the owner's eight decisions from it (hung apps after 5 s, the window system only posts, small messages copied and pixel buffers shared, cli in stage 1 only, one task per DOS box).",
    "why": "Starting from scratch with forty years of hindsight: take what worked, avoid the Win16 mutex and the frozen desktop.",
-   "evidence": "docs/PRIOR-ART.md; research only, nothing built or measured."
+   "evidence": "docs/PRIOR-ART.md; decisions by the owner on 2026-11-11; research only, nothing built or measured."
   },
   {
    "id": "nsound",
