@@ -1,73 +1,108 @@
 {
- "capturedAt": "2026-11-11T13:40:56-05:00",
+ "capturedAt": "2026-11-11T13:52:42-05:00",
  "data": {
   "openWork": {
-   "commitsOnBranches": 2,
+   "commitsOnBranches": 0,
    "conflicts": [],
    "prs": [
     {
      "ahead": 2,
      "base": "main",
-     "branch": "docs/r47-live-input-verified",
+     "branch": "docs/progress-report-update",
      "ci": "pending",
      "commitCount": 2,
      "commits": [
       {
-       "date": "2026-11-11T13:29:39-05:00",
-       "hash": "41140aa",
+       "date": "2026-11-11T13:41:05-05:00",
+       "hash": "80c4c32",
        "merge": false,
-       "subject": "docs: re-read the live-input \"Not verified\" list and record the re-check"
+       "subject": "feat: add the timeline, roadmap and diagram figures to the progress report"
       },
       {
-       "date": "2026-11-11T13:29:40-05:00",
-       "hash": "55da6cf",
+       "date": "2026-11-11T13:41:05-05:00",
+       "hash": "b2a8d81",
        "merge": false,
-       "subject": "docs: mark live input and the transcript fix done in the roadmap"
+       "subject": "docs: add chapters 19 to 23 and bring the progress report up to 11 November"
       }
      ],
-     "createdAt": "2026-11-11T18:30:19Z",
-     "ghAdditions": 48,
-     "ghChangedFiles": 3,
-     "ghDeletions": 29,
-     "head": "55da6cf",
-     "headFull": "55da6cfb6a06c81c59e465b6422f9b7f8bdc9783",
-     "isReport": false,
+     "createdAt": "2026-11-11T18:41:45Z",
+     "ghAdditions": 4574,
+     "ghChangedFiles": 26,
+     "ghDeletions": 1209,
+     "head": "b2a8d81",
+     "headFull": "b2a8d81f0065ae6e8449dde06e7a03d3e3388c0a",
+     "isReport": true,
      "labels": [
       "documentation",
-      "testing",
-      "dos",
-      "input"
+      "design-docs",
+      "pages"
      ],
-     "number": 73,
+     "number": 74,
      "stackedOn": [],
      "state": "in review",
-     "title": "Re-verify live input from a clean clone and update the roadmap",
-     "updatedAt": "2026-11-11T18:30:22Z",
-     "url": "https://github.com/liminal-hq/desk/pull/73"
+     "title": "Bring the progress report up to date with live input, the hands-on runs and the runtime comparison",
+     "updatedAt": "2026-11-11T18:41:46Z",
+     "url": "https://github.com/liminal-hq/desk/pull/74"
     }
    ],
-   "tips": [
-    {
-     "halLines": 10075,
-     "hostTests": 190,
-     "kernelLines": 3554,
-     "number": 73,
-     "transcripts": 40
-    }
-   ],
+   "tips": [],
    "warnings": [],
-   "widest": 73
+   "widest": null
   },
   "prs": [
+   {
+    "additions": 4574,
+    "baseRefName": "main",
+    "changedFiles": 26,
+    "checks": [
+     {
+      "conclusion": "",
+      "name": "check",
+      "status": "IN_PROGRESS",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T18:41:45Z",
+    "deletions": 1209,
+    "headRefName": "docs/progress-report-update",
+    "headRefOid": "b2a8d81f0065ae6e8449dde06e7a03d3e3388c0a",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "127c01",
+      "description": "GitHub Pages site and deployment",
+      "id": "LA_kwDOVTolZM8AAAAC-q8IYQ",
+      "name": "pages"
+     }
+    ],
+    "mergedAt": null,
+    "number": 74,
+    "state": "OPEN",
+    "title": "Bring the progress report up to date with live input, the hands-on runs and the runtime comparison",
+    "updatedAt": "2026-11-11T18:41:46Z",
+    "url": "https://github.com/liminal-hq/desk/pull/74"
+   },
    {
     "additions": 48,
     "baseRefName": "main",
     "changedFiles": 3,
     "checks": [
      {
-      "conclusion": "",
+      "conclusion": "SUCCESS",
       "name": "check",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "workflow": "CI"
      }
     ],
@@ -102,11 +137,11 @@
       "name": "input"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-11-11T18:44:08Z",
     "number": 73,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Re-verify live input from a clean clone and update the roadmap",
-    "updatedAt": "2026-11-11T18:30:22Z",
+    "updatedAt": "2026-11-11T18:44:11Z",
     "url": "https://github.com/liminal-hq/desk/pull/73"
    },
    {
@@ -3476,6 +3511,15 @@
    "visibility": "PUBLIC"
   },
   "runs": [
+   {
+    "conclusion": "",
+    "createdAt": "2026-11-11T18:44:11Z",
+    "displayTitle": "Re-verify live input from a clean clone and update the roadmap (#73)",
+    "event": "push",
+    "headSha": "eaede0f79c957902c60de161bbd424682d7e0bc5",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43080569055",
+    "workflowName": "CI"
+   },
    {
     "conclusion": "success",
     "createdAt": "2026-11-11T18:16:57Z",
