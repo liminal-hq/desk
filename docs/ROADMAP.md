@@ -2,14 +2,14 @@
 
 A trackable list of what the project has done, what is in flight and what is planned or only an idea, with the evidence for each. It is the one place that says where everything stands; [`DIRECTION.md`](DIRECTION.md) says why the project is shaped this way and [`SPEC.md`](SPEC.md) says what the hosted track will be.
 
-> **Status.** Written on 2026-10-29 against `main` at `44f0265` and the open pull requests as they stood that day. Every `done` item is merged into `main`. Nothing here has run on real hardware, and Bochs, 86Box and js-dos were not part of the runs behind the live-input and Manual work (their earlier results are in [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) and [`S5-JSDOS.md`](S5-JSDOS.md)). Where the repository does not establish a fact, the entry says so.
+> **Status.** Written on 2026-11-11 against `main` at `b8fb9ac`. Every pull request that was open before then was merged into `main` on 2026-11-11 with merge commits: the live-input stack, the Manual stack, the plan for the Manual, the DOS anatomy wording and this roadmap. One pull request is open, #65 (the Rust and DOS integration analysis and the repository breakup proposal, documents only), and it is the only `in progress` item that rests on an open pull request. Every `done` item is merged into `main`. Nothing here has run on real hardware, and Bochs, 86Box and js-dos were not part of the runs behind the live-input and Manual work (their earlier results are in [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) and [`S5-JSDOS.md`](S5-JSDOS.md)). Where the repository does not establish a fact, the entry says so.
 
 ## Contents
 
 - [Path to the first OS milestone](#path-to-the-first-os-milestone)
 - [How to read it](#how-to-read-it)
 - [Past: merged into main](#past-merged-into-main)
-- [Current: in flight on open pull requests](#current-in-flight-on-open-pull-requests)
+- [Current: in flight](#current-in-flight)
 - [Future: planned, in the owner's order](#future-planned-in-the-owners-order)
 - [Future: the path to an OS](#future-the-path-to-an-os)
 - [Reuse and vendoring](#reuse-and-vendoring)
@@ -21,7 +21,7 @@ A trackable list of what the project has done, what is in flight and what is pla
 
 The first OS milestone is: the native kernel boots, opens a window, and runs a separate program loaded from disk (R80). Until that works the native track is a kernel with a shell inside it, not an operating system. The order below is the owner's; each step names its items.
 
-1. Finish and verify live input (R47).
+1. Finish and verify live input (R47): the stack is merged; the re-check from clean clones of `main` and in the CI image is still to do.
 2. The module loader spike: an executable format and loaders for both tracks (R48).
 3. A floppy or IDE driver and a read-only FAT filesystem (R74, R75; spike R50).
 4. A system-call boundary between the kernel and apps (R77).
@@ -36,7 +36,7 @@ Each item has an id (R1, R2 and so on, never reused), a title, a status, the out
 | Status | Meaning |
 |---|---|
 | `done` | Merged into `main`. The outcome says what was verified and how, and what was not |
-| `in progress` | Built or being built on an open pull request that is not merged |
+| `in progress` | Started, with part of the outcome met or its checks still open. The entry says what is merged and what is not, or names the open pull request |
 | `planned` | Decided, in a known order, not started |
 | `idea` | Mentioned in a document or by the owner; not decided and not ordered |
 | `blocked` | Cannot proceed until something outside the work happens |
@@ -45,7 +45,7 @@ Three limits apply to every `done` item unless it says otherwise. No code has ru
 
 ## Past: merged into main
 
-Every pull request from #1 to #32 in the list is merged (there is no #22 in it). Merge commits are given where a pull request merged on its own; the first-window stack (#20 to #28) merged together in `c9612b4`.
+Every pull request from #1 to #64 in the list is merged (there is no #22, #35 or #42 in it). Merge commits are given where a pull request merged on its own; the first-window stack (#20 to #28) merged together in `c9612b4`, the live-input stack in `04e5fdb` and the Manual stack in `42d8319`.
 
 ### Foundations: fonts, emoji, toolchain, direction
 
@@ -90,52 +90,63 @@ Every pull request from #1 to #32 in the list is merged (there is no #22 in it).
 | R22 | The window on the native kernel | `done` | The kernel's `shell` test mode runs the scenario and QEMU's screendumps match the goldens (std and Cirrus cards). Scripted events, not live input | #29 (`81c85f4`) |
 | R23 | The window on DOS as `SHELL.EXE` | `done` | The hosted program draws the scenario on the pure-Rust DOS runtime and holds to the goldens in DOSBox Staging; keys reach it through IRQ 1 in the interactive run | #30 (`2164e7f`) |
 | R24 | Direct comparison of the two tracks | `done` | Every frame of the scenario has the same six-bit colour digest on DOS and native, at both depths. The DOS capture reads back the emulated card's memory, not the emulator's rendered screen. Not verified: the mouse path, real hardware, Bochs, 86Box | #31 (`24cc044`), [`FIRST-WINDOW.md`](FIRST-WINDOW.md#result) |
-| R25 | Progress report: first-window chapter | `done` | A chapter and two anatomy pages (DOS and native) in the progress report. The DOS anatomy page's opening wording is corrected in #36 (R36) | #32 (`44f0265`) |
-
-## Current: in flight on open pull requests
-
-None of the items below is merged. Each pull request's checks were passing on 2026-10-29. No pull request in either stack has been built from a clean clone of the whole stack by anyone other than its author, and the owner has not merged any of them.
+| R25 | Progress report: first-window chapter | `done` | A chapter and two anatomy pages (DOS and native) in the progress report. The DOS anatomy page's opening wording is corrected in #36 (R36, merged) | #32 (`44f0265`) |
 
 ### Live input (L1 to L9)
 
-A linear stack: each pull request's base is the branch of the one below it, starting at #33. The plan is in #33 (`docs/LIVE-INPUT-PLAN.md` and `docs/LIVE-INPUT.md` exist only on the branches until it merges). The builder stopped partway, so the statuses below follow what each pull request contains, not what the plan promised. The result write-up in #54 reports measured runs on 2026-10-23 on the tip of the stack; those runs were by the author and have not been repeated from clean clones, and #54's own "Not verified" section lists the real desktop, real hardware, other emulators and drivers, `INPUT_EXTRA=1 tools/check.sh` in the CI image, and the right and middle buttons.
+A linear stack, #33 to #54, that merged together on 2026-11-11 in `04e5fdb`. The design is in [`LIVE-INPUT.md`](LIVE-INPUT.md) and the plan in [`LIVE-INPUT-PLAN.md`](LIVE-INPUT-PLAN.md). The result write-up in #54 reports measured runs on 2026-10-23 on the tip of the stack; those runs were by the author and have not been repeated from clean clones of `main` or in the CI image (see R47), and #54's own "Not verified" section lists the real desktop, real hardware, other emulators and drivers, `INPUT_EXTRA=1 tools/check.sh` in the CI image, and the right and middle buttons. The builder stopped partway, so the statuses below follow what each pull request contains, not what the plan promised.
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
-| R26 | Live-input design and plan | `in progress` | `LIVE-INPUT.md` (design, key table, eight questions with defaults) and `LIVE-INPUT-PLAN.md` (tasks L1 to L9). Docs only | #33 (`docs/live-input-plan`, base `main`) |
-| R27 | L1: cursor coalescing and the `live` module | `in progress` | A burst of cursor moves presents at most two sprite rectangles (the test failed before the change: 2440 pixels against 456); `Shell::is_dirty`; `desk_shell::live` (`route`, `Tally`, mark lines). Host tests | #34 (`feat/live-cursor`) |
-| R28 | L2: window-manager keys | `in progress` | Alt+Tab, Shift+Alt+Tab, Alt+F4, Tab and Shift+Tab in `desk-wm`, the caret drawn only in the focused field, and a ten-frame `keys.scn` at each depth. Host tests | #37 (`feat/live-wm-keys`) |
-| R29 | L3: live scenarios and frame tooling | `in progress` | `live.scn` (8 frames) and `live-keys.scn` (4 frames); `frames.py live` turns them into QEMU monitor commands, `AUTOTYPE` lines or `xdotool` lines, and `frames.py marks` checks a run's marks | #39 (`feat/live-frames`) |
-| R30 | L4: INT 33h press and release counters | `in progress` | `INPUT.EXE slowpoll` against six 5 ms clicks saw none of them without the counters and all six with them (DOSBox's built-in driver only). The pull request's premise changed: a click with no gap never reaches DOSBox's driver, so spike B's explanation of the lost clicks was wrong | #43 (`feat/live-int33-clicks`), [`B-DOS-INPUT.md`](B-DOS-INPUT.md) |
-| R31 | L5: native live run | `in progress` | The kernel's `shell-live` mode (code 15) on the PS/2 drivers, paced by the PIT, marks on F12, Escape to end; per #54, QEMU played `live.scn` with 8 of 8 marks equal to the goldens at both depths. QEMU only | #44 (`feat/live-native`) |
-| R32 | L6: DOS live run | `in progress` | `SHELL.EXE`'s live loop with `marks`; per #54, `AUTOTYPE` and `xdotool` runs matched the goldens, and the native and DOS dumps of `live.scn` are pixel-equal. DOSBox's built-in mouse driver only | #49 (`feat/live-dos`) |
-| R33 | L7: launchers | `in progress` | `tools/run-shell.sh` (native or dos), `native-run.sh --window` and `DOS_WINDOW=1 tools/dosrun.sh` open the shell in an emulator window. Not tried on a Wayland desktop or by a person | #50 (`feat/live-launchers`) |
-| R34 | L8: the DOS mouse under Xvfb | `in progress` | `shell/dos/check-xvfb.sh` runs `SHELL.EXE` under Xvfb with `xdotool` and compares the marks with the goldens; opt-in (`INPUT_EXTRA=1`), needs Docker | #53 (`test/live-dos-xvfb`) |
-| R35 | L9: the result | `in progress` | `LIVE-INPUT.md`'s Result section: what was built, matched, differs from the design, and is not verified, with four screenshots from the runs | #54 (`docs/live-input-result`) |
-| R36 | DOS anatomy wording fix | `in progress` | A one-line fix so the Rust DOS anatomy page says plainly what it shows. Not part of the live-input stack (base `main`) | #36 (`docs/anatomy-dos-opening`) |
+| R26 | Live-input design and plan | `done` | `LIVE-INPUT.md` (design, key table, eight questions with defaults) and `LIVE-INPUT-PLAN.md` (tasks L1 to L9). Docs only | #33 (`04e5fdb`) |
+| R27 | L1: cursor coalescing and the `live` module | `done` | A burst of cursor moves presents at most two sprite rectangles (the test failed before the change: 2440 pixels against 456); `Shell::is_dirty`; `desk_shell::live` (`route`, `Tally`, mark lines). Host tests | #34 (`04e5fdb`) |
+| R28 | L2: window-manager keys | `done` | Alt+Tab, Shift+Alt+Tab, Alt+F4, Tab and Shift+Tab in `desk-wm`, the caret drawn only in the focused field, and a ten-frame `keys.scn` at each depth. Host tests | #37 (`04e5fdb`) |
+| R29 | L3: live scenarios and frame tooling | `done` | `live.scn` (8 frames) and `live-keys.scn` (4 frames); `frames.py live` turns them into QEMU monitor commands, `AUTOTYPE` lines or `xdotool` lines, and `frames.py marks` checks a run's marks | #39 (`04e5fdb`) |
+| R30 | L4: INT 33h press and release counters | `done` | `INPUT.EXE slowpoll` against six 5 ms clicks saw none of them without the counters and all six with them (DOSBox's built-in driver only). The pull request's premise changed: a click with no gap never reaches DOSBox's driver, so spike B's explanation of the lost clicks was wrong | #43 (`04e5fdb`), [`B-DOS-INPUT.md`](B-DOS-INPUT.md) |
+| R31 | L5: native live run | `done` | The kernel's `shell-live` mode (code 15) on the PS/2 drivers, paced by the PIT, marks on F12, Escape to end; per #54, QEMU played `live.scn` with 8 of 8 marks equal to the goldens at both depths. QEMU only | #44 (`04e5fdb`) |
+| R32 | L6: DOS live run | `done` | `SHELL.EXE`'s live loop with `marks`; per #54, `AUTOTYPE` and `xdotool` runs matched the goldens, and the native and DOS dumps of `live.scn` are pixel-equal. DOSBox's built-in mouse driver only | #49 (`04e5fdb`) |
+| R33 | L7: launchers | `done` | `tools/run-shell.sh` (native or dos), `native-run.sh --window` and `DOS_WINDOW=1 tools/dosrun.sh` open the shell in an emulator window. Not tried on a Wayland desktop or by a person | #50 (`04e5fdb`) |
+| R34 | L8: the DOS mouse under Xvfb | `done` | `shell/dos/check-xvfb.sh` runs `SHELL.EXE` under Xvfb with `xdotool` and compares the marks with the goldens; opt-in (`INPUT_EXTRA=1`), needs Docker | #53 (`04e5fdb`) |
+| R35 | L9: the result | `done` | `LIVE-INPUT.md`'s Result section: what was built, matched, differs from the design, and is not verified, with four screenshots from the runs | #54 (`04e5fdb`) |
+| R36 | DOS anatomy wording fix | `done` | A one-line fix so the Rust DOS anatomy page says plainly what it shows. Not part of the live-input stack | #36 (`d2f412e`) |
 
 ### The Manual (M1 to M22)
 
-A second linear stack on #38, with the state of the work in `MANUAL-STATUS.md` (on branch `docs/manual-appendices`, #63). The generator adds a Manual group to the progress report; the chapters are checked by their own tests (239 in all, per the status file) and by `build.py --check`. The status file's list of what could not be verified applies to all of them: nothing on real hardware, Bochs and 86Box not run for the chapters, js-dos and the opt-in checks not run, the DOS side run only for M17 and M19, and `tools/check.sh` not run in full locally (CI ran it on #40 to #57).
+A second linear stack on #38, merged on 2026-11-11: the plan in `b8fb9ac` and the stack #40 to #63 in `42d8319`. The state of the work is in [`MANUAL-STATUS.md`](MANUAL-STATUS.md). The generator adds a Manual group to the progress report; the chapters are checked by their own tests (239 in all, per the status file) and by `build.py --check`. The status file's list of what could not be verified applies to all of them: nothing on real hardware, Bochs and 86Box not run for the chapters, js-dos and the opt-in checks not run, the DOS side run only for M17 and M19, and `tools/check.sh` not run in full locally (CI ran it on #40 to #57). After the merge, `c339f1b` brought the Manual's counts and the test-mode table up to date with live input (mode 15 `shell-live`, 27 tests in `desk-int33`, four opt-in steps in `tools/check.sh`).
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
-| R37 | Manual plan | `in progress` | `MANUAL-PLAN.md`: 22 chapters, explainers, appendices and eight questions with defaults. Docs only | #38 |
-| R38 | W1: the Manual generator | `in progress` | The Manual group, `manual.html`, pager, backlinks, glossary, commands, sources and staleness report in the progress-report generator, with tests. Code-reviewed | #40 |
-| R39 | M4, M5: boot sector, loader, the whole boot | `in progress` | The model chapters and the `image` and `negatives` explainers. Code-reviewed | #41 |
-| R40 | M1, M2, M3: map, processor, devices | `in progress` | Chapters on the memory map, the CPU and the devices of a 486 PC, and the ports explainer. Code-reviewed | #45, #46 |
-| R41 | M6 to M8: tables, interrupts, memory, BIOS | `in progress` | Chapters on the kernel's tables, interrupts and timer, kernel memory and calling the BIOS. Code-reviewed | #47, #48 |
-| R42 | M9 to M14: HAL, drivers, surfaces, text, chrome | `in progress` | Chapters on the HAL, the first drivers, keyboard, mouse, VGA and VBE, surfaces and damage, text and window chrome. Code-reviewed | #51, #52, #55 |
-| R43 | M15 to M17, M19: shell, platforms, runtime, toolchain | `in progress` | Chapters on windows and scenarios, the two platforms, the DOS runtime and the toolchain; the DOS side of M17 and M19 was run in the CI image. Code-reviewed | #56, #57 |
-| R44 | M18, M20 to M22: fonts, emulators, evidence, frontier | `in progress` | Chapters on fonts and formats, emulators, the evidence method and what is not built. Not code-reviewed (#58's review did not run; #59 was read by its author alone) | #58, #59 |
-| R45 | Explainers X1 to X9 and appendices | `in progress` | The address, GDT, frames, interrupt, crate graph, `.DFN` and target explainers; appendix B generated from the files that hold the numbers; the editorial pass. Not code-reviewed; checked by their own tests and by rendering | #60, #61, #62, #63 |
-| R46 | Progress report with the Manual, published | `in progress` | Archive v10 is reported as published (the artifact's own version 10). That comes from the project transcript, passed on by the coordinator; `MANUAL-STATUS.md` on #63 does not mention a version, and the artifact was not read for this change, so it is not confirmed here. The publishing recipe is in [`tools/progress-report/README.md`](../tools/progress-report/README.md) | #63, [`tools/progress-report/README.md`](../tools/progress-report/README.md#publishing) |
+| R37 | Manual plan | `done` | `MANUAL-PLAN.md`: 22 chapters, explainers, appendices and eight questions with defaults. Docs only | #38 (`b8fb9ac`) |
+| R38 | W1: the Manual generator | `done` | The Manual group, `manual.html`, pager, backlinks, glossary, commands, sources and staleness report in the progress-report generator, with tests. Code-reviewed | #40 (`42d8319`) |
+| R39 | M4, M5: boot sector, loader, the whole boot | `done` | The model chapters and the `image` and `negatives` explainers. Code-reviewed | #41 (`42d8319`) |
+| R40 | M1, M2, M3: map, processor, devices | `done` | Chapters on the memory map, the CPU and the devices of a 486 PC, and the ports explainer. Code-reviewed | #45, #46 (`42d8319`) |
+| R41 | M6 to M8: tables, interrupts, memory, BIOS | `done` | Chapters on the kernel's tables, interrupts and timer, kernel memory and calling the BIOS. Code-reviewed | #47, #48 (`42d8319`) |
+| R42 | M9 to M14: HAL, drivers, surfaces, text, chrome | `done` | Chapters on the HAL, the first drivers, keyboard, mouse, VGA and VBE, surfaces and damage, text and window chrome. Code-reviewed | #51, #52, #55 (`42d8319`) |
+| R43 | M15 to M17, M19: shell, platforms, runtime, toolchain | `done` | Chapters on windows and scenarios, the two platforms, the DOS runtime and the toolchain; the DOS side of M17 and M19 was run in the CI image. Code-reviewed | #56, #57 (`42d8319`) |
+| R44 | M18, M20 to M22: fonts, emulators, evidence, frontier | `done` | Chapters on fonts and formats, emulators, the evidence method and what is not built. Not code-reviewed (#58's review did not run; #59 was read by its author alone) | #58, #59 (`42d8319`) |
+| R45 | Explainers X1 to X9 and appendices | `done` | The address, GDT, frames, interrupt, crate graph, `.DFN` and target explainers; appendix B generated from the files that hold the numbers; the editorial pass; and, in `c339f1b`, counts and the test-mode table brought up to date with live input. Not code-reviewed; checked by their own tests and by rendering | #60, #61, #62, #63 (`42d8319`), `c339f1b` |
+
+### The roadmap
+
+| Id | Title | Status | Outcome | Evidence |
+|---|---|---|---|---|
+| R83 | This roadmap | `done` | This file and the path tree behind it, `tools/progress-report/roadmap.json`. The statuses were brought up to date after the merges of 2026-11-11 | #64 (`74363b6`) |
+
+## Current: in flight
+
+One pull request is open, #65, and one item has merged work with its checks still open (R46). Each entry says what is and is not established.
+
+| Id | Title | Status | Outcome | Evidence |
+|---|---|---|---|---|
+| R46 | Progress report with the Manual, published | `in progress` | The Manual is merged (R37 to R45). Archive v10 is reported as published (the artifact's own version 10). That comes from the project transcript, passed on by the coordinator; [`MANUAL-STATUS.md`](MANUAL-STATUS.md) does not mention a version, and the artifact was not read for this change, so it is not confirmed here. Publishing the report built from `main` after the merge is not recorded. The publishing recipe is in [`tools/progress-report/README.md`](../tools/progress-report/README.md) | #63 (`42d8319`), [`tools/progress-report/README.md`](../tools/progress-report/README.md#publishing) |
+| R82 | Rust and DOS integration analysis and the repository breakup proposal | `in progress` | `RUST-DOS-INTEGRATION-ANALYSIS.md` follows each boundary between the hosted and native tracks and marks every claim as observed, recorded or inferred; `REPOSITORY-BREAKUP-PROPOSAL.md` sets out three structures (two, four and eight repositories) and recommends starting with the smallest. Documents and two presentation generators only. Open for review; not merged, and it approves nothing. The generators were not run and `tools/check.sh` was not run locally. The repository names in the proposal have not been checked for availability. The choice is listed under Decisions | #65 (`docs/rust-dos-integration-analysis`; those two documents exist only on that branch until it merges) |
+
 
 ## Future: planned, in the owner's order
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
-| R47 | Finish and verify live input | `planned` | The live-input stack is merged in order, and its checks pass from clean clones of `main` and in the CI image; the Not verified list of #54 is re-read and shortened where it can be | R26 to R36, #33 to #54 |
+| R47 | Finish and verify live input | `in progress` | The live-input stack is merged (R26 to R36, `04e5fdb`, 2026-11-11). Still open: its checks pass from clean clones of `main` and in the CI image, and the Not verified list of #54 is re-read and shortened where it can be. Nothing in the repository records either, so the item stays open | R26 to R36, #33 to #54, [`LIVE-INPUT.md`](LIVE-INPUT.md) |
 | R48 | Module loader spike | `planned` | Our own executable format and a loader: a packer that turns the linked Rust ELF into it, one loader for the native kernel and one DOS stub, so a module runs on both tracks without DJGPP's loader. Ends with a result document in `docs/` | [`DIRECTION.md`](DIRECTION.md) (native milestone 6; "What stays valid and what changes"), [`S1-DXE3.md`](S1-DXE3.md) |
 | R49 | Candidate spike: FreeDOS in a V86 task under the native kernel | `planned` | The kernel runs FreeDOS in a V86 task or boots into it, which is how DOS programs run on the native OS. Candidate; the order among the four is open | [`DIRECTION.md`](DIRECTION.md) ("DOS programs: bundle FreeDOS"), [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md) |
 | R50 | Candidate spike: native floppy and IDE | `planned` | Own floppy and IDE drivers in the kernel instead of INT 13h through the trampoline, the first step to a filesystem (follow-on work: R74, R75). Candidate | [`DIRECTION.md`](DIRECTION.md) (native milestone 5, "Early disk access") |
@@ -145,7 +156,7 @@ A second linear stack on #38, with the state of the work in `MANUAL-STATUS.md` (
 | R54 | Follow-up fix for the d0 runtime | `planned` | A fix pull request for four findings from the code review of the merged d0 runtime, never fixed: a recursion guard in `die` (`spikes/d0-rust-dos/rt/src/dos.rs`, line 72), `saturating_add` where the arithmetic can overflow (the sums in `rt/src/heap.rs` at lines 99 to 102 and 134 are the candidates), a reset of the IRQ 0 tick counter when the hook is installed (`rt/src/timer.rs`, `RT_IRQ0_TICKS` at line 17; the install code is at lines 56 to 70), and removal of dead code (not located). Whether to do the follow-up pull request is the owner's decision. The findings come from the project transcript, passed on by the coordinator; the repository does not record them, and the line numbers are the places the findings point to on `main` at `44f0265`, not quoted from the review | #7, [`D0-RUST-DOS.md`](D0-RUST-DOS.md) |
 | R55 | Correct the stale design documents | `planned` | A documentation pull request that fixes the documents the Manual found out of date: `HAL.md` (still says no binary uses the HAL and marks `kernel::hal` and `rt::hal` planned), `D0-RUST-DOS.md` (line counts and sizes), `NATIVE-BOOT.md` (the `wrong-expected.txt` description and where the EOI is sent), `RUST-TARGETS.md` (`elf2bin.py` is not a linker), `FIRST-WINDOW.md` (the platforms and `expect-damage`) | `MANUAL-STATUS.md` on #63 ("Known gaps") |
 | R56 | Refresh `tests/native/wrong-expected.txt` | `planned` | The negative-test expectation is rejected at its fifth line rather than at the number it was meant to differ in; refreshing it is a change to a test | `MANUAL-STATUS.md` on #63, [`tests/native/`](../tests/native/) |
-| R57 | Merge the Manual stack and review #58 to #63 | `planned` | Wait for CI on #58 to #63, run the code review on each, merge in the status file's order when the owner says so, then re-run `build.py --manual-report` on `main` and re-publish | `MANUAL-STATUS.md` on #63 ("The next step") |
+| R57 | Merge the Manual stack and review #58 to #63 | `in progress` | The stack is merged (R37 to R45, `b8fb9ac` and `42d8319`). Not recorded as done: the code review of #58 to #63 (the status file says #58 to #63 were not reviewed with the skill), and re-running `build.py --manual-report` on `main` and re-publishing (R46) | [`MANUAL-STATUS.md`](MANUAL-STATUS.md) ("The next step"), #58 to #63 |
 | R58 | HAL migration steps 3 to 5 | `planned` | The hosted skeleton and shell written against `Platform`, new drivers landing in `hal/drivers/`, and the core running on both platforms and the mock | [`HAL.md`](HAL.md) (migration plan) |
 | R59 | Tests the Manual found missing | `planned` | A script that runs the `bios-solo` test mode, and a test that makes a floppy read fail so stage 1's retry path runs (it has never run) | `MANUAL-STATUS.md` on #63 |
 | R60 | Remaining emoji | `planned` | 80 sequences still to do: 23 single, 2 VS16 forms, 7 ZWJ sequences and 48 tone families (240 variants by palette substitution), in the order set out in the emoji roadmap | [`EMOJI-ROADMAP.md`](EMOJI-ROADMAP.md) |
@@ -207,11 +218,12 @@ I am not confident of any other project's existence or licence, so none is liste
 - **Yellow in the 16-colour set.** The 16-colour fallback (slots 0 to 15, also the only colours in mode 12h) has no yellow, so the yellow circle and the orange circle emoji differ only by a band of brown; the Afterglow ramps in slots 16 to 96 do include yellow ([`PALETTE.md`](PALETTE.md)). The choices are to change the 16-colour set, accept it, or re-colour the oranges. A related open question: whether to draw lower-quality vector versions of animals and food or leave them to the pixel set. (From the project transcript.)
 - **Two older artifacts.** "Desk Fonts" (https://claude.ai/artifact/8Env6h8TMiFgiHgEmGBLSD) and "Desk Emoji" (https://claude.ai/artifact/BB2icTX4maR22ZBrcBLSAZ) are redundant now that the font and emoji pages live inside the new site, but the owner likes the emoji page as it is. Deleting either is the owner's call, and nothing has been deleted. (From the project transcript.)
 - **The d0 runtime follow-up** (R54): whether to open the fix pull request for the four review findings.
-- **The defaults taken for live input.** Eight questions in `LIVE-INPUT.md` (on #33 and #54): Escape ends a session, F12 always marks, Alt+Tab with no overlay, no absolute pointer, left-button counters only, one PIT tick of pacing, no windowed QEMU from Docker, one launcher.
-- **The defaults taken for the Manual.** Eight questions in `MANUAL-PLAN.md` (on #38): where it lives, M-numbers, a textbook voice with Gregory as editor, CI failing on broken pointers, the pager, the legacy hosted skeleton in one section of M17, planned formats in a short table, and writing the boot pair first.
+- **The defaults taken for live input.** Eight questions in [`LIVE-INPUT.md`](LIVE-INPUT.md) (merged in #33 and #54): Escape ends a session, F12 always marks, Alt+Tab with no overlay, no absolute pointer, left-button counters only, one PIT tick of pacing, no windowed QEMU from Docker, one launcher.
+- **The defaults taken for the Manual.** Eight questions in `MANUAL-PLAN.md` (merged in #38): where it lives, M-numbers, a textbook voice with Gregory as editor, CI failing on broken pointers, the pager, the legacy hosted skeleton in one section of M17, planned formats in a short table, and writing the boot pair first.
 - **Retiring the hosted skeleton's C layer and `coff2go32.py`** now that d0 works (R7).
 - **The order of the candidate spikes** (R49 to R52) after the module loader (R48).
-- **Merging the live-input and Manual stacks** (R47 and R57), and which is first.
+- **The repository breakup** (R82, #65): whether to split the repository at all, and into how many (the proposal sets out two, four and eight and recommends starting with the smallest). Nothing is decided; the proposal approves nothing.
+- **What counts as verifying live input** (R47): whether the re-check from clean clones of `main` and in the CI image, and a re-read of #54's Not verified list, are enough to close it, now that the stacks are merged.
 
 ## How to keep this current
 
