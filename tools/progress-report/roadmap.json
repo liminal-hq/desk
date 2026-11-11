@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, ten tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
+   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
