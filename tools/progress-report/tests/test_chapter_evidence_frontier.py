@@ -35,7 +35,7 @@ class EvidenceChapterTests(unittest.TestCase):
         rows = re.findall(r"^\| (\d+) \| (.+) \|$", self.c["raw"], flags=re.M)
         self.assertEqual([r[1] for r in rows], always)
         self.assertEqual([int(r[0]) for r in rows], list(range(1, len(always) + 1)))
-        self.assertEqual(len(optional), 3)
+        self.assertEqual(len(optional), 4)
         for var in ("INPUT_EXTRA", "NATIVE_EXTRA", "JSDOS"):
             self.assertIn(var, script)
             self.assertIn(var, self.c["raw"])

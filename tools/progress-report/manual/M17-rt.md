@@ -228,8 +228,8 @@ note: The out-of-memory run in the worked example ended in the panic handler wit
 id: rt.irq
 label: The sixteen IRQ stubs, the locked image and the interrupt stack
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Interactive: the keys typed through IRQ 1 reach the focused field
-note: Keys typed by DOSBox's AUTOTYPE reach the shell through IRQ 1. The check types keys only; its header says the mouse is tried by hand.
+evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Live: $live_scn typed through IRQ 1 at depth $depth
+note: Keys typed by DOSBox's AUTOTYPE reach the shell through IRQ 1, and each mark of the live scenario is read back and held to the goldens at both depths. The default check types keys only; the mouse is driven by xdotool under Xvfb in an opt-in step (INPUT_EXTRA=1).
 
 id: rt.hal
 label: DosBios and DosDisplay: mode 13h, mode 12h and VBE with a linear frame buffer

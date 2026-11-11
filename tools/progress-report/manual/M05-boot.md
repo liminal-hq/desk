@@ -122,6 +122,7 @@ The byte patched into the image at stage 2 offset 3 travels in the boot informat
 | 12 | `bios-solo` | `BiosSolo` | The BIOS scenarios without typed keys | no script in this repository runs it | |
 | 13 | `shell` | `Shell` | The first window's scenario, frame by frame | `expected-shell-8.txt`, `expected-shell-4.txt` and screendumps | `0` |
 | 14 | `shell-corrupt` | `ShellCorrupt` | `shell`, then one pixel of the screen changed | the screendump check must reject it | `0` |
+| 15 | `shell-live` | `ShellLive` | The first window on the PS/2 keyboard and mouse until Escape | `expected-shell-live-8.txt`, `expected-shell-live-4.txt`, `expected-shell-live-keys-8.txt` and screendumps | `0` |
 
 The names, the numbers and the run lines are the ones in the code; the build checks the table against `kernel/src/main.rs`. Mode 12 is an honest gap: `docs/N3-BIOS-PATH.md` records that it was run on Bochs by hand, but nothing in `tools/` or the CI runs it.
 
@@ -153,7 +154,7 @@ A test that can only pass proves little, so `tools/native-test.sh` also runs the
 ## Why it is this way
 
 - **A transcript, not a debugger.** The test is a comparison of the kernel's serial output with an expected file, because that is what a headless run can produce and what a person can read. The expected files carry patterns for the parts that vary: `{N:lo..hi}` for a number in a range, `{HEX}` for an address, `{BITS:mask=value}` for a register whose other bits depend on the BIOS, `{ANY}`, and `...` for any number of lines (`docs/NATIVE-BOOT.md`, "The checks"; `tools/native-check.py`). The matcher is a search over the lines, so a pattern may skip lines only where it says so.
-- **One kernel, many behaviours.** The test mode is a byte in the image, not a build flag, so a single kernel binary serves all fifteen modes and an image is made by patching one byte (`tools/native-image.sh`). A kernel that carries code to misbehave deliberately is a cost, accepted so that the negative checks run the real boot path.
+- **One kernel, many behaviours.** The test mode is a byte in the image, not a build flag, so a single kernel binary serves all sixteen modes and an image is made by patching one byte (`tools/native-image.sh`). A kernel that carries code to misbehave deliberately is a cost, accepted so that the negative checks run the real boot path.
 - **Prove that the check can fail.** The repository's rule is that a bug fix needs a check that fails before the fix (`AGENTS.md`, "Testing"). The same idea is applied to the checker itself: `tests/native/wrong-expected.txt` must be rejected by `tools/native-check.py`.
 - **Exit through a device.** Reporting success or failure by an exit status is what lets `tools/check.sh` and the CI treat a boot like any other test. A boot with no such device (real hardware, Bochs) ends by the kernel halting, and the harness decides by the transcript or the watchdog instead; the Bochs and 86Box runners return the same statuses ([M20](chapter:m-emulators)).
 - **Bounded waits.** Every place the boot could wait for hardware that might not answer has a limit: stage 1's retries, the loader's A20 and keyboard-controller waits, the first-tick spin. A boot that cannot continue prints why and stops, instead of hanging until the watchdog.

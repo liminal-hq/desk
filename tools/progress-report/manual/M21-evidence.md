@@ -90,7 +90,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 21 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
 | 22 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
-Three more steps run only when asked, because the CI image lacks what they need: the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
+Four more steps run only when asked, because the CI image lacks what they need: the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
 ### The three shelves and the four tags
 
