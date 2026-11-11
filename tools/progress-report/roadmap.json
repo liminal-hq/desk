@@ -1324,7 +1324,7 @@
    "deps": [
     "shell"
    ],
-   "what": "R128: Under investigation; the cause is unknown. After the host mouse leaves the QEMU window and returns, the pointer sticks at a screen edge. The shell clamps the pointer to the screen on every event (shell/shell/src/shell.rs), which is a fact about the code, not an established cause.",
+   "what": "R128: Under investigation; the cause is unknown. After the host mouse leaves the QEMU window and returns, the pointer sticks at a screen edge. The shell clamps the pointer to the screen on every event (shell/shell/src/shell.rs), which is a fact about the code, not an established cause. A headless QEMU measurement found the cursor leaves the edge on the first return move on both FreeDOS and the native kernel, so the guest does not reproduce it; the suspect is QEMU's GTK window under XWayland (try -display sdl, grab-on-hover=on).",
    "why": "Found in the owner's hands-on run.",
    "evidence": "docs/ROADMAP.md R128. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
   },
@@ -1339,6 +1339,18 @@
    "what": "R129: QEMU's GTK display only captures the pointer when it runs under XWayland (GDK_BACKEND=x11), so the launcher should set that on Wayland sessions. Alt+Tab went to GNOME's switcher instead of the guest, so the keyboard grab was not in effect; the cause is not established. Minimise and maximise did nothing, which is by design in the first window (R97).",
    "why": "Found in the owner's hands-on run.",
    "evidence": "docs/ROADMAP.md R129. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
+  },
+  {
+   "id": "f-speed",
+   "label": "Pointer speed on FreeDOS",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "shell"
+   ],
+   "what": "R130: A headless QEMU measurement put the pointer 1.35 to 2.5 times the host distance on FreeDOS with CuteMouse, and close to one to one on the native kernel. LIVE-INPUT.md says DOSBox's built-in driver gives mickeys one for one; CuteMouse does not. Planned: find the CuteMouse options that set the ratio, say so in the docs, and decide whether SHELL.EXE should scale the mickeys itself.",
+   "why": "Found in a headless measurement after the owner's hands-on run.",
+   "evidence": "docs/ROADMAP.md R130. Evidence: a headless measurement by an agent on 2026-11-11 (emulator only); not a committed test."
   },
   {
    "id": "first-window",
