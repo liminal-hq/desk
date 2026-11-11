@@ -13,6 +13,7 @@ Working design documents for Desk, an operating system in Rust for old hardware,
 | [`HANDOFF.md`](HANDOFF.md) | How the Desk steps aside to run a DOS program with the whole machine and comes back |
 | [`PALETTE.md`](PALETTE.md) | The 256-colour layout and the 16-colour fallback |
 | [`HIG.md`](HIG.md) | The design language every app follows |
+| [`SHELL-DESIGN.md`](SHELL-DESIGN.md) | The full shell design the shell is working towards, from the owner's design canvas: every board and screen, the desktop, launcher bar, Desk menu, windows, menus, dialogs, toasts and every app, the visual system, what is built, the differences from these documents, and questions for the owner |
 | [`ROADMAP.md`](ROADMAP.md) | What is done, in flight and planned, as numbered items with their status, evidence and what was not verified, and the decisions waiting on the owner |
 | [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) | What was decided before the repo existed, and what is still open |
 | [`RUST-TARGETS.md`](RUST-TARGETS.md) | How Rust is built for each application space: target specifications, `core`, `alloc` and `std`, and the spikes that track them |

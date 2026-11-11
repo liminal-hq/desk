@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116; min-height: 0;">
+
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <dc-import name="DeskTabs" tabs="{{ tabsShared }}" on-new="{{ newTabFn }}" hint-size="100%,22px"></dc-import>
+
+  <div style="height: 26px; display: flex; align-items: center; gap: 3px; padding: 0 4px; flex-shrink: 0; background: #14161d; border-bottom: 1px solid #1f2230;">
+    <span onClick="{{ goBack }}" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; color: {{ backFg }};" style-hover="background: #1b1e28;">←</span>
+    <span onClick="{{ goFwd }}" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; color: {{ fwdFg }};" style-hover="background: #1b1e28;">→</span>
+    <span onClick="{{ goUp }}" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; color: {{ upFg }};" style-hover="background: #1b1e28;">↑</span>
+    <div onClick="{{ editPath }}" style="flex: 1; min-width: 60px; height: 18px; display: flex; align-items: center; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; padding: 0 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; cursor: text; overflow: hidden;">
+      <sc-if value="{{ pathEditing }}" hint-placeholder-val="{{ false }}">
+        <input ref="{{ pathRef }}" value="{{ pathValue }}" onChange="{{ onPathChange }}" onKeyDown="{{ onPathKey }}" onBlur="{{ endPathEdit }}" spellcheck="false" style="width: 100%; border: none; background: transparent; color: #fff; font: inherit; padding: 0; outline: none; caret-color: #ffaa40;">
+      </sc-if>
+      <sc-if value="{{ pathShowing }}" hint-placeholder-val="{{ true }}"><span style="white-space: nowrap; color: #e0e0e0;">{{ pathLabel }}</span></sc-if>
+    </div>
+    <div style="width: 104px; height: 18px; display: flex; align-items: center; gap: 4px; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; padding: 0 5px;">
+      <span style="color: #5a6273;">⌕</span>
+      <input ref="{{ searchRef }}" value="{{ query }}" onChange="{{ onQuery }}" onKeyDown="{{ onQueryKey }}" placeholder="Search *.MID" spellcheck="false" style="flex: 1; min-width: 0; border: none; background: transparent; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0; outline: none; caret-color: #ffaa40;">
+    </div>
+    <span onClick="{{ setDetails }}" title="Details" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; background: {{ detailsBg }}; color: {{ detailsFg }};">☰</span>
+    <span onClick="{{ setIcons }}" title="Large icons" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; background: {{ iconsBg }}; color: {{ iconsFg }};">▦</span>
+    <span onClick="{{ togglePreview }}" title="Preview" style="width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: default; background: {{ previewBg }}; color: {{ previewFg }};">◧</span>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <sc-if value="{{ showTree }}" hint-placeholder-val="{{ true }}">
+      <div style="width: 116px; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; border-right: 1px solid #1f2230; background: #0c0c10; padding: 3px 0; display: flex; flex-direction: column;">
+        <sc-for list="{{ treeRows }}" as="r" hint-placeholder-count="6">
+          <div data-drop-path="{{ r.drop }}" onMouseDown="{{ r.mdown }}" onContextMenu="{{ r.ctx }}" style="height: 17px; flex-shrink: 0; display: flex; align-items: center; gap: 3px; padding-right: 4px; cursor: default; padding-left: {{ r.indent }}px; background: {{ r.bg }}; color: {{ r.fg }}; margin-top: {{ r.gap }}px;">
+            <span onClick="{{ r.toggle }}" style="width: 9px; flex-shrink: 0; color: #5a6273; text-align: center;">{{ r.chev }}</span>
+            <span onClick="{{ r.go }}" style="display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1;">
+              <dc-import name="FileIcon" kind="{{ r.kind }}" size="12" hint-size="12px,12px"></dc-import>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.label }}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div data-drop-path="{{ curPath }}" onMouseDown="{{ onPaneDown }}" onContextMenu="{{ onPaneCtx }}" style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: #111116;">
+      <sc-if value="{{ isDetails }}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: {{ cols }}; gap: 6px; padding: 3px 8px; color: #7c8796; font-size: 10px; flex-shrink: 0; border-bottom: 1px solid #1f2230;">
+          <sc-for list="{{ headers }}" as="h" hint-placeholder-count="4">
+            <span onClick="{{ h.sort }}" style="cursor: default; white-space: nowrap; overflow: hidden; text-align: {{ h.align }}; color: {{ h.fg }};" style-hover="color: #fff;">{{ h.label }}</span>
+          </sc-for>
+        </div>
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 1px 0;">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div data-drop-path="{{ r.drop }}" onMouseDown="{{ r.down }}" onDoubleClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display: grid; grid-template-columns: {{ cols }}; gap: 6px; padding: 0 8px; height: 18px; flex-shrink: 0; align-items: center; cursor: default; background: {{ r.bg }}; color: {{ r.fg }}; opacity: {{ r.op }};">
+              <span style="display: flex; align-items: center; gap: 5px; min-width: 0;">
+                <dc-import name="FileIcon" kind="{{ r.kind }}" size="16" hint-size="16px,16px"></dc-import>
+                <sc-if value="{{ r.renaming }}" hint-placeholder-val="{{ false }}">
+                  <input ref="{{ renameRef }}" value="{{ renameValue }}" onChange="{{ onRename }}" onKeyDown="{{ onRenameKey }}" onBlur="{{ commitRename }}" onMouseDown="{{ stop }}" spellcheck="false" style="flex: 1; min-width: 0; height: 15px; border: none; background: #050507; color: #fff; font-family: Inter, sans-serif; font-size: 11px; padding: 0 3px; outline: 1px solid #ffaa40; caret-color: #ffaa40;">
+                </sc-if>
+                <sc-if value="{{ r.showName }}" hint-placeholder-val="{{ true }}"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.name }}</span></sc-if>
+              </span>
+              <sc-if value="{{ showLoc }}" hint-placeholder-val="{{ false }}"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ r.muted }};">{{ r.loc }}</span></sc-if>
+              <span style="text-align: right; white-space: nowrap; color: {{ r.muted }};">{{ r.size }}</span>
+              <span style="text-align: right; white-space: nowrap; color: {{ r.muted }};">{{ r.date }}</span>
+              <sc-if value="{{ showAttr }}" hint-placeholder-val="{{ true }}"><span style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ r.muted }};">{{ r.attr }}</span></sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ renameErr }}" hint-placeholder-val="{{ false }}"><div style="margin: 4px 8px; padding: 4px 8px; background: #1e160d; color: #ffd096; flex-shrink: 0;">{{ renameErr }}</div></sc-if>
+          <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding: 18px 12px; color: #7c8796; text-align: center; line-height: 16px;">{{ emptyText }}</div></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isIcons }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, 70px); grid-auto-rows: 58px; gap: 4px; padding: 6px; align-content: start;">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div data-drop-path="{{ r.drop }}" onMouseDown="{{ r.down }}" onDoubleClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 3px; cursor: default; opacity: {{ r.op }};">
+              <dc-import name="FileIcon" kind="{{ r.kind }}" size="32" hint-size="32px,32px"></dc-import>
+              <span style="max-width: 68px; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: {{ r.bg }}; color: {{ r.fg }};">{{ r.name }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="grid-column: 1 / -1; padding: 18px 12px; color: #7c8796; text-align: center;">{{ emptyText }}</div></sc-if>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ showPreview }}" hint-placeholder-val="{{ true }}">
+      <div style="width: 128px; flex-shrink: 0; border-left: 1px solid #1f2230; background: #0c0c10; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;">
+        <dc-import name="FileIcon" kind="{{ pv.kind }}" size="32" hint-size="32px,32px"></dc-import>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff; word-break: break-all;">{{ pv.title }}</span>
+          <span style="color: #7c8796; line-height: 14px;">{{ pv.meta }}</span>
+        </div>
+        <sc-if value="{{ pv.hasWall }}" hint-placeholder-val="{{ false }}"><div style="height: 72px; background: {{ pv.wall }}; outline: 1px solid #262a37;"></div></sc-if>
+        <sc-if value="{{ pv.hasPixels }}" hint-placeholder-val="{{ false }}"><canvas ref="{{ pvCanvas }}" width="120" height="80" style="width: 120px; height: 80px; image-rendering: pixelated; outline: 1px solid #262a37;"></canvas></sc-if>
+        <sc-if value="{{ pv.hasText }}" hint-placeholder-val="{{ false }}"><div style="background: #050507; padding: 5px 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; line-height: 12px; color: #b4bfce; white-space: pre; overflow: hidden; max-height: 168px;">{{ pv.text }}</div></sc-if>
+        <sc-for list="{{ pv.facts }}" as="f" hint-placeholder-count="0">
+          <div style="display: flex; flex-direction: column;"><span style="color: #7c8796; font-size: 10px;">{{ f.k }}</span><span>{{ f.v }}</span></div>
+        </sc-for>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+          <sc-for list="{{ pv.actions }}" as="a" hint-placeholder-count="0">
+            <span onClick="{{ a.run }}" style="padding: 3px 8px; text-align: center; cursor: pointer; background: {{ a.bg }}; color: {{ a.fg }}; border: 1px solid {{ a.line }};" style-hover="filter: brightness(1.2);">{{ a.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ statusLeft }}</span>
+    <span style="display: flex; align-items: center; gap: 6px; white-space: nowrap;"><span style="width: 40px; height: 4px; background: #1f2230; display: inline-block;"><span style="display: block; height: 4px; width: {{ usedPct }}%; background: #ffaa40;"></span></span>{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    tabs: [{ id: 1, path: 'C:\\', back: [], fwd: [], sel: [], anchor: null, sort: { k: 'name', d: 1 }, view: 'details', q: '' }],
+    active: 1, nextTab: 2, tree: true, preview: true, attrs: true, hidden: false,
+    open: { 'C:\\': true }, ren: null, pathEdit: null, navN: null,
+  };
+  pathRef = (el) => { if (el && !this._pf) { this._pf = true; el.focus(); el.select(); } if (!el) this._pf = false; };
+  renameRef = (el) => { if (el && !this._rf) { this._rf = true; el.focus(); const i = el.value.lastIndexOf('.'); el.setSelectionRange(0, i > 0 ? i : el.value.length); } if (!el) this._rf = false; };
+  searchRef = (el) => { this.searchEl = el; };
+  pvCanvas = (el) => { this.pvEl = el; this.drawPv(); };
+
+  componentDidMount() {
+    const start = this.props.nav && this.props.nav.path;
+    if (start) this.setState(s => ({ tabs: s.tabs.map(t => ({ ...t, path: start })), navN: this.props.nav.n, open: this.openTo(s.open, start) }));
+    this.onKey = (e) => this.key(e);
+    document.addEventListener('keydown', this.onKey);
+    this.report();
+  }
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    const nav = this.props.nav;
+    if (nav && nav.n !== this.state.navN) {
+      this.setState({ navN: nav.n });
+      if (nav.tab) this.newTab(nav.path); else this.go(nav.path);
+    }
+    this.report();
+    this.drawPv();
+  }
+  report() {
+    const t = this.tab(); const ops = this.props.ops; if (!ops) return;
+    const title = 'Files · ' + (t.q ? 'Search' : t.path);
+    if (title !== this._title) { this._title = title; ops.setTitle(this.props.winId, title); }
+  }
+  drawPv() {
+    const ops = this.props.ops; if (!this.pvEl || !ops) return;
+    const t = this.tab(); if (t.sel.length !== 1) return;
+    const st = ops.stat(t.sel[0]); if (st && st.meta && st.meta.pixels) ops.drawPixels(this.pvEl, st.meta.pixels);
+  }
+  openTo(open, path) {
+    const o = { ...open }; const ops = this.props.ops; if (!ops) return o;
+    let p = ops.parent(path); while (p) { o[p] = true; p = ops.parent(p); }
+    return o;
+  }
+
+  tab() { return this.state.tabs.find(t => t.id === this.state.active) || this.state.tabs[0]; }
+  upd(fn) { this.setState(s => ({ tabs: s.tabs.map(t => t.id === s.active ? { ...t, ...fn(t) } : t) })); }
+  go(path, push = true) {
+    const ops = this.props.ops; const p = ops.norm(path); const st = ops.stat(p);
+    if (!st || !st.dir) { ops.toast(p + " isn't there", 'Check the path, or pick a folder in the tree.'); return false; }
+    this.setState(s => ({ open: this.openTo(s.open, p), ren: null, pathEdit: null }));
+    this.upd(t => t.path === p && !t.q ? {} : ({ path: p, sel: [], anchor: null, q: '', back: push ? [...t.back, t.path].slice(-30) : t.back, fwd: push ? [] : t.fwd }));
+    return true;
+  }
+  goBack() { const t = this.tab(); if (!t.back.length) return; const p = t.back[t.back.length - 1]; this.upd(x => ({ path: p, back: x.back.slice(0, -1), fwd: [x.path, ...x.fwd], sel: [], q: '' })); }
+  goFwd() { const t = this.tab(); if (!t.fwd.length) return; const p = t.fwd[0]; this.upd(x => ({ path: p, fwd: x.fwd.slice(1), back: [...x.back, x.path], sel: [], q: '' })); }
+  goUp() { const t = this.tab(); const p = this.props.ops.parent(t.path); if (p) { this.go(p); this.upd(() => ({ sel: [t.path], anchor: t.path })); } }
+  newTab(path) {
+    const p = path || this.tab().path;
+    this.setState(s => ({ tabs: [...s.tabs, { id: s.nextTab, path: p, back: [], fwd: [], sel: [], anchor: null, sort: { k: 'name', d: 1 }, view: this.tab().view, q: '' }], active: s.nextTab, nextTab: s.nextTab + 1, open: this.openTo(s.open, p) }));
+  }
+  closeTab(id) {
+    if (this.state.tabs.length === 1) return this.props.ops.closeWindow(this.props.winId);
+    this.setState(s => { const i = s.tabs.findIndex(t => t.id === id); const tabs = s.tabs.filter(t => t.id !== id); return { tabs, active: s.active === id ? tabs[Math.max(0, i - 1)].id : s.active }; });
+  }
+
+  items() {
+    const ops = this.props.ops, t = this.tab();
+    let list = t.q ? ops.search(t.path, t.q, this.state.hidden) : ops.list(t.path, this.state.hidden);
+    const { k, d } = t.sort;
+    const ext = (n) => { const i = n.lastIndexOf('.'); return i > 0 ? n.slice(i + 1) : ''; };
+    list = [...list].sort((a, b) => {
+      if (a.dir !== b.dir) return a.dir ? -1 : 1;
+      let r = 0;
+      if (k === 'size') r = (a.dir ? ops.dirSize(a.path) : a.size) - (b.dir ? ops.dirSize(b.path) : b.size);
+      else if (k === 'date') r = a.t - b.t;
+      else if (k === 'type') r = ext(a.n).localeCompare(ext(b.n));
+      return (r || a.n.localeCompare(b.n)) * d;
+    });
+    return list;
+  }
+  selPaths() { return this.tab().sel; }
+  setSel(sel, anchor) { this.upd(t => ({ sel, anchor: anchor === undefined ? t.anchor : anchor })); }
+
+  clickRow(e, it, list) {
+    const t = this.tab();
+    let sel = t.sel;
+    if (e.ctrlKey || e.metaKey) sel = sel.includes(it.path) ? sel.filter(p => p !== it.path) : [...sel, it.path];
+    else if (e.shiftKey && t.anchor) {
+      const a = list.findIndex(x => x.path === t.anchor), b = list.findIndex(x => x.path === it.path);
+      sel = list.slice(Math.min(a, b), Math.max(a, b) + 1).map(x => x.path);
+    } else if (!sel.includes(it.path)) sel = [it.path];
+    this.setSel(sel, e.shiftKey ? t.anchor : it.path);
+    return sel;
+  }
+  openItem(it) { if (it.dir) this.go(it.path); else this.props.ops.open(it.path); }
+  startRename(path) { const ops = this.props.ops; this.setState({ ren: { path, value: ops.base(path), err: null } }); }
+  commitRename() {
+    const r = this.state.ren; if (!r) return;
+    const ops = this.props.ops;
+    if (r.value.toUpperCase() === ops.base(r.path)) return this.setState({ ren: null });
+    const res = ops.rename(r.path, r.value);
+    if (res.err) return this.setState({ ren: { ...r, err: res.err } });
+    this.setState({ ren: null }); this.setSel([res.path], res.path);
+  }
+  del(paths) {
+    const ops = this.props.ops; if (!paths.length) return;
+    const inDel = paths.every(p => p.startsWith('C:\\DELETED\\'));
+    const what = paths.length === 1 ? ops.base(paths[0]) : paths.length + ' items';
+    ops.ask({
+      title: inDel ? 'Delete ' + what + ' for good?' : 'Move ' + what + ' to Deleted?',
+      text: inDel ? "This can't be undone." : 'You can restore it from Deleted until you empty it.',
+      yes: inDel ? 'Delete for good' : 'Move to Deleted', no: 'Keep',
+      run: () => { ops.remove(paths); this.setSel([], null); },
+    });
+  }
+  newFolder() { const p = this.props.ops.mkdir(this.tab().path); if (p) { this.setSel([p], p); this.startRename(p); } }
+
+  fileMenu(sel, list) {
+    const ops = this.props.ops, t = this.tab();
+    const one = sel.length === 1 ? (list.find(x => x.path === sel[0]) || ops.stat(sel[0])) : null;
+    const inDel = sel.length && sel.every(p => p.startsWith('C:\\DELETED\\'));
+    const items = [];
+    if (one) {
+      items.push({ label: one.dir ? 'Open' : ops.openLabel(one.path), bold: true, run: () => this.openItem(one) });
+      if (one.dir) items.push({ label: 'Open in new tab', run: () => this.newTab(one.path) }, { label: 'Open in new window', run: () => ops.newWindow(one.path) });
+      else items.push({ label: 'Open with…', run: () => ops.openWith(one.path) });
+      if (ops.isProgram(one.path)) items.push({ label: 'Make a desktop icon', run: () => ops.addShortcut(one.path) });
+      if (one.meta && (one.meta.wall || one.meta.pixels)) items.push({ label: 'Use as wallpaper', run: () => ops.useWallpaper(one.path) });
+      if (t.q) items.push({ label: 'Show in folder', run: () => { this.go(ops.parent(one.path)); this.upd(() => ({ sel: [one.path], anchor: one.path })); } });
+    }
+    if (inDel) items.push({ label: 'Restore', sep: items.length > 0, run: () => { ops.restore(sel); this.setSel([], null); } });
+    items.push(
+      { label: 'Cut', hint: 'Ctrl+X', sep: true, disabled: !sel.length || inDel, run: () => ops.clipFiles(sel, true) },
+      { label: 'Copy', hint: 'Ctrl+C', disabled: !sel.length, run: () => ops.clipFiles(sel, false) },
+      { label: one && one.dir ? 'Paste into folder' : 'Paste', hint: 'Ctrl+V', disabled: !ops.canPaste(), run: () => ops.paste(one && one.dir ? one.path : t.path) },
+      { label: 'Rename', hint: 'F2', sep: true, disabled: !one || inDel, run: () => this.startRename(one.path) },
+      { label: inDel ? 'Delete for good' : 'Delete', hint: 'Del', disabled: !sel.length, run: () => this.del(sel) },
+      { label: 'Properties', hint: 'Alt+Enter', sep: true, disabled: !sel.length, run: () => sel.forEach(p => ops.properties(p)) },
+    );
+    return items;
+  }
+  viewItems() {
+    const t = this.tab(), s = this.state;
+    const sortBy = (k) => () => this.upd(x => ({ sort: { k, d: x.sort.k === k ? -x.sort.d : 1 } }));
+    return [
+      { label: 'Details', check: t.view === 'details', run: () => this.upd(() => ({ view: 'details' })) },
+      { label: 'Large icons', check: t.view === 'icons', run: () => this.upd(() => ({ view: 'icons' })) },
+      { label: 'Folder tree', check: s.tree, sep: true, run: () => this.setState({ tree: !s.tree }) },
+      { label: 'Preview', check: s.preview, run: () => this.setState({ preview: !s.preview }) },
+      { label: 'Attributes', check: s.attrs, run: () => this.setState({ attrs: !s.attrs }) },
+      { label: 'Hidden and system files', check: s.hidden, run: () => this.setState({ hidden: !s.hidden }) },
+      { label: 'Sort by name', check: t.sort.k === 'name', sep: true, run: sortBy('name') },
+      { label: 'Sort by size', check: t.sort.k === 'size', run: sortBy('size') },
+      { label: 'Sort by date', check: t.sort.k === 'date', run: sortBy('date') },
+      { label: 'Sort by type', check: t.sort.k === 'type', run: sortBy('type') },
+    ];
+  }
+  paneMenu() {
+    const ops = this.props.ops, t = this.tab();
+    const inDelRoot = t.path === 'C:\\DELETED';
+    const items = [
+      { label: 'New folder', disabled: !!t.q || inDelRoot, run: () => this.newFolder() },
+      { label: 'Paste', hint: 'Ctrl+V', disabled: !ops.canPaste() || !!t.q, run: () => ops.paste(t.path) },
+      { label: 'Select all', hint: 'Ctrl+A', run: () => this.setSel(this.items().map(x => x.path)) },
+    ];
+    if (inDelRoot) items.push({ label: 'Empty Deleted', sep: true, disabled: !this.items().length, run: () => ops.ask({ title: 'Empty Deleted?', text: 'Everything in Deleted goes for good.', yes: 'Empty it', no: 'Keep', run: () => ops.emptyDeleted() }) });
+    items.push({ label: 'Open in new tab', sep: true, run: () => this.newTab(t.path) });
+    return items.concat(this.viewItems().map((x, i) => i === 0 ? { ...x, sep: true } : x), [{ label: 'Properties', sep: true, run: () => ops.properties(t.path) }]);
+  }
+  menuAt(e, items) { const r = e.currentTarget.getBoundingClientRect(); e.preventDefault(); e.stopPropagation(); this.props.ops.menu({ clientX: r.left, clientY: r.bottom, preventDefault() {}, stopPropagation() {} }, items); }
+
+  key(e) {
+    const ops = this.props.ops;
+    if (!this.props.focused || !ops || ops.busy()) return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const list = this.items(), t = this.tab(), sel = t.sel;
+    const idx = list.findIndex(x => x.path === (t.anchor || sel[sel.length - 1]));
+    const ctrl = e.ctrlKey || e.metaKey;
+    const move = (n) => { const i = Math.max(0, Math.min(list.length - 1, (idx < 0 ? -1 : idx) + n)); if (list[i]) this.setSel([list[i].path], list[i].path); };
+    let used = true;
+    if (e.key === 'ArrowDown') move(1);
+    else if (e.key === 'ArrowUp') move(-1);
+    else if (e.key === 'ArrowRight' && t.view === 'icons') move(1);
+    else if (e.key === 'ArrowLeft' && t.view === 'icons') move(-1);
+    else if (e.key === 'Home') move(-9999);
+    else if (e.key === 'End') move(9999);
+    else if (e.key === 'Enter' && e.altKey) sel.forEach(p => ops.properties(p));
+    else if (e.key === 'Enter') { const it = list.find(x => x.path === sel[0]); if (it) this.openItem(it); }
+    else if (e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) this.goUp();
+    else if (e.altKey && e.key === 'ArrowLeft') this.goBack();
+    else if (e.altKey && e.key === 'ArrowRight') this.goFwd();
+    else if (e.key === 'Delete') this.del(sel);
+    else if (e.key === 'F2' && sel.length === 1) this.startRename(sel[0]);
+    else if (ctrl && e.key.toLowerCase() === 'a') this.setSel(list.map(x => x.path));
+    else if (ctrl && e.key.toLowerCase() === 'c') ops.clipFiles(sel, false);
+    else if (ctrl && e.key.toLowerCase() === 'x') ops.clipFiles(sel, true);
+    else if (ctrl && e.key.toLowerCase() === 'v') ops.paste(t.path);
+    else if (ctrl && e.key.toLowerCase() === 't') this.newTab();
+    else if (ctrl && e.key.toLowerCase() === 'w') this.closeTab(t.id);
+    else if (ctrl && e.key.toLowerCase() === 'f') { if (this.searchEl) this.searchEl.focus(); }
+    else if (ctrl && e.key.toLowerCase() === 'l') this.setState({ pathEdit: t.path });
+    else if (e.key === 'Escape') { if (t.q) this.upd(() => ({ q: '' })); else this.setSel([], null); }
+    else if (e.key.length === 1 && /[A-Za-z0-9]/.test(e.key) && !ctrl && !e.altKey) {
+      const ch = e.key.toUpperCase(); const from = idx + 1;
+      const hit = [...list.slice(from), ...list.slice(0, from)].find(x => x.n.startsWith(ch));
+      if (hit) this.setSel([hit.path], hit.path);
+    } else used = false;
+    if (used) e.preventDefault();
+  }
+
+  renderVals() {
+    const ops = this.props.ops;
+    if (!ops) return { menus: [], tabRows: [], treeRows: [], rows: [], headers: [], pv: { facts: [], actions: [] } };
+    const s = this.state, t = this.tab();
+    const list = this.items();
+    const sel = t.sel.filter(p => list.some(x => x.path === p) || ops.stat(p));
+    const searching = !!t.q;
+    const chip = (on) => ({ bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#7c8796' });
+
+    const menus = [
+      { label: 'File', items: () => ([
+        { label: 'New window', run: () => ops.newWindow(t.path) },
+        { label: 'New tab', hint: 'Ctrl+T', run: () => this.newTab() },
+        { label: 'New folder', disabled: searching, run: () => this.newFolder() },
+        ...this.fileMenu(sel, list).map((x, i) => i === 0 ? { ...x, sep: true } : x),
+        { label: 'Close tab', hint: 'Ctrl+W', sep: true, run: () => this.closeTab(t.id) },
+        { label: 'Close window', run: () => ops.closeWindow(this.props.winId) },
+      ]) },
+      { label: 'Edit', items: () => ([
+        { label: 'Cut', hint: 'Ctrl+X', disabled: !sel.length, run: () => ops.clipFiles(sel, true) },
+        { label: 'Copy', hint: 'Ctrl+C', disabled: !sel.length, run: () => ops.clipFiles(sel, false) },
+        { label: 'Paste', hint: 'Ctrl+V', disabled: !ops.canPaste() || searching, run: () => ops.paste(t.path) },
+        { label: 'Select all', hint: 'Ctrl+A', sep: true, run: () => this.setSel(list.map(x => x.path)) },
+        { label: 'Invert selection', run: () => this.setSel(list.map(x => x.path).filter(p => !sel.includes(p))) },
+      ]) },
+      { label: 'View', items: () => (this.viewItems()) },
+      { label: 'Go', items: () => ([
+        { label: 'Back', hint: 'Alt+←', disabled: !t.back.length, run: () => this.goBack() },
+        { label: 'Forward', hint: 'Alt+→', disabled: !t.fwd.length, run: () => this.goFwd() },
+        { label: 'Up', hint: 'Backspace', disabled: !ops.parent(t.path), run: () => this.goUp() },
+        ...ops.drives().map((d, i) => ({ label: d.id + '  ' + d.label + ' · ' + ops.fmtSize(d.free) + ' free', sep: i === 0, run: () => this.go(d.id + '\\') })),
+        { label: 'Desktop', sep: true, run: () => this.go('C:\\DESK\\DESKTOP') },
+        { label: 'Deleted', run: () => this.go('C:\\DELETED') },
+        { label: 'Type a path…', hint: 'Ctrl+L', sep: true, run: () => this.setState({ pathEdit: t.path }) },
+        { label: 'Search', hint: 'Ctrl+F', run: () => this.searchEl && this.searchEl.focus() },
+      ]) },
+      { label: 'Help', items: () => ([
+        { label: 'Keyboard shortcuts', run: () => ops.toast('Files keys', 'Arrows and Enter move and open, Backspace goes up, F2 renames, Del moves to Deleted, Ctrl+T new tab, Ctrl+L type a path, Alt+Enter properties.') },
+        { label: 'Searching with wildcards', run: () => ops.toast('Wildcards', '* matches anything and ? one character: *.MID, PICT????.BMP. Search looks inside every folder below this one.') },
+        { label: 'Tabs and dragging', run: () => ops.toast('Tabs and dragging', 'Middle-click a folder to open it in a new tab. Drag onto a tab, a folder or the tree to move; hold Ctrl to copy.') },
+        { label: 'About Files', sep: true, run: () => ops.about('files') },
+      ]) },
+    ];
+
+    const tabRows = s.tabs.map(x => {
+      const on = x.id === s.active;
+      const p = ops.parts(x.path);
+      return { path: x.path, label: x.q ? 'Search' : (p.length > 1 ? p[p.length - 1] : p[0]), kind: x.path === 'C:\\DELETED' ? 'trash' : p.length === 1 ? (p[0] === 'A:' ? 'drive-a' : 'drive-c') : 'folder',
+        bg: on ? '#111116' : 'transparent', fg: on ? '#fff' : '#7c8796', shadow: on ? 'inset 0 2px 0 #ffaa40' : 'none',
+        pick: (e) => { if (e.button === 1) { e.preventDefault(); this.closeTab(x.id); } else this.setState({ active: x.id, ren: null }); },
+        close: (e) => { e.stopPropagation(); this.closeTab(x.id); },
+        ctx: (e) => ops.menu(e, [
+          { label: 'New tab', run: () => this.newTab(x.path) },
+          { label: 'Duplicate tab', run: () => this.newTab(x.path) },
+          { label: 'Open in new window', run: () => ops.newWindow(x.path) },
+          { label: 'Close tab', sep: true, run: () => this.closeTab(x.id) },
+          { label: 'Close other tabs', disabled: s.tabs.length < 2, run: () => this.setState({ tabs: s.tabs.filter(y => y.id === x.id), active: x.id }) },
+        ]) };
+    });
+
+    const treeRows = [];
+    const cur = t.path;
+    const row = (path, label, kind, depth, hasKids, extra = {}) => {
+      const on = cur === path && !searching;
+      const opened = !!s.open[path];
+      treeRows.push({ drop: path, label, kind, indent: 4 + depth * 10, chev: hasKids ? (opened ? '▾' : '▸') : '', gap: extra.gap || 0,
+        bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#e0e0e0',
+        toggle: (e) => { e.stopPropagation(); if (hasKids) this.setState(st => ({ open: { ...st.open, [path]: !st.open[path] } })); },
+        go: () => this.go(path),
+        mdown: (e) => { if (e.button === 1) { e.preventDefault(); this.newTab(path); } },
+        ctx: (e) => ops.menu(e, [
+          { label: 'Open', bold: true, run: () => this.go(path) },
+          { label: 'Open in new tab', run: () => this.newTab(path) },
+          { label: 'Open in new window', run: () => ops.newWindow(path) },
+          { label: 'Paste into folder', sep: true, disabled: !ops.canPaste(), run: () => ops.paste(path) },
+          ...(path === 'C:\\DELETED' ? [{ label: 'Empty Deleted', run: () => ops.ask({ title: 'Empty Deleted?', text: 'Everything in Deleted goes for good.', yes: 'Empty it', no: 'Keep', run: () => ops.emptyDeleted() }) }] : []),
+          { label: 'Properties', sep: true, run: () => ops.properties(path) },
+        ]) });
+      if (hasKids && opened) walk(path, depth + 1);
+    };
+    const walk = (path, depth) => {
+      ops.list(path, s.hidden).filter(x => x.dir).sort((a, b) => a.n.localeCompare(b.n)).forEach(x => {
+        if (x.path === 'C:\\DELETED') return;
+        row(x.path, x.n, 'folder', depth, ops.list(x.path, s.hidden).some(y => y.dir));
+      });
+    };
+    row('C:\\DESK\\DESKTOP', 'Desktop', 'desktop', 0, false);
+    row('C:\\DELETED', 'Deleted', 'trash', 0, false);
+    ops.drives().forEach((d, i) => row(d.id + '\\', d.id + ' ' + d.label, d.id === 'A:' ? 'drive-a' : 'drive-c', 0, ops.list(d.id + '\\', s.hidden).some(y => y.dir), { gap: i === 0 ? 6 : 0 }));
+
+    const showAttr = s.attrs && t.view === 'details';
+    const cols = 'minmax(0, 1fr)' + (searching ? ' minmax(0, 0.8fr)' : '') + ' 52px 46px' + (showAttr ? ' 30px' : '');
+    const head = (label, k, align) => ({ label: label + (t.sort.k === k ? (t.sort.d > 0 ? ' ▲' : ' ▼') : ''), align, fg: t.sort.k === k ? '#e0e0e0' : '#7c8796', sort: () => k && this.upd(x => ({ sort: { k, d: x.sort.k === k ? -x.sort.d : 1 } })) });
+    const headers = [head('Name', 'name', 'left'), ...(searching ? [head('Folder', null, 'left')] : []), head('Size', 'size', 'right'), head('Modified', 'date', 'right'), ...(showAttr ? [head('Attr', null, 'right')] : [])];
+
+    const clip = ops.clipState();
+    const rows = list.map(it => {
+      const on = sel.includes(it.path);
+      const renaming = s.ren && s.ren.path === it.path;
+      const a = it.attr;
+      return {
+        name: it.n, kind: it.path === 'C:\\DELETED' ? 'trash' : ops.kind(it.n, it.dir), drop: it.dir ? it.path : '',
+        size: it.dir ? '' : ops.fmtSize(it.size), date: ops.fmtDate(it.t), loc: ops.parent(it.path),
+        attr: (a.r ? 'R' : '·') + (a.h ? 'H' : '·') + (a.s ? 'S' : '·') + (a.a ? 'A' : '·'),
+        bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : (a.h ? '#7c8796' : '#e0e0e0'), muted: on ? '#ffaa40' : '#7c8796',
+        op: clip && clip.cut && clip.paths.includes(it.path) ? 0.5 : 1,
+        renaming, showName: !renaming,
+        down: (e) => {
+          if (e.button === 1 && it.dir) { e.preventDefault(); e.stopPropagation(); return this.newTab(it.path); }
+          if (e.button !== 0) return;
+          e.stopPropagation();
+          if (s.ren && !renaming) this.commitRename();
+          const ns = this.clickRow(e, it, list);
+          if (!(e.ctrlKey || e.shiftKey || e.metaKey)) ops.beginDrag(e, ns, ns.length === 1 ? it.n : ns.length + ' items');
+        },
+        open: () => this.openItem(it),
+        ctx: (e) => { const ns = sel.includes(it.path) ? sel : [it.path]; if (!sel.includes(it.path)) this.setSel(ns, it.path); ops.menu(e, this.fileMenu(ns, list)); },
+      };
+    });
+
+    const ren = s.ren;
+    const dr = ops.drive(t.path);
+    const selItems = sel.map(p => list.find(x => x.path === p) || ops.stat(p)).filter(Boolean);
+    const selBytes = selItems.reduce((n, x) => n + (x.dir ? ops.dirSize(x.path) : x.size), 0);
+
+    let pv;
+    const one = selItems.length === 1 ? selItems[0] : null;
+    const btn = (label, run, primary) => ({ label, run, bg: primary ? '#ffaa40' : 'transparent', fg: primary ? '#0a0a0c' : '#e0e0e0', line: primary ? '#ffaa40' : '#333847' });
+    if (!selItems.length) {
+      const here = ops.stat(t.path), c = ops.count(t.path);
+      pv = { kind: t.path === 'C:\\DELETED' ? 'trash' : ops.parts(t.path).length === 1 ? (t.path.startsWith('A') ? 'drive-a' : 'drive-c') : 'folder',
+        title: searching ? 'Search' : ops.base(t.path), meta: searching ? list.length + ' found under ' + t.path : c.files + ' files · ' + c.dirs + ' folders · ' + ops.fmtSize(ops.dirSize(t.path)),
+        facts: searching ? [{ k: 'Looking for', v: t.q }] : (here && here.t ? [{ k: 'Modified', v: ops.fmtDate(here.t, true) }] : []), actions: [] };
+    } else if (!one) {
+      pv = { kind: 'blank', title: selItems.length + ' items', meta: ops.fmtSize(selBytes) + ' in all', facts: [], actions: [btn('Properties', () => sel.forEach(p => ops.properties(p)))] };
+    } else {
+      const kind = ops.kind(one.n, one.dir);
+      const info = ops.typeName(one.n, one.dir);
+      pv = { kind: one.path === 'C:\\DELETED' ? 'trash' : kind, title: one.n, meta: info + (one.dir ? '' : ' · ' + ops.fmtSize(one.size)), facts: [], actions: [] };
+      if (one.dir) { const c = ops.count(one.path); pv.facts.push({ k: 'Holds', v: c.files + ' files, ' + c.dirs + ' folders' }, { k: 'Size', v: ops.fmtSize(ops.dirSize(one.path)) }); pv.actions.push(btn('Open', () => this.go(one.path), true)); }
+      else {
+        pv.facts.push({ k: 'Modified', v: ops.fmtDate(one.t, true) });
+        if (one.from) pv.facts.push({ k: 'Deleted from', v: one.from });
+        if (typeof one.text === 'string') { pv.hasText = true; pv.text = one.text.split('\n').slice(0, 14).join('\n'); }
+        if (one.meta && one.meta.wall) { pv.hasWall = true; pv.wall = ops.wallCss(one.meta.wall); pv.actions.push(btn('Use as wallpaper', () => ops.useWallpaper(one.path), true)); }
+        if (one.meta && one.meta.pixels) { pv.hasPixels = true; pv.actions.push(btn('Use as wallpaper', () => ops.useWallpaper(one.path))); }
+        if (one.meta && one.meta.len) { pv.facts.unshift({ k: 'Title', v: one.meta.title }, { k: 'Length', v: ops.fmtLen(one.meta.len) }, { k: 'Plays on', v: 'AdLib (OPL2)' }); }
+        if (ops.isProgram(one.path)) { const d = ops.getDif(one.path); pv.facts.unshift({ k: 'Program', v: d.title }, { k: 'Needs', v: d.memory + ' KB · ' + ops.soundName(d.sound) }); pv.actions.push(btn('Program settings…', () => ops.properties(one.path))); }
+        if (one.from) pv.actions.unshift(btn('Restore', () => { ops.restore([one.path]); this.setSel([], null); }, true));
+        else pv.actions.unshift(btn(ops.openLabel(one.path), () => ops.open(one.path), !pv.actions.some(a => a.bg === '#ffaa40')));
+        if (!pv.hasText && !pv.hasWall && !pv.hasPixels && !(one.meta && one.meta.len) && !ops.isProgram(one.path) && !ops.handler(one.path)) pv.facts.push({ k: 'Preview', v: 'Nothing to show for .' + (one.n.split('.')[1] || '') + ' files.' });
+      }
+    }
+
+    const emptyText = searching ? 'Nothing matches ' + t.q + ' under ' + t.path + '.' : t.path === 'C:\\DELETED' ? 'Deleted is empty. Things you delete wait here until you empty it.' : 'This folder is empty.';
+    return {
+      ops, newTabFn: () => this.newTab(), tabsShared: s.tabs.map((x, i) => ({ label: tabRows[i].label, kind: tabRows[i].kind, active: x.id === s.active, drop: x.path, pick: () => this.setState({ active: x.id, ren: null }), close: () => this.closeTab(x.id), ctx: tabRows[i].ctx })),
+      menus, tabRows, treeRows, rows, headers, cols, showAttr, showLoc: searching,
+      newTab: (e) => { e.preventDefault(); this.newTab(); },
+      goBack: () => this.goBack(), goFwd: () => this.goFwd(), goUp: () => this.goUp(),
+      backFg: t.back.length ? '#e0e0e0' : '#333847', fwdFg: t.fwd.length ? '#e0e0e0' : '#333847', upFg: ops.parent(t.path) ? '#e0e0e0' : '#333847',
+      pathEditing: s.pathEdit !== null, pathShowing: s.pathEdit === null, pathValue: s.pathEdit ?? '', pathLabel: searching ? 'Search results under ' + t.path : t.path, pathRef: this.pathRef,
+      editPath: () => { if (s.pathEdit === null) this.setState({ pathEdit: t.path }); },
+      onPathChange: (e) => this.setState({ pathEdit: e.target.value }),
+      onPathKey: (e) => { if (e.key === 'Enter') { if (this.go(s.pathEdit)) this.setState({ pathEdit: null }); } else if (e.key === 'Escape') this.setState({ pathEdit: null }); },
+      endPathEdit: () => this.setState({ pathEdit: null }),
+      query: t.q, searchRef: this.searchRef,
+      onQuery: (e) => { const q = e.target.value; this.upd(() => ({ q, sel: [] })); },
+      onQueryKey: (e) => { if (e.key === 'Escape') { this.upd(() => ({ q: '' })); e.target.blur(); } if (e.key === 'Enter') e.target.blur(); },
+      setDetails: () => this.upd(() => ({ view: 'details' })), setIcons: () => this.upd(() => ({ view: 'icons' })), togglePreview: () => this.setState({ preview: !s.preview }),
+      detailsBg: chip(t.view === 'details').bg, detailsFg: chip(t.view === 'details').fg, iconsBg: chip(t.view === 'icons').bg, iconsFg: chip(t.view === 'icons').fg,
+      previewBg: chip(s.preview).bg, previewFg: chip(s.preview).fg,
+      showTree: s.tree, showPreview: s.preview, isDetails: t.view === 'details', isIcons: t.view === 'icons',
+      curPath: searching ? '' : t.path,
+      onPaneDown: (e) => { if (e.button === 0) { if (s.ren) this.commitRename(); this.setSel([], null); } },
+      onPaneCtx: (e) => { this.setSel([], null); ops.menu(e, this.paneMenu()); },
+      renameRef: this.renameRef, renameValue: ren ? ren.value : '', renameErr: ren && ren.err ? ren.err : '',
+      onRename: (e) => { const v = e.target.value.toUpperCase(); this.setState(st => ({ ren: { ...st.ren, value: v, err: null } })); },
+      onRenameKey: (e) => { e.stopPropagation(); if (e.key === 'Enter') this.commitRename(); if (e.key === 'Escape') this.setState({ ren: null }); },
+      commitRename: () => this.commitRename(), stop: (e) => e.stopPropagation(),
+      empty: list.length === 0, emptyText,
+      pv: { hasWall: false, hasPixels: false, hasText: false, wall: '', text: '', ...pv }, pvCanvas: this.pvCanvas,
+      statusLeft: sel.length ? sel.length + ' selected · ' + ops.fmtSize(selBytes) : list.length + (list.length === 1 ? ' item' : ' items') + (clip ? ' · ' + clip.paths.length + (clip.cut ? ' cut' : ' copied') : ''),
+      statusRight: dr ? dr.id + ' ' + ops.fmtSize(dr.free) + ' free of ' + ops.fmtSize(dr.total) : '',
+      usedPct: dr ? Math.round((dr.total - dr.free) / dr.total * 100) : 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

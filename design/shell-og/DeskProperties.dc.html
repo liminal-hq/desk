@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div onContextMenu="{{ ctx }}" style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116; min-height: 0;">
+  <div style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <dc-import name="FileIcon" kind="{{ kind }}" size="32" hint-size="32px,32px"></dc-import>
+      <div style="display: flex; flex-direction: column; min-width: 0;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: #fff; word-break: break-all;">{{ title }}</span>
+        <span style="color: #7c8796;">{{ typeName }}</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ missing }}" hint-placeholder-val="{{ false }}"><div style="padding: 8px; background: #1e160d; color: #ffd096;">This item has moved or been deleted.</div></sc-if>
+
+    <sc-if value="{{ isDrive }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; gap: 14px; padding: 10px; background: #0c0c10; border: 1px solid #1f2230;">
+        <div style="width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; background: {{ pie }}; box-shadow: 0 0 0 1px #050507, 0 0 0 2px #333847;"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: #ffaa40;"></span><span style="display: flex; flex-direction: column;"><span>Used · {{ usedPct }}%</span><span style="color: #7c8796;">{{ usedText }}</span></span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: #333847;"></span><span style="display: flex; flex-direction: column;"><span>Free</span><span style="color: #7c8796;">{{ freeText }}</span></span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: #a78bfa;"></span><span style="display: flex; flex-direction: column;"><span>DOS and other files</span><span style="color: #7c8796;">{{ baseText }}</span></span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: grid; grid-template-columns: 74px 1fr; gap: 4px 8px;">
+      <sc-for list="{{ facts }}" as="f" hint-placeholder-count="4">
+        <span style="color: #7c8796;">{{ f.k }}</span><span style="word-break: break-all; font-family: {{ f.font }};">{{ f.v }}</span>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ hasOpener }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; gap: 8px;"><span style="color: #7c8796; width: 74px;">Opens with</span><span style="flex: 1;">{{ opener }}</span><span onClick="{{ changeOpener }}" style="padding: 2px 8px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Change…</span></div>
+    </sc-if>
+
+    <sc-if value="{{ hasAttrs }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 5px; padding-top: 8px; border-top: 1px solid #1f2230;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Attributes</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <sc-for list="{{ attrs }}" as="a" hint-placeholder-count="4">
+            <div onClick="{{ a.toggle }}" style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><span style="width: 9px; height: 9px; border: 1px solid {{ a.line }}; background: {{ a.fill }};"></span><span>{{ a.label }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isProgram }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid #1f2230;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">Program settings</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7c8796;">{{ difName }}</span></div>
+        <sc-for list="{{ fields }}" as="f" hint-placeholder-count="3">
+          <label style="display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px;"><span style="color: #7c8796;">{{ f.label }}</span><input value="{{ f.value }}" onChange="{{ f.change }}" spellcheck="false" style="height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; outline: none; caret-color: #ffaa40;"></label>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px;">
+          <span style="color: #7c8796;">Sound</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 3px;">
+            <sc-for list="{{ sounds }}" as="o" hint-placeholder-count="4"><span onClick="{{ o.pick }}" style="padding: 1px 6px; cursor: pointer; white-space: nowrap; background: {{ o.bg }}; color: {{ o.fg }}; border: 1px solid {{ o.line }};">{{ o.label }}</span></sc-for>
+          </div>
+        </div>
+        <div onClick="{{ togglePause }}" style="display: flex; align-items: center; gap: 6px; cursor: pointer; padding-left: 82px;"><span style="width: 9px; height: 9px; border: 1px solid #ffaa40; background: {{ pauseFill }};"></span><span>Wait for a key before returning to the Desk</span></div>
+        <div style="display: flex; gap: 6px; justify-content: flex-end; padding-top: 2px;">
+          <span onClick="{{ shortcut }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer;" style-hover="background: #1b1e28;">Make a desktop icon</span>
+          <span onClick="{{ saveDif }}" style="padding: 3px 10px; font-weight: 600; cursor: pointer; background: {{ saveBg }}; color: {{ saveFg }};">Save settings</span>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+  <div style="height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 10px; border-top: 1px solid #1f2230; background: #0c0c10;">
+    <span onClick="{{ openIt }}" style="padding: 3px 10px; border: 1px solid #333847; cursor: pointer; display: {{ openDisplay }};" style-hover="background: #1b1e28;">{{ openLabel }}</span>
+    <span onClick="{{ close }}" style="padding: 3px 12px; background: #ffaa40; color: #0a0a0c; font-weight: 600; cursor: pointer;" style-hover="background: #e89930;">Close</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 300, &quot;height&quot;: 380}}">
+class Component extends DCLogic {
+  state = { dif: null, dirty: false };
+  componentDidMount() { this.loadDif(); }
+  componentDidUpdate(pp) { if (pp.path !== this.props.path) this.loadDif(); }
+  loadDif() { const ops = this.props.ops; if (ops && ops.isProgram(this.props.path)) this.setState({ dif: { ...ops.getDif(this.props.path) }, dirty: false }); }
+  setDif(patch) { this.setState(s => ({ dif: { ...s.dif, ...patch }, dirty: true })); }
+  renderVals() {
+    const ops = this.props.ops, path = this.props.path;
+    if (!ops || !path) return { facts: [], attrs: [], fields: [], sounds: [] };
+    const st = ops.stat(path);
+    const isDrive = ops.parts(path).length === 1;
+    const close = () => ops.closeWindow(this.props.winId);
+    if (!st) return { missing: true, title: ops.base(path), typeName: '', kind: 'blank', facts: [], attrs: [], fields: [], sounds: [], close, openDisplay: 'none' };
+    const facts = [];
+    const mono = "'JetBrains Mono', monospace", sans = 'Inter, sans-serif';
+    let vals = {};
+    if (isDrive) {
+      const d = ops.drive(path);
+      const used = d.total - d.free, pct = Math.round(used / d.total * 100), basePct = d.base / d.total * 100;
+      facts.push({ k: 'Label', v: d.label, font: sans }, { k: 'Kind', v: d.id === 'A:' ? '3½-inch floppy · 1.44 MB' : 'Hard disk', font: sans }, { k: 'File system', v: d.id === 'A:' ? 'FAT12' : 'FAT16', font: sans }, { k: 'Capacity', v: ops.fmtBytes(d.total), font: sans });
+      vals = { isDrive: true, usedPct: pct, usedText: ops.fmtBytes(used), freeText: ops.fmtBytes(d.free), baseText: ops.fmtBytes(d.base),
+        pie: 'conic-gradient(#a78bfa 0 ' + basePct + '%, #ffaa40 ' + basePct + '% ' + pct + '%, #333847 ' + pct + '% 100%)' };
+    } else {
+      facts.push({ k: 'Type', v: ops.typeName(st.n, st.dir), font: sans }, { k: 'Location', v: ops.parent(path), font: mono });
+      if (st.dir) { const c = ops.count(path); facts.push({ k: 'Size', v: ops.fmtBytes(ops.dirSize(path)), font: sans }, { k: 'Holds', v: c.files + ' files, ' + c.dirs + ' folders', font: sans }); }
+      else facts.push({ k: 'Size', v: ops.fmtBytes(st.size), font: sans });
+      facts.push({ k: 'Modified', v: ops.fmtDate(st.t, true), font: sans });
+      if (st.from) facts.push({ k: 'Deleted from', v: st.from, font: mono });
+    }
+    const A = [['r', 'Read-only'], ['h', 'Hidden'], ['s', 'System'], ['a', 'Archive']];
+    const attrs = isDrive ? [] : A.map(([k, label]) => ({ label, line: st.attr[k] ? '#ffaa40' : '#5a6273', fill: st.attr[k] ? '#ffaa40' : 'transparent', toggle: () => ops.setAttr(path, k, !st.attr[k]) }));
+    const prog = !isDrive && ops.isProgram(path);
+    const d = this.state.dif || (prog ? ops.getDif(path) : null);
+    const handler = !isDrive && !st.dir && !prog ? ops.handler(path) : null;
+    const chip = (on) => ({ bg: on ? '#372612' : 'transparent', fg: on ? '#ffaa40' : '#b4bfce', line: on ? '#ffaa40' : '#333847' });
+    return {
+      ...vals, missing: false, title: isDrive ? path.slice(0, 2) + ' ' + ops.drive(path).label : st.n, typeName: isDrive ? 'Drive' : ops.typeName(st.n, st.dir),
+      kind: isDrive ? (path.startsWith('A') ? 'drive-a' : 'drive-c') : path === 'C:\\DELETED' ? 'trash' : ops.kind(st.n, st.dir),
+      facts, attrs, hasAttrs: !isDrive, isProgram: prog,
+      hasOpener: !isDrive && !st.dir && !prog, opener: handler ? handler.name : 'Not set', changeOpener: () => ops.openWith(path),
+      difName: prog ? ops.base(path).replace(/\.[^.]+$/, '') + '.DIF' : '',
+      fields: prog && d ? [
+        { label: 'Title', value: d.title, change: (e) => this.setDif({ title: e.target.value }) },
+        { label: 'Arguments', value: d.args, change: (e) => this.setDif({ args: e.target.value }) },
+        { label: 'Memory (KB)', value: String(d.memory), change: (e) => this.setDif({ memory: parseInt(e.target.value.replace(/\D/g, '') || '0', 10) }) },
+      ] : [],
+      sounds: prog && d ? ['adlib', 'speaker', 'mpu401', 'none'].map(k => ({ label: ops.soundName(k), ...chip(d.sound === k), pick: () => this.setDif({ sound: k }) })) : [],
+      pauseFill: d && d.pause ? '#ffaa40' : 'transparent', togglePause: () => this.setDif({ pause: !(d && d.pause) }),
+      saveBg: this.state.dirty ? '#ffaa40' : '#1b1e28', saveFg: this.state.dirty ? '#0a0a0c' : '#5a6273',
+      saveDif: () => { if (!this.state.dirty) return; ops.setDif(path, this.state.dif); this.setState({ dirty: false }); },
+      shortcut: () => ops.addShortcut(path),
+      openLabel: isDrive || st.dir ? 'Open in Files' : ops.openLabel(path), openDisplay: 'block',
+      openIt: () => ops.open(path),
+      close,
+      ctx: (e) => ops.menu(e, [
+        { label: isDrive || st.dir ? 'Open in Files' : ops.openLabel(path), run: () => ops.open(path) },
+        { label: 'Show in Files', disabled: isDrive, run: () => ops.reveal(path) },
+        { label: 'Copy path', sep: true, run: () => ops.clipText(path) },
+        { label: 'Close', sep: true, run: close },
+      ]),
+    };
+  }
+}
+</script>
+</body>
+</html>

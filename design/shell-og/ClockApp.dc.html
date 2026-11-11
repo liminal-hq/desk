@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <div style="width: 168px; flex-shrink: 0; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #1f2230;">
+      <div style="display: flex; flex-direction: column;"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; color: #fff; letter-spacing: -0.02em; white-space: nowrap;">{{ big }}</span><span style="color: #7c8796;">{{ long }}</span></div>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span onClick="{{ prevMonth }}" style="width: 16px; text-align: center; cursor: default; color: #b4bfce;" style-hover="color: #fff; background: #1b1e28;">‹</span>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: #fff;">{{ monthLabel }}</span>
+        <span onClick="{{ nextMonth }}" style="width: 16px; text-align: center; cursor: default; color: #b4bfce;" style-hover="color: #fff; background: #1b1e28;">›</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; text-align: center; font-size: 10px;">
+        <sc-for list="{{ cells }}" as="d" hint-placeholder-count="35">
+          <span onClick="{{ d.pick }}" style="height: 17px; line-height: 15px; position: relative; cursor: default; background: {{ d.bg }}; color: {{ d.fg }}; box-shadow: {{ d.ring }};">{{ d.label }}<span style="position: absolute; left: 50%; bottom: 1px; width: 3px; height: 2px; margin-left: -1px; background: {{ d.dot }};"></span></span>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+      <div style="padding: 10px 10px 6px; display: flex; flex-direction: column; gap: 1px; flex-shrink: 0;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: #fff;">{{ dayTitle }}</span>
+        <span style="color: #7c8796; font-size: 10px;">Reminders show a quiet note at their time. No sound, no snooze.</span>
+      </div>
+      <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 0 6px;">
+        <sc-for list="{{ rems }}" as="r" hint-placeholder-count="2">
+          <div onContextMenu="{{ r.ctx }}" style="display: grid; grid-template-columns: 12px 40px 1fr 14px; gap: 6px; align-items: center; height: 20px; flex-shrink: 0; padding: 0 4px;" style-hover="background: #14161d;">
+            <span onClick="{{ r.toggle }}" style="width: 8px; height: 8px; cursor: pointer; border: 1px solid {{ r.line }}; background: {{ r.fill }};"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ r.timeFg }};">{{ r.time }}</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{ r.fg }};">{{ r.text }}</span>
+            <span onClick="{{ r.remove }}" style="color: #5a6273; cursor: pointer; text-align: center;" style-hover="color: #fff;">×</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ none }}" hint-placeholder-val="{{ true }}"><span style="padding: 10px 4px; color: #5a6273;">Nothing on this day. That's everything.</span></sc-if>
+      </div>
+      <div style="display: flex; gap: 4px; padding: 6px; border-top: 1px solid #1f2230; background: #0c0c10; flex-shrink: 0;">
+        <input value="{{ newTime }}" onChange="{{ onTime }}" onKeyDown="{{ onAddKey }}" placeholder="16:30" spellcheck="false" style="width: 42px; height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 0 5px; outline: none; caret-color: #ffaa40;">
+        <input ref="{{ textRef }}" value="{{ newText }}" onChange="{{ onText }}" onKeyDown="{{ onAddKey }}" placeholder="Stretch, water the plant…" spellcheck="false" style="flex: 1; min-width: 0; height: 18px; border: none; background: #050507; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; color: #fff; font-family: Inter, sans-serif; font-size: 11px; padding: 0 5px; outline: none; caret-color: #ffaa40;">
+        <span onClick="{{ add }}" style="padding: 2px 10px; font-weight: 600; cursor: pointer; background: {{ addBg }}; color: {{ addFg }};">Add</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  static WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  state = { now: Date.now(), sel: null, view: null, newTime: '', newText: '' };
+  textRef = (el) => { this.textEl = el; };
+  componentDidMount() { this.t = setInterval(() => this.setState({ now: Date.now() }), 1000); this.onKey = (e) => this.key(e); document.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { clearInterval(this.t); document.removeEventListener('keydown', this.onKey); }
+  iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  sel() { return this.state.sel ? new Date(this.state.sel + 'T12:00') : new Date(this.state.now); }
+  pick(d) { this.setState({ sel: this.iso(d), view: null }); }
+  shift(days) { const d = this.sel(); d.setDate(d.getDate() + days); this.pick(d); }
+  month(n) { const d = this.sel(); d.setDate(1); d.setMonth(d.getMonth() + n); this.pick(d); }
+  add() {
+    const ops = this.props.ops, s = this.state;
+    const m = /^(\d{1,2})[:.]?(\d{2})$/.exec(s.newTime.trim()); const text = s.newText.trim();
+    if (!m || +m[1] > 23 || +m[2] > 59) return ops.toast('Pick a time', 'Write it as 24-hour HH:MM, like 16:30.');
+    if (!text) return ops.toast('Say what it is for', 'A few words is plenty.');
+    const time = m[1].padStart(2, '0') + ':' + m[2];
+    ops.setReminders([...ops.reminders(), { id: Date.now(), date: this.iso(this.sel()), time, text, done: false, fired: false }]);
+    this.setState({ newText: '' });
+  }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const tag = e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const k = e.key, ctrl = e.ctrlKey || e.metaKey;
+    let used = true;
+    if (k === 'ArrowLeft') this.shift(-1); else if (k === 'ArrowRight') this.shift(1);
+    else if (k === 'ArrowUp') this.shift(-7); else if (k === 'ArrowDown') this.shift(7);
+    else if (k === 'PageUp') this.month(-1); else if (k === 'PageDown') this.month(1);
+    else if (k.toLowerCase() === 't' && !ctrl) this.setState({ sel: null });
+    else if (ctrl && k.toLowerCase() === 'n') { if (this.textEl) this.textEl.focus(); }
+    else used = false;
+    if (used) e.preventDefault();
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops) return { menus: [], cells: [], rems: [] };
+    const s = this.state, now = new Date(s.now), sel = this.sel(), selIso = this.iso(sel), todayIso = this.iso(now);
+    const all = ops.reminders();
+    const dates = new Set(all.filter(r => !r.done).map(r => r.date));
+    const y = sel.getFullYear(), mo = sel.getMonth();
+    const first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
+    const cells = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(l => ({ label: l, bg: 'transparent', fg: '#7c8796', ring: 'none', dot: 'transparent', pick: () => {} }));
+    for (let i = 0; i < first; i++) cells.push({ label: '', bg: 'transparent', fg: '#7c8796', ring: 'none', dot: 'transparent', pick: () => {} });
+    for (let d = 1; d <= days; d++) {
+      const dt = new Date(y, mo, d), iso = this.iso(dt), today = iso === todayIso, on = iso === selIso;
+      cells.push({ label: String(d), bg: today ? '#ffaa40' : on ? '#372612' : 'transparent', fg: today ? '#0a0a0c' : on ? '#ffaa40' : '#e0e0e0', ring: on && today ? '0 0 0 1px #ffd096' : 'none', dot: dates.has(iso) ? (today ? '#0a0a0c' : '#22d3ee') : 'transparent', pick: () => this.pick(dt) });
+    }
+    const rems = all.filter(r => r.date === selIso).sort((a, b) => a.time.localeCompare(b.time)).map(r => {
+      const past = r.date < todayIso || (r.date === todayIso && r.time <= String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'));
+      const set = (patch) => ops.setReminders(ops.reminders().map(x => x.id === r.id ? { ...x, ...patch } : x));
+      const remove = () => ops.setReminders(ops.reminders().filter(x => x.id !== r.id));
+      return { time: r.time, text: r.text, fg: r.done ? '#5a6273' : '#e0e0e0', timeFg: r.done ? '#5a6273' : past ? '#7c8796' : '#22d3ee', line: r.done ? '#5a6273' : '#ffaa40', fill: r.done ? '#5a6273' : 'transparent',
+        toggle: () => set({ done: !r.done }), remove,
+        ctx: (e) => ops.menu(e, [{ label: r.done ? 'Not done' : 'Done', run: () => set({ done: !r.done }) }, { label: 'Move to tomorrow', run: () => { const d = new Date(r.date + 'T12:00'); d.setDate(d.getDate() + 1); set({ date: this.iso(d), fired: false }); } }, { label: 'Copy', sep: true, run: () => ops.clipText(r.time + ' ' + r.text, false) }, { label: 'Remove', sep: true, run: remove }]) };
+    });
+    const ok = /^\d{1,2}[:.]?\d{2}$/.test(s.newTime.trim()) && s.newText.trim();
+    return {
+      ops,
+      menus: [
+        { label: 'File', items: () => [{ label: 'New reminder', hint: 'Ctrl+N', run: () => this.textEl && this.textEl.focus() }, { label: 'Clear done', disabled: !all.some(r => r.done), run: () => ops.setReminders(all.filter(r => !r.done)) }, { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'View', items: () => [{ label: 'Today', hint: 'T', run: () => this.setState({ sel: null }) }, { label: 'Previous month', hint: 'PgUp', sep: true, run: () => this.month(-1) }, { label: 'Next month', hint: 'PgDn', run: () => this.month(1) }] },
+        { label: 'Help', items: () => [{ label: 'Setting the clock', run: () => ops.toast('Set it from DOS', 'Use DATE and TIME at a DOS prompt; the Desk reads the BIOS clock.') }, { label: 'About Clock', sep: true, run: () => ops.about('clock') }] },
+      ],
+      big: ops.fmtTime(now), long: Component.WD[now.getDay()] + ' ' + now.getDate() + ' ' + Component.MON[now.getMonth()],
+      monthLabel: Component.MON[mo] + ' ' + y, cells,
+      prevMonth: () => this.month(-1), nextMonth: () => this.month(1),
+      dayTitle: (selIso === todayIso ? 'Today · ' : '') + Component.WD[sel.getDay()] + ' ' + sel.getDate() + ' ' + Component.MON[mo].slice(0, 3),
+      rems, none: !rems.length,
+      newTime: s.newTime, newText: s.newText, textRef: this.textRef,
+      onTime: (e) => this.setState({ newTime: e.target.value }), onText: (e) => this.setState({ newText: e.target.value }),
+      onAddKey: (e) => { e.stopPropagation(); if (e.key === 'Enter') this.add(); },
+      add: () => this.add(), addBg: ok ? '#ffaa40' : '#1b1e28', addFg: ok ? '#0a0a0c' : '#5a6273',
+    };
+  }
+}
+</script>
+</body>
+</html>

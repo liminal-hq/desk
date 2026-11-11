@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/tokens/colours.css">
+<link rel="stylesheet" href="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/styles.css">
+<script src="_ds/liminal-hq-design-system-6cba2760-aafe-4956-b98a-086ca9e6ecd3/_ds_bundle.js"></script>
+</helmet>
+<div style="height: 100%; display: flex; flex-direction: column; font-family: Inter, sans-serif; font-size: 11px; color: #e0e0e0; background: #111116;">
+  <dc-import name="DeskMenuBar" menus="{{ menus }}" ops="{{ ops }}" hint-size="100%,18px"></dc-import>
+  <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; overflow: auto;">
+    <div style="width: {{ boardW }}px; display: flex; align-items: center; justify-content: space-between; padding: 4px; background: #0c0c10; box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847; flex-shrink: 0;">
+      <span style="min-width: 40px; padding: 1px 4px; background: #050507; color: #ffaa40; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; text-align: right;">{{ left }}</span>
+      <span onClick="{{ newGame }}" title="New game (F2)" style="height: 22px; padding: 0 8px; display: flex; align-items: center; cursor: default; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{ faceFg }}; background: #1b1e28; box-shadow: inset 1px 1px 0 #333847, inset -1px -1px 0 #050507; white-space: nowrap;" style-active="box-shadow: inset 1px 1px 0 #050507, inset -1px -1px 0 #333847;">{{ face }}</span>
+      <span style="min-width: 40px; padding: 1px 4px; background: #050507; color: #ffaa40; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; text-align: right;">{{ time }}</span>
+    </div>
+    <div onContextMenu="{{ boardCtx }}" onMouseLeave="{{ up }}" style="display: grid; gap: 0; flex-shrink: 0; grid-template-columns: repeat({{ cols }}, 16px); box-shadow: 0 0 0 1px #050507, 0 0 0 2px #262a37;">
+      <sc-for list="{{ cells }}" as="c" hint-placeholder-count="81">
+        <span onMouseDown="{{ c.down }}" onMouseUp="{{ c.up }}" onDoubleClick="{{ c.chord }}" onContextMenu="{{ c.flag }}" style="width: 16px; height: 16px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: default; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; line-height: 1; background: {{ c.bg }}; color: {{ c.fg }}; box-shadow: {{ c.shadow }}; outline: {{ c.ring }}; outline-offset: -2px;">{{ c.t }}</span>
+      </sc-for>
+    </div>
+  </div>
+  <div style="height: 18px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; border-top: 1px solid #1f2230; background: #0c0c10; color: #7c8796; font-size: 10px;">
+    <span style="white-space: nowrap;">{{ statusLeft }}</span><span style="white-space: nowrap;">{{ statusRight }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static LEVELS = { beginner: { label: 'Beginner', w: 9, h: 9, n: 10 }, intermediate: { label: 'Intermediate', w: 16, h: 16, n: 40 }, expert: { label: 'Expert', w: 30, h: 16, n: 99 } };
+  static NUM = ['', '#60a5fa', '#2ec66a', '#f43f5e', '#a78bfa', '#ffaa40', '#22d3ee', '#e0e0e0', '#b4bfce'];
+  state = { level: 'beginner', board: null, status: 'ready', start: 0, end: 0, now: Date.now(), press: null, cur: null, marks: true, best: {} };
+  componentDidMount() { this.reset('beginner', true); this.t = setInterval(() => { if (this.state.status === 'playing') this.setState({ now: Date.now() }); }, 1000); this.onKey = (e) => this.key(e); document.addEventListener('keydown', this.onKey); }
+  componentWillUnmount() { clearInterval(this.t); document.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() { const t = 'Mines · ' + Component.LEVELS[this.state.level].label + (this.state.status === 'playing' ? ' · ' + this.fmt(this.secs()) : ''); if (t !== this._t) { this._t = t; this.props.ops.setTitle(this.props.winId, t); } }
+  L() { return Component.LEVELS[this.state.level]; }
+  reset(level = this.state.level, first) {
+    const L = Component.LEVELS[level];
+    const board = Array.from({ length: L.w * L.h }, () => ({ mine: false, open: false, flag: 0, n: 0 }));
+    this.setState({ level, board, status: 'ready', start: 0, end: 0, press: null, cur: null });
+    if (!first || level !== 'beginner') this.props.ops.resizeWindow(this.props.winId, Math.max(208, L.w * 16 + 36), L.h * 16 + 132);
+  }
+  around(i) { const L = this.L(), x = i % L.w, y = Math.floor(i / L.w), out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < L.w && ny < L.h) out.push(ny * L.w + nx); } return out; }
+  lay(b, safe) {
+    const L = this.L(), keep = new Set([safe, ...this.around(safe)]);
+    let n = 0; while (n < L.n) { const i = Math.floor(Math.random() * b.length); if (keep.has(i) || b[i].mine) continue; b[i].mine = true; n++; }
+    b.forEach((c, i) => { c.n = this.around(i).filter(j => b[j].mine).length; });
+  }
+  reveal(i) {
+    const s = this.state; if (s.status === 'won' || s.status === 'lost') return;
+    const b = s.board.map(c => ({ ...c }));
+    let status = s.status, start = s.start;
+    if (status === 'ready') { this.lay(b, i); status = 'playing'; start = Date.now(); }
+    if (b[i].open || b[i].flag === 1) return;
+    if (b[i].mine) { b[i].open = true; b[i].boom = true; b.forEach(c => { if (c.mine && c.flag !== 1) c.open = true; if (!c.mine && c.flag === 1) c.wrong = true; }); return this.setState({ board: b, status: 'lost', start, end: Date.now() }); }
+    const st = [i];
+    while (st.length) { const j = st.pop(); if (b[j].open || b[j].flag === 1) continue; b[j].open = true; b[j].flag = 0; if (b[j].n === 0) st.push(...this.around(j)); }
+    this.finish(b, status, start);
+  }
+  finish(b, status, start) {
+    if (b.every(c => c.mine || c.open)) {
+      b.forEach(c => { if (c.mine) c.flag = 1; });
+      const secs = Math.floor((Date.now() - start) / 1000), lv = this.state.level, prev = this.state.best[lv];
+      this.setState({ board: b, status: 'won', start, end: Date.now(), best: prev === undefined || secs < prev ? { ...this.state.best, [lv]: secs } : this.state.best });
+      this.props.ops.toast('Cleared in ' + this.fmt(secs), prev === undefined || secs < prev ? 'Your best on ' + Component.LEVELS[lv].label + '.' : 'Best on ' + Component.LEVELS[lv].label + ' is ' + this.fmt(prev) + '.');
+      this.props.ops.jax && this.props.ops.jax('party');
+      return;
+    }
+    this.setState({ board: b, status, start });
+  }
+  flag(i) {
+    const s = this.state; if (s.status === 'won' || s.status === 'lost' || s.board[i].open) return;
+    const b = s.board.map(c => ({ ...c })); b[i].flag = (b[i].flag + 1) % (s.marks ? 3 : 2); this.setState({ board: b });
+  }
+  chord(i) {
+    const s = this.state, c = s.board[i]; if (!c.open || !c.n || s.status !== 'playing') return;
+    const ns = this.around(i); if (ns.filter(j => s.board[j].flag === 1).length !== c.n) return;
+    ns.forEach(j => { if (!this.state.board[j].open && this.state.board[j].flag !== 1) this.reveal(j); });
+  }
+  secs() { const s = this.state; if (!s.start) return 0; return Math.min(999, Math.floor(((s.status === 'playing' ? s.now : s.end) - s.start) / 1000)); }
+  fmt(n) { return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0'); }
+  key(e) {
+    if (!this.props.focused || this.props.ops.busy()) return;
+    const L = this.L(), s = this.state, k = e.key;
+    let cur = s.cur ?? Math.floor(L.h / 2) * L.w + Math.floor(L.w / 2), used = true;
+    if (k === 'F2') this.reset();
+    else if (k === 'ArrowLeft') this.setState({ cur: cur % L.w ? cur - 1 : cur });
+    else if (k === 'ArrowRight') this.setState({ cur: cur % L.w < L.w - 1 ? cur + 1 : cur });
+    else if (k === 'ArrowUp') this.setState({ cur: cur >= L.w ? cur - L.w : cur });
+    else if (k === 'ArrowDown') this.setState({ cur: cur + L.w < L.w * L.h ? cur + L.w : cur });
+    else if (k === ' ' || k === 'Enter') { this.setState({ cur }); s.board[cur].open ? this.chord(cur) : this.reveal(cur); }
+    else if (k.toLowerCase() === 'f') { this.setState({ cur }); this.flag(cur); }
+    else if (k.toLowerCase() === 'c') this.chord(cur);
+    else used = false;
+    if (used) e.preventDefault();
+  }
+  renderVals() {
+    const ops = this.props.ops; if (!ops || !this.state.board) return { menus: [], cells: [], cols: 9 };
+    const s = this.state, L = this.L(), over = s.status === 'won' || s.status === 'lost';
+    const flags = s.board.filter(c => c.flag === 1).length;
+    const raised = 'inset 1px 1px 0 #333847, inset -1px -1px 0 #050507';
+    const cells = s.board.map((c, i) => {
+      const pressed = s.press !== null && !c.open && c.flag !== 1 && (s.press.i === i || (s.press.chord && this.around(s.press.i).includes(i)));
+      let t = '', bg = '#1b1e28', fg = '#e0e0e0', shadow = raised;
+      if (c.open || pressed) { bg = '#0c0c10'; shadow = 'inset 0 0 0 1px #14161d'; }
+      if (c.open && c.mine) { t = '✹'; fg = '#f43f5e'; bg = c.boom ? '#541824' : '#0c0c10'; }
+      else if (c.open && c.n) { t = String(c.n); fg = Component.NUM[c.n]; }
+      else if (!c.open && c.flag === 1) { t = c.wrong ? '✕' : '⚑'; fg = c.wrong ? '#f43f5e' : '#ffaa40'; }
+      else if (!c.open && c.flag === 2) { t = '?'; fg = '#b4bfce'; }
+      return { t, bg, fg, shadow, ring: s.cur === i ? '1px solid #ffaa40' : 'none',
+        down: (e) => { if (over) return; if (e.button === 1 || (e.buttons & 3) === 3) { e.preventDefault(); this.setState({ press: { i, chord: true } }); } else if (e.button === 0) this.setState({ press: { i, chord: c.open } }); },
+        up: (e) => { const p = this.state.press; this.setState({ press: null }); if (!p || p.i !== i || over) return; if (p.chord || c.open) this.chord(i); else if (e.button === 0) this.reveal(i); },
+        chord: () => this.chord(i),
+        flag: (e) => { e.preventDefault(); e.stopPropagation(); this.flag(i); } };
+    });
+    const face = s.status === 'won' ? '✦‿✦' : s.status === 'lost' ? 'x‿x' : s.press ? '°o°' : '●‿●';
+    const lvItems = Object.entries(Component.LEVELS).map(([k, v], i) => ({ label: v.label + ' · ' + v.w + '×' + v.h + ', ' + v.n + ' mines', check: s.level === k, sep: i === 0, run: () => this.reset(k) }));
+    const best = s.best[s.level];
+    return {
+      ops,
+      menus: [
+        { label: 'Game', items: () => [{ label: 'New game', hint: 'F2', run: () => this.reset() }, ...lvItems, { label: 'Question marks', check: s.marks, sep: true, run: () => this.setState({ marks: !s.marks }) }, { label: 'Close window', sep: true, run: () => ops.closeWindow(this.props.winId) }] },
+        { label: 'Help', items: () => [
+          { label: 'How to play', run: () => ops.toast('How to play', 'Open every square without a mine. Numbers count the mines next door. Right-click marks a mine; double-click a number opens its neighbours.') },
+          { label: 'Keyboard', run: () => ops.toast('Mines keys', 'Arrows move, Space opens, F marks, C opens around a number, F2 starts again.') },
+          { label: 'About Mines', sep: true, run: () => ops.about('mines') },
+        ] },
+      ],
+      cols: L.w, boardW: L.w * 16, cells,
+      left: String(Math.max(-99, L.n - flags)).padStart(3, '0'), time: String(this.secs()).padStart(3, '0'),
+      face, faceFg: s.status === 'won' ? '#ffaa40' : s.status === 'lost' ? '#f43f5e' : '#ffb454',
+      newGame: () => this.reset(), up: () => this.setState({ press: null }),
+      boardCtx: (e) => { e.preventDefault(); e.stopPropagation(); },
+      statusLeft: L.label + ' · ' + L.n + ' mines',
+      statusRight: s.status === 'won' ? 'Cleared · ' + this.fmt(this.secs()) : s.status === 'lost' ? 'Boom. F2 for another go.' : best !== undefined ? 'Best ' + this.fmt(best) : 'First click is always safe',
+    };
+  }
+}
+</script>
+</body>
+</html>
