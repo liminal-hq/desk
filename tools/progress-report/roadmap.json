@@ -1312,9 +1312,9 @@
    "deps": [
     "shell"
    ],
-   "what": "R127: In interactive mode SHELL.EXE prints its shell: mark 00 … lines with println!, which the DOS console draws onto the graphics screen, visible top left over the window. The shell's own back buffer is clean and moving the pointer repaints it away. The native kernel sends the same lines to serial. The tests redirect output, so none saw it. Planned fix: send the interactive transcript to a file or serial, and add a check.",
+   "what": "R127: In interactive mode SHELL.EXE prints its shell: mark 00 … lines with println!, which the DOS console draws onto the graphics screen, visible top left over the window. The shell's own back buffer is clean and moving the pointer repaints it away. The native kernel sends the same lines to serial. The tests redirect output, so none saw it. Planned fix: buffer the transcript until text mode returns, as Fizz 2 does (R133), and add a check.",
    "why": "Found in the owner's hands-on run.",
-   "evidence": "docs/ROADMAP.md R127. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test."
+   "evidence": "docs/ROADMAP.md R127. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test. Fix path: R133, docs/FIZZ2-COMPARISON.md."
   },
   {
    "id": "f-sticky",
@@ -1351,6 +1351,139 @@
    "what": "R130: A headless QEMU measurement put the pointer 1.35 to 2.5 times the host distance on FreeDOS with CuteMouse, and close to one to one on the native kernel. LIVE-INPUT.md says DOSBox's built-in driver gives mickeys one for one; CuteMouse does not. Planned: find the CuteMouse options that set the ratio, say so in the docs, and decide whether SHELL.EXE should scale the mickeys itself.",
    "why": "Found in a headless measurement after the owner's hands-on run.",
    "evidence": "docs/ROADMAP.md R130. Evidence: a headless measurement by an agent on 2026-11-11 (emulator only); not a committed test."
+  },
+  {
+   "id": "ru-decision",
+   "label": "Decision: Desk's runtime is canonical",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt"
+   ],
+   "what": "Decision recorded by the owner on 2026-11-11: Desk's rt stays the general, canonical runtime and Fizz 2's improvements come back into it; Fizz 2 may adopt it later and nothing in Fizz 2 changes unasked.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R131; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-mem",
+   "label": "String-instruction memset and memcpy",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt",
+    "ru-decision"
+   ],
+   "what": "R132: A mem.rs in the promoted rt with rep stosd and rep movsd for memset and memcpy, and a rep movsd path for MmioRegion::write_bytes. Fizz 2 measured its screen copy dropping from 3,589 to 599 µs in DOSBox (its figure, not reproduced). Open: whether a string move meets the volatile contract.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R132; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-transcript",
+   "label": "Buffer the transcript until text mode",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "f-transcript",
+    "ru-decision"
+   ],
+   "what": "R133: The fix path for R127: collect the transcript in a fixed buffer, print nothing while in graphics mode, and flush after text mode is restored, as Fizz 2 does. Add the check R127 asks for.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R133; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-pit",
+   "label": "Reprogrammed PIT with per-interrupt chaining",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt",
+    "ru-decision"
+   ],
+   "what": "R134: A hosted timer from Fizz 2's design: reprogram the PIT, keep the BIOS clock right with an accumulator, an integer Pacer with a catch-up cap, restore the divisor on exit. The HAL's Chain becomes a per-interrupt decision instead of one fixed at registration. Also serves R81.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R134; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-sound",
+   "label": "Sound drivers ported into hal/drivers",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "nsound",
+    "drivers",
+    "ru-decision",
+    "ru-pit"
+   ],
+   "what": "R135: Port Fizz 2's OPL, PC speaker and Sound Blaster code into hal/drivers over PortIo with mock tests, rather than writing sound fresh for R81 and R62. Same licence (Apache-2.0 OR MIT) but parts derive from lieutenant-fizz-dos (MIT, same author): NOTICE entries needed; upstream licences not checked. Verified in Fizz 2 by write counts only; no DMA or PCM.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R135; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-present",
+   "label": "Open decision: finished-frame present API",
+   "branch": "hosted",
+   "state": "decision",
+   "deps": [
+    "rt",
+    "ru-decision",
+    "breakup"
+   ],
+   "what": "R136: Decision for the owner. Fizz 2's Display::present(pixels, pitch) holds no video pointer in the HAL and so closes the framebuffer-lifetime gap of the integration analysis (section 3). Desk needs damage spans and planar modes: the candidate is a presenter session taking present_span(y, x, &[u8]). Settle before apps switch modes (R79).",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R136; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-bench",
+   "label": "Benchmark and parity discipline",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "ru-decision"
+   ],
+   "what": "R137: Plain-number cpu_cycles, a guard that fails on any Invalid ' DOSBox setting (DOSBox Staging 0.83 silently rejects fixed 26800 and runs at 3,000), a calibration loop asserted within 10%, a PIT-latch stopwatch, digests outside timed sections, and path-scoped PR checks with a nightly gate. Desk's dosrun.sh has no guard.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R137; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-float",
+   "label": "Open decision: the float policy",
+   "branch": "hosted",
+   "state": "decision",
+   "deps": [
+    "ru-decision"
+   ],
+   "what": "R138: Decision for the owner. shell/ bans floating-point maths; Fizz 2 uses f64 on the x87 at 53 bits (control word 0x027F), keeps interrupt handlers off the x87, pins a software libm without exp and snaps subnormals. Open: whether the SDK promises that for apps and whether the native scheduler saves x87 state per task.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R138; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-promote",
+   "label": "Promote rt with Fizz 2's improvements",
+   "branch": "hosted",
+   "state": "planned",
+   "deps": [
+    "rt",
+    "ru-mem",
+    "ru-pit",
+    "ru-sound",
+    "ru-transcript"
+   ],
+   "what": "R139: The promotion of R53 (spikes/d0-rust-dos/rt to rt/), done so the promoted runtime is the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R139; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+  },
+  {
+   "id": "ru-adopt",
+   "label": "Fizz 2 adopts Desk's runtime",
+   "branch": "hosted",
+   "state": "research",
+   "deps": [
+    "ru-promote",
+    "fizz2"
+   ],
+   "what": "R140: Idea, the owner's call and later. Lieutenant Fizz 2 replaces its copy with Desk's promoted rt and, in time, Desk's HAL crates. Nothing in Fizz 2 changes unless the owner asks. Follows R139.",
+   "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
+   "evidence": "docs/ROADMAP.md R140; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
   },
   {
    "id": "first-window",
