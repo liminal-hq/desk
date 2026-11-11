@@ -731,13 +731,13 @@
    "id": "breakup",
    "label": "Integration analysis and repository breakup",
    "branch": "foundations",
-   "state": "progress",
+   "state": "done",
    "deps": [
     "desk"
    ],
    "what": "An analysis of the boundaries between the hosted and native tracks and a proposal for splitting the repository into two, four or eight; documents only.",
    "why": "Decides how the shared core, the runtime and the two tracks are owned and released.",
-   "evidence": "PR #65, open for review (roadmap item R82). Nothing is decided; the proposal approves nothing.",
+   "evidence": "PR #65, merged (`b928309`; roadmap item R82). Nothing is decided; merging the proposal approved nothing.",
    "prs": [
     65
    ]
