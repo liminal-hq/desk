@@ -669,6 +669,15 @@ def metric(value, label, how):
     return {"value": value, "label": label, "how": how}
 
 
+def timeline_of(gh):
+    """Every pull request's dates and every CI run on main, as gh gave them (or the snapshot): what the timeline figures draw."""
+    prs = [{"number": p["number"], "title": p["title"], "base": p.get("baseRefName"), "createdAt": p.get("createdAt"), "mergedAt": p.get("mergedAt"), "state": p.get("state")}
+           for p in sorted(gh["prs"], key=lambda p: p["number"])]
+    runs = [{"createdAt": r.get("createdAt"), "sha": (r.get("headSha") or "")[:7], "conclusion": r.get("conclusion") or "", "title": r.get("displayTitle") or ""}
+            for r in sorted(gh["runs"], key=lambda r: r.get("createdAt") or "")]
+    return {"prs": prs, "runs": runs}
+
+
 def gather(root=ROOT, ref="main", offline=False, dry_run=False):
     # `main` means the remote's main when there is one: the local branch of a worktree-based checkout can be behind what gh reports.
     repo = Repo(root, (branch_ref(root, "main") or "main") if ref == "main" else ref)
@@ -771,6 +780,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         "docSizes": facts["docSizes"], "measured": measured, "faces": faces_history(repo), "transcripts": transcripts(repo),
         "roadmap": roadmap, "progress": progress, "warnings": warnings, "missing": sorted(set(missing)), "metrics": metrics,
         "open": work, "openSource": work_source, "captures": captures,
+        "timeline": timeline_of(gh),
         "mergeDay": {"date": md_date, "numbers": [p["number"] for p in md_prs], "since": [p["number"] for p in since]},
     }
 
