@@ -94,7 +94,7 @@ No helper call (`__sync_*`, `__atomic_*`) appeared in any variant, and `compiler
 **What that means for one file on both tracks.** A `.DMD` or `.DKX` is the same bytes on both tracks, so an inline `lock cmpxchg` anywhere in it faults under `tools/dosrun.sh`'s DOSBox. Locks are only part of it: in the 1.98 sources `compare_exchange` is also used by `alloc`'s `Arc` (five sites in `alloc/src/sync.rs`, `Weak::upgrade` among them), `std::sync::mpsc`'s channels, the thread id counter, the panic count and `process::exit`, and by any crate an app uses. The fallback therefore has two parts:
 
 1. **Locks through one imported helper.** In `std`'s futex-based `Mutex`, `Condvar`, `RwLock`, `Once` and `Parker` the atomic word's type is the platform's `futex::Futex` and `futex::SmallFutex` (the five files name only those aliases; read in the sources, not built). The Desk platform layer can define them as its own `u32` wrapper whose `compare_exchange` and `compare_exchange_weak` call an imported `desk_cas32(addr, expected, new) -> previous` and whose `load`, `store`, `swap`, `fetch_add` and `fetch_sub` stay inline (`xchg` and `lock xadd` run in DOSBox's 486 mode). The five `sync` files then compile unchanged. On native the kernel binds `desk_cas32` to a `lock cmpxchg`; on hosted to a compare and store, which is atomic there because green threads switch only at calls and `rt`'s interrupt handlers never touch an app's lock words, with the virtual interrupt flag cleared around it (DPMI 0900h and 0901h) as the owner's masking form for any word an interrupt might share. The cost is a call per lock acquire, tens of cycles against an inline instruction (an estimate).
-2. **Every other `CMPXCHG` emulated on hosted.** `rt` installs a DPMI exception handler (function 0203h) for the invalid opcode; when the faulting bytes are `0F B1 /r`, with or without an `F0` prefix, it performs the compare and exchange with the virtual interrupt flag cleared, sets `ZF` and `EAX` as the instruction would, and resumes after it. Only DOSBox's `normal` and `simple` 486 cores ever take that path; on QEMU and, as far as is known, on a real 486 the instruction runs and the handler is never called. Whether CWSDPMI under DOSBox delivers that exception to the client's handler is unverified, and `rt` has no exception handlers yet (D0 already recommended them, for crash reports and fault containment).
+2. **Every other `CMPXCHG` emulated on hosted: an unverified fallback.** `rt` would install a DPMI exception handler (function 0203h) for the invalid opcode (exception 6); when the faulting bytes are `0F B1 /r`, with or without an `F0` prefix, it performs the compare and exchange with the virtual interrupt flag cleared, sets `ZF` and `EAX` as the instruction would, and resumes after it. Only DOSBox's `normal` and `simple` 486 cores would take that path; on QEMU and, as far as is known, on a real 486 the instruction runs. Whether exception 6 reaches the client's handler under CWSDPMI in DOSBox, and whether the handler can resume, is the subject of an experiment whose result is not in yet; `rt` has no exception handlers today. Until it is settled, an app that calls `compare_exchange` directly, or uses `Arc::downgrade`, `Weak::upgrade`, `Arc::get_mut`, `std`'s channels or a crate that does, is checked under QEMU (or DOSBox with another `cputype`) rather than DOSBox's 486 core.
 
 **The header needs no new ABI number or flag.** With the helper and the emulation, a file built with inline `CMPXCHG` runs on both tracks, so a loader has nothing to refuse; and a packer cannot reliably detect the instruction without disassembling the image. The SDK version covers `desk_cas32`, which joins the `desk_*` import names.
 
@@ -103,15 +103,31 @@ No helper call (`__sync_*`, `__atomic_*`) appeared in any variant, and `compiler
 | Rust operation (`AtomicU32`) | i486 code | Runs in DOSBox's 486 mode (by the test table) |
 |---|---|---|
 | `load`, `store` | plain `mov` | Yes |
-| `swap` | `xchgl` | Yes (not in the table, but `XCHG` is an 8086 instruction) |
+| `swap` | `xchgl` | Yes (the runtime table) |
 | `fetch_add` with the result used | `lock xaddl` | Yes |
-| `fetch_sub` or `fetch_add` with the result unused | `lock decl` or `lock incl` (or `lock addl`) | Yes, by inference: these are 386 instructions; not in the table |
-| `fetch_or` with the result unused | `lock orl` | Yes, by the same inference |
+| `fetch_sub` or `fetch_add` with the result unused | `lock decl` or `lock incl` (or `lock addl`) | Yes (the runtime table) |
+| `fetch_or` with the result unused | `lock orl` | Yes (the runtime table) |
 | `fetch_or`, `fetch_and` with the result used | a `lock cmpxchgl` loop | No |
 | `fetch_max`, `fetch_update` | a `lock cmpxchgl` loop | No |
 | `compare_exchange`, `compare_exchange_weak` | `lock cmpxchgl` | No |
 | `alloc`'s `Arc::clone` and drop | `lock incl`, `lock decl` | Yes |
 | `alloc`'s `Arc::downgrade`, `Weak::upgrade`, `Arc::get_mut` | `lock cmpxchgl` | No |
+
+
+**A runtime run of the same operations** (an agent's pure-Rust DOS program on `rt`, one test per run; the CI image, rustc 1.98.0, DOSBox Staging 0.83.0, QEMU 8.2.2 with FreeDOS; nothing on real hardware). Builds: `a` the repository's `dos-elf.json` (`i486`, atomic width 32); `b1` `cpu: i386`; `c1` `i386` with `-cx8,-cmov`; `b2` `b1` with `atomic-cas: false`; `b4` `i486` with `atomic-cas: false`; `b3` `max-atomic-width: 0`. `a`, `b1` and `c1` compile to the same code, with no `__sync_*` or `__atomic_*` call, and LLVM has no feature for 32-bit `cmpxchg` (only `cx8` and `cx16`).
+
+| Operation | Emitted | DOSBox `cputype = 486`, `core = normal` | DOSBox `pentium` | QEMU `-cpu 486` |
+|---|---|---|---|---|
+| `compare_exchange`, `compare_exchange_weak`, `fetch_or` (result used), `fetch_and`, `fetch_xor`, `fetch_max` | `lock cmpxchg` | Invalid opcode (no output, exit status 1) | OK | OK |
+| `fetch_add`, `fetch_sub` | `lock xadd` | OK | OK | OK |
+| `fetch_add` and `fetch_or` with the result unused, `fence` | `lock add`, `lock or` | OK | OK | OK |
+| `swap`, `store` (sequentially consistent), `load` | `xchg`, `mov` | OK | OK | OK |
+| `AtomicU8::compare_exchange` | byte `lock cmpxchg` | OK | OK | OK |
+| A test-and-set spinlock from `swap`, a ticket lock from `fetch_add` | as above | OK | OK | OK |
+| Builds `b2` and `b4` (`atomic-cas: false`) | — | Only `load`, `store` and `fence` compile; `swap` and `fetch_add` fail with "no method named … found" | | |
+| Build `b3` (`max-atomic-width: 0`) | — | All 16 tests fail to compile (`unresolved imports AtomicU32, AtomicU8`) | | |
+
+So `desk-hal` itself would not build with `atomic-cas: false` (it uses `swap` in `ring.rs` and `fetch_add` in `time.rs`), and the repository's `shell/` and `hal/` already avoid compare-and-swap, which is why the first window runs in DOSBox's 486 core.
 
 **The three ways to deliver the fallback.**
 
@@ -128,11 +144,11 @@ No helper call (`__sync_*`, `__atomic_*`) appeared in any variant, and `compiler
 | Patch to maintain per Rust release | Arm lists and the wrapper | A hosted arm and lock code | Arm lists and four lock implementations of our own |
 | One file, both tracks | Allowed | Not allowed | Allowed |
 
-**Recommendation: (a), with `rt`'s emulation of `CMPXCHG` on hosted; (c) only for the `Mutex` later, if the helper's call shows up in a measurement.** (a) keeps `std`'s locks as Rust ships and tests them and adds the least code to carry across releases; (c) saves a call per lock but takes on four lock implementations and still needs the emulation for `Arc` and everything else; (b) breaks the one-file rule and leaves the rest of `std`'s `CMPXCHG` in place. What changes in the patch for (a): `desk` in the five futex arm lists (`sys/sync/mutex/mod.rs`, `condvar/mod.rs`, `rwlock/mod.rs`, `once/mod.rs`, `thread_parking/mod.rs`), a `sys/pal/desk/futex.rs` with the four types, the wrapper and `futex_wait`, `futex_wake` and `futex_wake_all` over `desk_wait` and `desk_wake`, and `desk_cas32` in `abi.rs`; outside the patch, `rt`'s invalid-opcode handler and the kernel's `desk_cas32`. The loader spike's plan does not change: its modules are `no_std`, their own code is under the compare-and-swap ban already, and the emulation belongs to the `std` work (R146) and `rt`'s exception handlers.
+**Decided: (a), and native uses `desk_cas32` too.** The owner chose (a): `std`'s own locks, with their compare-and-swap through the imported `desk_cas32`, implemented with `lock cmpxchg` or interrupt masking per track; and the native kernel routes it through `desk_cas32` as well, so one `.DKX` behaves the same on both tracks (this removes the earlier question of inline `CMPXCHG` on native). The runtime run confirms the reasoning: (c)'s swap-and-add locks do work, even in DOSBox's 486 core, but they leave `CMPXCHG` in `Arc`, channels and crates and add four lock implementations to carry across releases; the target-level settings do not help, because they remove `swap` and `fetch_add` with `compare_exchange`, or the atomic types altogether; (b) breaks the one-file rule. (c) stays an option for the `Mutex` alone if the helper's call is ever measured to matter. The emulation of other `CMPXCHG` uses on hosted stays an unverified fallback until the fault-delivery experiment reports.
 
 **Refusing a file that contains `CMPXCHG`.** Not with the emulation in place, since every file then runs. A packer check would also be fragile: the bytes `0F B1` can occur inside other instructions' immediates and displacements, so a byte scan has false positives; a sound answer needs an instruction-length decoder sweeping each function from its symbol (compiler output on x86 ELF puts no data in `.text`), a few hundred lines that the packer does not otherwise need. If a report is wanted, `llvm-objdump -d` of the kept ELF in a CI step is the cheap form, as a warning, not a refusal.
 
-**Measured and not.** Measured: the instruction table (the coordinator's test) and the two codegen tables (the CI image). Read, not built: the `sync` sources' use of compare-and-swap. Inferred: that `lock inc`, `dec`, `add` and `or` run in DOSBox's 486 mode, and that `alloc::sync` needs compare-and-swap support in the target. Not: anything built with the wrapper or the handler; whether the five `sync` files compile against a wrapper type; CWSDPMI's delivery of the exception under DOSBox; real hardware; and whether QEMU's 486 model matches any real 486 stepping.
+**Measured and not.** Measured: the instruction table (the coordinator's test) and the two codegen tables (the CI image). The runtime table (an agent's runs in DOSBox and QEMU). Read, not built: the `sync` sources' use of compare-and-swap. Inferred: that `alloc::sync` needs compare-and-swap support in the target. Not: anything built with the wrapper or the handler (the fault-delivery experiment is running); whether the five `sync` files compile against a wrapper type; CWSDPMI's delivery of the exception under DOSBox; real hardware; and whether QEMU's 486 model matches any real 486 stepping.
 
 ## Maintenance
 
@@ -147,7 +163,7 @@ The patch follows each Rust release: [`E-STD-STUBS.md`](E-STD-STUBS.md#5-mainten
 ## Questions for the owner
 
 1. **One target for both tracks.** Default: yes, `i486-unknown-desk`.
-2. **Decided: an interrupt-masking lock fallback on the hosted track** ([above](#cmpxchg-on-the-hosted-track)): locks through `desk_cas32`, other `CMPXCHG` emulated by `rt`. Still open, with its default: **does native also go through `desk_cas32`?** Default: yes, the kernel binds it to a `lock cmpxchg` stub, so the file is identical and only the helper's speed differs by track; the alternative, inline `CMPXCHG` in a native-only build, would break one file for both tracks.
+2. **Decided: (a), with native through `desk_cas32` too** ([above](#cmpxchg-on-the-hosted-track)): one file behaves the same on both tracks. The emulation of other `CMPXCHG` uses on hosted waits on the fault-delivery experiment; until then such apps are checked under QEMU.
 3. **`fn main` or `desk_main`.** Default: the file's entry stays `desk_main`, which calls `std`'s `lang_start` and so the app's `fn main`, so `std` initialises as it expects (E's open item).
 4. **Thread-local keys or native thread-locals first.** Default accepted by the owner: keys, which need no format change.
 5. **A patched sysroot or an upstream target.** Default accepted by the owner: the patched sysroot for years; upstream (R71) only when the target is stable and someone will maintain it there.

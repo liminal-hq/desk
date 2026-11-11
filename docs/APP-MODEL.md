@@ -39,7 +39,7 @@ Recorded by the owner on 2026-11-11, each with its reason in one line.
 8. **One container, two extensions (`.DMD` modules, `.DKX` applications); libraries documented, not built; the packer in Rust; `std` later through a platform layer of our own; no OS asset-pack container.** See [`LOADER.md`](LOADER.md#decisions).
 9. **Basic priority inheritance for the futex-style locks**: a low-priority holder runs at the priority of the highest-priority waiter while it holds the lock. Without it a high-priority thread can wait indefinitely behind a medium one ([Priorities](#priorities)).
 10. **Native stage order: paging and ring 3 first, then the system-call boundary.** Protection first, so a crash stays inside its task; the system calls then arrive on a working protected task as small stubs resolved by the same named imports.
-11. **An interrupt-masking lock fallback on the hosted track**, so DOSBox's 486 mode, which rejects `CMPXCHG`, keeps working: locks reach compare-and-swap through an imported helper, `desk_cas32`, that each track implements, and `rt` emulates any other `CMPXCHG` ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track), with the test table).
+11. **An interrupt-masking lock fallback, through one helper on both tracks**, so DOSBox's 486 mode, which rejects `CMPXCHG`, keeps working: locks reach compare-and-swap through an imported `desk_cas32`, which the native kernel uses too (with `lock cmpxchg` or interrupt masking), so one file behaves the same everywhere; `rt` emulating any other `CMPXCHG` on hosted is an unverified fallback until a fault-delivery experiment reports ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track), with the test table).
 12. **The defaults of the first version of this design are accepted**: 32 levels with the policy under [Priorities](#priorities), a 10 ms slice, ageing, the thread limits, the 32-byte message records, the window system's first native stage in the kernel's address space, thread-local keys first ([Questions](#questions-for-the-owner) lists them with their values).
 
 ## Vocabulary
@@ -277,5 +277,4 @@ Not rewritten now; R79 (and R48's result for the format) make these edits.
 
 1. **The entry once `std` arrives.** Default: `desk_main` stays the file's entry, and a `std` app's `fn main` is called from it through `lang_start` ([`DESK-STD.md`](DESK-STD.md#questions-for-the-owner)).
 2. **Retained drawing requests or client buffers first.** Default: requests first (no shared memory needed); client buffers when stage 2 can share pages.
-3. **Native `desk_cas32`.** Default: native binds it to a `lock cmpxchg` stub, so one file serves both tracks and only the helper's speed differs ([`DESK-STD.md`](DESK-STD.md#questions-for-the-owner)).
-4. **The interim gate in stage 2.** Default: one software-interrupt vector that the import stubs use to reach the existing kernel functions, replaced by stage 3's numbered table.
+3. **The interim gate in stage 2.** Default: one software-interrupt vector that the import stubs use to reach the existing kernel functions, replaced by stage 3's numbered table.
