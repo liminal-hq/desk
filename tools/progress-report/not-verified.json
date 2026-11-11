@@ -8,6 +8,14 @@
   "why": "The native image booted in QEMU, in Bochs 2.7 as a 486 with three BIOSes and in 86Box 6.0 on one 1993 AMIBIOS board (chapter 16, PR #16, {{pr16.state}}). Other 86Box machines, chipsets and disks, a hard-disk or CD boot, and v86 in the browser were not tried, the 86Box run is not part of CI, and the picture of it is not in the pull request."
  },
  {
+  "what": "The owner's hands-on runs.",
+  "why": "On 11 November the owner ran the native window in QEMU on a GNOME Wayland desktop and the hosted first window on FreeDOS in QEMU with CuteMouse (chapter 20). Those runs are reported in the roadmap (R127 to R130) and kept as no screenshots, transcripts or tests; two findings also rest on an agent's headless measurement that is not committed. The pointer sticking at an edge, the keyboard grab under native Wayland and CuteMouse's speed ratio have no established cause."
+ },
+ {
+  "what": "Live input beyond one emulator per track.",
+  "why": "The live scenarios played in QEMU on the native side and in DOSBox Staging with its built-in mouse driver on the hosted side (chapter 19); Bochs, 86Box, other mouse drivers, a real 8042 and a person at a window of DOSBox were not part of those runs. The clean-clone and CI-image re-check of the live-input stack is roadmap item R47, still open."
+ },
+ {
   "what": "The BIOS trampoline on real machines.",
   "why": "The real-mode round trip, and the 8259 re-initialisation that it depends on, ran only in emulators, on SeaBIOS and two Bochs BIOSes. The kernel of that branch does not start on 86Box until the loader has the AH=88h fallback of PR #16. Paging and V86 mode are design only."
  },
@@ -58,5 +66,9 @@
  {
   "what": "Speed on a 486.",
   "why": "Every rate and size in the graphics and `std` chapters was measured under an emulator on a fast machine. They show relative costs, not what a 486 does."
+ },
+ {
+  "what": "The Fizz 2 comparison.",
+  "why": "The comparison of Desk's runtime with Lieutenant Fizz 2's (chapter 23) is a read of two code bases: only `file` and `cmp` on two executables were run, Fizz 2's figures were not reproduced, and neither project has run on real hardware."
  }
 ]

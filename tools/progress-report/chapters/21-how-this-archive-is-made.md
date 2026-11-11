@@ -3,7 +3,7 @@ id: archive
 n:
 kicker: How this archive is made
 title: How this archive is made
-date: 2026-10-23
+date: 2026-11-11
 summary: The generator, where its data comes from, the figure registry behind the gallery, the rules for the three shelves, the commands, and the commits of the branches this edition read.
 prs: []
 section: reference
@@ -49,6 +49,10 @@ python3 tools/progress-report/gather.py --update-captures                       
 python3 tools/progress-report/build.py --data dist/progress-report-data.json --check
 python3 -I tools/progress-report/tests/test_report.py
 ```
+
+**The figures that read the repository.** The chapters since live input add figures drawn from files and from `gh` rather than from captures. `gather.py` now keeps every pull request's opening and merging times and every CI run on `main` (the `timeline` record, refreshed with `--update-snapshot`), and the timeline and the strip of CI runs draw from it. The roadmap chart counts the rows of `docs/ROADMAP.md`, refusing an unknown status or a repeated id. The live scenario's table reads `tests/shell/live.sums` and refuses a digest that `docs/LIVE-INPUT.md` does not record. The two route diagrams and the go32 layout name only paths that exist in the tree, and the go32 layout refuses to draw if the packer's header comment or the comparison stops saying what it quotes. The screenshots in these chapters are copies of files in `docs/images/` and `design/shell-og/screenshots/`, and the build refuses a copy that differs from its source. All of this is in `since.py`.
+
+**Editions.** The artifact has been republished as the work grew; this edition covers the history up to the merge of #71 on 11 November 2026. The path tree's data (`roadmap.json`) and the roadmap's rows are owned by the pull requests that change the work, so where a chapter says a row will move, it will move when that pull request lands.
 
 **Adding a chapter.** Write `tools/progress-report/chapters/NN-name.md` with a small front matter (`id`, `n`, `title`, `date`, `summary`, `prs`), the narrative, a `figures` block, the three shelves and a sidebar, run `python3 tools/progress-report/build.py --check`, and publish. The chapter appears in the contents, the pager and the gallery without any other file changing. A chapter that is expected and not yet written can be named in `pages/coming.json` and shows as a "coming" row until its chapter exists; that file is empty now that spikes G and n3 have chapters.
 
