@@ -1,0 +1,140 @@
+{
+  "v": 1,
+  "mode": "omelette",
+  "root": "project/",
+  "title": "DOS Project Brainstorm",
+  "entry": "Afterglow Desk Prototype v4.dc.html",
+  "pages": [
+    {
+      "path": "Afterglow Desk Prototype v4.dc.html",
+      "title": "Afterglow Desk Prototype v4",
+      "kind": "page"
+    },
+    {
+      "path": "InspectorApp.dc.html",
+      "title": "InspectorApp",
+      "kind": "component"
+    },
+    {
+      "path": "SettingsApp.dc.html",
+      "title": "SettingsApp",
+      "kind": "component"
+    },
+    {
+      "path": "Afterglow Desk.dc.html",
+      "title": "Afterglow Desk",
+      "kind": "page"
+    },
+    {
+      "path": "Afterglow Desk Prototype v3.dc.html",
+      "title": "Afterglow Desk Prototype v3",
+      "kind": "page"
+    },
+    {
+      "path": "TerminalApp.dc.html",
+      "title": "TerminalApp",
+      "kind": "component"
+    },
+    {
+      "path": "ProgramsApp.dc.html",
+      "title": "ProgramsApp",
+      "kind": "component"
+    },
+    {
+      "path": "MinesApp.dc.html",
+      "title": "MinesApp",
+      "kind": "component"
+    },
+    {
+      "path": "MidiApp.dc.html",
+      "title": "MidiApp",
+      "kind": "component"
+    },
+    {
+      "path": "DeskFiles.dc.html",
+      "title": "DeskFiles",
+      "kind": "component"
+    },
+    {
+      "path": "NotesApp.dc.html",
+      "title": "NotesApp",
+      "kind": "component"
+    },
+    {
+      "path": "ClockApp.dc.html",
+      "title": "ClockApp",
+      "kind": "component"
+    },
+    {
+      "path": "CalcApp.dc.html",
+      "title": "CalcApp",
+      "kind": "component"
+    },
+    {
+      "path": "PaintApp.dc.html",
+      "title": "PaintApp",
+      "kind": "component"
+    },
+    {
+      "path": "DeskPicker.dc.html",
+      "title": "DeskPicker",
+      "kind": "component"
+    },
+    {
+      "path": "DeskTabs.dc.html",
+      "title": "DeskTabs",
+      "kind": "component"
+    },
+    {
+      "path": "DeskToolbar.dc.html",
+      "title": "DeskToolbar",
+      "kind": "component"
+    },
+    {
+      "path": "DeskMenuBar.dc.html",
+      "title": "DeskMenuBar",
+      "kind": "component"
+    },
+    {
+      "path": "Afterglow Desk Prototype v2.dc.html",
+      "title": "Afterglow Desk Prototype v2",
+      "kind": "page"
+    },
+    {
+      "path": "FileIcon.dc.html",
+      "title": "FileIcon",
+      "kind": "component"
+    },
+    {
+      "path": "DeskProperties.dc.html",
+      "title": "DeskProperties",
+      "kind": "component"
+    },
+    {
+      "path": "Afterglow Desk Prototype.dc.html",
+      "title": "Afterglow Desk Prototype",
+      "kind": "page"
+    }
+  ],
+  "migratorVersion": "artifact-migrator (claude-design-backend ed667f7ac9c1)",
+  "createdAt": "2026-11-11T15:44:40.655Z",
+  "source": {
+    "v": 1,
+    "app": "claude-design",
+    "url": "https://claude.ai/design/p/bcfe0d0b-27f4-43c1-a542-1008a6250659",
+    "projectId": "bcfe0d0b-27f4-43c1-a542-1008a6250659",
+    "exportedAt": "2026-11-11T15:44:40.655Z"
+  },
+  "report": {
+    "itemsVersion": 2,
+    "pages": {
+      "total": 5,
+      "ok": 5,
+      "partial": 0,
+      "notMigrated": 0
+    },
+    "items": [],
+    "truncated": 0,
+    "truncatedLeftOut": 0
+  }
+}

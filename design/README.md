@@ -11,5 +11,6 @@ Open the `.dc.html` files in a browser from this folder; they load `support.js`,
 | `Desk*.dc.html`, `FileIcon`, and one file per app (`CalcApp`, `ClockApp`, `InspectorApp`, `MidiApp`, `MinesApp`, `NotesApp`, `PaintApp`, `ProgramsApp`, `SettingsApp`, `TerminalApp`) | The prototype's components; each app talks to the shell through one `ops` object |
 | `_ds/` | The Liminal HQ design system the prototype was drawn with (tokens, fonts, colours) |
 | `screenshots/`, `uploads/`, `site/img/` | Screenshots and a sketch the boards use |
+| `shell-og/` | The whole design canvas these files came from, captured on 2026-11-11 from the owner's claude.ai artifact: the same pages plus the first two prototypes and the brainstorm's own doc drafts, with screenshots of every board, app and dialog (its `README.md`; described in `docs/SHELL-DESIGN.md`) |
 
 "Afterglow Desk" is the brainstorm's name for the project. The working name is now "Desk" (see `docs/NAMING.md`); the file names here keep the original.
