@@ -2,7 +2,7 @@
 
 A trackable list of what the project has done, what is in flight and what is planned or only an idea, with the evidence for each. It is the one place that says where everything stands; [`DIRECTION.md`](DIRECTION.md) says why the project is shaped this way and [`SPEC.md`](SPEC.md) says what the hosted track will be.
 
-> **Status.** Written on 2026-11-11 against `main` at `b8fb9ac`. Every pull request that was open before then was merged into `main` on 2026-11-11 with merge commits: the live-input stack, the Manual stack, the plan for the Manual, the DOS anatomy wording and this roadmap. One pull request is open, #65 (the Rust and DOS integration analysis and the repository breakup proposal, documents only), and it is the only `in progress` item that rests on an open pull request. Every `done` item is merged into `main`. Nothing here has run on real hardware, and Bochs, 86Box and js-dos were not part of the runs behind the live-input and Manual work (their earlier results are in [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) and [`S5-JSDOS.md`](S5-JSDOS.md)). Where the repository does not establish a fact, the entry says so.
+> **Status.** Written on 2026-11-11 against `main` at `b928309`. Every pull request that was open before then was merged into `main` on 2026-11-11 with merge commits: the live-input stack, the Manual stack, the plan for the Manual, the DOS anatomy wording, this roadmap and #65 (the Rust and DOS integration analysis and the repository breakup proposal, documents only). No pull request is open, and every `in progress` item is merged work with its checks still open. Every `done` item is merged into `main`. Nothing here has run on real hardware, and Bochs, 86Box and js-dos were not part of the runs behind the live-input and Manual work (their earlier results are in [`NATIVE-EMULATORS.md`](NATIVE-EMULATORS.md) and [`S5-JSDOS.md`](S5-JSDOS.md)). Where the repository does not establish a fact, the entry says so.
 
 ## Contents
 
@@ -131,15 +131,15 @@ A second linear stack on #38, merged on 2026-11-11: the plan in `b8fb9ac` and th
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
 | R83 | This roadmap | `done` | This file and the path tree behind it, `tools/progress-report/roadmap.json`. The statuses were brought up to date after the merges of 2026-11-11 | #64 (`74363b6`) |
+| R82 | Rust and DOS integration analysis and the repository breakup proposal | `done` | [`RUST-DOS-INTEGRATION-ANALYSIS.md`](RUST-DOS-INTEGRATION-ANALYSIS.md) follows each boundary between the hosted and native tracks and marks every claim as observed, recorded or inferred; [`REPOSITORY-BREAKUP-PROPOSAL.md`](REPOSITORY-BREAKUP-PROPOSAL.md) sets out three structures (two, four and eight repositories) and recommends starting with the smallest. Documents and two presentation generators only. The generators were not run and `tools/check.sh` was not run locally. The repository names in the proposal have not been checked for availability. Merging it approved nothing: the choice is still open and is listed under Decisions | #65 (`b928309`) |
 
 ## Current: in flight
 
-One pull request is open, #65, and one item has merged work with its checks still open (R46). Each entry says what is and is not established.
+No pull request is open. Two items have merged work with their checks still open (R46, R57). Each entry says what is and is not established.
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
 | R46 | Progress report with the Manual, published | `in progress` | The Manual is merged (R37 to R45). Archive v10 is reported as published (the artifact's own version 10). That comes from the project transcript, passed on by the coordinator; [`MANUAL-STATUS.md`](MANUAL-STATUS.md) does not mention a version, and the artifact was not read for this change, so it is not confirmed here. Publishing the report built from `main` after the merge is not recorded. The publishing recipe is in [`tools/progress-report/README.md`](../tools/progress-report/README.md) | #63 (`42d8319`), [`tools/progress-report/README.md`](../tools/progress-report/README.md#publishing) |
-| R82 | Rust and DOS integration analysis and the repository breakup proposal | `in progress` | `RUST-DOS-INTEGRATION-ANALYSIS.md` follows each boundary between the hosted and native tracks and marks every claim as observed, recorded or inferred; `REPOSITORY-BREAKUP-PROPOSAL.md` sets out three structures (two, four and eight repositories) and recommends starting with the smallest. Documents and two presentation generators only. Open for review; not merged, and it approves nothing. The generators were not run and `tools/check.sh` was not run locally. The repository names in the proposal have not been checked for availability. The choice is listed under Decisions | #65 (`docs/rust-dos-integration-analysis`; those two documents exist only on that branch until it merges) |
 
 
 ## Future: planned, in the owner's order
@@ -222,7 +222,7 @@ I am not confident of any other project's existence or licence, so none is liste
 - **The defaults taken for the Manual.** Eight questions in `MANUAL-PLAN.md` (merged in #38): where it lives, M-numbers, a textbook voice with Gregory as editor, CI failing on broken pointers, the pager, the legacy hosted skeleton in one section of M17, planned formats in a short table, and writing the boot pair first.
 - **Retiring the hosted skeleton's C layer and `coff2go32.py`** now that d0 works (R7).
 - **The order of the candidate spikes** (R49 to R52) after the module loader (R48).
-- **The repository breakup** (R82, #65): whether to split the repository at all, and into how many (the proposal sets out two, four and eight and recommends starting with the smallest). Nothing is decided; the proposal approves nothing.
+- **The repository breakup** (R82, #65, merged): whether to split the repository at all, and into how many (the proposal sets out two, four and eight and recommends starting with the smallest). Nothing is decided; merging the proposal approved nothing.
 - **What counts as verifying live input** (R47): whether the re-check from clean clones of `main` and in the CI image, and a re-read of #54's Not verified list, are enough to close it, now that the stacks are merged.
 
 ## How to keep this current
