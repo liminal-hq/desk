@@ -26,7 +26,7 @@ jobs:
       contents: read
     # The shared DOS build image from liminal-hq/.github (docker/ci/Dockerfile, target ci-dos), pinned by digest. Updating the pin is
     # a pull request, and its checks run in the new image.
-    container: ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
     steps:
       - uses: actions/checkout@v7
         with:
@@ -38,18 +38,10 @@ jobs:
       - name: Install the font tools
         run: bun install --frozen-lockfile
         working-directory: fonts
-      # The image already holds Rust 1.98.0 with rust-src, DJGPP, DOSBox Staging and CWSDPMI under DOS_TOOLCHAIN; setup links vendor/ to
-      # them and confirms each one runs. Cargo downloads the crates that -Zbuild-std's standard library sources depend on, so the job
-      # needs network access.
+      # The image already holds Rust 1.98.0 with rust-src, QEMU, NASM and mtools, and DJGPP, DOSBox Staging and CWSDPMI under
+      # DOS_TOOLCHAIN; setup links vendor/ to the last three and confirms each one runs. Cargo downloads the crates that
+      # -Zbuild-std's standard library sources depend on, so the job needs network access.
       - name: Set up the DOS toolchain
         run: tools/setup.sh
-      # The native boot test needs QEMU and NASM, which the image does not carry yet. This adds roughly half a minute, mostly the
-      # apt download; the install is skipped when the image has them, so it can go once they move into ci-dos.
-      - name: Install QEMU and NASM
-        run: |
-          if ! command -v qemu-system-i386 > /dev/null || ! command -v nasm > /dev/null; then
-            apt-get update -qq
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends qemu-system-x86 nasm
-          fi
       - name: Check
         run: tools/check.sh
