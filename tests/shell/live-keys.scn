@@ -1,0 +1,23 @@
+# The first window's field played with the keyboard alone, so DOSBox's AUTOTYPE can play it: typing, Backspace and typing again. The steps before the first frame are the first window's set-up, which a live session performs itself; the first frame is its first mark.
+desk-scenario 1
+screen 640 480
+depths 8 4
+open notes 60 60 300 180 "Notes"
+label notes 12 12 "The first window."
+open welcome 220 150 340 200 "Welcome to Desk"
+label welcome 12 12 "Type something:"
+field welcome 12 36 300
+pointer 320 240
+frame start
+# Typing goes to Welcome's field.
+type "desk"
+frame typed
+# Backspace twice removes "sk".
+key Backspace down
+key Backspace up
+key Backspace down
+key Backspace up
+frame erased
+# Typing again.
+type "ok"
+frame again

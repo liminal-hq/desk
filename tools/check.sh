@@ -3,7 +3,7 @@
 # and lints, the HAL's and the shell's host tests and cross builds, the frame tools' tests, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
 # checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, the shell on DOS, then the native boot test under QEMU, then the comparison of the two tracks' frames.
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
-# JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
+# INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -53,6 +53,20 @@ step "Shell: host tests and no_std builds"
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
+python3 -I tools/frames.py goldens tests/shell/keys.sums tests/shell/golden/keys
+python3 -I tools/frames.py goldens tests/shell/live.sums tests/shell/golden/live
+python3 -I tools/frames.py goldens tests/shell/live-keys.sums tests/shell/golden/live-keys
+# The live scenarios translate for every emulator that can play them, so a step an emulator cannot express fails here, before any
+# emulator runs. live.scn uses the mouse, which AUTOTYPE cannot send: that refusal is itself checked.
+for form in --qemu --xdotool; do
+  for scn in live live-keys; do
+    python3 -I tools/frames.py live "tests/shell/$scn.scn" "$form" > /dev/null || fail "tests/shell/$scn.scn does not translate with $form"
+  done
+done
+python3 -I tools/frames.py live tests/shell/live-keys.scn --autotype > /dev/null || fail "tests/shell/live-keys.scn does not translate for AUTOTYPE"
+if python3 -I tools/frames.py live tests/shell/live.scn --autotype > /dev/null 2>&1; then
+  fail "frames.py live accepted a mouse scenario for AUTOTYPE"
+fi
 
 step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
 python3 -I tools/test_frames.py
@@ -123,6 +137,13 @@ fi
 
 step "Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens"
 shell/dos/check.sh
+
+# Opt-in like the spike B mouse run: the live scenario's pointer, drag, Alt+Tab, typing and Alt+F4 through DOSBox's window under Xvfb in
+# Docker, held to the goldens, with quick clicks and a negative run. Without Docker it says it was skipped.
+if [ -n "${INPUT_EXTRA:-}" ]; then
+  step "Shell on DOS (opt-in, INPUT_EXTRA=1): the live scenario's mouse and keys through DOSBox's window under Xvfb"
+  shell/dos/check-xvfb.sh
+fi
 
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh

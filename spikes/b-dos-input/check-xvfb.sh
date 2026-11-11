@@ -20,18 +20,13 @@ fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 command -v docker > /dev/null || { echo "skipped: needs Docker (INPUT_EXTRA=1)"; exit 0; }
 [ -f dist/b/INPUT.EXE ] || $DIR/build.sh
 
-step "The container image (cached by tag)"
-if ! docker image inspect desk-dos-xvfb:1 > /dev/null 2>&1; then
-  docker build -q -t desk-dos-xvfb:1 -f tools/docker/Dockerfile.dos-xvfb tools/docker > /dev/null
-fi
-echo "desk-dos-xvfb:1"
-
-# drive <MOUSE_DRIVER> <script>: runs the script against INPUT.EXE in the container and sets $out and $status.
+# drive <MOUSE_DRIVER> <dump?> <script> [<extra INPUT.EXE arguments>]: runs the xdotool script against INPUT.EXE with tools/xvfb-dos.sh (the
+# container image is built there once, as desk-dos-xvfb:1) and sets $out and $status. A second argument asks for the screen dump, which the
+# program writes next to itself in dist/b (the repository is mounted writable).
 drive() {
   status=0
-  # A second argument asks for the screen dump, which the program writes next to itself in dist/b (the repository is mounted writable).
-  out="$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e MOUSE_DRIVER="$1" -e INPUT_ARGS="${2:+dump}" -v "$PWD":/work \
-    desk-dos-xvfb:1 /work/$DIR/xvfb-inner.sh "/work/$3" 2> /dev/null)" || status=$?
+  # shellcheck disable=SC2086
+  out="$(tools/xvfb-dos.sh --mouse "$1" dist/b "$3" INPUT.EXE ${2:+dump}${4:+ $4} 2> /dev/null)" || status=$?
 }
 
 # The motion and buttons the script produced: "dx dy wheel-sum states" with the button states in order, repeats collapsed.
@@ -64,6 +59,18 @@ step "The screen the program drew (the cursor at (375, 290), the left button lit
 python3 -I tools/raw2png.py dist/b/SCREEN.RAW dist/b/SCREEN.PAL 640 480 dist/b/screen.png
 [ "$(head -c 8 dist/b/screen.png | od -An -c | tr -d ' ')" = '211PNG\r\n032\n' ] || fail "screen.png is not a PNG"
 echo "dist/b/screen.png"
+
+step "Clicks over in a few milliseconds, with the program polling every 165 ms: only the press and release counters see them"
+# Each click is a press and a release five milliseconds apart (xdotool mousedown, sleep, mouseup), far shorter than a poll, so the
+# button's state is the same before and after and only functions 0005h and 0006h show it. (A press and release with no gap at all,
+# as `xdotool click` sends them, never reach DOSBox's driver, whatever the program does: X delivers both with one timestamp and SDL
+# or DOSBox drops the pair, so no counter holds it.)
+drive on "" $DIR/quick.xdotool slowpoll
+[ "$status" = 0 ] || fail "the quick-click run exited with status $status: $out"
+got="$(reduce)"
+want_quick='dx=0 dy=0 wheel=0 states=L,-,L,-,L,-,L,-,L,-,L,-'
+[ "$got" = "$want_quick" ] || fail "six quick clicks reduce to \"$got\", not \"$want_quick\""
+echo "reduced: $got"
 
 step "A transcript with the middle button missing is rejected"
 saved_out=$out
