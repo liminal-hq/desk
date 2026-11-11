@@ -1,0 +1,46 @@
+
+stage2: loader running
+stage2: a20 already enabled
+stage2: memory map from E820, entries: {N:1..32}
+stage2: font: 8x16 copied from the BIOS
+stage2: vbe {N:2..3}.{N:0..2}: mode {HEX} 640x480x8, pitch 640, frame buffer at {HEX}
+stage2: vbe: mode set with the linear frame buffer
+stage2: entering protected mode
+Desk native kernel 0.1.0 (i486)
+boot: drive 0x00, memory map from E820 ({N:1..32} entries)
+gdt: loaded, flat 4 GiB code and data segments
+idt: 32 exception gates and the timer gate installed
+pic: remapped to 0x20 and 0x28, only IRQ0 unmasked
+pit: channel 0 at 100 Hz
+...
+memory: usable RAM {N:14000..16384} KiB
+memory: kernel image {HEX}-{HEX}
+memory: {N:3000..4096} frames of 4 KiB free after reservations
+frames: alloc and free of two frames ok
+bios: real-mode trampoline at 0x10000, bounce buffer 0x11000 (8192 bytes), stack 0x13000
+heap: 4096 KiB at {HEX}
+video: boot info version 1
+video: 8x16 font, 4096 bytes at 0x2000
+video: the loader set VBE {N:2..3}.{N:0..2} mode {HEX}: 640x480x8, pitch 640, memory model 4, {N:1024..1048576} KiB on the card
+video: mode {HEX} frame buffer {HEX}-{HEX} overlaps no RAM, heap or kernel; reserved
+alloc: Vec sum 385, String "desk-native", format "desk-native:10:0x0181"
+heap: 4096 KiB free after the demo
+timer: waited for 10 ticks with hlt, elapsed 10 ticks
+fpu: control word 0x037f, sqrt(2) = 1.414214, H(10) = 2.928968
+fpu: results check out
+input: 8042 dual channel, translation on
+input: keyboard ready, scancode set 1 translated by the controller
+input: mouse ready, id 3 (4-byte packets)
+input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on
+input: ready
+shell: live, depth 8
+shell: linear frame buffer, mode {HEX}, 640x480, pitch 640
+shell: mark 00 8 640x480 920263aa c310363f
+shell: mark 01 8 640x480 dc85a936 436a5df4
+shell: mark 02 8 640x480 d4c79e33 f76bd194
+shell: mark 03 8 640x480 b4a64148 e8538dd6
+shell: live ended by Escape: {N:18..30} keys, {N:0..0} pointer reports, {N:4..60} frames, {N:50000..3000000} pixels presented, 4 marks
+gfx: leaving VBE: Bochs VBE registers (id {HEX}) switched off
+shell: done
+gfx: text mode restored: registers, palette and the 8x16 font reloaded
+boot complete

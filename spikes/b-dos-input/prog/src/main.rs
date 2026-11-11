@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
-// usage: INPUT.EXE [text] [13] [chain] [nomouse] [timeout=N] [stall=N] [dump] [panic] [leave]
+// usage: INPUT.EXE [text] [13] [chain] [nomouse] [timeout=N] [stall=N] [slowpoll] [dump] [panic] [leave]
 //
 // The program takes IRQ 1 from the BIOS, finds the mouse driver, sets VBE 640 x 480 x 8 (mode 13h when VBE is not offered, or with
 // `13`; no graphics at all with `text`), prints every decoded event as one line, draws a software cursor that follows the mouse
@@ -16,6 +16,8 @@
 // - `nomouse`   do not look for a mouse driver
 // - `timeout=N` give up after N seconds without Escape (default 30)
 // - `stall=N`  do not read any input for N seconds, so the keys typed meanwhile can overflow the ring
+// - `slowpoll`  wait about 165 ms between polls, so a click over in a few milliseconds falls between two of them (only the driver's
+//                press and release counters see it)
 // - `dump`     at the end write the screen as SCREEN.RAW and its palette as SCREEN.PAL, for tools/raw2png.py
 // - `panic`     install everything, then panic: the clean-up list must put it all back first
 // - `leave`     install everything, then exit at once
@@ -351,12 +353,18 @@ fn main() -> i32 {
         );
     }
 
+    let slow_poll = has("slowpoll");
     let start = timer::bios_ticks();
     // 18.2065 ticks a second, rounded up.
     let limit = timeout_s * 19;
     let (mut keys, mut mice) = (0u32, 0u32);
     let mut line = String::new();
     let status = loop {
+        if slow_poll {
+            // Three BIOS ticks (about 165 ms) between polls, so a click that is over in a few milliseconds falls between two of them.
+            let t = timer::bios_ticks();
+            while timer::bios_ticks().wrapping_sub(t) < 3 {}
+        }
         let mut escape = false;
         while let Some(e) = input.poll_key() {
             line.clear();

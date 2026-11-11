@@ -8,7 +8,8 @@
 //
 // - `Mouse` wraps the calls, through the HAL's `Bios` trait (a real-mode software interrupt; under DPMI function 0300h);
 // - `MouseInput` turns "motion since the last call" (function 000Bh, in mickeys) and "buttons now" (0003h) into the `MouseEvent`
-//   the native kernel's PS/2 driver produces, so the core cannot tell the tracks apart;
+//   the native kernel's PS/2 driver produces, so the core cannot tell the tracks apart; the left button's press and release counters
+//   (0005h and 0006h) give it the clicks shorter than one poll, which it reports as a press and a release;
 // - `DosInput` is the `InputSource` for the hosted platform: scancodes from the IRQ 1 ring through the shared `desk-kbd` decoder,
 //   mouse reports from `MouseInput`. A machine with no mouse driver simply has no mouse reports (the SPEC's keyboard-only mode).
 //
@@ -35,6 +36,11 @@ pub mod func {
     pub const HIDE: u16 = 0x0002;
     /// Position and buttons: BX = buttons (bit 0 left, 1 right, 2 middle), CX = x, DX = y.
     pub const POSITION: u16 = 0x0003;
+    /// Button press information: BX = the button (0 left, 1 right, 2 middle) on entry; on return AX = the buttons now, BX = presses of
+    /// that button since the last call (then zero), CX, DX = the position at the last press.
+    pub const PRESSES: u16 = 0x0005;
+    /// Button release information: as `PRESSES`, for releases.
+    pub const RELEASES: u16 = 0x0006;
     /// Set the position to CX, DX.
     pub const SET_POSITION: u16 = 0x0004;
     /// Set the horizontal range to CX..=DX.
@@ -202,6 +208,26 @@ impl<B: Bios> Mouse<B> {
         })
     }
 
+    /// Function 0005h: how many times `button` (0 left, 1 right, 2 middle) went down since the last call to it, and where the pointer
+    /// was at the last press. The driver's count is cleared by the read. A driver without the function leaves the count at 0.
+    pub fn presses(&self, button: u8) -> Result<Edges, Error> {
+        self.edges(func::PRESSES, button)
+    }
+
+    /// Function 0006h: as `presses`, for the releases.
+    pub fn releases(&self, button: u8) -> Result<Edges, Error> {
+        self.edges(func::RELEASES, button)
+    }
+
+    fn edges(&self, ax: u16, button: u8) -> Result<Edges, Error> {
+        let r = self.func(ax, button.into(), 0, 0)?;
+        Ok(Edges {
+            count: r.ebx as u16,
+            x: r.ecx as u16 as i16,
+            y: r.edx as u16 as i16,
+        })
+    }
+
     /// Function 0004h.
     pub fn set_position(&self, x: i16, y: i16) -> Result<(), Error> {
         self.func(func::SET_POSITION, 0, x as u16, y as u16).map(|_| ())
@@ -239,6 +265,16 @@ impl<B: Bios> Mouse<B> {
             irq: r.ecx as u8,
         }))
     }
+}
+
+/// The result of function 0005h or 0006h for one button.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Edges {
+    /// Presses (or releases) since the last read.
+    pub count: u16,
+    /// The driver's position at the last one.
+    pub x: i16,
+    pub y: i16,
 }
 
 /// The result of function 0003h.

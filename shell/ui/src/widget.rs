@@ -29,8 +29,8 @@ pub struct Label {
     pub role: Role,
 }
 
-/// A field: a `Border` outline, `Content` inside, the text in `Text`, and a caret in `Accent` after the text while its window is
-/// focused. It is `width` wide and `FIELD_HEIGHT` high at `at`, and holds at most `max_chars` characters, fewer when they would not fit inside the outline with the caret.
+/// A field: a `Border` outline, `Content` inside, the text in `Text`, and a caret in `Accent` after the text while it is the
+/// focused widget of the focused window. It is `width` wide and `FIELD_HEIGHT` high at `at`, and holds at most `max_chars` characters, fewer when they would not fit inside the outline with the caret.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TextLine {
     pub at: (i32, i32),
@@ -65,6 +65,11 @@ impl TextLine {
         let w = font.advance(text).min(i32::MAX as u32);
         let cell = Rect::new(x, self.at.1 + TEXT_TOP, w, font.height());
         (cell, Rect::new(cell.x1, self.at.1 + CARET_TOP, 1, CARET_HEIGHT))
+    }
+
+    /// The caret's rectangle after the text as it is now, relative to the content area.
+    pub fn caret(&self, font: &Font) -> Rect {
+        self.cell_and_caret(font, &self.text).1
     }
 
     // Everything `text` and its caret cover, for the text as it is now or as it was.
@@ -137,13 +142,27 @@ impl Widget {
         }
     }
 
-    /// Paints the widget with the content area's top-left at `origin`. `focused` is whether its window is the focused one.
+    /// Paints the widget with the content area's top-left at `origin`. `focused` is whether the widget is the focused widget of the
+    /// focused window, which is when a field shows its caret.
     pub fn paint(&self, s: &mut Surface, t: &Theme, font: &Font, origin: (i32, i32), focused: bool) {
         match self {
             Widget::Label(l) => {
                 draw_text(s, font, l.at.0 + origin.0, l.at.1 + origin.1, &l.text, t.slot(l.role));
             }
             Widget::TextLine(f) => f.paint(s, t, font, origin, focused),
+        }
+    }
+
+    /// Whether Tab can land on the widget: the text fields, not the labels.
+    pub fn takes_focus(&self) -> bool {
+        matches!(self, Widget::TextLine(_))
+    }
+
+    /// The rectangle of the widget's caret relative to the content area, for a widget that has one.
+    pub fn caret(&self, font: &Font) -> Option<Rect> {
+        match self {
+            Widget::Label(_) => None,
+            Widget::TextLine(f) => Some(f.caret(font)),
         }
     }
 

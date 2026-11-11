@@ -105,6 +105,7 @@ enum TestMode {
     BiosSolo = 12,
     Shell = 13,
     ShellCorrupt = 14,
+    ShellLive = 15,
 }
 
 impl TestMode {
@@ -124,6 +125,7 @@ impl TestMode {
             12 => TestMode::BiosSolo,
             13 => TestMode::Shell,
             14 => TestMode::ShellCorrupt,
+            15 => TestMode::ShellLive,
             _ => TestMode::Normal,
         }
     }
@@ -249,6 +251,12 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
         shell::run(video, ps2, mode == TestMode::ShellCorrupt);
         return;
     }
+    if mode == TestMode::ShellLive {
+        // The first window on live input until Escape (`shell.rs`, `docs/LIVE-INPUT.md`).
+        println!("input: ready");
+        shell::live(video, ps2);
+        return;
+    }
     let timeout_ticks = match mode {
         TestMode::Input => 1500,
         TestMode::InputMasked => 500,
@@ -262,7 +270,7 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo | TestMode::Shell | TestMode::ShellCorrupt => {}
+        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo | TestMode::Shell | TestMode::ShellCorrupt | TestMode::ShellLive => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.
