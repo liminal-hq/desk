@@ -9,6 +9,7 @@ Scripts for working on the repository: the repo checks, the DOS build pipeline a
 | `fetch-tools.sh` | Downloads DJGPP, DOSBox Staging and CWSDPMI into `vendor/` with SHA-256 checks, using the versions of the CI image |
 | `build.sh` | Cargo for `core/dos.json`, `coff2go32.py`, DJGPP's gcc for `c/`, then `dist/DESK.EXE` beside `CWSDPMI.EXE` |
 | `coff2go32.py` | Converts rustc's COFF objects so DJGPP's linker lays them out and relocates them correctly |
+| `desk.magic` | `file(1)` magic for the Desk loadable image (`.DMD` modules, `.DKX` applications; [`../docs/LOADER.md`](../docs/LOADER.md)): `file -b -m tools/desk.magic FILE` names the kind, ABI and SDK version without installing anything |
 | `elf2go32.py` | Packs a linked 32-bit ELF into a DJGPP go32 `.EXE` (used by the d0-rust-dos and e-std-stubs spikes, whose `build.sh` scripts and checks run through `dosrun.sh`) |
 | `dosrun.sh` | Runs a DOS command in headless DOSBox Staging; prints its output and returns its exit status. `DOS_AUTOTYPE` types keys into the program with DOSBox's `AUTOTYPE`, `DOS_CONF` appends configuration, `DOS_X11=1` uses a real display; `DOS_MACHINE` picks the emulated card for one run (default `svga_s3`; `vgaonly` has no VBE) |
 | `xvfb-dos.sh` | Runs a DOS program in DOSBox's SDL window on a virtual X server in Docker, with `xdotool` lines from a script moving, clicking and typing over it (`frames.py live --xdotool` writes one); `--mouse off`, `--start-wait` and `--step-wait` as options. Spike B's and the shell's Xvfb checks use it |

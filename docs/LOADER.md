@@ -210,6 +210,8 @@ module/pack/target/release/dmdpack pack module/mods/target/i486-desk-none/releas
 module/pack/target/release/dmdpack info dist/modules/HELLO.DMD    # the header, the counts and the import names
 ```
 
+`file -b -m tools/desk.magic dist/modules/HELLO.DMD` names the result without installing anything: `Desk loadable image, version 1, module (.DMD), i486 flat, SDK 1, 96-byte header` (and `Desk loadable image, version 1, application (.DKX), i486 flat, SDK 1, 96-byte header` for an application). The first phrase is the same for every kind on purpose, because modules, applications and libraries are one container, so the family is named by a neutral "loadable image" and the kind follows; the magic file reads the version-1 offsets (4 header size, 8 ABI, 10 SDK, 12 kind) and changes whenever the header table does. No MIME type is given: none is registered, and inventing one would mislead.
+
 `tools/build-modules.sh` runs these for every module and keeps each ELF beside its `.DMD` (`dist/modules/hello.elf`) for debugging: the loader prints where it put a module, and `gdb`'s `add-symbol-file hello.elf -o <load address − 0x400000>` gives symbols for it under QEMU's `-s`.
 
 The packer is Rust (decided: [Decisions](#decisions)), a host-side tool in the `module/` Cargo workspace that shares `desk-module` with the loaders, so the format has one definition; once it is proven it may also take over `tools/elf2go32.py`'s job. `dmdpack pack --kind app` writes an application.
