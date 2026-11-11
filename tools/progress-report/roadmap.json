@@ -21,13 +21,13 @@
   {
    "id": "convergence",
    "label": "Convergence (shared)",
-   "next": "Re-check live input from clean clones of main and in the CI image, then widgets and menus on the first window's core. Then the full shell parts on the first window's core: widgets, menus, the launcher bar and window operations (docs/ROADMAP.md R84 to R108).",
+   "next": "The module loader spike (R48) comes next, then widgets and menus on the first window's core. Then the full shell parts on the first window's core: widgets, menus, the launcher bar and window operations (docs/ROADMAP.md R84 to R108).",
    "blocker": "The app model: nothing decides what an app is, how it is loaded or how it calls the Desk (the anatomy page of the Desk)."
   },
   {
    "id": "native",
    "label": "Native track (own kernel)",
-   "next": "Re-check live input on the native shell-live mode; then the executable-format spike (planned after live input); a V86 monitor if FreeDOS needs it.",
+   "next": "The executable-format spike (R48), the next step now that live input is finished (R47); a V86 monitor if FreeDOS needs it.",
    "blocker": "Scheduling, paging and system calls are open decisions; no user mode exists in the kernel. The path and mount model and the shared commands (R125, R126) are proposals waiting on the owner and come before the filesystem and the app model."
   },
   {
@@ -711,14 +711,14 @@
    "id": "liveinput",
    "label": "Live input into the shell",
    "branch": "convergence",
-   "state": "progress",
+   "state": "done-emu",
    "deps": [
     "shell",
     "ndesk"
    ],
-   "what": "Keys and the mouse reaching the shell through each platform's own input path (QEMU sendkey and mouse_move; DOSBox AUTOTYPE and a real INT 33h mouse). Built and merged: the native shell-live mode, the hosted live loop, window-manager keys, INT 33h click counters, launchers.",
+   "what": "Keys and the mouse reaching the shell through each platform's own input path (QEMU sendkey and mouse_move; DOSBox AUTOTYPE and a real INT 33h mouse). Built, merged and re-verified: the native shell-live mode, the hosted live loop, window-manager keys, INT 33h click counters, launchers.",
    "why": "The first window is moved by scripted events in the golden runs; this tests the input path, not the pixels.",
-   "evidence": "docs/LIVE-INPUT.md Result; PRs #33, #34, #37, #39, #43, #44, #49, #50, #53 and #54 merged on 2026-11-11 (roadmap item R47). The measured runs were by the author and have not been repeated from clean clones of main or in the CI image; the Not verified list of #54 has not been re-read. DOSBox's built-in mouse driver and QEMU only; nothing ran on real hardware.",
+   "evidence": "docs/LIVE-INPUT.md Result (Re-verification, 2026-11-11); PRs #33, #34, #37, #39, #43, #44, #49, #50, #53 and #54 merged on 2026-11-11 (roadmap item R47, done). tools/check.sh passed from a clean clone of main at 593504a in the CI image; the Xvfb and Bochs opt-in steps need Docker and were not repeated. Emulators only (DOSBox, QEMU, FreeDOS in QEMU); nothing ran on real hardware.",
    "prs": [
     33,
     34,
@@ -1308,13 +1308,16 @@
    "id": "f-transcript",
    "label": "SHELL.EXE draws its transcript",
    "branch": "hosted",
-   "state": "planned",
+   "state": "done-emu",
    "deps": [
     "shell"
    ],
-   "what": "R127: In interactive mode SHELL.EXE prints its shell: mark 00 … lines with println!, which the DOS console draws onto the graphics screen, visible top left over the window. The shell's own back buffer is clean and moving the pointer repaints it away. The native kernel sends the same lines to serial. The tests redirect output, so none saw it. Planned fix: buffer the transcript until text mode returns, as Fizz 2 does (R133), and add a check.",
+   "what": "R127: Interactive SHELL.EXE printed its shell: mark 00 … lines with println!, which the DOS console drew onto the graphics screen over the window. Fixed: the lines are buffered in a fixed buffer and printed after text mode returns (R133).",
    "why": "Found in the owner's hands-on run.",
-   "evidence": "docs/ROADMAP.md R127. Evidence: the owner's run of the hosted track on FreeDOS in QEMU on 2026-11-11 (emulator only); not a committed test. Fix path: R133, docs/FIZZ2-COMPARISON.md."
+   "evidence": "docs/ROADMAP.md R127; PR #72 (5e110a0). New check: shell/dos/check.sh with DOS_CONSOLE=1. The owner confirmed in a live FreeDOS-in-QEMU window on 2026-11-11 that the stray text is gone. Emulator only; nothing on real hardware.",
+   "prs": [
+    72
+   ]
   },
   {
    "id": "f-sticky",
@@ -1381,14 +1384,17 @@
    "id": "ru-transcript",
    "label": "Buffer the transcript until text mode",
    "branch": "hosted",
-   "state": "planned",
+   "state": "done-emu",
    "deps": [
     "f-transcript",
     "ru-decision"
    ],
-   "what": "R133: The fix path for R127: collect the transcript in a fixed buffer, print nothing while in graphics mode, and flush after text mode is restored, as Fizz 2 does. Add the check R127 asks for.",
+   "what": "R133: The fix path for R127, done: the transcript is collected in a fixed buffer, nothing is printed while in graphics mode, and it is flushed after text mode is restored, as Fizz 2 does.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R133; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+   "evidence": "docs/ROADMAP.md R133; PR #72 (5e110a0); check: shell/dos/check.sh with DOS_CONSOLE=1. Emulator only; nothing on real hardware.",
+   "prs": [
+    72
+   ]
   },
   {
    "id": "ru-pit",
