@@ -319,6 +319,7 @@ Recorded by the owner on 2026-11-11 after reading the first version of this desi
 11. **No OS asset-pack container.** The OS is files; data packing is the apps' own business.
 12. **Native is preemptive, hosted is cooperative; threads, wait and wake, configurable priorities, the window system as a task and the main-loop app shape** are decided in [`APP-MODEL.md`](APP-MODEL.md#decisions), outside R48's scope.
 13. **Applications are `.DKX`** (a Desk executable), on the same container with kind 2; `.DMD` stays the module extension. It is 8.3, reads as an executable, and avoids `.DXE` (DJGPP's), `.DEX` (Android's Dalvik), `.DAP` (Desk's app package) and `.APP`. The magic is `DMD1` for every kind, so a renamed file is still recognised by its `kind`.
+14. **`CMPXCHG` and the ABI field.** DOSBox's 486 mode rejects `CMPXCHG`, and the owner chose an interrupt-masking lock fallback on the hosted track ([`DESK-STD.md`](DESK-STD.md#cmpxchg-on-the-hosted-track)). The format does not change: ABI 1 needs no flag for it, because locks go through the imported `desk_cas32` and `rt` emulates any other `CMPXCHG`, so every file runs on both tracks and a loader has nothing to refuse.
 
 ## Questions for the owner
 
