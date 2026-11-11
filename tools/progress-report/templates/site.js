@@ -172,7 +172,7 @@
   // view and every tile stay in the page.
   var tiles = document.getElementById('tiles');
   if (tiles) {
-    var state = { kind: '', track: '', sort: 'chapter', view: 'grid' };
+    var state = { kind: '', track: '', section: '', sort: 'chapter', view: 'grid' };
     var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-group]'));
     var sortBtns = Array.prototype.slice.call(document.querySelectorAll('[data-sort]'));
     var viewBtns = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
@@ -183,7 +183,7 @@
     var fromHash = function () {
       var h = (location.hash || '').replace(/^#/, '').split('.');
       h.forEach(function (t) {
-        var m = /^(kind|track)-([a-z0-9-]+)$/.exec(t);
+        var m = /^(kind|track|section)-([a-z0-9-]+)$/.exec(t);
         if (m) state[m[1]] = m[2] === 'all' ? '' : m[2];
         if (t === 'sort-new') state.sort = 'new';
         if (t === 'view-list') state.view = 'list';
@@ -193,6 +193,7 @@
       var t = [];
       if (state.kind) t.push('kind-' + state.kind);
       if (state.track) t.push('track-' + state.track);
+      if (state.section) t.push('section-' + state.section);
       if (state.sort === 'new') t.push('sort-new');
       if (state.view === 'list') t.push('view-list');
       try { history.replaceState(null, '', t.length ? '#' + t.join('.') : location.pathname + location.search); } catch (e) { /* a sandboxed frame may refuse */ }
@@ -200,12 +201,12 @@
     var apply = function () {
       var shown = 0;
       items.forEach(function (li) {
-        var ok = (!state.kind || li.getAttribute('data-kind') === state.kind) && (!state.track || li.getAttribute('data-track') === state.track);
+        var ok = (!state.kind || li.getAttribute('data-kind') === state.kind) && (!state.track || li.getAttribute('data-track') === state.track) && (!state.section || li.getAttribute('data-section') === state.section);
         li.hidden = !ok;
         if (ok) shown++;
       });
       rows.forEach(function (tr) {
-        tr.hidden = !((!state.kind || tr.getAttribute('data-kind') === state.kind) && (!state.track || tr.getAttribute('data-track') === state.track));
+        tr.hidden = !((!state.kind || tr.getAttribute('data-kind') === state.kind) && (!state.track || tr.getAttribute('data-track') === state.track) && (!state.section || tr.getAttribute('data-section') === state.section));
       });
       var sorted = items.slice().sort(function (a, b) {
         if (state.sort === 'new') {
@@ -221,7 +222,7 @@
       viewBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-view') === state.view)); });
       tiles.hidden = state.view === 'list';
       if (listBox) listBox.open = state.view === 'list';
-      count.textContent = 'Showing ' + shown + ' of ' + items.length + ' figures' + (state.kind ? ', kind ' + state.kind : '') + (state.track ? ', track ' + state.track : '') + '.';
+      count.textContent = 'Showing ' + shown + ' of ' + items.length + ' figures' + (state.kind ? ', kind ' + state.kind : '') + (state.track ? ', track ' + state.track : '') + (state.section ? ', ' + (state.section === 'manual' ? 'the manual' : 'the log') : '') + '.';
     };
     chips.forEach(function (c) {
       c.addEventListener('click', function (e) {
@@ -234,6 +235,6 @@
     viewBtns.forEach(function (b) { b.addEventListener('click', function () { state.view = b.getAttribute('data-view'); apply(); toHash(); }); });
     fromHash();
     apply();
-    window.addEventListener('hashchange', function () { state.kind = ''; state.track = ''; state.sort = 'chapter'; state.view = 'grid'; fromHash(); apply(); });
+    window.addEventListener('hashchange', function () { state.kind = ''; state.track = ''; state.section = ''; state.sort = 'chapter'; state.view = 'grid'; fromHash(); apply(); });
   }
 })();

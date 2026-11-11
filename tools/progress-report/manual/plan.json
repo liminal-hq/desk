@@ -1,0 +1,338 @@
+{
+ "parts": [
+  {
+   "id": "I",
+   "title": "Foundations"
+  },
+  {
+   "id": "II",
+   "title": "Booting"
+  },
+  {
+   "id": "III",
+   "title": "The native kernel"
+  },
+  {
+   "id": "IV",
+   "title": "Hardware abstraction"
+  },
+  {
+   "id": "V",
+   "title": "The shared core"
+  },
+  {
+   "id": "VI",
+   "title": "The platforms"
+  },
+  {
+   "id": "VII",
+   "title": "Making and checking"
+  },
+  {
+   "id": "VIII",
+   "title": "The frontier"
+  }
+ ],
+ "chapters": [
+  {
+   "id": "m-map",
+   "n": "M1",
+   "part": "I",
+   "title": "The map",
+   "summary": "The two tracks, the four kinds of code, which directory is which layer, what is built and what is not, and how to read the state tags."
+  },
+  {
+   "id": "m-cpu",
+   "n": "M2",
+   "part": "I",
+   "title": "The processor: real mode, protected mode and the A20 gate",
+   "summary": "Segments and offsets, the 1 MiB limit and the A20 gate, descriptors and the GDT, the switch to protected mode, interrupts, and what a 486 lacks."
+  },
+  {
+   "id": "m-devices",
+   "n": "M3",
+   "part": "I",
+   "title": "The devices of a 486 PC",
+   "summary": "The ISA bus and port I/O, the PICs, the PIT, the 8042, the 16550, VGA and VBE, the floppy, and the BIOS services the project calls."
+  },
+  {
+   "id": "m-loader",
+   "n": "M4",
+   "part": "II",
+   "title": "The boot sector and the loader",
+   "summary": "The floppy image, the 512-byte boot sector, stage 2, the A20 test, the memory map, the boot information block, the switch and the copy to 1 MiB."
+  },
+  {
+   "id": "m-boot",
+   "n": "M5",
+   "part": "II",
+   "title": "The boot, end to end",
+   "summary": "Power-on to boot complete, one transcript line at a time, the test modes, and how a run ends and what its exit status means."
+  },
+  {
+   "id": "m-interrupts",
+   "n": "M6",
+   "part": "III",
+   "title": "The kernel: tables, interrupts and the timer",
+   "summary": "The kernel's GDT and IDT, remapping the PICs, the IRQ registry, end-of-interrupt, and the PIT at 100 Hz."
+  },
+  {
+   "id": "m-memory",
+   "n": "M7",
+   "part": "III",
+   "title": "The kernel: memory and the x87",
+   "summary": "The memory map as the loader leaves it, the frame bitmap, the heap, the usable-RAM arithmetic and the x87 set-up."
+  },
+  {
+   "id": "m-bioscalls",
+   "n": "M8",
+   "part": "III",
+   "title": "The kernel: calling the BIOS from protected mode",
+   "summary": "Why the kernel needs the BIOS, the switching sequence, the Bios trait, what was measured, and what V86 would add."
+  },
+  {
+   "id": "m-hal",
+   "n": "M9",
+   "part": "IV",
+   "title": "The HAL",
+   "summary": "The contract crate: port I/O, memory-mapped regions, interrupts, time, video and input, the mock platform and the host tests."
+  },
+  {
+   "id": "m-sysdrivers",
+   "n": "M10",
+   "part": "IV",
+   "title": "Drivers I: serial, interrupt controllers and the timer",
+   "summary": "The 16550, the two 8259s and the 8254: their register sequences, their tests and how each track uses them."
+  },
+  {
+   "id": "m-input",
+   "n": "M11",
+   "part": "IV",
+   "title": "Drivers II: keyboard and mouse",
+   "summary": "The 8042, scancodes, the PS/2 mouse packet, the event contract, the hand-off through rings, and INT 33h on DOS."
+  },
+  {
+   "id": "m-graphics",
+   "n": "M12",
+   "part": "IV",
+   "title": "Drivers III: VGA and VBE",
+   "summary": "Register-programmed modes 13h and 12h, the DAC, text mode, VBE over the Bios trait, the linear frame buffer and the software cursor."
+  },
+  {
+   "id": "m-pixels",
+   "n": "M13",
+   "part": "V",
+   "title": "The core I: surfaces, damage and presenting",
+   "summary": "The 8-bit back buffer, rectangles and sprites, dirty rectangles, the compositor, frame digests and the presenters."
+  },
+  {
+   "id": "m-text",
+   "n": "M14",
+   "part": "V",
+   "title": "The core II: text, themes and window chrome",
+   "summary": "Reading .DFN files, measuring and drawing text, roles and palettes, the window chrome, icons and the first widgets."
+  },
+  {
+   "id": "m-shell",
+   "n": "M15",
+   "part": "V",
+   "title": "The core III: windows, events and scenarios",
+   "summary": "The window manager, Shell::handle and Shell::frame, the cursor, the scenario format and the seam the platforms call."
+  },
+  {
+   "id": "m-platforms",
+   "n": "M16",
+   "part": "VI",
+   "title": "Two platforms, one core",
+   "summary": "What a platform is, the native shell mode and SHELL.EXE side by side, and why there is no Platform trait yet."
+  },
+  {
+   "id": "m-rt",
+   "n": "M17",
+   "part": "VI",
+   "title": "The hosted runtime and the build to SHELL.EXE",
+   "summary": "DOS extenders and DPMI, the runtime contract, the heap, INT 21h, the IRQ stubs, and the build from Rust to an executable."
+  },
+  {
+   "id": "m-fonts",
+   "n": "M18",
+   "part": "VII",
+   "title": "Fonts and formats",
+   "summary": "The bitmap faces, .DFN byte by byte, one source for three formats, the outline faces, the emoji and the formats still planned."
+  },
+  {
+   "id": "m-toolchain",
+   "n": "M19",
+   "part": "VII",
+   "title": "The toolchain and the custom targets",
+   "summary": "The pinned toolchain, the three target files compared, build-std, the linker, elf2bin and the Docker images."
+  },
+  {
+   "id": "m-emulators",
+   "n": "M20",
+   "part": "VII",
+   "title": "The machines we run on",
+   "summary": "QEMU as a 486, Bochs, 86Box, DOSBox Staging and js-dos, how each run is driven, and the standing caveat about real hardware."
+  },
+  {
+   "id": "m-evidence",
+   "n": "M21",
+   "part": "VII",
+   "title": "Testing and the evidence method",
+   "summary": "Nothing is promoted without evidence: host tests, expected transcripts, negative checks, golden frames, CI and the three shelves."
+  },
+  {
+   "id": "m-frontier",
+   "n": "M22",
+   "part": "VIII",
+   "title": "What is not built",
+   "summary": "Every planned box said plainly: apps, the SDK, system calls, a loader, processes, paging, storage, sound and FreeDOS."
+  }
+ ],
+ "appendices": [
+  {
+   "id": "m-glossary",
+   "n": "A",
+   "title": "A. Glossary",
+   "summary": "Every term the chapters define, with a one-line definition and the chapter that teaches it. Generated from the chapters."
+  },
+  {
+   "id": "m-maps",
+   "n": "B",
+   "title": "B. Maps and numbers",
+   "summary": "Reference tables in one place: memory maps, I/O ports, IRQs and vectors, BIOS calls, exit statuses and test modes."
+  },
+  {
+   "id": "m-commands",
+   "n": "C",
+   "title": "C. Commands",
+   "summary": "Every Try it yourself command of the manual, grouped by chapter, with what it needs. Generated from the chapters."
+  },
+  {
+   "id": "m-sources",
+   "n": "D",
+   "title": "D. Sources",
+   "summary": "Every source a sidebar cites and every document a chapter leans on. Generated from the chapters."
+  }
+ ],
+ "paths": {
+  "learn": [
+   "m-map",
+   "m-cpu",
+   "m-devices",
+   "m-loader",
+   "m-boot",
+   "m-interrupts",
+   "m-memory",
+   "m-bioscalls",
+   "m-hal",
+   "m-sysdrivers",
+   "m-input",
+   "m-graphics",
+   "m-pixels",
+   "m-text",
+   "m-shell",
+   "m-platforms",
+   "m-rt",
+   "m-fonts",
+   "m-toolchain",
+   "m-emulators",
+   "m-evidence",
+   "m-frontier"
+  ],
+  "find": [
+   "m-map",
+   "m-shell",
+   "m-text",
+   "m-pixels",
+   "m-platforms",
+   "m-rt",
+   "m-hal",
+   "m-sysdrivers",
+   "m-input",
+   "m-graphics",
+   "m-interrupts",
+   "m-memory",
+   "m-bioscalls",
+   "m-boot",
+   "m-loader",
+   "m-cpu",
+   "m-devices",
+   "m-fonts",
+   "m-toolchain",
+   "m-emulators",
+   "m-evidence",
+   "m-frontier"
+  ]
+ },
+ "tasks": [
+  {
+   "task": "Change the loader",
+   "chapters": [
+    "m-loader",
+    "m-boot"
+   ],
+   "checks": [
+    "tools/native-test.sh"
+   ]
+  },
+  {
+   "task": "Add a kernel test mode",
+   "chapters": [
+    "m-boot",
+    "m-evidence"
+   ],
+   "checks": [
+    "tools/native-test.sh"
+   ]
+  },
+  {
+   "task": "Add a driver",
+   "chapters": [
+    "m-hal",
+    "m-sysdrivers"
+   ],
+   "checks": [
+    "(cd hal && cargo test --locked --quiet)"
+   ]
+  },
+  {
+   "task": "Add a widget",
+   "chapters": [
+    "m-text"
+   ],
+   "checks": [
+    "(cd shell && cargo test --locked --quiet)"
+   ]
+  },
+  {
+   "task": "Add a scenario and its goldens",
+   "chapters": [
+    "m-shell",
+    "m-evidence"
+   ],
+   "checks": [
+    "tools/shell-goldens.sh",
+    "tools/shell-compare.sh"
+   ]
+  },
+  {
+   "task": "Change a target",
+   "chapters": [
+    "m-toolchain"
+   ],
+   "checks": [
+    "tools/check.sh"
+   ]
+  },
+  {
+   "task": "Add a glyph",
+   "chapters": [
+    "m-fonts"
+   ],
+   "checks": [
+    "(cd fonts && bun build.ts --check)"
+   ]
+  }
+ ]
+}

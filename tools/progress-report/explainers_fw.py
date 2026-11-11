@@ -241,10 +241,15 @@ def anatomy(name, ctx, alt_lead):
     o.append("</svg>")
     legend = ('<ul class="m-key"><li><span class="sw a-sw-built"></span> built and verified (emulator or host; nothing on real hardware)</li><li><span class="sw a-sw-review"></span> built, not verified</li>'
               '<li><span class="sw a-sw-plan"></span> planned (dashed): wish list</li>%s</ul>' % ('<li><span class="sw a-sw-ext"></span> not ours</li>' if "external" in data["statuses"] else ""))
-    rows = "".join('<tr><th scope="row">%s<div class="sub">%s</div></th><td><span class="an-st an-%s">%s</span></td><td>%s</td><td>%s</td></tr>' % (
-        esc(b["label"]), esc(data["layers"][b["layer"]]), b["status"], esc(WORD[b["status"]]), inline(b["text"], ctx), evidence_links(b.get("evidence", []), ctx) or "—") for b in data["boxes"])
+    links = {bid: v for (n, bid), v in getattr(ctx, "manual_boxes", {}).items() if n == name}
+
+    def manual_cell(b):
+        return "<td>%s</td>" % ", ".join('<a href="%s.html">%s</a>' % (m["id"], esc(m["label"])) for m in links.get(b["id"], [])) if links else ""
+    rows = "".join('<tr%s><th scope="row">%s<div class="sub">%s</div></th><td><span class="an-st an-%s">%s</span></td><td>%s</td><td>%s</td>%s</tr>' % (
+        (' id="box-%s-%s"' % (name, b["id"])) if links else "", esc(b["label"]), esc(data["layers"][b["layer"]]), b["status"], esc(WORD[b["status"]]), inline(b["text"], ctx), evidence_links(b.get("evidence", []), ctx) or "—", manual_cell(b)) for b in data["boxes"])
+    extra_head = '<th scope="col">Manual</th>' if links else ""
     table = ('<details class="an-text"><summary>The same diagram as text: every box, its status and its evidence</summary><div class="tbl"><table><caption class="sr">Boxes of the diagram with status and evidence</caption>'
-             '<thead><tr><th scope="col">Box</th><th scope="col">Status</th><th scope="col">What it is</th><th scope="col">Evidence</th></tr></thead><tbody>%s</tbody></table></div></details>') % rows
+             '<thead><tr><th scope="col">Box</th><th scope="col">Status</th><th scope="col">What it is</th><th scope="col">Evidence</th>%s</tr></thead><tbody>%s</tbody></table></div></details>') % (extra_head, rows)
     return ('<figure><div class="chart scroll" tabindex="0" aria-label="%s, scrolls sideways"><div style="min-width:820px">%s</div></div>%s<figcaption>%s</figcaption>%s</figure>') % (
         esc(data["title"]), "".join(o), legend,
         "Drawn from <code>tools/progress-report/anatomy-%s.json</code>, last updated %s: each box has a status and evidence in that file, and the generator refuses a built box without evidence." % (name, esc(data["updated"])), table)

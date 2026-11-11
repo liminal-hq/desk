@@ -5,7 +5,7 @@
 #
 # The dialect is deliberately tiny and follows the repository's markdown rules (one line per paragraph). Inline: **bold**, *em*,
 # `code`, [text](url) and {{m.key}} placeholders. Links may use the schemes chapter:ID, pr:N, commit:HASH and repo:PATH, which the
-# builder resolves. Block directives are HTML comments on their own line: <!-- explainer ID -->, <!-- figure ID -->,
+# builder resolves; the manual adds sym:PATH::NAME, test:PATH::NAME, doc:PATH#ANCHOR and term:ID, and the placeholders {{state.ID}}. Block directives are HTML comments on their own line: <!-- explainer ID -->, <!-- figure ID -->,
 # <!-- facts KEY ... -->. A block quote that starts with **From the stacks** is a sidebar; `### Catalogued`, `### Uncatalogued` and
 # `### Wish list` followed by a list are the three shelves.
 import html
@@ -24,6 +24,7 @@ def neutral(s):
     return str(s).replace("{{", "{\u200b{").replace("`", "'").replace("*", "\u2217").replace("[", "(").replace("]", ")")
 
 
+FENCED = ("status", "try", "glossary")
 SHELF_NAMES = {"catalogued": "catalogued", "uncatalogued": "uncatalogued", "wish list": "wish"}
 
 
@@ -59,6 +60,9 @@ class Ctx:
 
     def __init__(self, values=None, chapters=(), repo_url="https://github.com/liminal-hq/desk", prs=()):
         self.values, self.chapters, self.repo_url = values or {}, set(chapters), repo_url.rstrip("/")
+        self.terms = set()
+        self.coming = set()
+        self.manual_boxes = {}
         self.prs = {p["number"]: p for p in prs}
         self.used_chapters = set()
 
@@ -66,6 +70,8 @@ class Ctx:
         if key not in self.values:
             raise MdError("unknown placeholder {{%s}}" % key)
         v = self.values[key]
+        if isinstance(v, Raw):
+            return v
         if isinstance(v, int):
             return "{:,}".format(v)
         return str(v)
@@ -74,6 +80,8 @@ class Ctx:
         scheme, _, rest = target.partition(":")
         if scheme == "chapter":
             page, _, frag = rest.partition("#")
+            if page in self.coming:
+                return "manual.html#row-" + page
             if page not in self.chapters:
                 raise MdError("link to a chapter that does not exist: %s" % target)
             self.used_chapters.add(page)
@@ -84,11 +92,27 @@ class Ctx:
             return "%s/commit/%s" % (self.repo_url, rest)
         if scheme == "repo":
             return "%s/blob/main/%s" % (self.repo_url, rest)
+        if scheme in ("sym", "test"):
+            return "%s/blob/main/%s" % (self.repo_url, rest.partition("::")[0])
+        if scheme == "doc":
+            return "%s/blob/main/%s" % (self.repo_url, rest)
+        if scheme == "term":
+            if rest not in self.terms:
+                raise MdError("link to a glossary term that no chapter defines: %s" % target)
+            return "m-glossary.html#term-" + rest
         return target
 
 
 def _text(s, ctx):
-    s = re.sub(r"\{\{([\w.]+)\}\}", lambda m: ctx.value(m.group(1)), s)
+    raws = []
+
+    def put(m):
+        v = ctx.value(m.group(1))
+        if isinstance(v, Raw):
+            raws.append(str(v))
+            return "\ue000%d\ue001" % (len(raws) - 1)
+        return v
+    s = re.sub(r"\{\{([\w.-]+)\}\}", put, s)
     out = []
     for i, part in enumerate(re.split(r"(`[^`]+`)", s)):
         if i % 2:
@@ -98,7 +122,8 @@ def _text(s, ctx):
         part = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", part)
         part = re.sub(r"(?<![\w*])\*([^*\s][^*]*?)\*(?![\w*])", r"<em>\1</em>", part)
         out.append(part)
-    return "".join(out)
+    text = "".join(out)
+    return re.sub("\ue000(\\d+)\ue001", lambda m: raws[int(m.group(1))], text) if raws else text
 
 
 def inline(s, ctx):
@@ -107,7 +132,7 @@ def inline(s, ctx):
         if i % 2:
             m = LINK_PART.match(part)
             target = m.group(2)
-            ext = ' target="_blank" rel="noopener"' if re.match(r"^(https?://|pr:|commit:|repo:)", target) else ""
+            ext = ' target="_blank" rel="noopener"' if re.match(r"^(https?://|pr:|commit:|repo:|sym:|test:|doc:)", target) else ""
             out.append('<a href="%s"%s>%s</a>' % (esc(ctx.href(target)), ext, _text(m.group(1), ctx)))
         else:
             out.append(_text(part, ctx))
@@ -208,6 +233,8 @@ def render(blocks, ctx, directive):
             out.append("<ul>%s</ul>" % "".join("<li>%s</li>" % inline(x, ctx) for x in b["items"]))
         elif t == "ol":
             out.append("<ol>%s</ol>" % "".join("<li>%s</li>" % inline(x, ctx) for x in b["items"]))
+        elif t == "code" and b["lang"] in FENCED:
+            out.append(directive("@" + b["lang"], [b["text"]]))
         elif t == "code":
             out.append('<pre class="term"><code>%s</code></pre>' % esc(b["text"]))
         elif t == "table":
