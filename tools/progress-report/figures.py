@@ -19,6 +19,8 @@
 #   state: in review                  optional; merged, in review, in progress, planned or none. The default is the state of the chapter's
 #                                     pull requests, and merged for a chapter that has none (its subject is in the history of main).
 #   date: 2026-10-23                  optional; the chapter's date by default
+#   reuse: boot-stepper               a manual chapter that draws a figure the log already declares says `reuse: ID` with the same `at`, and
+#                                     needs no other key: the gallery keeps the original's tile and the registry still sees the drawing claimed
 #
 # Nothing here is hand-listed in the gallery: the gallery page reads the registry. `check()` fails the build when a record is incomplete, when a
 # directive it names is not in the chapter, when its anchor or image does not exist, or when a figure has no alt text.
@@ -72,8 +74,30 @@ def validate(records, chapters):
     """Checks every record on its own and against the chapters; returns the records in chapter order, each with its chapter's index."""
     ids = [c["id"] for c in chapters]
     seen = set()
+    originals = {r["id"]: r for r in records if r.get("id") and not r.get("reuse")}
     for r in records:
         where = "%s: figure %r" % (r["chapter"], r.get("id"))
+        if r.get("reuse"):
+            for k in ("id", "at"):
+                if not r.get(k):
+                    raise MdError("%s has no %s" % (where, k))
+            if r["id"] in seen:
+                raise MdError("%s: duplicate figure id" % where)
+            seen.add(r["id"])
+            target = originals.get(r["reuse"])
+            if not target:
+                raise MdError("%s: reuse names %r, which is not a figure of any chapter" % (where, r["reuse"]))
+            if target.get("at") != r["at"]:
+                raise MdError("%s: reuses %s but draws %r, not %r" % (where, r["reuse"], r["at"], target["at"]))
+            if target["chapter"] == r["chapter"]:
+                raise MdError("%s: reuse names a figure of the same chapter" % where)
+            if r["chapter"] not in ids:
+                raise MdError("%s: its chapter does not exist" % where)
+            r["anchor"] = r.get("anchor") or "fig-" + r["id"]
+            r["index"] = ids.index(r["chapter"])
+            for k in ("kind", "track", "title", "alt", "caption", "thumb"):
+                r.setdefault(k, target[k])
+            continue
         for k in REQUIRED:
             if not r.get(k):
                 raise MdError("%s has no %s" % (where, k))
