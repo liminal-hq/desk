@@ -31,7 +31,7 @@ Chapter 8 proved that a DOS program could be Rust all the way down. Chapter 15 a
 |---|---|---|
 | R131 | Decision: Desk's `rt` is canonical | planned (the decision is recorded; nothing is built) |
 | R132 | String-instruction `memset` and `memcpy` | planned |
-| R133 | Buffer the transcript until text mode returns | planned in the roadmap; built, as R127's fix, in #72 (chapter 20) |
+| R133 | Buffer the transcript until text mode returns | done in the roadmap since #73; built, as R127's fix, in #72 (chapter 20) |
 | R134 | A reprogrammed PIT that keeps the BIOS clock right | planned |
 | R135 | Sound drivers ported into `hal/drivers` | planned |
 | R136 | Open decision: the finished-frame `present` against the framebuffer-lifetime gap | planned, for the owner |

@@ -30,11 +30,11 @@ Chapter 0 described the donation that started the archive: a design brainstorm i
 | Files, Open with, Deleted, drag and drop | Not built; they need a filesystem (R75 on the native track) |
 | The handoff and Exit to DOS | Not built (R61, hosted track) |
 
-**The roadmap grows.** `docs/ROADMAP.md` now lists 140 items. R84 to R130 are the full shell and apps: forty-seven items, none done, eight in progress (parts that have some merged code) and thirty-nine planned. They fall into shared widgets and dialogs, the shell's parts, the hosted handoff and installer, the four core apps, the optional apps, two design proposals for the owner (R125 and R126: a path and mount model, and shared commands) and the four findings of chapter 20. The chart below is counted from the file itself when this page is built, so it moves when the roadmap does.
+**The roadmap grows.** `docs/ROADMAP.md` now lists 140 items. R84 to R130 are the full shell and apps: forty-seven items: one done (R127, the transcript fix of chapter 20), eight in progress (parts that have some merged code) and thirty-eight planned. They fall into shared widgets and dialogs, the shell's parts, the hosted handoff and installer, the four core apps, the optional apps, two design proposals for the owner (R125 and R126: a path and mount model, and shared commands) and the four findings of chapter 20. The chart below is counted from the file itself when this page is built, so it moves when the roadmap does.
 
 <!-- figure roadmap-status -->
 
-**An honest reading of the numbers.** The roadmap's `done` column is the foundations, the spikes, the native track, the first window, live input and the Manual: forty-seven things, each merged, each with its limits stated beside it. The long planned bars are the distance between a window and a desktop. None of the planned work depends on a pull request being open; it depends on the app model, a filesystem and a loader, which the roadmap puts first (R47, R48, R125, R126, R74, R75, R77, R79, R80).
+**An honest reading of the numbers.** The roadmap's `done` column is the foundations, the spikes, the native track, the first window, live input and the Manual, with the findings fixed since: fifty things, each merged, each with its limits stated beside it. The long planned bars are the distance between a window and a desktop. None of the planned work depends on a pull request being open; it depends on the app model, a filesystem and a loader, which the roadmap puts first (R48, R125, R126, R74, R75, R77, R79, R80).
 
 ## The shelves
 

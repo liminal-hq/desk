@@ -9,11 +9,11 @@
  },
  {
   "what": "The owner's hands-on runs.",
-  "why": "On 11 November the owner ran the native window in QEMU on a GNOME Wayland desktop and the hosted first window on FreeDOS in QEMU with CuteMouse (chapter 20). Those runs are reported in the roadmap (R127 to R130) and kept as no screenshots, transcripts or tests; two findings also rest on an agent's headless measurement that is not committed. The pointer sticking at an edge, the keyboard grab under native Wayland and CuteMouse's speed ratio have no established cause."
+  "why": "On 11 November the owner ran the native window in QEMU on a GNOME Wayland desktop and the hosted first window on FreeDOS in QEMU with CuteMouse (chapter 20). Those runs are reported in the roadmap (R127 to R130; R127 is done, with a committed check, and the owner confirmed the fix in a live FreeDOS-in-QEMU window) and kept as no screenshots, transcripts or tests; two findings also rest on an agent's headless measurement that is not committed. The pointer sticking at an edge, the keyboard grab under native Wayland and CuteMouse's speed ratio have no established cause."
  },
  {
   "what": "Live input beyond one emulator per track.",
-  "why": "The live scenarios played in QEMU on the native side and in DOSBox Staging with its built-in mouse driver on the hosted side (chapter 19); Bochs, 86Box, other mouse drivers, a real 8042 and a person at a window of DOSBox were not part of those runs. The clean-clone and CI-image re-check of the live-input stack is roadmap item R47, still open."
+  "why": "The live scenarios played in QEMU on the native side and in DOSBox Staging with its built-in mouse driver on the hosted side (chapter 19); Bochs, 86Box, other mouse drivers, a real 8042 and a person at a window of DOSBox were not part of those runs. The clean-clone and CI-image re-check of the live-input stack (roadmap item R47) passed on 11 November (#73); the opt-in Xvfb (`INPUT_EXTRA=1`) and Bochs (`NATIVE_EXTRA=1`) steps are not in that image and were not repeated."
  },
  {
   "what": "The BIOS trampoline on real machines.",

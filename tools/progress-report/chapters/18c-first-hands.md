@@ -16,7 +16,7 @@ Every run in this archive until now was a machine talking to a machine: `xdotool
 
 | Finding | What happened | What is and is not established |
 |---|---|---|
-| R127 | Interactive `SHELL.EXE` printed its `shell: mark 00 …` lines over the window, top left. The shell's own back buffer was clean; moving the pointer repainted the text away. | The cause is known (the DOS console draws text onto the frame buffer while the VBE mode is on) and the fix has merged (below). |
+| R127 | Interactive `SHELL.EXE` printed its `shell: mark 00 …` lines over the window, top left. The shell's own back buffer was clean; moving the pointer repainted the text away. | The cause is known (the DOS console draws text onto the frame buffer while the VBE mode is on) and the fix has merged and been confirmed in a live window (below). The roadmap row is `done`. |
 | R128 | After the host mouse left the QEMU window and came back, the pointer stuck at a screen edge. | **Cause unknown.** A headless measurement (over-drive an edge by 3,000 units, then move 40 back) found the cursor leaves the edge on the first return move on both FreeDOS and the native kernel, so the guest does not reproduce it. The suspect, which a headless run cannot test, is QEMU's GTK window under XWayland. Roadmap status: in progress. |
 | R129 | Under native Wayland GTK the pointer was never captured; Alt+Tab went to GNOME's switcher, not the guest. Minimise and maximise did nothing. | The XWayland workaround worked for the pointer. Why the keyboard grab was not in effect is not established. Minimise and maximise do nothing by design in the first window (R97). The launcher does not set `GDK_BACKEND` yet. |
 | R130 | On FreeDOS with CuteMouse the pointer moved faster than the host's. | The headless measurement put it at 1.35 to 2.5 times the host distance, against roughly one to one on the native kernel. `docs/LIVE-INPUT.md` says DOSBox's built-in driver turns motion into mickeys one for one; CuteMouse does not, so the hosted track's pointer speed depends on the driver. No fix chosen. |
@@ -40,7 +40,7 @@ The part an archivist likes is the check. `tools/dosrun.sh` gained `DOS_CONSOLE=
 ### Uncatalogued
 - The owner's two hands-on runs themselves: reported in the roadmap, with no screenshots, transcripts or committed checks. The owner's report that the stray transcript is gone is likewise a report.
 - R128, R129 and R130: observations and an uncommitted headless measurement; the pointer's sticking, the keyboard grab under Wayland and CuteMouse's speed ratio have no explanation and no test.
-- The roadmap on `main` still lists R127 as planned, because the pull request that fixed it did not touch the roadmap; the row will move when the open documentation pull request for R47 merges.
+- The roadmap rows for R127 and R133 are `done` since #73, which cites #72 and the check; the owner's confirmation that the stray text is gone in a live FreeDOS-in-QEMU window is a report, not a recording.
 - FreeDOS with another mouse driver, DOSBox in a real window, any run on real hardware.
 
 ### Wish list

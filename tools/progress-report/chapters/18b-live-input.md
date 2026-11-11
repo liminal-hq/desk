@@ -52,7 +52,7 @@ Chapter 18 ended with a window that moved only when a script told it to. This ch
 - Real hardware of every kind: a real 8042, a real mouse driver, a real VGA card, a 486. Pacing was designed, not timed.
 - Bochs and 86Box did not play the live scenarios, and DOSBox's built-in INT 33h driver is the only one this chapter's runs used (FreeDOS with CuteMouse, in the next chapter, is another).
 - The right and middle buttons and the wheel reach the shell and do nothing.
-- Whether the stack's checks pass from a clean clone of `main` and in the CI image: roadmap item R47, open as I write.
+- The Xvfb steps (`INPUT_EXTRA=1`) and the Bochs steps (`NATIVE_EXTRA=1`) in the CI image: the image has no Docker, so they were not part of the later re-check and were last run on the author's host on 23 October. The rest was re-checked from a clean clone in the image on 11 November (#73).
 
 ### Wish list
 - An absolute pointer in QEMU (`vmmouse`, a USB tablet) so no grab is needed (R66, an idea).
