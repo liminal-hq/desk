@@ -6,7 +6,7 @@ A trackable list of what the project has done, what is in flight and what is pla
 >
 > **Full shell and apps.** R84 to R130 add the owner's original shell and apps design ([`SHELL-DESIGN.md`](SHELL-DESIGN.md)): 47 items, 1 `done` (R127), 8 `in progress` and 38 `planned`. Of the whole list, 49 items are `done`, 10 `in progress`, 60 `planned`, 9 `idea` and 2 `blocked`. Two of the new items are design proposals for the owner (R125, R126) and four record findings from the owner's hands-on run of the hosted track on FreeDOS in QEMU on 2026-11-11 (R127 to R130), which rest on that run and not on a committed test (R128 and R130 also rest on a headless measurement, which is not committed either).
 >
-> **Runtime reunification.** R131 to R140 record the owner's decision of 2026-11-11 to bring Lieutenant Fizz 2's runtime improvements back into Desk's `rt` and keep it canonical ([`FIZZ2-COMPARISON.md`](FIZZ2-COMPARISON.md), a read of two code bases and not a run): 10 items, 1 `done` (R133), 8 `planned` (R136 and R138 are open decisions for the owner) and 1 `idea` (R140, Fizz 2 adopting Desk's runtime, later and only if the owner asks). Of the whole list of 140, 50 items are `done`, 10 `in progress`, 68 `planned`, 10 `idea` and 2 `blocked`. This does not change the path to the first OS milestone.
+> **Runtime reunification.** R131 to R140 record the owner's decision of 2026-11-11 to bring Lieutenant Fizz 2's runtime improvements back into Desk's `rt` and keep it canonical ([`FIZZ2-COMPARISON.md`](FIZZ2-COMPARISON.md), a read of two code bases and not a run): 10 items, 1 `done` (R133), 8 `planned` (R136 and R138 are open decisions for the owner) and 1 `idea` (R140, Fizz 2 adopting Desk's runtime, later and only if the owner asks). Of the whole list of 140, 50 items are `done`, 11 `in progress`, 67 `planned`, 10 `idea` and 2 `blocked` (R48 moved to `in progress` when its design and plan were written). This does not change the path to the first OS milestone.
 
 ## Contents
 
@@ -28,7 +28,7 @@ A trackable list of what the project has done, what is in flight and what is pla
 The first OS milestone is: the native kernel boots, opens a window, and runs a separate program loaded from disk (R80). Until that works the native track is a kernel with a shell inside it, not an operating system. The order below is the owner's; each step names its items.
 
 1. Finish and verify live input (R47): done. The stack is merged, and `tools/check.sh` passed from a clean clone of `main` in the CI image on 2026-11-11 (emulators only, nothing on real hardware).
-2. The module loader spike: an executable format and loaders for both tracks (R48), which is the next step.
+2. The module loader spike: an executable format and loaders for both tracks (R48), which is the next step; its design and build plan are written ([`LOADER.md`](LOADER.md), [`LOADER-PLAN.md`](LOADER-PLAN.md)) and nothing is built.
 3. Decide the path and mount model and the shared commands (R125, R126), which are proposals, so the filesystem and the app model are written against them.
 4. A floppy or IDE driver and a read-only FAT filesystem (R74, R75; spike R50).
 5. A system-call boundary between the kernel and apps (R77).
@@ -145,7 +145,7 @@ A second linear stack on #38, merged on 2026-11-11: the plan in `b8fb9ac` and th
 
 ## Current: in flight
 
-No pull request is open. Two items have merged work with their checks still open (R46, R57). Each entry says what is and is not established.
+No pull request is open. Two items have merged work with their checks still open (R46, R57), and R48 has its design and build plan written but no code (its row is under the planned items, where the owner's order puts it). Each entry says what is and is not established.
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
@@ -156,7 +156,7 @@ No pull request is open. Two items have merged work with their checks still open
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
-| R48 | Module loader spike | `planned` | Our own executable format and a loader: a packer that turns the linked Rust ELF into it, one loader for the native kernel and one DOS stub, so a module runs on both tracks without DJGPP's loader. Ends with a result document in `docs/` | [`DIRECTION.md`](DIRECTION.md) (native milestone 6; "What stays valid and what changes"), [`S1-DXE3.md`](S1-DXE3.md) |
+| R48 | Module loader spike | `in progress` | Our own executable format and a loader: a packer that turns the linked Rust ELF into it, one loader for the native kernel and one Rust-only DOS host, so a module runs on both tracks without DJGPP's loader. Ends with a result document in `docs/`. The design is written ([`LOADER.md`](LOADER.md): the `.DMD` format, relocated from a preferred base, with named import slots) and so is the build plan ([`LOADER-PLAN.md`](LOADER-PLAN.md), nine tasks); no task has started and no code exists. The one measurement behind the design (what `rust-lld` emits for a module) ran in a scratch directory and is not committed | [`LOADER.md`](LOADER.md), [`LOADER-PLAN.md`](LOADER-PLAN.md), [`DIRECTION.md`](DIRECTION.md) (native milestone 6; "What stays valid and what changes"), [`S1-DXE3.md`](S1-DXE3.md) |
 | R49 | Candidate spike: FreeDOS in a V86 task under the native kernel | `planned` | The kernel runs FreeDOS in a V86 task or boots into it, which is how DOS programs run on the native OS. Candidate; the order among the four is open | [`DIRECTION.md`](DIRECTION.md) ("DOS programs: bundle FreeDOS"), [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md) |
 | R50 | Candidate spike: native floppy and IDE | `planned` | Own floppy and IDE drivers in the kernel instead of INT 13h through the trampoline, the first step to a filesystem (follow-on work: R74, R75). Candidate | [`DIRECTION.md`](DIRECTION.md) (native milestone 5, "Early disk access") |
 | R51 | Candidate spike: paging | `planned` | The kernel turns on paging, which memory protection and V86 both need. Candidate | [`N3-BIOS-PATH.md`](N3-BIOS-PATH.md), [`DIRECTION.md`](DIRECTION.md) ("Memory protection") |

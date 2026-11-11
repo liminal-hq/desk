@@ -574,7 +574,7 @@
    "id": "loader",
    "label": "Module format and loader",
    "branch": "native",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "fs",
     "dxe3",
@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "DIRECTION.md; lessons from S1-DXE3.md. The executable-format spike is planned after live input; nothing is built."
+   "evidence": "docs/LOADER.md (the design: the .DMD format, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
