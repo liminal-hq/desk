@@ -9,6 +9,8 @@ A trackable list of what the project has done, what is in flight and what is pla
 > **Runtime reunification.** R131 to R140 record the owner's decision of 2026-11-11 to bring Lieutenant Fizz 2's runtime improvements back into Desk's `rt` and keep it canonical ([`FIZZ2-COMPARISON.md`](FIZZ2-COMPARISON.md), a read of two code bases and not a run): 10 items, 1 `done` (R133), 8 `planned` (R136 and R138 are open decisions for the owner) and 1 `idea` (R140, Fizz 2 adopting Desk's runtime, later and only if the owner asks). This does not change the path to the first OS milestone.
 >
 > **Programs, threads and libraries.** R141 to R146 record the owner's decisions of 2026-11-11 on what a program is on Desk ([`APP-MODEL.md`](APP-MODEL.md), [`DESK-STD.md`](DESK-STD.md), with the format in [`LOADER.md`](LOADER.md)): preemptive native and cooperative hosted scheduling (R77, rewritten), threads with one wait and wake primitive, configurable priorities, the window system as a task, applications as files, shared libraries and the `std` target. 6 items, 5 `planned` and 1 `idea` (R145, shared libraries, documented but not time yet); R48 moved to `in progress` when its design and plan were written. Of the whole list of 146, 50 items are `done`, 11 `in progress`, 72 `planned`, 11 `idea` and 2 `blocked`. Nothing in them is built.
+>
+> **Prior art.** R147 is a research note, [`PRIOR-ART.md`](PRIOR-ART.md): what earlier systems (Windows 3.x to ME, AmigaOS, BeOS, OS/2, classic Mac OS, Windows NT, QNX, X11 and Wayland, RISC OS, Plan 9) did well and badly, sourced, and what applies to the decisions above. 1 item, `in progress` while its questions are with the owner. Of the whole list of 147, 50 items are `done`, 12 `in progress`, 72 `planned`, 11 `idea` and 2 `blocked`.
 
 ## Contents
 
@@ -147,11 +149,12 @@ A second linear stack on #38, merged on 2026-11-11: the plan in `b8fb9ac` and th
 
 ## Current: in flight
 
-No pull request is open. Two items have merged work with their checks still open (R46, R57), and R48 has its design and build plan written but no code (its row is under the planned items, where the owner's order puts it). Each entry says what is and is not established.
+No pull request is open. Two items have merged work with their checks still open (R46, R57), and R48 has its design and build plan written but no code (its row is under the planned items, where the owner's order puts it). R147, the prior-art note, is written and waits on the owner's answers to its questions. Each entry says what is and is not established.
 
 | Id | Title | Status | Outcome | Evidence |
 |---|---|---|---|---|
 | R46 | Progress report with the Manual, published | `in progress` | The Manual is merged (R37 to R45). Archive v10 is reported as published (the artifact's own version 10). That comes from the project transcript, passed on by the coordinator; [`MANUAL-STATUS.md`](MANUAL-STATUS.md) does not mention a version, and the artifact was not read for this change, so it is not confirmed here. Publishing the report built from `main` after the merge is not recorded. The publishing recipe is in [`tools/progress-report/README.md`](../tools/progress-report/README.md) | #63 (`42d8319`), [`tools/progress-report/README.md`](../tools/progress-report/README.md#publishing) |
+| R147 | Prior art: lessons from earlier systems | `in progress` | A sourced note on Windows 3.x to ME, AmigaOS, BeOS and Haiku, OS/2 Presentation Manager, classic Mac OS, Windows NT, QNX and Photon, X11 and Wayland, RISC OS and Plan 9, with what each means for Desk: a table of lessons against decisions and items (applied, partly, not yet) and eight questions for the owner with defaults (hung-client detection, a server that never blocks on a client, copy semantics for messages, `cli` in stage 1, the FreeDOS task's shape, priority inheritance through messages, no per-program special cases, per-task path resolution). Research only: nothing built or measured, and every claim about another system links to its source. Stays in progress until the owner answers the questions | [`PRIOR-ART.md`](PRIOR-ART.md); stacked on the loader and app-model design (R48, R77, R141 to R146) |
 
 
 ## Future: planned, in the owner's order

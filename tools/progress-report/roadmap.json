@@ -678,6 +678,19 @@
    "evidence": "docs/DESK-STD.md; std::sync read in the Rust 1.98.0 sources, not built."
   },
   {
+   "id": "priorart",
+   "label": "Prior art: lessons from earlier systems",
+   "branch": "convergence",
+   "state": "progress",
+   "deps": [
+    "sched",
+    "winsys"
+   ],
+   "what": "R147: a sourced note on what Windows 3.x to ME, AmigaOS, BeOS, OS/2 PM, classic Mac OS, Windows NT, QNX, X11 and Wayland, RISC OS and Plan 9 did well and badly, and what each means for the app model, with a table of lessons against decisions and eight questions for the owner.",
+   "why": "Starting from scratch with forty years of hindsight: take what worked, avoid the Win16 mutex and the frozen desktop.",
+   "evidence": "docs/PRIOR-ART.md; research only, nothing built or measured."
+  },
+  {
    "id": "nsound",
    "label": "OPL and Sound Blaster",
    "branch": "native",
