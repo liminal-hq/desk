@@ -159,11 +159,20 @@ class GatherTests(unittest.TestCase):
         self.assertEqual(road["nodes"][0]["state"], "done-emu")
 
 
+def fixture_gather(root):
+    """Gather a throwaway repository offline. The real not-verified panel names the spike pull requests (#8 to #17), which the throwaway
+    repository does not have, so their records come from a fixture of what the open work looked like when they were open."""
+    data = gather.gather(root, "main", offline=True)
+    with open(os.path.join(HERE, "fixture", "open-work.json"), encoding="utf-8") as f:
+        data["open"] = json.load(f)
+    return data
+
+
 class BuildTests(unittest.TestCase):
     def build_fixture(self, out):
         with tempfile.TemporaryDirectory() as d:
             make_repo(d)
-            data = gather.gather(d, "main", offline=True)
+            data = fixture_gather(d)
         chapters = build.load_chapters(os.path.join(HERE, "fixture", "chapters"))
         site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), out, assets=False)
         site.write()
@@ -237,7 +246,7 @@ class RobustnessTests(unittest.TestCase):
             chapters = build.load_chapters(os.path.join(HERE, "fixture", "chapters"))
             with tempfile.TemporaryDirectory() as r:
                 make_repo(r)
-                data = gather.gather(r, "main", offline=True)
+                data = fixture_gather(r)
             site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), d, assets=False)
             with self.assertRaises(ValueError):
                 site.write()
@@ -316,7 +325,7 @@ class FigureTests(unittest.TestCase):
         out, ch = broken_site(figs, extra)
         with tempfile.TemporaryDirectory() as d:
             make_repo(d)
-            data = gather.gather(d, "main", offline=True)
+            data = fixture_gather(d)
         site_dir = os.path.join(out, "site")
         chapters = build.load_chapters(ch)
         site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), site_dir, assets=assets)
@@ -339,7 +348,7 @@ class FigureTests(unittest.TestCase):
         wr(os.path.join(ch, "00-one.md"), rd(os.path.join(ch, "00-one.md")).replace("<!-- figure arch -->", ""))
         with tempfile.TemporaryDirectory() as d:
             make_repo(d)
-            data = gather.gather(d, "main", offline=True)
+            data = fixture_gather(d)
         site = build.Site(data, build.load_chapters(ch), os.path.join(HERE, "fixture", "pages"), os.path.join(out, "site"), assets=False)
         site.write()
         self.assertFalse(os.path.exists(os.path.join(out, "site", "gallery.html")))
@@ -812,7 +821,7 @@ class ManualSiteTests(unittest.TestCase):
             wr(os.path.join(d, "M02-two.md"), text)
         with tempfile.TemporaryDirectory() as r:
             make_repo(r)
-            data = gather.gather(r, "main", offline=True)
+            data = fixture_gather(r)
         chapters = build.load_chapters(chapters_dir or os.path.join(HERE, "fixture", "chapters"), d)
         out = os.path.join(tempfile.mkdtemp(), "site")
         site = build.Site(data, chapters, os.path.join(HERE, "fixture", "pages"), out, assets=False, manual_dir=d)

@@ -5,7 +5,7 @@ kicker: Decisions and risks
 title: Decisions and risks
 date: 2026-10-23
 summary: What has been decided, what is waiting for the owner, what could go wrong, and, since merge day, the order in which the spike pull requests were merged and what the work taught about how it is being done.
-prs: [5, 8, 10, 11, 12, 13, 14, 15, 16, 17]
+prs: [5, 8, 10, 11, 12, 13, 14, 15, 16, 17, 70, 71]
 section: reference
 ---
 An archive that only lists successes is a brochure. Here are the decisions on record, the questions still open, and the risks that `docs/DIRECTION.md` names for itself. The first three tables are lifted from `docs/OPEN-QUESTIONS.md`, `docs/DIRECTION.md` and the roadmap, and say where. The sections after them are mine: they are about how the spike pull requests were merged and the way the work is being done, and each says what it rests on.
@@ -20,7 +20,9 @@ An archive that only lists successes is a brochure. Here are the decisions on re
 | Rust apps as modules, hosted | DXE3 modules importing `desk_*` by name (route a), with a function-pointer table as the fallback (route b) | [`docs/S1-DXE3.md`](repo:docs/S1-DXE3.md) |
 | Licence | Apache-2.0 OR MIT | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md) |
 | Merging | Merge commits only, never squash, never rebase-merge | [`AGENTS.md`](repo:AGENTS.md) |
-| The CI image | `ci-dos`, pinned by digest | [`AGENTS.md`](repo:AGENTS.md) |
+| The CI image | `ci-dos`, pinned by digest; since 11 November the 20261110 image, which carries QEMU and NASM, so the workflow installs nothing at run time (chapter 22) | [`AGENTS.md`](repo:AGENTS.md), [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) |
+| Where the status lives | `docs/ROADMAP.md`: 140 items, R1 to R140, each with a status and its evidence, kept current by the pull request that changes the work | [`docs/ROADMAP.md`](repo:docs/ROADMAP.md) |
+| Whose runtime | Desk's `rt` is the canonical DOS runtime; Fizz 2's improvements come back into it and Fizz 2 may adopt it later (decided 2026-11-11, R131; chapter 23) | [`docs/FIZZ2-COMPARISON.md`](repo:docs/FIZZ2-COMPARISON.md) |
 | Browser build | Ship DOSBox-only until the linear frame buffer works in js-dos. The condition is now met by spike s5, in pull request #13, which is {{pr13.state}} (chapter 14) | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md), [`docs/S5-JSDOS.md`](repo:docs/S5-JSDOS.md) |
 
 ## Waiting for a decision
@@ -33,6 +35,9 @@ An archive that only lists successes is a brochure. Here are the decisions on re
 | Memory protection and app isolation | Decides what a crashed app can damage | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | Filesystem, boot media, early disk access | What the kernel can read and how it is started | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | The shape of the HAL | Without it the two tracks drift apart. A first design came in pull request #8, which is {{pr8.state}}, and it has consumers in #10, #11, #14, #15 and #17, and it is still a design that only emulators and host tests have met (chapter 10) | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md), [`docs/HAL.md`](repo:docs/HAL.md) |
+| The path and mount model, and the shared commands | Proposals the filesystem and the app model are to be written against (R125, R126) | [`docs/ROADMAP.md`](repo:docs/ROADMAP.md) |
+| The finished-frame `present` API and the float policy | Whether the HAL's display takes a finished frame, and whether the SDK promises 53-bit floating point for apps (R136, R138; chapter 23) | [`docs/FIZZ2-COMPARISON.md`](repo:docs/FIZZ2-COMPARISON.md) |
+| The shell design's eleven questions | The clock's format, icon positions, the keyboard model, which faces and more (chapter 21) | [`docs/SHELL-DESIGN.md`](repo:docs/SHELL-DESIGN.md) |
 | Licensing of FreeDOS components | Must be checked before a release carries them | [`docs/DIRECTION.md`](repo:docs/DIRECTION.md) |
 | The product name | Names the image, the disk label and the repository; blocks nothing | [`docs/NAMING.md`](repo:docs/NAMING.md) |
 | The 4 bitmap faces | They have not been seen on a DOS screen, and the 6 by 8 face is the one to check first | [`docs/OPEN-QUESTIONS.md`](repo:docs/OPEN-QUESTIONS.md) |
@@ -55,6 +60,8 @@ Nine spike pull requests were open at once, and all nine are merged now (#8, #10
 - **The review still paid for itself.** Each of those comments lists real defects found and fixed in separate commits, such as the timer's wrong mode in #8, the clock that froze at midnight in #12 and the Backspace key that did nothing in the first window of #14, and a few findings declined with reasons. The archive counts the fixes by reading the comments, not by trusting the summary.
 - **Spikes stack, and the stacks are the risk.** A stacked pull request shows its parents' lines, so the sizes in the evidence tables carry a footnote, and a base branch that is merged first changes what a later pull request contains.
 - **Disk and tooling.** When this chapter was written the development machine's `/home` was 99% full with 13 GB free (`df -h /home`), and `/tmp` is memory-backed, so the generator's scratch builds are kept small and deleted. Cargo target directories, a DOS toolchain and Docker images each cost real space, and the repository's own build scripts say so. This is a note about the machine, not about the repository.
+- **A stack can wait.** The live-input and Manual stacks were opened on 23 October and merged on 11 November (chapter 19), nineteen days in review. Nothing was lost, since each branch carried its parents, but the first-parent history shows them as one merge, and the archive's merge-commit CI records are a poor guide to them. The timeline in chapter 19 is the honest record.
+- **A person finds what a script cannot.** The owner's first hands-on runs (chapter 20) found a transcript drawn over the window, a keyboard grab that did not take and a pointer that ran fast, none of which the checks could see because the checks are the machine talking to itself. The fix for the first came with a check that failed before it; the other three are findings, not yet tests.
 
 ## Risks
 
@@ -63,6 +70,7 @@ Nine spike pull requests were open at once, and all nine are merged now (#8, #10
 | Hardware diversity | Video cards, sound cards and chipsets differ in ways the BIOS used to hide; a native OS carries that cost itself |
 | No real hardware in the loop | Emulators will pass things real machines reject, and the reverse |
 | Emulator accuracy | QEMU, 86Box and Bochs disagree with each other and with real parts; a result in one is not a claim about hardware |
+| Two runtimes | Desk's DOS runtime and Fizz 2's copy of it have diverged (chapter 23); until the improvements are merged back and the runtime promoted, a fix in one does not reach the other. This one is mine, from the Fizz 2 comparison, and the roadmap tracks it as R131 to R140 |
 | Scope | An operating system is much more than a shell; two tracks split the effort |
 | Divergence | If the HAL is wrong, the two tracks drift apart. A first design now exists and is merged with its consumers (the input, graphics and BIOS spikes), but every consumer ran only in an emulator, so whether the design is right is still open |
 

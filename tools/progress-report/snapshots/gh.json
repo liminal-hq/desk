@@ -1,1159 +1,2395 @@
 {
- "capturedAt": "2026-10-23T02:28:30-04:00",
+ "capturedAt": "2026-11-11T13:52:42-05:00",
  "data": {
   "openWork": {
-   "commitsOnBranches": 77,
-   "conflicts": [
-    {
-     "a": 8,
-     "b": 12,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 8,
-     "b": 13,
-     "files": [
-      "docs/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 8,
-     "b": 16,
-     "files": [
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 10,
-     "b": 11,
-     "files": [
-      "docs/README.md",
-      "hal/Cargo.toml",
-      "hal/platform/mock/src/lib.rs",
-      "spikes/README.md"
-     ]
-    },
-    {
-     "a": 10,
-     "b": 12,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 10,
-     "b": 13,
-     "files": [
-      "docs/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 10,
-     "b": 16,
-     "files": [
-      "docs/NATIVE-BOOT.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 11,
-     "b": 12,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "spikes/d0-rust-dos/rt/Cargo.toml",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 11,
-     "b": 13,
-     "files": [
-      "docs/README.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 11,
-     "b": 16,
-     "files": [
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 12,
-     "b": 13,
-     "files": [
-      "docs/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 12,
-     "b": 14,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "spikes/d0-rust-dos/rt/Cargo.toml",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 12,
-     "b": 15,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "spikes/d0-rust-dos/rt/Cargo.toml",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 12,
-     "b": 16,
-     "files": [
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 12,
-     "b": 17,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "spikes/d0-rust-dos/rt/Cargo.toml",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 13,
-     "b": 14,
-     "files": [
-      "docs/README.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 13,
-     "b": 15,
-     "files": [
-      "docs/README.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 13,
-     "b": 16,
-     "files": [
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 13,
-     "b": 17,
-     "files": [
-      "docs/README.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 14,
-     "b": 15,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "hal/Cargo.toml",
-      "hal/platform/mock/src/lib.rs",
-      "spikes/README.md",
-      "tools/README.md"
-     ]
-    },
-    {
-     "a": 14,
-     "b": 16,
-     "files": [
-      "boot/stage2.asm",
-      "docs/NATIVE-BOOT.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 15,
-     "b": 16,
-     "files": [
-      "docs/NATIVE-BOOT.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    },
-    {
-     "a": 15,
-     "b": 17,
-     "files": [
-      "docs/README.md",
-      "docs/RUST-TARGETS.md",
-      "hal/Cargo.toml",
-      "hal/platform/mock/src/lib.rs",
-      "spikes/README.md",
-      "tools/README.md"
-     ]
-    },
-    {
-     "a": 16,
-     "b": 17,
-     "files": [
-      "boot/stage2.asm",
-      "docs/NATIVE-BOOT.md",
-      "docs/RUST-TARGETS.md",
-      "spikes/README.md",
-      "tools/README.md",
-      "tools/check.sh"
-     ]
-    }
-   ],
+   "commitsOnBranches": 0,
+   "conflicts": [],
    "prs": [
     {
-     "ahead": 17,
+     "ahead": 2,
      "base": "main",
-     "branch": "feat/hal-design",
-     "ci": "passing",
-     "commitCount": 17,
+     "branch": "docs/progress-report-update",
+     "ci": "pending",
+     "commitCount": 2,
      "commits": [
       {
-       "date": "2026-10-22T23:28:07-04:00",
-       "hash": "77f3299",
+       "date": "2026-11-11T13:41:05-05:00",
+       "hash": "80c4c32",
        "merge": false,
-       "subject": "feat: add the shared HAL crates with serial, PIT and PIC drivers"
+       "subject": "feat: add the timeline, roadmap and diagram figures to the progress report"
       },
       {
-       "date": "2026-10-22T23:28:13-04:00",
-       "hash": "abffc42",
+       "date": "2026-11-11T13:41:05-05:00",
+       "hash": "b2a8d81",
        "merge": false,
-       "subject": "ci: run the HAL's host tests and no_std cross builds in check.sh"
-      },
-      {
-       "date": "2026-10-22T23:30:03-04:00",
-       "hash": "0cf89bb",
-       "merge": false,
-       "subject": "refactor: report the clock's tick rate in millihertz"
-      },
-      {
-       "date": "2026-10-22T23:33:34-04:00",
-       "hash": "f395e0b",
-       "merge": false,
-       "subject": "docs: design the HAL and the shared drivers (spike H)"
-      },
-      {
-       "date": "2026-10-22T23:34:35-04:00",
-       "hash": "73599b3",
-       "merge": false,
-       "subject": "docs: link the HAL design and mark merged work as merged"
-      },
-      {
-       "date": "2026-10-22T23:38:15-04:00",
-       "hash": "6197213",
-       "merge": false,
-       "subject": "docs: record the PR number and the ci-dos run of spike H"
-      },
-      {
-       "date": "2026-10-22T23:49:52-04:00",
-       "hash": "77e2941",
-       "merge": false,
-       "subject": "fix: refuse 1 baud and wait for the loopback echo in the 16550 probe"
-      },
-      {
-       "date": "2026-10-22T23:50:27-04:00",
-       "hash": "895257a",
-       "merge": false,
-       "subject": "fix: restore the BIOS's PIT mode and validate the clock's divisor"
-      },
-      {
-       "date": "2026-10-22T23:50:41-04:00",
-       "hash": "92f7351",
-       "merge": false,
-       "subject": "docs: require interrupts off around 8259 mask changes"
-      },
-      {
-       "date": "2026-10-22T23:51:32-04:00",
-       "hash": "641ceca",
-       "merge": false,
-       "subject": "fix: register interrupt work over shared atomics without leaking"
-      },
-      {
-       "date": "2026-10-22T23:51:53-04:00",
-       "hash": "dd7701f",
-       "merge": false,
-       "subject": "fix: drop the wall-clock trait until something implements it"
-      },
-      {
-       "date": "2026-10-22T23:52:00-04:00",
-       "hash": "905fa56",
-       "merge": false,
-       "subject": "docs: exempt the test platform from the platform-location rule"
-      },
-      {
-       "date": "2026-10-22T23:52:10-04:00",
-       "hash": "bd43d29",
-       "merge": false,
-       "subject": "docs: record the tests added by the review fixes in HAL.md"
-      },
-      {
-       "date": "2026-10-22T23:57:20-04:00",
-       "hash": "24776dd",
-       "merge": false,
-       "subject": "fix: let the 16550 finish sending before the loopback probe"
-      },
-      {
-       "date": "2026-10-22T23:58:10-04:00",
-       "hash": "c57afa0",
-       "merge": false,
-       "subject": "fix: acknowledge spurious IRQ 15 through the trait and use the C ABI"
-      },
-      {
-       "date": "2026-10-22T23:58:59-04:00",
-       "hash": "de7c496",
-       "merge": false,
-       "subject": "fix: program the PIT and record the clock's rate in one step"
-      },
-      {
-       "date": "2026-10-22T23:59:18-04:00",
-       "hash": "ab23751",
-       "merge": false,
-       "subject": "docs: record the assembly check rerun after the review fixes"
+       "subject": "docs: add chapters 19 to 23 and bring the progress report up to 11 November"
       }
      ],
-     "createdAt": "2026-10-23T03:38:21Z",
-     "ghAdditions": 3113,
-     "ghChangedFiles": 34,
-     "ghDeletions": 22,
-     "head": "ab23751",
-     "headFull": "ab23751289914de3263c34b026c15723a37acc2f",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "design-docs"
-     ],
-     "number": 8,
-     "stackedOn": [],
-     "state": "in review",
-     "title": "Design the HAL and add host-tested shared serial, PIT and PIC drivers",
-     "updatedAt": "2026-10-23T04:04:37Z",
-     "url": "https://github.com/liminal-hq/desk/pull/8"
-    },
-    {
-     "ahead": 24,
-     "base": "feat/hal-design",
-     "branch": "spike/c-kernel-input",
-     "ci": "passing",
-     "commitCount": 7,
-     "commits": [
-      {
-       "date": "2026-10-23T00:04:47-04:00",
-       "hash": "6b81760",
-       "merge": false,
-       "subject": "feat(hal): add the PS/2 input drivers and their mock controller"
-      },
-      {
-       "date": "2026-10-23T00:05:05-04:00",
-       "hash": "a70369f",
-       "merge": true,
-       "subject": "merge: bring in the HAL design branch"
-      },
-      {
-       "date": "2026-10-23T00:08:59-04:00",
-       "hash": "13c3256",
-       "merge": false,
-       "subject": "feat(kernel): run on the shared HAL drivers and read the keyboard and mouse"
-      },
-      {
-       "date": "2026-10-23T00:08:59-04:00",
-       "hash": "cd6a319",
-       "merge": false,
-       "subject": "test(native): inject keys and mouse motion through the QEMU monitor"
-      },
-      {
-       "date": "2026-10-23T00:10:37-04:00",
-       "hash": "3ad4c85",
-       "merge": false,
-       "subject": "docs: record the keyboard and mouse spike and its HAL feedback"
-      },
-      {
-       "date": "2026-10-23T00:11:20-04:00",
-       "hash": "3d03ff4",
-       "merge": false,
-       "subject": "docs: give the exact test counts in C-INPUT"
-      },
-      {
-       "date": "2026-10-23T00:15:57-04:00",
-       "hash": "33b37c9",
-       "merge": false,
-       "subject": "fix(input): apply the code review of the keyboard and mouse spike"
-      }
-     ],
-     "createdAt": "2026-10-23T04:11:15Z",
-     "ghAdditions": 3959,
-     "ghChangedFiles": 41,
-     "ghDeletions": 131,
-     "head": "33b37c9",
-     "headFull": "33b37c9a72b7360d687734e6a572fd55c609ea5f",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "spike"
-     ],
-     "number": 10,
-     "stackedOn": [
-      8
-     ],
-     "state": "in review",
-     "title": "Add keyboard and PS/2 mouse input to the native kernel",
-     "updatedAt": "2026-10-23T04:20:22Z",
-     "url": "https://github.com/liminal-hq/desk/pull/10"
-    },
-    {
-     "ahead": 23,
-     "base": "feat/hal-design",
-     "branch": "spike/a-vga-vbe-rust",
-     "ci": "passing",
-     "commitCount": 6,
-     "commits": [
-      {
-       "date": "2026-10-23T00:05:17-04:00",
-       "hash": "a5a1144",
-       "merge": false,
-       "subject": "feat: add the VGA and VBE driver and the video types to the HAL"
-      },
-      {
-       "date": "2026-10-23T00:05:18-04:00",
-       "hash": "16d40d2",
-       "merge": true,
-       "subject": "Merge remote-tracking branch 'origin/feat/hal-design' into spike/a-vga-vbe-rust"
-      },
-      {
-       "date": "2026-10-23T00:10:53-04:00",
-       "hash": "8625acd",
-       "merge": false,
-       "subject": "feat: run VGA and VBE from Rust on the DOS runtime through desk-vga"
-      },
-      {
-       "date": "2026-10-23T00:12:29-04:00",
-       "hash": "7d59239",
-       "merge": false,
-       "subject": "docs: record the spike A result for VGA and VBE"
-      },
-      {
-       "date": "2026-10-23T00:13:03-04:00",
-       "hash": "5bd167b",
-       "merge": false,
-       "subject": "docs: name the spike A pull request in the targets table"
-      },
-      {
-       "date": "2026-10-23T00:17:47-04:00",
-       "hash": "4ab237b",
-       "merge": false,
-       "subject": "fix: leave graphics after direct mode sets, bound a dead fade, free a replaced mapping"
-      }
-     ],
-     "createdAt": "2026-10-23T04:12:56Z",
-     "ghAdditions": 4127,
-     "ghChangedFiles": 49,
-     "ghDeletions": 8,
-     "head": "4ab237b",
-     "headFull": "4ab237bdc8fd0cdfedbf0c3701e182c54e0ac87a",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "dos",
-      "graphics",
-      "spike"
-     ],
-     "number": 11,
-     "stackedOn": [
-      8
-     ],
-     "state": "in review",
-     "title": "Add the VGA and VBE driver and prove it on the DOS runtime",
-     "updatedAt": "2026-10-23T04:24:39Z",
-     "url": "https://github.com/liminal-hq/desk/pull/11"
-    },
-    {
-     "ahead": 5,
-     "base": "main",
-     "branch": "spike/e-std-stubs",
-     "ci": "passing",
-     "commitCount": 5,
-     "commits": [
-      {
-       "date": "2026-10-23T00:27:41-04:00",
-       "hash": "648d009",
-       "merge": false,
-       "subject": "feat: build std for an invented OS and probe every stubbed API"
-      },
-      {
-       "date": "2026-10-23T00:27:41-04:00",
-       "hash": "098b714",
-       "merge": false,
-       "subject": "docs: record the result of spike E, std for an invented OS"
-      },
-      {
-       "date": "2026-10-23T00:34:45-04:00",
-       "hash": "563ebb6",
-       "merge": false,
-       "subject": "fix: carry the monotonic clock across midnight"
-      },
-      {
-       "date": "2026-10-23T00:34:45-04:00",
-       "hash": "c3b3be4",
-       "merge": false,
-       "subject": "docs: correct the desk_* function count and drop dead code"
-      },
-      {
-       "date": "2026-10-23T00:34:45-04:00",
-       "hash": "7c88426",
-       "merge": false,
-       "subject": "fix: give std programs the program path as argv[0]"
-      }
-     ],
-     "createdAt": "2026-10-23T04:28:09Z",
-     "ghAdditions": 2253,
-     "ghChangedFiles": 44,
-     "ghDeletions": 9,
-     "head": "7c88426",
-     "headFull": "7c88426b9522d2dbdaf16b6d086598b5a0e070b6",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "rust",
-      "experimental",
-      "spike"
-     ],
-     "number": 12,
-     "stackedOn": [],
-     "state": "in review",
-     "title": "Run spike E: build std for an invented OS and patch in a platform layer",
-     "updatedAt": "2026-10-23T04:43:27Z",
-     "url": "https://github.com/liminal-hq/desk/pull/12"
-    },
-    {
-     "ahead": 6,
-     "base": "main",
-     "branch": "spike/s5-jsdos",
-     "ci": "passing",
-     "commitCount": 6,
-     "commits": [
-      {
-       "date": "2026-10-23T00:25:25-04:00",
-       "hash": "f3f6470",
-       "merge": false,
-       "subject": "feat: add the s5-jsdos graphics and sound probes"
-      },
-      {
-       "date": "2026-10-23T00:32:24-04:00",
-       "hash": "8544b4c",
-       "merge": false,
-       "subject": "test: run the DOS programs in js-dos 8 in headless Chromium"
-      },
-      {
-       "date": "2026-10-23T00:32:24-04:00",
-       "hash": "87c2a15",
-       "merge": false,
-       "subject": "docs: record the result of spike s5-jsdos"
-      },
-      {
-       "date": "2026-10-23T00:38:41-04:00",
-       "hash": "25389db",
-       "merge": false,
-       "subject": "fix: harden the s5 probes against a missing window segment and the midnight tick wrap"
-      },
-      {
-       "date": "2026-10-23T00:38:41-04:00",
-       "hash": "bfc6598",
-       "merge": false,
-       "subject": "test: make the s5 driver survive bad requests and missing exit files"
-      },
-      {
-       "date": "2026-10-23T00:38:41-04:00",
-       "hash": "869785a",
-       "merge": false,
-       "subject": "build: keep the s5 output directory in one place and re-fetch a partial js-dos"
-      }
-     ],
-     "createdAt": "2026-10-23T04:32:55Z",
-     "ghAdditions": 2260,
-     "ghChangedFiles": 37,
-     "ghDeletions": 10,
-     "head": "869785a",
-     "headFull": "869785a1cd76326275648ac420a05311b134fe85",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "experimental",
-      "dos",
-      "spike"
-     ],
-     "number": 13,
-     "stackedOn": [],
-     "state": "in review",
-     "title": "Run spike s5: DOS programs and the VBE linear frame buffer work in js-dos 8",
-     "updatedAt": "2026-10-23T04:43:31Z",
-     "url": "https://github.com/liminal-hq/desk/pull/13"
-    },
-    {
-     "ahead": 40,
-     "base": "spike/c-kernel-input",
-     "branch": "spike/d-native-vga",
-     "ci": "passing",
-     "commitCount": 10,
-     "commits": [
-      {
-       "date": "2026-10-23T00:32:35-04:00",
-       "hash": "7f6b22c",
-       "merge": true,
-       "subject": "Merge spike A's `desk-vga` driver into the native graphics spike"
-      },
-      {
-       "date": "2026-10-23T00:37:36-04:00",
-       "hash": "7d0e128",
-       "merge": false,
-       "subject": "feat(hal): add the text-mode restore to `desk-vga`"
-      },
-      {
-       "date": "2026-10-23T00:37:36-04:00",
-       "hash": "995d6c6",
-       "merge": false,
-       "subject": "feat(boot): ask VBE for a linear frame buffer before the switch to protected mode"
-      },
-      {
-       "date": "2026-10-23T00:49:39-04:00",
-       "hash": "c962b00",
-       "merge": false,
-       "subject": "feat(kernel): draw with `desk-vga` from protected mode, with a cursor and a first window"
-      },
-      {
-       "date": "2026-10-23T00:49:39-04:00",
-       "hash": "316043b",
-       "merge": false,
-       "subject": "test(native): check the graphics tour against screenshots taken through the QEMU monitor"
-      },
-      {
-       "date": "2026-10-23T00:51:16-04:00",
-       "hash": "ed8f947",
-       "merge": false,
-       "subject": "perf(hal): fill spans with word stores through `MmioRegion::fill8`"
-      },
-      {
-       "date": "2026-10-23T00:54:20-04:00",
-       "hash": "31a0306",
-       "merge": false,
-       "subject": "docs: record spike D, native graphics in the kernel"
-      },
-      {
-       "date": "2026-10-23T01:02:31-04:00",
-       "hash": "172901b",
-       "merge": false,
-       "subject": "fix(boot): use the linear bytes per scan line of a VBE 3.0 mode as the pitch"
-      },
-      {
-       "date": "2026-10-23T01:02:31-04:00",
-       "hash": "0621e68",
-       "merge": false,
-       "subject": "fix(kernel): let Backspace edit the echo line and tidy the tour's helpers"
-      },
-      {
-       "date": "2026-10-23T01:02:31-04:00",
-       "hash": "563f6c4",
-       "merge": false,
-       "subject": "test(native): show monitor error replies that end like the command"
-      }
-     ],
-     "createdAt": "2026-10-23T04:55:01Z",
-     "ghAdditions": 6331,
-     "ghChangedFiles": 85,
-     "ghDeletions": 47,
-     "head": "563f6c4",
-     "headFull": "563f6c42c26348320db719d5630a2f73b5c73596",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "graphics",
-      "spike"
-     ],
-     "number": 14,
-     "stackedOn": [
-      8,
-      10,
-      11
-     ],
-     "state": "in review",
-     "title": "Draw from the native kernel: VBE from the loader, a cursor and a first window",
-     "updatedAt": "2026-10-23T05:08:46Z",
-     "url": "https://github.com/liminal-hq/desk/pull/14"
-    },
-    {
-     "ahead": 39,
-     "base": "spike/a-vga-vbe-rust",
-     "branch": "spike/b-dos-input",
-     "ci": "passing",
-     "commitCount": 9,
-     "commits": [
-      {
-       "date": "2026-10-23T00:31:44-04:00",
-       "hash": "85e6581",
-       "merge": true,
-       "subject": "Merge spike C (the kernel's input drivers) into the DOS input spike"
-      },
-      {
-       "date": "2026-10-23T00:38:30-04:00",
-       "hash": "a3dc83c",
-       "merge": false,
-       "subject": "feat: add the INT 33h mouse driver crate and a seeded keyboard decoder"
-      },
-      {
-       "date": "2026-10-23T00:51:46-04:00",
-       "hash": "fbf6a0a",
-       "merge": false,
-       "subject": "feat: add the DOS interrupt registry and BIOS keyboard state to rt, and a software cursor to desk-vga"
-      },
-      {
-       "date": "2026-10-23T00:51:55-04:00",
-       "hash": "37802fd",
-       "merge": false,
-       "subject": "feat: add INPUT.EXE, the keyboard and mouse on the pure-Rust DOS runtime, with AUTOTYPE checks"
-      },
-      {
-       "date": "2026-10-23T00:56:19-04:00",
-       "hash": "7a88d8f",
-       "merge": false,
-       "subject": "test: drive the DOS mouse with xdotool under Xvfb (opt-in) and record the screen"
-      },
-      {
-       "date": "2026-10-23T00:56:52-04:00",
-       "hash": "caf2b03",
-       "merge": false,
-       "subject": "feat: let the core ask an input source whether there is a mouse"
-      },
-      {
-       "date": "2026-10-23T01:01:37-04:00",
-       "hash": "d82b80d",
-       "merge": false,
-       "subject": "docs: write up spike B, the keyboard and the mouse on the DOS runtime"
-      },
-      {
-       "date": "2026-10-23T01:11:01-04:00",
-       "hash": "ec86c13",
-       "merge": false,
-       "subject": "fix: refuse an IRQ registration the clean-up list cannot undo, and keep a line registered when its vector cannot be restored"
-      },
-      {
-       "date": "2026-10-23T01:11:01-04:00",
-       "hash": "ba6456f",
-       "merge": false,
-       "subject": "fix: keep a poll's motion when the button read fails, and report chained lock keys honestly"
-      }
-     ],
-     "createdAt": "2026-10-23T05:02:11Z",
-     "ghAdditions": 6988,
-     "ghChangedFiles": 73,
-     "ghDeletions": 139,
-     "head": "ba6456f",
-     "headFull": "ba6456f0100376b4d4f1f41896188a07768633e9",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "dos",
-      "input",
-      "spike"
-     ],
-     "number": 15,
-     "stackedOn": [
-      8,
-      10,
-      11
-     ],
-     "state": "in review",
-     "title": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DOS runtime",
-     "updatedAt": "2026-10-23T05:34:06Z",
-     "url": "https://github.com/liminal-hq/desk/pull/15"
-    },
-    {
-     "ahead": 8,
-     "base": "main",
-     "branch": "spike/g-boot-bochs-86box",
-     "ci": "passing",
-     "commitCount": 8,
-     "commits": [
-      {
-       "date": "2026-10-23T00:08:32-04:00",
-       "hash": "078f2e4",
-       "merge": false,
-       "subject": "test: accept any CR0 cache-disable bits in the exception dump checks"
-      },
-      {
-       "date": "2026-10-23T00:08:32-04:00",
-       "hash": "1eccdf1",
-       "merge": false,
-       "subject": "test: boot the native image in Bochs as a 486 (opt-in)"
-      },
-      {
-       "date": "2026-10-23T01:42:03-04:00",
-       "hash": "a1ced7b",
-       "merge": false,
-       "subject": "fix: fall back to INT 15h AH=88 when the BIOS has neither E820 nor E801"
-      },
-      {
-       "date": "2026-10-23T01:42:15-04:00",
-       "hash": "28a4be3",
-       "merge": false,
-       "subject": "test: boot the native image in headless 86Box on an AMIBIOS 486 (experimental)"
-      },
-      {
-       "date": "2026-10-23T01:44:01-04:00",
-       "hash": "7ab0e33",
-       "merge": false,
-       "subject": "docs: record spike G, the native image in Bochs and 86Box"
-      },
-      {
-       "date": "2026-10-23T01:51:34-04:00",
-       "hash": "45c303f",
-       "merge": false,
-       "subject": "docs: count the AH=88 build among the four verified loader variants"
-      },
-      {
-       "date": "2026-10-23T01:51:35-04:00",
-       "hash": "bc4d6da",
-       "merge": false,
-       "subject": "fix: time the Bochs watchdog by the clock and match its container exactly"
-      },
-      {
-       "date": "2026-10-23T01:51:35-04:00",
-       "hash": "04f1212",
-       "merge": false,
-       "subject": "fix: retry dismissing the 86Box serial message box and time out by the clock"
-      }
-     ],
-     "createdAt": "2026-10-23T05:44:39Z",
-     "ghAdditions": 650,
-     "ghChangedFiles": 24,
-     "ghDeletions": 38,
-     "head": "04f1212",
-     "headFull": "04f12127fcd9ec5f80be0a468761948ba8576530",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "experimental",
-      "spike"
-     ],
-     "number": 16,
-     "stackedOn": [],
-     "state": "in review",
-     "title": "Boot the native image in Bochs and 86Box, and fix the loader for old BIOSes",
-     "updatedAt": "2026-10-23T06:07:08Z",
-     "url": "https://github.com/liminal-hq/desk/pull/16"
-    },
-    {
-     "ahead": 49,
-     "base": "spike/d-native-vga",
-     "branch": "spike/n3-native-bios",
-     "ci": "passing",
-     "commitCount": 9,
-     "commits": [
-      {
-       "date": "2026-10-23T01:54:19-04:00",
-       "hash": "5cc045c",
-       "merge": false,
-       "subject": "feat(hal): read the 8259 in-service and request registers"
-      },
-      {
-       "date": "2026-10-23T01:54:39-04:00",
-       "hash": "3743ac9",
-       "merge": false,
-       "subject": "feat(kernel): call the BIOS from protected mode through a real-mode trampoline"
-      },
-      {
-       "date": "2026-10-23T01:57:12-04:00",
-       "hash": "e33f156",
-       "merge": false,
-       "subject": "feat(kernel): leave VBE through the BIOS on cards without the Bochs registers"
-      },
-      {
-       "date": "2026-10-23T02:01:16-04:00",
-       "hash": "589e08e",
-       "merge": false,
-       "subject": "feat(kernel): add a `bios-solo` test mode and a disk error every BIOS answers"
-      },
-      {
-       "date": "2026-10-23T02:07:47-04:00",
-       "hash": "c863551",
-       "merge": false,
-       "subject": "fix(kernel): start a BIOS handler with the caller's flags"
-      },
-      {
-       "date": "2026-10-23T02:07:47-04:00",
-       "hash": "64f658c",
-       "merge": false,
-       "subject": "test(kernel): time plain BIOS calls apart from the state checks"
-      },
-      {
-       "date": "2026-10-23T02:07:47-04:00",
-       "hash": "1ab8769",
-       "merge": false,
-       "subject": "docs: record spike n3, a real BIOS path for the native kernel"
-      },
-      {
-       "date": "2026-10-23T02:15:24-04:00",
-       "hash": "9109761",
-       "merge": false,
-       "subject": "fix(kernel): pass the direction flag into a BIOS handler and count the midnight rollover"
-      },
-      {
-       "date": "2026-10-23T02:15:24-04:00",
-       "hash": "8704850",
-       "merge": false,
-       "subject": "docs: name PR #17 for spike n3 in the Rust targets table"
-      }
-     ],
-     "createdAt": "2026-10-23T06:08:30Z",
-     "ghAdditions": 1987,
-     "ghChangedFiles": 31,
-     "ghDeletions": 36,
-     "head": "8704850",
-     "headFull": "870485044468933e9f2d34db5c3a916176028324",
-     "isReport": false,
-     "labels": [
-      "documentation",
-      "enhancement",
-      "testing",
-      "rust",
-      "graphics",
-      "spike"
-     ],
-     "number": 17,
-     "stackedOn": [
-      8,
-      10,
-      11,
-      14
-     ],
-     "state": "in review",
-     "title": "Call the BIOS from the native kernel through a real-mode trampoline",
-     "updatedAt": "2026-10-23T06:15:48Z",
-     "url": "https://github.com/liminal-hq/desk/pull/17"
-    },
-    {
-     "ahead": 8,
-     "base": "main",
-     "branch": "docs/progress-report-chapters",
-     "ci": "passing",
-     "commitCount": 8,
-     "commits": [
-      {
-       "date": "2026-10-23T02:07:39-04:00",
-       "hash": "8900789",
-       "merge": false,
-       "subject": "feat: read open pull requests and their branches in the report generator"
-      },
-      {
-       "date": "2026-10-23T02:08:05-04:00",
-       "hash": "a9dd0db",
-       "merge": false,
-       "subject": "feat: add the hardware explainers, charts and the gallery to the report generator"
-      },
-      {
-       "date": "2026-10-23T02:08:05-04:00",
-       "hash": "4cd606f",
-       "merge": false,
-       "subject": "docs: add six chapters to the progress report and refresh the archive"
-      },
-      {
-       "date": "2026-10-23T02:08:08-04:00",
-       "hash": "b1a3e29",
-       "merge": true,
-       "subject": "Merge main into docs/progress-report-chapters"
-      },
-      {
-       "date": "2026-10-23T02:11:20-04:00",
-       "hash": "df47e7e",
-       "merge": false,
-       "subject": "fix: stop state tags clashing with specimen labels and hide unused explainer panels"
-      },
-      {
-       "date": "2026-10-23T02:17:26-04:00",
-       "hash": "8f63d31",
-       "merge": false,
-       "subject": "fix: apply the review of the progress report pull request"
-      },
-      {
-       "date": "2026-10-23T02:17:59-04:00",
-       "hash": "1882f41",
-       "merge": false,
-       "subject": "docs: mark spike n3's pull request and the work-in-progress state in the report"
-      },
-      {
-       "date": "2026-10-23T02:19:07-04:00",
-       "hash": "7dee5ee",
-       "merge": false,
-       "subject": "docs: say in the archive's description that it is a work in progress"
-      }
-     ],
-     "createdAt": "2026-10-23T06:11:49Z",
-     "ghAdditions": 6954,
-     "ghChangedFiles": 68,
-     "ghDeletions": 268,
-     "head": "7dee5ee",
-     "headFull": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
+     "createdAt": "2026-11-11T18:41:45Z",
+     "ghAdditions": 4574,
+     "ghChangedFiles": 26,
+     "ghDeletions": 1209,
+     "head": "b2a8d81",
+     "headFull": "b2a8d81f0065ae6e8449dde06e7a03d3e3388c0a",
      "isReport": true,
      "labels": [
       "documentation",
-      "enhancement",
-      "testing",
-      "design-docs"
+      "design-docs",
+      "pages"
      ],
-     "number": 18,
+     "number": 74,
      "stackedOn": [],
      "state": "in review",
-     "title": "Add chapters for the open spikes and a gallery to the progress report",
-     "updatedAt": "2026-10-23T06:19:25Z",
-     "url": "https://github.com/liminal-hq/desk/pull/18"
+     "title": "Bring the progress report up to date with live input, the hands-on runs and the runtime comparison",
+     "updatedAt": "2026-11-11T18:41:46Z",
+     "url": "https://github.com/liminal-hq/desk/pull/74"
     }
    ],
-   "tips": [
-    {
-     "halLines": 2401,
-     "hostTests": 35,
-     "kernelLines": 1090,
-     "number": 8,
-     "transcripts": 25
-    },
-    {
-     "halLines": 5393,
-     "hostTests": 106,
-     "kernelLines": 1320,
-     "number": 10,
-     "transcripts": 27
-    },
-    {
-     "halLines": 5111,
-     "hostTests": 82,
-     "kernelLines": 1090,
-     "number": 11,
-     "transcripts": 28
-    },
-    {
-     "halLines": 0,
-     "hostTests": 0,
-     "kernelLines": 1090,
-     "number": 12,
-     "transcripts": 25
-    },
-    {
-     "halLines": 0,
-     "hostTests": 0,
-     "kernelLines": 1090,
-     "number": 13,
-     "transcripts": 25
-    },
-    {
-     "halLines": 8358,
-     "hostTests": 158,
-     "kernelLines": 2086,
-     "number": 14,
-     "transcripts": 33
-    },
-    {
-     "halLines": 9459,
-     "hostTests": 173,
-     "kernelLines": 1320,
-     "number": 15,
-     "transcripts": 31
-    },
-    {
-     "halLines": 0,
-     "hostTests": 0,
-     "kernelLines": 1091,
-     "number": 16,
-     "transcripts": 25
-    },
-    {
-     "halLines": 8395,
-     "hostTests": 159,
-     "kernelLines": 3280,
-     "number": 17,
-     "transcripts": 34
-    }
-   ],
+   "tips": [],
    "warnings": [],
-   "widest": 15
+   "widest": null
   },
   "prs": [
    {
-    "additions": 6954,
+    "additions": 4574,
     "baseRefName": "main",
-    "changedFiles": 68,
+    "changedFiles": 26,
+    "checks": [
+     {
+      "conclusion": "",
+      "name": "check",
+      "status": "IN_PROGRESS",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T18:41:45Z",
+    "deletions": 1209,
+    "headRefName": "docs/progress-report-update",
+    "headRefOid": "b2a8d81f0065ae6e8449dde06e7a03d3e3388c0a",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "127c01",
+      "description": "GitHub Pages site and deployment",
+      "id": "LA_kwDOVTolZM8AAAAC-q8IYQ",
+      "name": "pages"
+     }
+    ],
+    "mergedAt": null,
+    "number": 74,
+    "state": "OPEN",
+    "title": "Bring the progress report up to date with live input, the hands-on runs and the runtime comparison",
+    "updatedAt": "2026-11-11T18:41:46Z",
+    "url": "https://github.com/liminal-hq/desk/pull/74"
+   },
+   {
+    "additions": 48,
+    "baseRefName": "main",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T18:30:19Z",
+    "deletions": 29,
+    "headRefName": "docs/r47-live-input-verified",
+    "headRefOid": "55da6cfb6a06c81c59e465b6422f9b7f8bdc9783",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T18:44:08Z",
+    "number": 73,
+    "state": "MERGED",
+    "title": "Re-verify live input from a clean clone and update the roadmap",
+    "updatedAt": "2026-11-11T18:44:11Z",
+    "url": "https://github.com/liminal-hq/desk/pull/73"
+   },
+   {
+    "additions": 220,
+    "baseRefName": "main",
+    "changedFiles": 7,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T17:27:48Z",
+    "deletions": 31,
+    "headRefName": "fix/r127-buffer-shell-transcript",
+    "headRefOid": "e49f14e17a3419b7a2827176e1158e8f79df4312",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "d73a4a",
+      "description": "Something isn't working",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yOQ",
+      "name": "bug"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     }
+    ],
+    "mergedAt": "2026-11-11T18:07:54Z",
+    "number": 72,
+    "state": "MERGED",
+    "title": "Keep the shell's transcript off the screen while the window is up",
+    "updatedAt": "2026-11-11T18:07:57Z",
+    "url": "https://github.com/liminal-hq/desk/pull/72"
+   },
+   {
+    "additions": 308,
+    "baseRefName": "main",
+    "changedFiles": 4,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T17:06:22Z",
+    "deletions": 4,
+    "headRefName": "docs/roadmap-runtime-reunion",
+    "headRefOid": "6b23bc2c7e0bfdaf7a00c807fc8d492a161fe0de",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": "2026-11-11T18:16:54Z",
+    "number": 71,
+    "state": "MERGED",
+    "title": "Add the runtime reunification group and the Fizz 2 comparison",
+    "updatedAt": "2026-11-11T18:16:57Z",
+    "url": "https://github.com/liminal-hq/desk/pull/71"
+   },
+   {
+    "additions": 7,
+    "baseRefName": "main",
+    "changedFiles": 4,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T16:57:02Z",
+    "deletions": 15,
+    "headRefName": "ci/pin-ci-dos-with-qemu",
+    "headRefOid": "05c07d4a8fd0b3f7d7b757fe5315b54d41da5aff",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "094999",
+      "description": "Build tooling and packaging updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q7_7Q",
+      "name": "build"
+     },
+     {
+      "color": "0e8a16",
+      "description": "Continuous integration workflows and checks",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Anw",
+      "name": "ci"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": "2026-11-11T17:21:13Z",
+    "number": 70,
+    "state": "MERGED",
+    "title": "Move CI to the ci-dos image that carries QEMU and NASM",
+    "updatedAt": "2026-11-11T17:21:16Z",
+    "url": "https://github.com/liminal-hq/desk/pull/70"
+   },
+   {
+    "additions": 731,
+    "baseRefName": "main",
+    "changedFiles": 2,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T16:36:10Z",
+    "deletions": 19,
+    "headRefName": "docs/roadmap-full-shell",
+    "headRefOid": "d749da1e19c80a70f01c9df274566983fb9bc042",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-11-11T18:02:44Z",
+    "number": 69,
+    "state": "MERGED",
+    "title": "Add the full shell and apps to the roadmap",
+    "updatedAt": "2026-11-11T18:02:47Z",
+    "url": "https://github.com/liminal-hq/desk/pull/69"
+   },
+   {
+    "additions": 19617,
+    "baseRefName": "main",
+    "changedFiles": 115,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T16:31:29Z",
+    "deletions": 0,
+    "headRefName": "docs/shell-design-reference",
+    "headRefOid": "438332c8a453cab44322eebe93413e3ff1a7d40e",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "e99695",
+      "description": "Palette, fonts, icons and app guidelines",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OKA",
+      "name": "design-system"
+     }
+    ],
+    "mergedAt": "2026-11-11T17:48:25Z",
+    "number": 68,
+    "state": "MERGED",
+    "title": "Capture the original shell design and describe it against the docs and code",
+    "updatedAt": "2026-11-11T17:48:28Z",
+    "url": "https://github.com/liminal-hq/desk/pull/68"
+   },
+   {
+    "additions": 6,
+    "baseRefName": "main",
+    "changedFiles": 2,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T15:36:30Z",
+    "deletions": 6,
+    "headRefName": "docs/roadmap-r82-done",
+    "headRefOid": "26424a880c161de9b96da1827ca9873189761d78",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-11-11T17:35:46Z",
+    "number": 67,
+    "state": "MERGED",
+    "title": "Mark the integration analysis and breakup proposal as done",
+    "updatedAt": "2026-11-11T17:35:48Z",
+    "url": "https://github.com/liminal-hq/desk/pull/67"
+   },
+   {
+    "additions": 85,
+    "baseRefName": "main",
+    "changedFiles": 2,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T06:57:53Z",
+    "deletions": 46,
+    "headRefName": "docs/roadmap-after-merges",
+    "headRefOid": "fb273389fafffdb8e4feb8e29fac2b828bc057ca",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-11-11T15:26:57Z",
+    "number": 66,
+    "state": "MERGED",
+    "title": "Bring the roadmap up to date with the merged pull requests",
+    "updatedAt": "2026-11-11T15:27:00Z",
+    "url": "https://github.com/liminal-hq/desk/pull/66"
+   },
+   {
+    "additions": 912,
+    "baseRefName": "main",
+    "changedFiles": 5,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-11T06:55:02Z",
+    "deletions": 0,
+    "headRefName": "docs/rust-dos-integration-analysis",
+    "headRefOid": "6e8f4122687404056151a74d9cb28623b16259d7",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": "2026-11-11T15:27:28Z",
+    "number": 65,
+    "state": "MERGED",
+    "title": "Assess the Rust/DOS integration and propose three repository splits",
+    "updatedAt": "2026-11-11T15:27:30Z",
+    "url": "https://github.com/liminal-hq/desk/pull/65"
+   },
+   {
+    "additions": 225,
+    "baseRefName": "main",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-29T17:16:58Z",
+    "deletions": 2,
+    "headRefName": "docs/roadmap",
+    "headRefOid": "63b96849301d2bda162c95c9cb347e687b4a1dcc",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:57Z",
+    "number": 64,
+    "state": "MERGED",
+    "title": "Add a roadmap of what is done, in flight and planned",
+    "updatedAt": "2026-11-11T06:26:59Z",
+    "url": "https://github.com/liminal-hq/desk/pull/64"
+   },
+   {
+    "additions": 355,
+    "baseRefName": "docs/manual-explainers-c",
+    "changedFiles": 10,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:50:52Z",
+    "deletions": 24,
+    "headRefName": "docs/manual-appendices",
+    "headRefOid": "2ae4181b4504224113f6627276e56f512f6d0ba5",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:44Z",
+    "number": 63,
+    "state": "MERGED",
+    "title": "Generate appendix B of the manual and finish the editorial pass",
+    "updatedAt": "2026-11-11T06:39:55Z",
+    "url": "https://github.com/liminal-hq/desk/pull/63"
+   },
+   {
+    "additions": 565,
+    "baseRefName": "docs/manual-explainers-b",
+    "changedFiles": 11,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:50:49Z",
+    "deletions": 4,
+    "headRefName": "docs/manual-explainers-c",
+    "headRefOid": "27aaea8c880cc6ecf58c2809e9c8769c5dc81fd9",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:42Z",
+    "number": 62,
+    "state": "MERGED",
+    "title": "Add the crate graph, .DFN and target explainers to the manual",
+    "updatedAt": "2026-11-11T06:39:54Z",
+    "url": "https://github.com/liminal-hq/desk/pull/62"
+   },
+   {
+    "additions": 386,
+    "baseRefName": "docs/manual-explainers-a",
+    "changedFiles": 6,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:50:46Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-explainers-b",
+    "headRefOid": "0166ead9357541c7341763ad1f01e323c4ef700c",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:41Z",
+    "number": 61,
+    "state": "MERGED",
+    "title": "Add the frames and interrupt explainers to the manual",
+    "updatedAt": "2026-11-11T06:39:53Z",
+    "url": "https://github.com/liminal-hq/desk/pull/61"
+   },
+   {
+    "additions": 389,
+    "baseRefName": "docs/manual-evidence-frontier",
+    "changedFiles": 7,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:50:42Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-explainers-a",
+    "headRefOid": "8678f87b53fabf5c7cbdbb06d2fba58c4572d833",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:40Z",
+    "number": 60,
+    "state": "MERGED",
+    "title": "Add the address and GDT explainers to the manual",
+    "updatedAt": "2026-11-11T06:39:53Z",
+    "url": "https://github.com/liminal-hq/desk/pull/60"
+   },
+   {
+    "additions": 611,
+    "baseRefName": "docs/manual-fonts-emulators",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:47:43Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-evidence-frontier",
+    "headRefOid": "3c5b2e53cbb873e97e025c5ffaa9ca446d101f49",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:39Z",
+    "number": 59,
+    "state": "MERGED",
+    "title": "Add the manual chapters on the evidence method and on what is not built",
+    "updatedAt": "2026-11-11T06:39:52Z",
+    "url": "https://github.com/liminal-hq/desk/pull/59"
+   },
+   {
+    "additions": 941,
+    "baseRefName": "docs/manual-rt-toolchain",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:47:40Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-fonts-emulators",
+    "headRefOid": "41d59cd4841b08598c07a135a9bacf5f29653784",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:38Z",
+    "number": 58,
+    "state": "MERGED",
+    "title": "Add the manual chapters on fonts and formats and on the emulators",
+    "updatedAt": "2026-11-11T06:39:52Z",
+    "url": "https://github.com/liminal-hq/desk/pull/58"
+   },
+   {
+    "additions": 899,
+    "baseRefName": "docs/manual-shell-platforms",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:37:54Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-rt-toolchain",
+    "headRefOid": "5052571543738951e4dfb63ff6b08855e3c62b12",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:36Z",
+    "number": 57,
+    "state": "MERGED",
+    "title": "Add the manual chapters on the DOS runtime and the toolchain",
+    "updatedAt": "2026-11-11T06:39:51Z",
+    "url": "https://github.com/liminal-hq/desk/pull/57"
+   },
+   {
+    "additions": 634,
+    "baseRefName": "docs/manual-surfaces-text",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:37:51Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-shell-platforms",
+    "headRefOid": "e9ad9553405e9cb3a47dfe7e4fbd662d272d884f",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:35Z",
+    "number": 56,
+    "state": "MERGED",
+    "title": "Add the manual chapters on windows, scenarios and the two platforms",
+    "updatedAt": "2026-11-11T06:39:50Z",
+    "url": "https://github.com/liminal-hq/desk/pull/56"
+   },
+   {
+    "additions": 1168,
+    "baseRefName": "docs/manual-input-graphics",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:37:48Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-surfaces-text",
+    "headRefOid": "8744dc9fa64fcf258c8419fe1779be15ee87abfa",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:34Z",
+    "number": 55,
+    "state": "MERGED",
+    "title": "Add the manual chapters on surfaces, damage, text and window chrome",
+    "updatedAt": "2026-11-11T06:39:50Z",
+    "url": "https://github.com/liminal-hq/desk/pull/55"
+   },
+   {
+    "additions": 88,
+    "baseRefName": "test/live-dos-xvfb",
+    "changedFiles": 10,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:23:24Z",
+    "deletions": 6,
+    "headRefName": "docs/live-input-result",
+    "headRefOid": "73087f78062536e7f6b2406c45a2a3b737ea901f",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:11Z",
+    "number": 54,
+    "state": "MERGED",
+    "title": "Record the result of live input on both tracks",
+    "updatedAt": "2026-11-11T06:26:17Z",
+    "url": "https://github.com/liminal-hq/desk/pull/54"
+   },
+   {
+    "additions": 191,
+    "baseRefName": "feat/live-launchers",
+    "changedFiles": 15,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T17:20:07Z",
+    "deletions": 76,
+    "headRefName": "test/live-dos-xvfb",
+    "headRefOid": "1722bbc8e7090adf0b8320df65e4f034b3d2f186",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:10Z",
+    "number": 53,
+    "state": "MERGED",
+    "title": "Check the hosted mouse path against the goldens under Xvfb",
+    "updatedAt": "2026-11-11T06:26:17Z",
+    "url": "https://github.com/liminal-hq/desk/pull/53"
+   },
+   {
+    "additions": 983,
+    "baseRefName": "docs/manual-hal-drivers",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:52:52Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-input-graphics",
+    "headRefOid": "4113baa9d69c336b263591f9b63f9600f26747bb",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:33Z",
+    "number": 52,
+    "state": "MERGED",
+    "title": "Add the manual chapters on keyboard, mouse, VGA and VBE drivers",
+    "updatedAt": "2026-11-11T06:39:49Z",
+    "url": "https://github.com/liminal-hq/desk/pull/52"
+   },
+   {
+    "additions": 752,
+    "baseRefName": "docs/manual-memory-bios",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:52:49Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-hal-drivers",
+    "headRefOid": "4779c18e19ecdb3402509fc7d63375e06a5121e7",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:31Z",
+    "number": 51,
+    "state": "MERGED",
+    "title": "Add the manual chapters on the HAL and the first drivers",
+    "updatedAt": "2026-11-11T06:39:49Z",
+    "url": "https://github.com/liminal-hq/desk/pull/51"
+   },
+   {
+    "additions": 175,
+    "baseRefName": "feat/live-dos",
+    "changedFiles": 6,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:43:41Z",
+    "deletions": 11,
+    "headRefName": "feat/live-launchers",
+    "headRefOid": "fa1c227a2eeb2a1fe220413a7a6cb78e8e17a403",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "ededed",
+      "description": "Maintenance and housekeeping",
+      "id": "LA_kwDOVTolZM8AAAAC-q8AQQ",
+      "name": "chore"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:09Z",
+    "number": 50,
+    "state": "MERGED",
+    "title": "Add a launcher that opens the first window in an emulator window",
+    "updatedAt": "2026-11-11T06:26:16Z",
+    "url": "https://github.com/liminal-hq/desk/pull/50"
+   },
+   {
+    "additions": 194,
+    "baseRefName": "feat/live-native",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:31:10Z",
+    "deletions": 29,
+    "headRefName": "feat/live-dos",
+    "headRefOid": "38177f128a229cf1e6b43f1288d6c5910a92d737",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:07Z",
+    "number": 49,
+    "state": "MERGED",
+    "title": "Run the hosted first window on live input with marks",
+    "updatedAt": "2026-11-11T06:26:16Z",
+    "url": "https://github.com/liminal-hq/desk/pull/49"
+   },
+   {
+    "additions": 881,
+    "baseRefName": "docs/manual-interrupts",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:27:04Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-memory-bios",
+    "headRefOid": "7e04602f493d83bd57764d07c5b46c8c389c8576",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:30Z",
+    "number": 48,
+    "state": "MERGED",
+    "title": "Add the manual chapters on kernel memory and on calling the BIOS",
+    "updatedAt": "2026-11-11T06:39:48Z",
+    "url": "https://github.com/liminal-hq/desk/pull/48"
+   },
+   {
+    "additions": 405,
+    "baseRefName": "docs/manual-devices",
+    "changedFiles": 2,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:27:01Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-interrupts",
+    "headRefOid": "7de35c0b15f3a6dfde8370fa0fd9d708bf6e26b1",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:29Z",
+    "number": 47,
+    "state": "MERGED",
+    "title": "Add the manual chapter on the kernel's tables, interrupts and timer",
+    "updatedAt": "2026-11-11T06:39:47Z",
+    "url": "https://github.com/liminal-hq/desk/pull/47"
+   },
+   {
+    "additions": 585,
+    "baseRefName": "docs/manual-map-cpu",
+    "changedFiles": 3,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:26:57Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-devices",
+    "headRefOid": "18fe4125584eaa4f1a3a4123609248492cad92da",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:28Z",
+    "number": 46,
+    "state": "MERGED",
+    "title": "Add the manual chapter on the devices of a 486 PC",
+    "updatedAt": "2026-11-11T06:39:47Z",
+    "url": "https://github.com/liminal-hq/desk/pull/46"
+   },
+   {
+    "additions": 793,
+    "baseRefName": "docs/manual-boot",
+    "changedFiles": 5,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T16:26:52Z",
+    "deletions": 8,
+    "headRefName": "docs/manual-map-cpu",
+    "headRefOid": "13f4267855235cc47afc0e41f26d373fbb346a7e",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:27Z",
+    "number": 45,
+    "state": "MERGED",
+    "title": "Add the manual chapters on the map and on the processor",
+    "updatedAt": "2026-11-11T06:39:46Z",
+    "url": "https://github.com/liminal-hq/desk/pull/45"
+   },
+   {
+    "additions": 346,
+    "baseRefName": "feat/live-int33-clicks",
+    "changedFiles": 9,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:59:21Z",
+    "deletions": 22,
+    "headRefName": "feat/live-native",
+    "headRefOid": "7add54ef33bc742d8041bfed46790f4aa852b793",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:06Z",
+    "number": 44,
+    "state": "MERGED",
+    "title": "Run the first window on live keyboard and mouse input in the native kernel",
+    "updatedAt": "2026-11-11T06:26:15Z",
+    "url": "https://github.com/liminal-hq/desk/pull/44"
+   },
+   {
+    "additions": 390,
+    "baseRefName": "feat/live-frames",
+    "changedFiles": 12,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:59:18Z",
+    "deletions": 26,
+    "headRefName": "feat/live-int33-clicks",
+    "headRefOid": "adf1bb42ba9a6cca6ea45649acd582e4e04f41e0",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:05Z",
+    "number": 43,
+    "state": "MERGED",
+    "title": "Report clicks shorter than one poll from the INT 33h counters",
+    "updatedAt": "2026-11-11T06:26:14Z",
+    "url": "https://github.com/liminal-hq/desk/pull/43"
+   },
+   {
+    "additions": 1105,
+    "baseRefName": "feat/manual-generator",
+    "changedFiles": 6,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:47:01Z",
+    "deletions": 0,
+    "headRefName": "docs/manual-boot",
+    "headRefOid": "30091007ddbb823c0077aa8921d3a4c6b443e794",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:25Z",
+    "number": 41,
+    "state": "MERGED",
+    "title": "Add the manual chapters on the boot sector, the loader and the whole boot",
+    "updatedAt": "2026-11-11T06:39:46Z",
+    "url": "https://github.com/liminal-hq/desk/pull/41"
+   },
+   {
+    "additions": 2025,
+    "baseRefName": "docs/manual-plan",
+    "changedFiles": 17,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:34:22Z",
+    "deletions": 52,
+    "headRefName": "feat/manual-generator",
+    "headRefOid": "86dc88946a714675cdbd15bec984226be6ecd473",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:39:24Z",
+    "number": 40,
+    "state": "MERGED",
+    "title": "Add the Manual group to the progress report generator",
+    "updatedAt": "2026-11-11T06:39:45Z",
+    "url": "https://github.com/liminal-hq/desk/pull/40"
+   },
+   {
+    "additions": 938,
+    "baseRefName": "feat/live-wm-keys",
+    "changedFiles": 36,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:26:00Z",
+    "deletions": 7,
+    "headRefName": "feat/live-frames",
+    "headRefOid": "5821e4222f9362f844f03034433f6667d70d6730",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:04Z",
+    "number": 39,
+    "state": "MERGED",
+    "title": "Add the live scenarios and the tools that turn them into input",
+    "updatedAt": "2026-11-11T06:26:14Z",
+    "url": "https://github.com/liminal-hq/desk/pull/39"
+   },
+   {
+    "additions": 13856,
+    "baseRefName": "main",
+    "changedFiles": 66,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:16:53Z",
+    "deletions": 52,
+    "headRefName": "docs/manual-plan",
+    "headRefOid": "c339f1b7d1d32bc297e31b1c0b2418dda00651a7",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:54:15Z",
+    "number": 38,
+    "state": "MERGED",
+    "title": "Plan the Manual, a technical manual beside the progress report",
+    "updatedAt": "2026-11-11T06:54:18Z",
+    "url": "https://github.com/liminal-hq/desk/pull/38"
+   },
+   {
+    "additions": 644,
+    "baseRefName": "feat/live-cursor",
+    "changedFiles": 29,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:16:20Z",
+    "deletions": 11,
+    "headRefName": "feat/live-wm-keys",
+    "headRefOid": "ad90bc5773fe44e475919b7056a6ac80e1e0c9b7",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Windows, widgets and on-screen interface",
+      "id": "LA_kwDOVTolZM8AAAAC-q8H2Q",
+      "name": "ui"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:03Z",
+    "number": 37,
+    "state": "MERGED",
+    "title": "Add Alt+Tab, Alt+F4 and Tab to the window manager",
+    "updatedAt": "2026-11-11T06:26:13Z",
+    "url": "https://github.com/liminal-hq/desk/pull/37"
+   },
+   {
+    "additions": 1,
+    "baseRefName": "main",
+    "changedFiles": 1,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T15:01:14Z",
+    "deletions": 1,
+    "headRefName": "docs/anatomy-dos-opening",
+    "headRefOid": "bbc18ece646c71a15b7b0c883bee55cfe40995fb",
+    "isDraft": false,
+    "labels": [],
+    "mergedAt": "2026-11-11T06:26:54Z",
+    "number": 36,
+    "state": "MERGED",
+    "title": "Say plainly what the Rust DOS anatomy page shows",
+    "updatedAt": "2026-11-11T06:26:56Z",
+    "url": "https://github.com/liminal-hq/desk/pull/36"
+   },
+   {
+    "additions": 394,
+    "baseRefName": "docs/live-input-plan",
+    "changedFiles": 7,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T14:57:30Z",
+    "deletions": 24,
+    "headRefName": "feat/live-cursor",
+    "headRefOid": "9271e9025f7261f8550f26529aeff8329bb97122",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Performance measurement and optimisation",
+      "id": "LA_kwDOVTolZM8AAAAC-q8DCQ",
+      "name": "performance"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:02Z",
+    "number": 34,
+    "state": "MERGED",
+    "title": "Coalesce the cursor's damage and add the live module",
+    "updatedAt": "2026-11-11T06:26:13Z",
+    "url": "https://github.com/liminal-hq/desk/pull/34"
+   },
+   {
+    "additions": 600,
+    "baseRefName": "main",
+    "changedFiles": 5,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T14:43:33Z",
+    "deletions": 1,
+    "headRefName": "docs/live-input-plan",
+    "headRefOid": "9d3ac15977b4b589554f46407d871cb0e69af0d8",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-11T06:26:01Z",
+    "number": 33,
+    "state": "MERGED",
+    "title": "Design live keyboard and mouse input for the first window",
+    "updatedAt": "2026-11-11T06:26:12Z",
+    "url": "https://github.com/liminal-hq/desk/pull/33"
+   },
+   {
+    "additions": 795,
+    "baseRefName": "main",
+    "changedFiles": 37,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T14:05:25Z",
+    "deletions": 150,
+    "headRefName": "docs/progress-report-first-window",
+    "headRefOid": "1daee4b6b3050d324aa322511e03c0911f634f21",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "ededed",
+      "description": "Maintenance and housekeeping",
+      "id": "LA_kwDOVTolZM8AAAAC-q8AQQ",
+      "name": "chore"
+     }
+    ],
+    "mergedAt": "2026-10-23T14:32:23Z",
+    "number": 32,
+    "state": "MERGED",
+    "title": "Add the first-window chapter and two anatomy pages to the progress report",
+    "updatedAt": "2026-10-23T14:32:26Z",
+    "url": "https://github.com/liminal-hq/desk/pull/32"
+   },
+   {
+    "additions": 150,
+    "baseRefName": "main",
+    "changedFiles": 12,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:58:14Z",
+    "deletions": 4,
+    "headRefName": "feat/shell-compare",
+    "headRefOid": "f8e89ab8ce1b31dec65e2ee145c8acbf4c00e1be",
+    "isDraft": false,
+    "labels": [],
+    "mergedAt": "2026-10-23T13:28:44Z",
+    "number": 31,
+    "state": "MERGED",
+    "title": "Compare the two tracks' first-window frames and record the result",
+    "updatedAt": "2026-10-23T13:28:47Z",
+    "url": "https://github.com/liminal-hq/desk/pull/31"
+   },
+   {
+    "additions": 834,
+    "baseRefName": "main",
+    "changedFiles": 13,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:44:56Z",
+    "deletions": 5,
+    "headRefName": "feat/shell-dos",
+    "headRefOid": "9c06e673b3b1f899494fd49cc5c21e67129f1153",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:16:59Z",
+    "number": 30,
+    "state": "MERGED",
+    "title": "Run the first window on DOS as SHELL.EXE and hold it to the goldens",
+    "updatedAt": "2026-10-23T13:17:02Z",
+    "url": "https://github.com/liminal-hq/desk/pull/30"
+   },
+   {
+    "additions": 433,
+    "baseRefName": "main",
+    "changedFiles": 14,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:39:59Z",
+    "deletions": 18,
+    "headRefName": "feat/shell-native",
+    "headRefOid": "635df1f3191dd01122299067193e2380c01a7883",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:16:35Z",
+    "number": 29,
+    "state": "MERGED",
+    "title": "Run the first window in the native kernel and compare QEMU's screendumps with the goldens",
+    "updatedAt": "2026-10-23T13:16:37Z",
+    "url": "https://github.com/liminal-hq/desk/pull/29"
+   },
+   {
+    "additions": 425,
+    "baseRefName": "feat/shell-runtime",
+    "changedFiles": 21,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:32:50Z",
+    "deletions": 4,
+    "headRefName": "feat/shell-goldens",
+    "headRefOid": "6ced1c44d1c77b1e3a321f2b94dede67ecf45f5a",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:57Z",
+    "number": 28,
+    "state": "MERGED",
+    "title": "Add the first-window scenario and its golden frames",
+    "updatedAt": "2026-10-23T13:02:57Z",
+    "url": "https://github.com/liminal-hq/desk/pull/28"
+   },
+   {
+    "additions": 1199,
+    "baseRefName": "feat/shell-scenario",
+    "changedFiles": 10,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:17:48Z",
+    "deletions": 7,
+    "headRefName": "feat/shell-runtime",
+    "headRefOid": "381eb87b7645316ac027c461831221f72c978f2c",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:56Z",
+    "number": 27,
+    "state": "MERGED",
+    "title": "Add the shell runtime: events, cursor, frames and scenario runner",
+    "updatedAt": "2026-10-23T13:03:03Z",
+    "url": "https://github.com/liminal-hq/desk/pull/27"
+   },
+   {
+    "additions": 2421,
+    "baseRefName": "feat/shell-wm",
+    "changedFiles": 10,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:10:37Z",
+    "deletions": 10,
+    "headRefName": "feat/shell-scenario",
+    "headRefOid": "3ea85bff23acde11bf25f6b3b8aca3e6d0bf1fff",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "fbca04",
+      "description": "Tests, fixtures, and test tooling updates",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
+      "name": "testing"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:55Z",
+    "number": 26,
+    "state": "MERGED",
+    "title": "Add the scenario parser and tools/frames.py",
+    "updatedAt": "2026-10-23T13:03:02Z",
+    "url": "https://github.com/liminal-hq/desk/pull/26"
+   },
+   {
+    "additions": 1053,
+    "baseRefName": "feat/shell-ui",
+    "changedFiles": 11,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T09:10:31Z",
+    "deletions": 10,
+    "headRefName": "feat/shell-wm",
+    "headRefOid": "665f4b9a4f65f21d6fe56f88cade0f67b4028d1b",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Windows, widgets and on-screen interface",
+      "id": "LA_kwDOVTolZM8AAAAC-q8H2Q",
+      "name": "ui"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:54Z",
+    "number": 25,
+    "state": "MERGED",
+    "title": "Add desk-wm, windows, focus, dragging and their damage",
+    "updatedAt": "2026-10-23T13:03:02Z",
+    "url": "https://github.com/liminal-hq/desk/pull/25"
+   },
+   {
+    "additions": 1172,
+    "baseRefName": "feat/shell-present",
+    "changedFiles": 14,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T08:52:44Z",
+    "deletions": 6,
+    "headRefName": "feat/shell-ui",
+    "headRefOid": "5c7f79a7a6b916539e479a0bf013289b53becc70",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Windows, widgets and on-screen interface",
+      "id": "LA_kwDOVTolZM8AAAAC-q8H2Q",
+      "name": "ui"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     },
+     {
+      "color": "e99695",
+      "description": "Palette, fonts, icons and app guidelines",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OKA",
+      "name": "design-system"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:52Z",
+    "number": 24,
+    "state": "MERGED",
+    "title": "Add desk-ui, theme roles, text and window chrome",
+    "updatedAt": "2026-10-23T13:03:01Z",
+    "url": "https://github.com/liminal-hq/desk/pull/24"
+   },
+   {
+    "additions": 736,
+    "baseRefName": "feat/shell-font",
+    "changedFiles": 10,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T08:52:40Z",
+    "deletions": 10,
+    "headRefName": "feat/shell-present",
+    "headRefOid": "d3c1dc3bc368d8b8eb7fabe728aba2c1e4a83a84",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:51Z",
+    "number": 23,
+    "state": "MERGED",
+    "title": "Add desk-present, the linear and planar presenters",
+    "updatedAt": "2026-10-23T13:03:01Z",
+    "url": "https://github.com/liminal-hq/desk/pull/23"
+   },
+   {
+    "additions": 464,
+    "baseRefName": "feat/shell-gfx",
+    "changedFiles": 8,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T08:39:02Z",
+    "deletions": 3,
+    "headRefName": "feat/shell-font",
+    "headRefOid": "634784ab371fd610ec557a5f6273d01f40f0d86b",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:50Z",
+    "number": 21,
+    "state": "MERGED",
+    "title": "Add desk-font, a reader for the .DFN faces",
+    "updatedAt": "2026-10-23T13:03:00Z",
+    "url": "https://github.com/liminal-hq/desk/pull/21"
+   },
+   {
+    "additions": 2015,
+    "baseRefName": "docs/first-window-plan",
+    "changedFiles": 19,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T08:38:58Z",
+    "deletions": 5,
+    "headRefName": "feat/shell-gfx",
+    "headRefOid": "2b50be16e6d72d992d24acc4a9c0854245682d4d",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:02:48Z",
+    "number": 20,
+    "state": "MERGED",
+    "title": "Start the shell workspace with the desk-gfx compositor",
+    "updatedAt": "2026-10-23T13:02:59Z",
+    "url": "https://github.com/liminal-hq/desk/pull/20"
+   },
+   {
+    "additions": 10375,
+    "baseRefName": "main",
+    "changedFiles": 80,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "check",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-10-23T08:26:42Z",
+    "deletions": 6,
+    "headRefName": "docs/first-window-plan",
+    "headRefOid": "c9612b40538259afa3a1f5513f90d643ca4e057b",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "0075ca",
+      "description": "Design documents and specs",
+      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
+      "name": "design-docs"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Window manager, compositing and redraw",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KOA",
+      "name": "compositor"
+     },
+     {
+      "color": "1d76db",
+      "description": "VESA, VGA, palette, fonts and drawing",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
+      "name": "graphics"
+     }
+    ],
+    "mergedAt": "2026-10-23T13:16:09Z",
+    "number": 19,
+    "state": "MERGED",
+    "title": "Design and plan the first window on both tracks",
+    "updatedAt": "2026-10-23T13:16:13Z",
+    "url": "https://github.com/liminal-hq/desk/pull/19"
+   },
+   {
+    "additions": 8407,
+    "baseRefName": "main",
+    "changedFiles": 80,
     "checks": [
      {
       "conclusion": "SUCCESS",
@@ -1163,9 +2399,9 @@
      }
     ],
     "createdAt": "2026-10-23T06:11:49Z",
-    "deletions": 268,
+    "deletions": 306,
     "headRefName": "docs/progress-report-chapters",
-    "headRefOid": "7dee5eed0fcc090fb4dbb28991a5585a0dd9a6c1",
+    "headRefOid": "af482743aafe5b7122dde33374dbfff61b9ad35a",
     "isDraft": false,
     "labels": [
      {
@@ -1193,17 +2429,17 @@
       "name": "design-docs"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T08:02:17Z",
     "number": 18,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Add chapters for the open spikes and a gallery to the progress report",
-    "updatedAt": "2026-10-23T06:19:25Z",
+    "updatedAt": "2026-10-23T08:02:19Z",
     "url": "https://github.com/liminal-hq/desk/pull/18"
    },
    {
-    "additions": 1987,
-    "baseRefName": "spike/d-native-vga",
-    "changedFiles": 31,
+    "additions": 1988,
+    "baseRefName": "main",
+    "changedFiles": 32,
     "checks": [
      {
       "conclusion": "SUCCESS",
@@ -1215,7 +2451,7 @@
     "createdAt": "2026-10-23T06:08:30Z",
     "deletions": 36,
     "headRefName": "spike/n3-native-bios",
-    "headRefOid": "870485044468933e9f2d34db5c3a916176028324",
+    "headRefOid": "ff6376c1a04acc00688855c570327d3b63687421",
     "isDraft": false,
     "labels": [
      {
@@ -1255,15 +2491,15 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T07:16:08Z",
     "number": 17,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Call the BIOS from the native kernel through a real-mode trampoline",
-    "updatedAt": "2026-10-23T06:15:48Z",
+    "updatedAt": "2026-10-23T07:16:12Z",
     "url": "https://github.com/liminal-hq/desk/pull/17"
    },
    {
-    "additions": 650,
+    "additions": 653,
     "baseRefName": "main",
     "changedFiles": 24,
     "checks": [
@@ -1275,9 +2511,9 @@
      }
     ],
     "createdAt": "2026-10-23T05:44:39Z",
-    "deletions": 38,
+    "deletions": 40,
     "headRefName": "spike/g-boot-bochs-86box",
-    "headRefOid": "04f12127fcd9ec5f80be0a468761948ba8576530",
+    "headRefOid": "38237e26fbbb10b5e98fb4de5b87fbd167196022",
     "isDraft": false,
     "labels": [
      {
@@ -1311,17 +2547,17 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T07:26:13Z",
     "number": 16,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Boot the native image in Bochs and 86Box, and fix the loader for old BIOSes",
-    "updatedAt": "2026-10-23T06:07:08Z",
+    "updatedAt": "2026-10-23T07:26:16Z",
     "url": "https://github.com/liminal-hq/desk/pull/16"
    },
    {
-    "additions": 6988,
-    "baseRefName": "spike/a-vga-vbe-rust",
-    "changedFiles": 73,
+    "additions": 3032,
+    "baseRefName": "main",
+    "changedFiles": 42,
     "checks": [
      {
       "conclusion": "SUCCESS",
@@ -1331,9 +2567,9 @@
      }
     ],
     "createdAt": "2026-10-23T05:02:11Z",
-    "deletions": 139,
+    "deletions": 11,
     "headRefName": "spike/b-dos-input",
-    "headRefOid": "ba6456f0100376b4d4f1f41896188a07768633e9",
+    "headRefOid": "a3a314a01c70e7e0f95e7d51e94dabba142db0e5",
     "isDraft": false,
     "labels": [
      {
@@ -1379,17 +2615,17 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T07:04:44Z",
     "number": 15,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DOS runtime",
-    "updatedAt": "2026-10-23T05:34:06Z",
+    "updatedAt": "2026-10-23T07:04:46Z",
     "url": "https://github.com/liminal-hq/desk/pull/15"
    },
    {
-    "additions": 6331,
-    "baseRefName": "spike/c-kernel-input",
-    "changedFiles": 85,
+    "additions": 2219,
+    "baseRefName": "main",
+    "changedFiles": 46,
     "checks": [
      {
       "conclusion": "SUCCESS",
@@ -1399,9 +2635,9 @@
      }
     ],
     "createdAt": "2026-10-23T04:55:01Z",
-    "deletions": 47,
+    "deletions": 50,
     "headRefName": "spike/d-native-vga",
-    "headRefOid": "563f6c42c26348320db719d5630a2f73b5c73596",
+    "headRefOid": "29157d99fd6d72f56a80e58842b155fefcf95782",
     "isDraft": false,
     "labels": [
      {
@@ -1441,15 +2677,15 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T06:58:24Z",
     "number": 14,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Draw from the native kernel: VBE from the loader, a cursor and a first window",
-    "updatedAt": "2026-10-23T05:08:46Z",
+    "updatedAt": "2026-10-23T06:58:27Z",
     "url": "https://github.com/liminal-hq/desk/pull/14"
    },
    {
-    "additions": 2260,
+    "additions": 2283,
     "baseRefName": "main",
     "changedFiles": 37,
     "checks": [
@@ -1463,7 +2699,7 @@
     "createdAt": "2026-10-23T04:32:55Z",
     "deletions": 10,
     "headRefName": "spike/s5-jsdos",
-    "headRefOid": "869785a1cd76326275648ac420a05311b134fe85",
+    "headRefOid": "f918c1870fd198ee0acee0150029cfca8e76a917",
     "isDraft": false,
     "labels": [
      {
@@ -1503,15 +2739,15 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T07:53:29Z",
     "number": 13,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Run spike s5: DOS programs and the VBE linear frame buffer work in js-dos 8",
-    "updatedAt": "2026-10-23T04:43:31Z",
+    "updatedAt": "2026-10-23T07:53:33Z",
     "url": "https://github.com/liminal-hq/desk/pull/13"
    },
    {
-    "additions": 2253,
+    "additions": 2275,
     "baseRefName": "main",
     "changedFiles": 44,
     "checks": [
@@ -1525,7 +2761,7 @@
     "createdAt": "2026-10-23T04:28:09Z",
     "deletions": 9,
     "headRefName": "spike/e-std-stubs",
-    "headRefOid": "7c88426b9522d2dbdaf16b6d086598b5a0e070b6",
+    "headRefOid": "0d1bffcf91a05d72df0762e3bff6b11af1016aa3",
     "isDraft": false,
     "labels": [
      {
@@ -1559,16 +2795,16 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T07:38:55Z",
     "number": 12,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Run spike E: build std for an invented OS and patch in a platform layer",
-    "updatedAt": "2026-10-23T04:43:27Z",
+    "updatedAt": "2026-10-23T07:38:57Z",
     "url": "https://github.com/liminal-hq/desk/pull/12"
    },
    {
     "additions": 4127,
-    "baseRefName": "feat/hal-design",
+    "baseRefName": "main",
     "changedFiles": 49,
     "checks": [
      {
@@ -1581,7 +2817,7 @@
     "createdAt": "2026-10-23T04:12:56Z",
     "deletions": 8,
     "headRefName": "spike/a-vga-vbe-rust",
-    "headRefOid": "4ab237bdc8fd0cdfedbf0c3701e182c54e0ac87a",
+    "headRefOid": "eb694cd0a417e97d93ebd5e79102803ff854a91b",
     "isDraft": false,
     "labels": [
      {
@@ -1627,17 +2863,17 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T06:52:54Z",
     "number": 11,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Add the VGA and VBE driver and prove it on the DOS runtime",
-    "updatedAt": "2026-10-23T04:24:39Z",
+    "updatedAt": "2026-10-23T06:52:56Z",
     "url": "https://github.com/liminal-hq/desk/pull/11"
    },
    {
-    "additions": 3959,
-    "baseRefName": "feat/hal-design",
-    "changedFiles": 41,
+    "additions": 3963,
+    "baseRefName": "main",
+    "changedFiles": 42,
     "checks": [
      {
       "conclusion": "SUCCESS",
@@ -1649,7 +2885,7 @@
     "createdAt": "2026-10-23T04:11:15Z",
     "deletions": 131,
     "headRefName": "spike/c-kernel-input",
-    "headRefOid": "33b37c9a72b7360d687734e6a572fd55c609ea5f",
+    "headRefOid": "20b4de25681be51bb190b22e6752842cfa409423",
     "isDraft": false,
     "labels": [
      {
@@ -1683,11 +2919,11 @@
       "name": "spike"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T06:47:08Z",
     "number": 10,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Add keyboard and PS/2 mouse input to the native kernel",
-    "updatedAt": "2026-10-23T04:20:22Z",
+    "updatedAt": "2026-10-23T06:47:12Z",
     "url": "https://github.com/liminal-hq/desk/pull/10"
    },
    {
@@ -1755,7 +2991,7 @@
     "createdAt": "2026-10-23T03:38:21Z",
     "deletions": 22,
     "headRefName": "feat/hal-design",
-    "headRefOid": "ab23751289914de3263c34b026c15723a37acc2f",
+    "headRefOid": "8a05c295b10bce0b4cadb8eda182176c7f8faea5",
     "isDraft": false,
     "labels": [
      {
@@ -1789,11 +3025,11 @@
       "name": "design-docs"
      }
     ],
-    "mergedAt": null,
+    "mergedAt": "2026-10-23T06:40:11Z",
     "number": 8,
-    "state": "OPEN",
+    "state": "MERGED",
     "title": "Design the HAL and add host-tested shared serial, PIT and PIC drivers",
-    "updatedAt": "2026-10-23T04:04:37Z",
+    "updatedAt": "2026-10-23T06:40:15Z",
     "url": "https://github.com/liminal-hq/desk/pull/8"
    },
    {
@@ -2276,6 +3512,258 @@
   },
   "runs": [
    {
+    "conclusion": "",
+    "createdAt": "2026-11-11T18:44:11Z",
+    "displayTitle": "Re-verify live input from a clean clone and update the roadmap (#73)",
+    "event": "push",
+    "headSha": "eaede0f79c957902c60de161bbd424682d7e0bc5",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43080569055",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-11T18:16:57Z",
+    "displayTitle": "Add the runtime reunification group and the Fizz 2 comparison (#71)",
+    "event": "push",
+    "headSha": "593504a3f89ca53b73cdd79d18be97750904a99a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43076268796",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T18:07:57Z",
+    "displayTitle": "Keep the shell's transcript off the screen while the window is up (#72)",
+    "event": "push",
+    "headSha": "5e110a0f74dd372f213734b4cb086c77af874cc3",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43074808762",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T18:02:47Z",
+    "displayTitle": "Add the full shell and apps to the roadmap (#69)",
+    "event": "push",
+    "headSha": "9664c2f5fec25961b9b0f8594f13d2516e91b0bb",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43073968013",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-11T17:48:28Z",
+    "displayTitle": "Capture the original shell design and describe it against the docs an\u2026",
+    "event": "push",
+    "headSha": "bd49a6985ef7b54623789689175de2180560b641",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43071694422",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T17:35:49Z",
+    "displayTitle": "Mark the integration analysis and breakup proposal as done (#67)",
+    "event": "push",
+    "headSha": "e9ea094347432063f08caa95126deb7c589b9092",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43069694732",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-11T17:21:16Z",
+    "displayTitle": "Move CI to the ci-dos image that carries QEMU and NASM (#70)",
+    "event": "push",
+    "headSha": "77d90536a75f3b8616e920a509041b50da0da6e9",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43067335476",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "failure",
+    "createdAt": "2026-11-11T15:27:32Z",
+    "displayTitle": "Assess the Rust/DOS integration and propose three repository splits (\u2026",
+    "event": "push",
+    "headSha": "b928309d3c21b839c5cb88507aa5e909c335561b",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43048548734",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T15:27:01Z",
+    "displayTitle": "Bring the roadmap up to date with the merged pull requests (#66)",
+    "event": "push",
+    "headSha": "6f3d600a8c70c45a2b5e5324c050856a94a9eba5",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/43048464196",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-11T06:54:18Z",
+    "displayTitle": "Plan the Manual, a technical manual beside the progress report (#38)",
+    "event": "push",
+    "headSha": "b8fb9acf388c1c9432f87605369f58944428076a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/42975668840",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-11T06:26:59Z",
+    "displayTitle": "Add a roadmap of what is done, in flight and planned (#64)",
+    "event": "push",
+    "headSha": "74363b6c891c40880e63a6603447a3dbafa2e459",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/42972498861",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T06:26:56Z",
+    "displayTitle": "Say plainly what the Rust DOS anatomy page shows (#36)",
+    "event": "push",
+    "headSha": "d2f412e9f440ab8b031a9afa646b9fc95f496227",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/42972493385",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-11-11T06:26:20Z",
+    "displayTitle": "Record the result of live input on both tracks (#54)",
+    "event": "push",
+    "headSha": "04e5fdb1b1fd1cbcd457e2dff60b46f816b55225",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/42972423759",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T14:32:26Z",
+    "displayTitle": "Add the first-window chapter and two anatomy pages to the progress re\u2026",
+    "event": "push",
+    "headSha": "44f02658095f7fb39b40824a72eac60ab7a71518",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39970498693",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T13:28:48Z",
+    "displayTitle": "Compare the two tracks' first-window frames and record the result (#31)",
+    "event": "push",
+    "headSha": "24cc04469cc127ff518707da0b5b7f5c97131702",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39961536006",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-10-23T13:17:02Z",
+    "displayTitle": "Run the first window on DOS as SHELL.EXE and hold it to the goldens (\u2026",
+    "event": "push",
+    "headSha": "2164e7f3433f57a4c6a2580218a7cd41aa33b9e9",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39959918037",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-10-23T13:16:39Z",
+    "displayTitle": "Run the first window in the native kernel and compare QEMU's screendu\u2026",
+    "event": "push",
+    "headSha": "81c85f4eefea6af24cdfe7fe1c83bf69658cfc59",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39959866153",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "cancelled",
+    "createdAt": "2026-10-23T13:16:12Z",
+    "displayTitle": "Design and plan the first window on both tracks (#19)",
+    "event": "push",
+    "headSha": "b45b25222e3e1478490584469b6e6bd351e3d08a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39959805082",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T08:02:20Z",
+    "displayTitle": "Add chapters for the open spikes and a gallery to the progress report\u2026",
+    "event": "push",
+    "headSha": "c4a897c1da8797111531c154816d3f0c3344f80a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39921834394",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T07:53:32Z",
+    "displayTitle": "Run spike s5: DOS programs and the VBE linear frame buffer work in js\u2026",
+    "event": "push",
+    "headSha": "662544bf951e1ddf4f129a7309657e385f013633",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39920821213",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T07:38:57Z",
+    "displayTitle": "Run spike E: build std for an invented OS and patch in a platform lay\u2026",
+    "event": "push",
+    "headSha": "564105d9a1573aeffe0e3da48685f9830fff97e7",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39919168848",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T07:26:16Z",
+    "displayTitle": "Boot the native image in Bochs and 86Box, and fix the loader for old \u2026",
+    "event": "push",
+    "headSha": "ca3c37d26dfc837085370dea6dd2fbd150ab281a",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39917724995",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T07:16:11Z",
+    "displayTitle": "Call the BIOS from the native kernel through a real-mode trampoline (\u2026",
+    "event": "push",
+    "headSha": "0d9868b6283137e4db7c8d3613b508ca46c8987d",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39916656252",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T07:04:47Z",
+    "displayTitle": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DO\u2026",
+    "event": "push",
+    "headSha": "b754da96b4a4dc5db56fbe44a12a88ddeaef8bfd",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39915478662",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T06:58:27Z",
+    "displayTitle": "Draw from the native kernel: VBE from the loader, a cursor and a firs\u2026",
+    "event": "push",
+    "headSha": "3f008384dec225a47b8c43de7cf4f2015328a061",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39914794034",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T06:52:57Z",
+    "displayTitle": "Add the VGA and VBE driver and prove it on the DOS runtime (#11)",
+    "event": "push",
+    "headSha": "16ac88e8c22d5c86d236f2737d3107b50c052c07",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39914223964",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T06:47:11Z",
+    "displayTitle": "Add keyboard and PS/2 mouse input to the native kernel (#10)",
+    "event": "push",
+    "headSha": "547478b96ac202add4a24f23fa706cec883e1810",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39913631045",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-23T06:40:14Z",
+    "displayTitle": "Design the HAL and add host-tested shared serial, PIT and PIC drivers\u2026",
+    "event": "push",
+    "headSha": "fe419f3183d56f10bd343dd3cbf2bddcec8612e0",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39912913559",
+    "workflowName": "CI"
+   },
+   {
     "conclusion": "success",
     "createdAt": "2026-10-23T06:00:11Z",
     "displayTitle": "Add the progress report generator and its chapters (#9)",
@@ -2366,21 +3854,21 @@
     "workflowName": "CI"
    },
    {
-    "conclusion": "success",
-    "createdAt": "2026-10-22T14:41:33Z",
-    "displayTitle": "github_actions in /. - Update #1645450510",
-    "event": "dynamic",
-    "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
-    "url": "https://github.com/liminal-hq/desk/actions/runs/39797889448",
-    "workflowName": "Dependabot Updates"
-   },
-   {
     "conclusion": "failure",
     "createdAt": "2026-10-22T14:41:33Z",
     "displayTitle": "cargo in /. - Update #1645450513",
     "event": "dynamic",
     "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
     "url": "https://github.com/liminal-hq/desk/actions/runs/39797889410",
+    "workflowName": "Dependabot Updates"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-10-22T14:41:33Z",
+    "displayTitle": "github_actions in /. - Update #1645450510",
+    "event": "dynamic",
+    "headSha": "89239ff0a74a6ebef375b95c4d99c185d11a4534",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/39797889448",
     "workflowName": "Dependabot Updates"
    },
    {

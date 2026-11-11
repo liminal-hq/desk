@@ -5,7 +5,7 @@ kicker: Findings
 title: Findings
 date: 2026-10-23
 summary: What the spikes and skeletons actually found, in one table, each with where it was written down. All of the rows come from merged pull requests, and each says which.
-prs: [3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17]
+prs: [3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 54, 70, 72]
 section: reference
 ---
 A spike ends with a written result, and this is the index to them. Every row says what was found and where the finding lives, and each came from a run in an emulator: none has been tried on a real machine. If a row disagrees with the document it points to, the document wins and the generator's reader should say so.
@@ -42,6 +42,12 @@ A spike ends with a written result, and this is the index to them. Every row say
 | BIOS path, PR #17 | Can the protected-mode kernel use the BIOS again? | Yes, in emulators, through a real-mode trampoline: VBE set and left on three QEMU cards, floppy and LBA reads, the memory map and the clock; tens of microseconds a call, emulated. | [`docs/N3-BIOS-PATH.md`](pr:17) |
 | BIOS path, PR #17 | Does that settle leaving VBE? | In emulators, yes: `INT 10h` function 0003h restores text on the Cirrus card that spike D could not. A real card was not tried. | [`docs/N3-BIOS-PATH.md`](pr:17) |
 | Fonts, PR #1 | Do the faces render everywhere? | Not known: Chromium treats `Desk Fixed DOS`'s `.ttf` as a symbol font, and Windows and macOS were not tried. | [`docs/FONTS.md`](repo:docs/FONTS.md) |
+| Live input, PR #54 | Do a real mouse path and a real keyboard path give both tracks the same picture? | Yes in emulators: every mark of the live runs equals its host golden on the native kernel in QEMU and on `SHELL.EXE` in DOSBox, and `frames.py same` reports the two tracks' dumps equal. | [`docs/LIVE-INPUT.md`](repo:docs/LIVE-INPUT.md) (Result) |
+| Live input, PR #54 | Were quick clicks lost because press and release fell inside one poll? | No, the premise of spike B was wrong: a press and release with no gap never reach DOSBox's driver. A click of 1 to 5 ms arrives, and the counters matter when a poll is slower than the click. | [`docs/LIVE-INPUT.md`](repo:docs/LIVE-INPUT.md) (What differs from the design) |
+| Hands-on, #72 | Does the interactive `SHELL.EXE` look right on FreeDOS? | No, until #72: its `shell:` lines were drawn over the window by the DOS console. The transcript is now buffered until text mode returns, and a check that failed before the fix passes. The owner's run that found it is reported, not recorded. | [`docs/LIVE-INPUT.md`](repo:docs/LIVE-INPUT.md), roadmap R127 |
+| Hands-on, owner's run | Does a person get the pointer and keyboard in the QEMU window? | The pointer, once QEMU runs under XWayland; the keyboard grab for Alt+Tab did not take under native Wayland GTK, cause unknown; the pointer stuck at an edge (R128, not reproduced headless) and ran 1.35 to 2.5 times the host's distance under CuteMouse (R130, a headless measurement). None is a committed test. | [`docs/ROADMAP.md`](repo:docs/ROADMAP.md) (R127 to R130) |
+| CI, PR #70 | Why did CI go red on 11 November? | The workflow installed QEMU and NASM with `apt` and the runner could not resolve the Ubuntu mirror from 15:27 UTC; the cure was a build image that carries them, which passed. The cause is from the pull request, not from a log read here. | [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) |
+| Fizz 2 comparison, PR #71 | Has Fizz 2's fork of Desk's runtime diverged? | In the built executables, no: the stub, `CWSDPMI.EXE`, COFF headers and `.bss` match. Above the packer, yes, in twenty-six areas; the owner decided to bring its improvements into Desk's runtime. This is a read of two code bases, not a run. | [`docs/FIZZ2-COMPARISON.md`](repo:docs/FIZZ2-COMPARISON.md) |
 
 ## The shelves
 
@@ -52,4 +58,4 @@ A spike ends with a written result, and this is the index to them. Every row say
 - Every row: none was repeated on real hardware, and the generator checks that the cited files exist, not that the prose of this table matches them word for word.
 
 ### Wish list
-- The next spikes: an own stub and extender, loadable modules on the native track, TrueType reading, the shared core, and a real-hardware run.
+- The next spikes: an own stub and extender, a module loader on both tracks, a floppy and filesystem read, TrueType reading, and a real-hardware run.

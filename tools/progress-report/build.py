@@ -32,6 +32,7 @@ import gather  # noqa: E402
 import manual  # noqa: E402
 import manual_maps as maps  # noqa: E402
 import mdlite  # noqa: E402
+import since  # noqa: E402
 from mdlite import Ctx, esc, inline  # noqa: E402
 
 ARTIFACT_URL = "https://claude.ai/artifact/UiyueA93UpACK4UnMMh5as"
@@ -361,6 +362,11 @@ class Site:
                 return hw.shots(d, args[1:])
             if name == "figure" and args[0] in ("font-matrix", "emoji-coverage", "track-progress", "pr-stack"):
                 return {"font-matrix": charts.font_matrix, "emoji-coverage": charts.emoji_coverage, "track-progress": charts.track_progress, "pr-stack": charts.pr_stack}[args[0]](d)
+            if name == "figure" and args[0] in ("pr-timeline", "ci-runs", "roadmap-status", "live-marks", "live-routes", "transcript-flow", "go32-layout"):
+                return {"pr-timeline": since.pr_timeline, "ci-runs": since.ci_runs, "roadmap-status": since.roadmap_status, "live-marks": since.live_marks,
+                        "live-routes": since.live_routes, "transcript-flow": since.transcript_flow, "go32-layout": since.go32_layout}[args[0]](d)
+            if name == "figure" and args[0] == "repo-images":
+                return since.repo_images(d, args[1:])
             if name == "figure" and args[0] == "fw-digests":
                 return fw.digest_table(d, ctx)
             if name == "figure" and args[0] in ("anatomy-dos", "anatomy-desk"):
