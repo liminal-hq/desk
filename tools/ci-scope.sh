@@ -8,8 +8,10 @@
 #        tools/ci-scope.sh --files          the paths come from standard input, one per line
 #        tools/ci-scope.sh --self-test      check the table below, the path dependencies and the coverage, then exit
 #
-# Standard output is one line for tools/check.sh --groups: a comma list such as `base,report`, or `all` for the full gate. Standard
-# error says why, one line per changed path with the rule that matched it. `base` is always in the answer.
+# Standard output is one line for tools/check.sh --groups: a comma list such as `base,report`. The full gate is every group name
+# spelled out (`all` is expanded here), so a workflow can test a group with contains(format(',{0},', groups), ',rust,') and need no
+# special case for `all`. Standard error says why, one line per changed path with the rule that matched it. `base` is always in the
+# answer.
 #
 # How it decides: each path takes the FIRST rule of RULES whose pattern matches it (a shell glob in which `*` also matches `/`), and
 # the answer is the union of the groups of those rules. A path that no rule matches selects `all`: a file the table has never heard
@@ -19,10 +21,19 @@
 #
 # The groups are the ones tools/check.sh runs (--names). A new directory means a new rule here; until then its changes run the full
 # gate and the self-test (the base group's "CI scope table" step) fails, naming the files no rule covers.
+#
+# What the self-test cannot see: it reads the files a group's steps name (the scripts, `(cd DIR` directories, and the tracked files
+# those scripts and the Bun and Rust tests mention as string literals or through include_bytes!, include_str!, include! and #[path]),
+# so a file a program computes the name of, or reads through a path assembled at run time, is a dependency only a person can add. For
+# those, and for a script that calls a script that calls a file, put the path in a rule by hand.
 set -euo pipefail
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
 
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
+
+# Paths with non-ASCII characters come out of git unquoted, so they match the rules as they are written.
+git() { command git -c core.quotePath=false "$@"; }
 
 # pattern ; groups ; example path. The self-test checks each rule against its example, so an example must reach its own rule first.
 # Order matters: a specific rule goes above the general one that would also match.
@@ -31,24 +42,29 @@ RULES=(
   'LICENSE-*;base;LICENSE-MIT'
   'NOTICE;base;NOTICE'
   '.gitignore;base;.gitignore'
-  '.gitattributes;base;.gitattributes'
+  '.gitattributes;all;.gitattributes'
   'assets/*;base;assets/hero.svg'
-  'tools/build-hero.py;base;tools/build-hero.py'
-  # Documentation, and the design boards the report generator draws pictures from: the manual's tests read them.
+  # The progress report's tests walk every .py, .sh and .rs file, so the tools the base group runs are report inputs too.
+  'tools/build-hero.py;base,report;tools/build-hero.py'
+  # Documentation, and the design boards the report generator draws pictures from: the manual's tests read them. The palette and the
+  # emoji roadmap are also read by the font tests (fonts/test/emoji-pixel.test.ts, fonts/test/emoji-roadmap.test.ts).
+  'docs/PALETTE.md;base,report,fonts;docs/PALETTE.md'
+  'docs/EMOJI-ROADMAP.md;base,report,fonts;docs/EMOJI-ROADMAP.md'
   '*.md;base,report;docs/SPEC.md'
   'docs/*;base,report;docs/images/first-window/dos-8-typed.png'
   'design/*;base,report;design/shell-og/screenshots/v4-01-desktop.png'
   # The workflow and the files that decide what runs or how it is set up: the full gate.
   '.github/workflows/*;all;.github/workflows/ci.yml'
+  '.github/actions/*;all;.github/actions/setup/action.yml'
   '.github/*;base;.github/dependabot.yml'
   'tools/check.sh;all;tools/check.sh'
   'tools/ci-scope.sh;all;tools/ci-scope.sh'
   'tools/setup.sh;all;tools/setup.sh'
   'tools/fetch-tools.sh;all;tools/fetch-tools.sh'
   'rust-toolchain.toml;all;rust-toolchain.toml'
-  # The base checks themselves.
-  'tools/check-headers.sh;base;tools/check-headers.sh'
-  'tools/check-docs.py;base;tools/check-docs.py'
+  # The base checks themselves (and report inputs, as above).
+  'tools/check-headers.sh;base,report;tools/check-headers.sh'
+  'tools/check-docs.py;base,report;tools/check-docs.py'
   # The progress report and the frame tools.
   'tools/progress-report/*;report;tools/progress-report/gather.py'
   'tools/test_frames.py;report;tools/test_frames.py'
@@ -210,8 +226,22 @@ self_test() {
   expect base,report,stdstubs spikes/e-std-stubs/shim/src/lib.rs
   expect base LICENSE-MIT assets/hero.svg
   expect all 'docs/a b.md' 'x y'
+  expect base,report 'docs/Ünïcode ✓.md'
+  expect base,report,fonts docs/PALETTE.md docs/EMOJI-ROADMAP.md
+  expect all .gitattributes .github/actions/setup/action.yml
+  expect base,report tools/check-headers.sh tools/check-docs.py tools/build-hero.py
+  # `all` is spelled out on standard output, so contains(',rust,') works on it.
+  got="$(printf 'some/new/file.rs\n' | bash "$SELF" --files 2> /dev/null)" || got="(failed)"
+  [ "$got" = "${ALL_GROUPS// /,}" ] || { echo "ci-scope: --files for an unknown path gave '$got', not every group" >&2; bad=1; }
+  n=$((n + 1))
+  # Paths with non-ASCII characters come out of git unquoted.
+  scratch_repo_test || bad=1
+  n=$((n + 1))
   # The path dependencies: a change in a directory something depends on must select every group the dependent selects.
   closure || bad=1
+  # The files each group's steps read: the scripts and directories its steps in tools/check.sh name, what those scripts and the font
+  # and Rust tests read.
+  steps_closure || bad=1
   # Coverage: every tracked file reaches a rule (a file that falls to `all` means a missing rule).
   local f missing=0
   while IFS= read -r f; do
@@ -270,7 +300,7 @@ closure() {
     git ls-files --error-unmatch -- "$dep" > /dev/null 2>&1 || continue
     need "$dep" "$(groups_of "$f")" "$f names the module $dep" || bad=1
     tests=$((tests + 1))
-  done < <(git grep -E '^#\[path *= *"[^"]+"\]' -- '*.rs' | sed -E 's/^([^:]+):#\[path *= *"([^"]+)"\].*$/\1:\2/')
+  done < <(git grep -E '^[[:space:]]*#\[path *= *"[^"]+"\]' -- '*.rs' | sed -E 's/^([^:]+):[[:space:]]*#\[path *= *"([^"]+)"\].*$/\1:\2/')
   # 5. The cross builds in tools/check.sh: `(cd W && ... --target ../X ...)` inside an `if run GROUP ...` block needs GROUP.
   block=
   while IFS= read -r line; do
@@ -286,16 +316,187 @@ closure() {
   return "$bad"
 }
 
+# scratch_repo_test: changed_since reports a non-ASCII path as it is written, not in git's quoted octal form
+scratch_repo_test() {
+  local dir got ok=0 root
+  root="$(pwd)"
+  dir="$(mktemp -d)"
+  (
+    cd "$dir"
+    git init -q .
+    git config user.name scope-test
+    git config user.email scope-test@example.invalid
+    git config commit.gpgsign false
+    : > a.txt && git add a.txt && git commit -q -m one
+    : > 'é ✓.md' && git add -- 'é ✓.md' && git commit -q -m two
+    got="$(changed_since HEAD~1)"
+    [ "$got" = 'é ✓.md' ] || { echo "ci-scope: git named the non-ASCII path '$got'" >&2; exit 1; }
+  ) || ok=1
+  cd "$root"
+  rm -rf "$dir"
+  return "$ok"
+}
+
+declare -A TRACKED=() GCACHE=() SEEN=() DOCS_BY_BASE=()
+
+# groups_cached PATH: groups_of, remembered, left in GC (no subshell, so thousands of lookups stay cheap)
+groups_cached() {
+  [ -n "${GCACHE[$1]+x}" ] || GCACHE[$1]="$(groups_of "$1")"
+  GC="${GCACHE[$1]}"
+}
+
+# normpath PATH: the path without `.` and `..` parts, left in NP, in pure bash (empty when it climbs out of the repository)
+normpath() {
+  local part out=() IFS=/
+  NP=
+  for part in $1; do
+    case "$part" in
+      '' | .) ;;
+      ..) [ "${#out[@]}" -gt 0 ] || return 0; unset 'out[${#out[@]}-1]' ;;
+      *) out+=("$part") ;;
+    esac
+  done
+  NP="${out[*]}"
+}
+
+# require PATH GROUP WHY: PATH, when it is a tracked file, selects GROUP (each pair is checked once)
+require() {
+  [ -n "${TRACKED[$1]+x}" ] || return 0
+  [ -z "${SEEN[$1|$2]+x}" ] || return 0
+  SEEN[$1|$2]=1
+  STEP_EDGES=$((STEP_EDGES + 1))
+  groups_cached "$1"
+  covers "$GC" "$2" || { echo "ci-scope: $3: $1 selects '$GC', which lacks '$2'" >&2; return 1; }
+}
+
+# scan_refs FILE GROUP QUOTED_ONLY BASES...: the tracked files FILE names, each resolved against the root and against each of the
+# BASES directories, must select GROUP. Comment lines are skipped. QUOTED_ONLY=1 looks only at the string literals.
+scan_refs() {
+  local f="$1" g="$2" quoted="$3" tok base dep bad=0 pick='[A-Za-z0-9_./+-]+'
+  shift 3
+  [ "$quoted" = 1 ] && pick='"[^" ]+"'
+  while IFS= read -r tok; do
+    tok="${tok//\"/}"
+    case "$tok" in */* | *.*) ;; *) continue ;; esac
+    # A script's mentions of documents, boards and pictures are text for people, not inputs.
+    # The Dockerfiles and the Xvfb runner are reached only by opt-in runs and fallbacks (INPUT_EXTRA, NATIVE_EXTRA, no local QEMU), and
+    # are named in usage text; the CI image runs none of them.
+    if [ "$quoted" = 0 ]; then
+      case "$tok" in *.md | *.svg | *.png | docs/* | design/* | assets/* | tools/docker/* | tools/xvfb-dos.sh) continue ;; esac
+    fi
+    for base in "" "$@"; do
+      normpath "${base:+$base/}$tok"; dep="$NP"
+      [ -n "$dep" ] && [ "$dep" != "$f" ] || continue
+      require "$dep" "$g" "$f (which the $g group runs) names $dep" || bad=1
+      # A script that a script calls is read in turn (shell and Python only: a Rust or Bun file is a leaf).
+      if [ "$quoted" = 0 ] && [ -n "${TRACKED[$dep]+x}" ]; then
+        case "$dep" in *.sh | *.py) scan_script "$dep" "$g" || bad=1 ;; esac
+      fi
+    done
+  done < <(grep -vE '^[[:space:]]*(#|//)' "$f" | grep -oE "$pick" | sort -u)
+  return "$bad"
+}
+
+# scan_bun FILE: the font tests assemble repository paths from pieces (join(dir, '..', 'docs', 'PALETTE.md')), so a tracked document
+# outside fonts/ whose name is a string literal of the file, and each directory of whose path is a string literal too (docs, PALETTE.md),
+# is a file the fonts group reads; so is any literal path that resolves to a tracked file from the file's directory or from fonts/
+scan_bun() {
+  local f="$1" lit bad=0 cand part ok
+  local -A lits=()
+  while IFS= read -r lit; do lits[${lit:1:${#lit}-2}]=1; done < <(grep -oE "['\"\`][A-Za-z0-9_.+-]+['\"\`]" "$f" | sort -u)
+  for lit in "${!lits[@]}"; do
+    for cand in ${DOCS_BY_BASE[$lit]:-}; do
+      case "$cand" in fonts/*) continue ;; esac
+      ok=1
+      for part in $(dirname "$cand" | tr / ' '); do [ "$part" = . ] || [ -n "${lits[$part]+x}" ] || ok=0; done
+      [ "$ok" = 0 ] || require "$cand" fonts "$f reads $cand" || bad=1
+    done
+  done
+  scan_refs "$f" fonts 1 "$(dirname "$f")" fonts || bad=1
+  return "$bad"
+}
+
+# scan_script SCRIPT GROUP: what a script the group runs reads, and the scripts it calls in turn (each script once per group)
+scan_script() {
+  [ -n "${TRACKED[$1]+x}" ] || return 0
+  # This script's table names every path it classifies; it reads none of them.
+  [ "$1" != tools/ci-scope.sh ] || return 0
+  [ -z "${SEEN[scan|$1|$2]+x}" ] || return 0
+  SEEN[scan|$1|$2]=1
+  scan_refs "$1" "$2" 0 "$(dirname "$1")"
+}
+
+# steps_closure: everything a group's steps in tools/check.sh run, and what that reads, selects that group
+steps_closure() {
+  local bad=0 line block='' depth=0 optin=0 f tok d first rel crate g
+  STEP_EDGES=0
+  TRACKED=()
+  DOCS_BY_BASE=()
+  while IFS= read -r f; do
+    TRACKED[$f]=1
+    case "$f" in *.md) DOCS_BY_BASE[${f##*/}]+="$f " ;; esac
+  done < <(git ls-files)
+  declare -A blocks=()
+  # The text of each `if run GROUP` block, indented opt-in steps included; the opt-in blocks that rerun a whole group are not CI.
+  while IFS= read -r line; do
+    if [ "$depth" = 0 ]; then
+      if [[ "$line" =~ ^if\ run\ ([a-z]+) ]]; then block="${BASH_REMATCH[1]}"; depth=1; elif [[ "$line" =~ ^if\  ]]; then block=; depth=1; fi
+      continue
+    fi
+    # An `if [ -n "${..._EXTRA:-}" ]` is an opt-in run the CI does not make: its lines are skipped up to its `fi`.
+    if [ "$optin" = 1 ]; then [ "$line" = "fi" ] && optin=0; continue; fi
+    if [[ "$line" =~ ^if\ .*_EXTRA ]]; then optin=1; continue; fi
+    [[ "$line" =~ ^if\  ]] && depth=$((depth + 1))
+    if [ "$line" = "fi" ]; then depth=$((depth - 1)); [ "$depth" = 0 ] && block=; continue; fi
+    [ -z "$block" ] || blocks[$block]+="$line"$'\n'
+  done < tools/check.sh
+  for g in "${!blocks[@]}"; do
+    # Level 1: the tracked files named on a step's lines, and the directories of `(cd DIR && ...)`, with the files they run there.
+    while IFS= read -r line; do
+      [[ "$line" =~ ^[[:space:]]*# ]] && continue
+      d=
+      [[ "$line" =~ \(cd\ ([^\ \)]+) ]] && d="${BASH_REMATCH[1]}"
+      first=1
+      for tok in $(printf '%s\n' "$line" | grep -oE '[A-Za-z0-9_./+-]+'); do
+        require "$tok" "$g" "tools/check.sh's $g group runs $tok" || bad=1
+        if [ -n "$d" ]; then
+          [ "$first" = 1 ] && { require "$d/Cargo.toml" "$g" "tools/check.sh's $g group builds in $d" || bad=1; first=0; }
+          normpath "$d/$tok"
+          require "$NP" "$g" "tools/check.sh's $g group runs $tok in $d" || bad=1
+        fi
+        case "$tok" in *.sh | *.py) scan_script "$tok" "$g" || bad=1 ;; esac
+      done
+    done <<< "${blocks[$g]}"
+  done
+  # Rust sources that include or read other files: include_bytes!, include_str!, include!, #[path] (indented too) and file reads
+  # through string literals. Test code needs only the rust group, which runs the host tests.
+  while IFS= read -r f; do
+    case "$f" in */tests/* | */tests.rs) g=rust ;; *) groups_cached "$f"; g="$GC" ;; esac
+    crate="$(dirname "$f")"
+    while [ "$crate" != . ] && [ ! -f "$crate/Cargo.toml" ]; do crate="$(dirname "$crate")"; done
+    scan_refs "$f" "$g" 1 "$(dirname "$f")" "$crate" || bad=1
+  done < <(git grep -lE 'include_bytes!|include_str!|include!|#\[path|fs::read|File::open|CARGO_MANIFEST_DIR' -- '*.rs')
+  # The font tests run in fonts/ and read files of the repository (docs/PALETTE.md and the like).
+  while IFS= read -r f; do
+    scan_bun "$f" || bad=1
+  done < <(git ls-files 'fonts/*.ts')
+  echo "ci-scope: group steps: $STEP_EDGES files checked" >&2
+  return "$bad"
+}
+
 # changed_since REF: the paths changed on this branch since its merge base with REF (renames count as a delete and an add)
 changed_since() {
   git rev-parse --verify --quiet "$1^{commit}" > /dev/null || fail "cannot resolve '$1' (fetch it, with enough history for a merge base)"
   git diff --name-only --no-renames "$1...HEAD" || fail "cannot diff against '$1'"
 }
 
+# expand ANSWER: `all` spelled out as every group, anything else as it is
+expand() { if [ "$1" = all ]; then echo "${ALL_GROUPS// /,}"; else echo "$1"; fi; }
+
 case "${1:-}" in
   --self-test) self_test ;;
-  --files) classify ;;
-  --base) [ $# -ge 2 ] || fail "--base needs a ref"; paths="$(changed_since "$2")"; classify <<< "$paths" ;;
-  "") paths="$(changed_since origin/main)"; classify <<< "$paths" ;;
+  --files) answer="$(classify)"; expand "$answer" ;;
+  --base) [ $# -ge 2 ] || fail "--base needs a ref"; paths="$(changed_since "$2")"; answer="$(classify <<< "$paths")"; expand "$answer" ;;
+  "") paths="$(changed_since origin/main)"; answer="$(classify <<< "$paths")"; expand "$answer" ;;
   *) fail "unknown argument $1 (see the usage at the top of the script)" ;;
 esac
