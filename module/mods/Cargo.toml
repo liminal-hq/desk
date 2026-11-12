@@ -1,0 +1,19 @@
+# The test modules (docs/LOADER.md, docs/LOADER-PLAN.md): small `no_std`, `no_main` programs linked as modules (`.DMD`) and
+# applications (`.DKX`) for the kernel's target by `tools/build-modules.sh`. Its own workspace, because the default target here is not
+# the host's (`.cargo/config.toml`); `module/Cargo.toml` excludes it.
+[workspace]
+members = ["hello", "appmain"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
+debug = 0

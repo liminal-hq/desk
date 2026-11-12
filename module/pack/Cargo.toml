@@ -13,3 +13,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "dmdpack"
 path = "src/main.rs"
+
+[dependencies]
+desk-module = { path = "../format" }
