@@ -11,6 +11,7 @@ extern crate alloc;
 mod crc;
 mod error;
 mod header;
+mod load;
 mod module;
 
 pub use crc::crc32;
@@ -19,4 +20,5 @@ pub use header::{
     parse_header, Header, ABI_I486_FLAT, HEADER_SIZE, KIND_APP, KIND_LIBRARY, KIND_MODULE, LINK_BASE, MAGIC, MAX_IMPORTS,
     MAX_MEMORY, MAX_NAME,
 };
+pub use load::{load_into, Placed};
 pub use module::{Import, Module};
