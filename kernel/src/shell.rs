@@ -14,8 +14,8 @@
 
 use crate::gfx::{self, lfb_region, rendezvous, vga_window};
 use crate::hal::PORTS;
-use crate::{input, pit, println};
 use crate::video::Video;
+use crate::{input, pit, println};
 use desk_font::Font;
 use desk_gfx::Present;
 use desk_hal::{InputSource, Rgb6};
@@ -57,12 +57,17 @@ fn corrupt<P: Present>(out: &mut P, shell: &Shell, colours: &[Rgb6; dac::ENTRIES
     group.copy_from_slice(&shell.back().row(y)[x0 as usize..x0 as usize + 8]);
     let at = (x - x0) as usize;
     let old = group[at];
-    let new = (0..16u8).find(|i| colours[usize::from(*i)] != colours[usize::from(old)]).expect("a differing colour");
+    let new = (0..16u8)
+        .find(|i| colours[usize::from(*i)] != colours[usize::from(old)])
+        .expect("a differing colour");
     group[at] = new;
     out.begin().expect("begin the corrupting write");
     out.span(x0, y, &group).expect("the corrupting write");
     out.end().expect("end the corrupting write");
-    println!("shell: corrupted pixel {},{} of the screen: index {} became {}", x, y, old, new);
+    println!(
+        "shell: corrupted pixel {},{} of the screen: index {} became {}",
+        x, y, old, new
+    );
 }
 
 /// Runs the scenario at `depth` into `out`: a frame, its digests, the rendezvous. `corrupt_with` reaches the same screen by a second
@@ -75,7 +80,11 @@ fn play<P: Present>(
     corrupt_with: &mut dyn FnMut(&Shell, &[Rgb6; dac::ENTRIES]),
 ) {
     let sc = parse(SCENARIO).unwrap_or_else(|e| panic!("shell: the scenario does not parse: {}", e));
-    assert!(sc.depths.contains(&depth), "shell: the scenario does not list depth {}", bits(depth));
+    assert!(
+        sc.depths.contains(&depth),
+        "shell: the scenario does not list depth {}",
+        bits(depth)
+    );
     let mut shell = Shell::new(sc.screen.0, sc.screen.1, depth, fonts()).expect("shell: a shell for the scenario's screen");
     let result = run_scenario(&sc, depth, &mut shell, out, |name, s, stats| {
         let d = s.digest();
@@ -88,7 +97,10 @@ fn play<P: Present>(
             d.index,
             d.colour
         );
-        println!("shell: damage {}: {} pixels repainted, {} presented in {} rectangles", name, stats.repainted, stats.presented, stats.rects);
+        println!(
+            "shell: damage {}: {} pixels repainted, {} presented in {} rectangles",
+            name, stats.repainted, stats.presented, stats.rects
+        );
         if name.as_str() == CORRUPT_AFTER {
             corrupt_with(s, colours);
         }
@@ -104,7 +116,10 @@ fn play<P: Present>(
 fn depth_for(video: &Video) -> Depth {
     match &video.lfb {
         Some(l) if (l.width, l.height) == (640, 480) => Depth::Bits8,
-        Some(l) => panic!("shell: the loader's {}x{} frame buffer is not the scenario's 640x480", l.width, l.height),
+        Some(l) => panic!(
+            "shell: the loader's {}x{} frame buffer is not the scenario's 640x480",
+            l.width, l.height
+        ),
         None => Depth::Bits4,
     }
 }
@@ -121,7 +136,11 @@ fn fonts() -> Fonts<'static> {
 /// when the shell is dirty and a tick has passed (or a mark is due), and halts until the next interrupt.
 fn live_session<P: Present>(depth: Depth, out: &mut P, ps2: &mut Ps2Input) {
     let sc = parse(SCENARIO).unwrap_or_else(|e| panic!("shell: the scenario does not parse: {}", e));
-    assert!(sc.depths.contains(&depth), "shell: the scenario does not list depth {}", bits(depth));
+    assert!(
+        sc.depths.contains(&depth),
+        "shell: the scenario does not list depth {}",
+        bits(depth)
+    );
     let mut shell = Shell::new(sc.screen.0, sc.screen.1, depth, fonts()).expect("shell: a shell for the scenario's screen");
     for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
         apply(&mut shell, step).unwrap_or_else(|e| panic!("shell: the set-up failed: {}", e));
@@ -189,7 +208,10 @@ pub fn live(video: &Video, mut ps2: Ps2Input) {
     let colours = palette(depth);
     match &video.lfb {
         Some(l) => {
-            println!("shell: linear frame buffer, mode {:#06x}, {}x{}, pitch {}", l.mode, l.width, l.height, l.pitch);
+            println!(
+                "shell: linear frame buffer, mode {:#06x}, {}x{}, pitch {}",
+                l.mode, l.width, l.height, l.pitch
+            );
             dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
             let mut region = lfb_region(l);
             let mut out = LinearPresent::new(&mut region, l.width, l.height, l.pitch).expect("shell: the linear presenter");
@@ -201,7 +223,8 @@ pub fn live(video: &Video, mut ps2: Ps2Input) {
             regs::set_mode_12h(&PORTS);
             dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
             let mut region = vga_window();
-            let mut out = PlanarPresent::new(&PORTS, &mut region, 640, 480, desk_vga::planar::PITCH_640).expect("shell: the planar presenter");
+            let mut out = PlanarPresent::new(&PORTS, &mut region, 640, 480, desk_vga::planar::PITCH_640)
+                .expect("shell: the planar presenter");
             live_session(depth, &mut out, &mut ps2);
         }
     }
@@ -218,7 +241,10 @@ pub fn run(video: &Video, mut ps2: Ps2Input, corrupt_pixel: bool) {
     let colours = palette(sc_depth);
     match (&video.lfb, sc_depth) {
         (Some(l), _) => {
-            println!("shell: linear frame buffer, mode {:#06x}, {}x{}, pitch {}", l.mode, l.width, l.height, l.pitch);
+            println!(
+                "shell: linear frame buffer, mode {:#06x}, {}x{}, pitch {}",
+                l.mode, l.width, l.height, l.pitch
+            );
             dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
             let mut region = lfb_region(l);
             let mut out = LinearPresent::new(&mut region, l.width, l.height, l.pitch).expect("shell: the linear presenter");
@@ -238,11 +264,13 @@ pub fn run(video: &Video, mut ps2: Ps2Input, corrupt_pixel: bool) {
             regs::set_mode_12h(&PORTS);
             dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
             let mut region = vga_window();
-            let mut out = PlanarPresent::new(&PORTS, &mut region, 640, 480, desk_vga::planar::PITCH_640).expect("shell: the planar presenter");
+            let mut out = PlanarPresent::new(&PORTS, &mut region, 640, 480, desk_vga::planar::PITCH_640)
+                .expect("shell: the planar presenter");
             let mut second = vga_window();
             let mut again = |s: &Shell, c: &[Rgb6; dac::ENTRIES]| {
                 if corrupt_pixel {
-                    let mut p = PlanarPresent::new(&PORTS, &mut second, 640, 480, desk_vga::planar::PITCH_640).expect("shell: a second planar presenter");
+                    let mut p = PlanarPresent::new(&PORTS, &mut second, 640, 480, desk_vga::planar::PITCH_640)
+                        .expect("shell: a second planar presenter");
                     corrupt(&mut p, s, c);
                 }
             };
