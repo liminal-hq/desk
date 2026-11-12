@@ -98,7 +98,7 @@ step() {
   [ -z "${CHECK_TIMES:-}" ] || printf 'start\t%s\t%s\t%s\n' "$(date +%s%3N)" "$CUR" "$1" >> "$CHECK_TIMES"
 }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
-[ -z "${CHECK_TIMES:-}" ] || trap 'printf "end\t%s\t%s\n" "$(date +%s%3N)" "$?" >> "$CHECK_TIMES"' EXIT
+[ -z "${CHECK_TIMES:-}" ] || trap 'status=$?; printf "end\t%s\t%s\n" "$(date +%s%3N)" "$status" >> "$CHECK_TIMES"' EXIT
 
 # Each group's steps are in `if run GROUP [PART]; then` blocks whose bodies are not indented: a step at the start of a line runs whenever
 # its block does, an indented one is opt-in, and the manual's step table (tools/progress-report/manual/M21-evidence.md) is checked
