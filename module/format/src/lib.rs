@@ -13,6 +13,7 @@ mod error;
 mod header;
 mod load;
 mod module;
+mod write;
 
 pub use crc::crc32;
 pub use error::{FormatError, LoadError};
@@ -22,3 +23,4 @@ pub use header::{
 };
 pub use load::{load_into, Placed};
 pub use module::{Import, Module};
+pub use write::Builder;
