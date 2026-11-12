@@ -1,0 +1,15 @@
+[package]
+name = "dmdpack"
+description = "The module packer: reads a linked ELF32 file and extracts what a .DMD or .DKX image needs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "dmdpack"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dmdpack"
+path = "src/main.rs"
