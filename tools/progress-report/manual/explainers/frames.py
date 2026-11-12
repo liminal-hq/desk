@@ -41,8 +41,8 @@ def rules(text=None):
     text = text if text is not None else src("kernel/src/memory.rs")
     h = src("kernel/src/heap.rs")
     for needle, why in (("pub const FRAME_SIZE: u32 = 4096;", "the frame size"), ("const MAX_BYTES: u64 = 256 * 1024 * 1024;", "the 256 MiB bitmap limit"),
-                        ("let first = (r.base + fs - 1) / fs;", "usable regions rounded inward at the start"), ("let last = (r.base + r.len) / fs;", "usable regions rounded inward at the end"),
-                        ("let first = r.base / fs;", "other regions rounded outward at the start"), ("let last = (r.base + r.len + fs - 1) / fs;", "other regions rounded outward at the end"),
+                        ("let first = r.base.div_ceil(fs);", "usable regions rounded inward at the start"), ("let last = (r.base + r.len) / fs;", "usable regions rounded inward at the end"),
+                        ("let first = r.base / fs;", "other regions rounded outward at the start"), ("let last = (r.base + r.len).div_ceil(fs);", "other regions rounded outward at the end"),
                         ("for f in 0..(0x100000 / FRAME_SIZE) as usize {", "the first megabyte reserved"), ("end.div_ceil(FRAME_SIZE)", "the kernel range rounded outward")):
         if needle not in text:
             raise ValueError("kernel/src/memory.rs no longer has %s (%r), so the replica no longer follows it" % (why, needle))

@@ -201,7 +201,8 @@ class BiosChapterTests(unittest.TestCase):
         self.assertIn("bounce.write_low(20, &1u32.to_le_bytes())", t)
         self.assertIn("edx: 0x534D_4150", t)
         self.assertEqual(0x534D4150.to_bytes(4, "big"), b"SMAP")
-        self.assertIn("eax: 0x8600, ecx: 0x000F, edx: 0x4240", t)
+        for field in ("eax: 0x8600,", "ecx: 0x000F,", "edx: 0x4240,"):
+            self.assertIn(field, t)
         self.assertEqual(0x000F4240, 1_000_000)
         self.assertEqual(0x0007A120, 500_000)
 

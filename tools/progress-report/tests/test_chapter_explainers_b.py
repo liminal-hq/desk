@@ -52,7 +52,7 @@ class FramesExplainerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.m.transcript("no map here")
         with self.assertRaises(ValueError):
-            self.m.rules(rd("kernel/src/memory.rs").replace("let last = (r.base + r.len) / fs;", "let last = (r.base + r.len + fs - 1) / fs;"))
+            self.m.rules(rd("kernel/src/memory.rs").replace("let last = (r.base + r.len) / fs;", "let last = (r.base + r.len).div_ceil(fs);"))
 
     def test_m7_draws_it(self):
         chapters = {c["id"]: c for c in manual.load_chapters(manual.load_plan())}
