@@ -6,7 +6,7 @@ title: Testing and the evidence method
 summary: Nothing is promoted without evidence: host tests against the mock bus, expected transcripts, negative checks, key injection, golden frames and their digests, the comparison of the two tracks, CI, the three shelves and the manual's four tags, and what verified never means.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [tools/check.sh, tools/native-check.py, tools/native-inject.py, tools/frames.py, tools/shell-compare.sh, tools/shell-goldens.sh, tests/native/, tests/shell/, hal/platform/mock/, .github/workflows/]
+watches: [tools/check.sh, tools/ci-scope.sh, tools/native-check.py, tools/native-inject.py, tools/frames.py, tools/shell-compare.sh, tools/shell-goldens.sh, tests/native/, tests/shell/, hal/platform/mock/, .github/workflows/]
 log: [boot, hal, input, firstwindow, archive]
 anatomy: []
 ---
@@ -69,27 +69,28 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 |---|---|
 | 1 | Licence headers |
 | 2 | Markdown style and links |
-| 3 | Progress report generator: unit tests and a dry run of the data gather |
-| 4 | Fonts |
-| 5 | Rust format and lints |
-| 6 | HAL: host tests and no_std builds |
-| 7 | Shell: host tests and no_std builds |
-| 8 | Module loader: host tests and no_std builds |
-| 9 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
-| 10 | Build DESK.EXE |
-| 11 | Run DESK.EXE in headless DOSBox |
-| 12 | A Rust panic reports through C and exits non-zero |
-| 13 | Spike s1-dxe3: Rust format and lints for the modules |
-| 14 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
-| 15 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
-| 16 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
-| 17 | Spike s5-jsdos: Rust format and lints for the probes |
-| 18 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
-| 19 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
-| 20 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
-| 21 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
-| 22 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
-| 23 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
+| 3 | CI scope table: one test per rule, the path dependencies and every tracked file covered |
+| 4 | Progress report generator: unit tests and a dry run of the data gather |
+| 5 | Fonts |
+| 6 | Rust format and lints |
+| 7 | HAL: host tests and no_std builds |
+| 8 | Shell: host tests and no_std builds |
+| 9 | Module loader: host tests and no_std builds |
+| 10 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
+| 11 | Build DESK.EXE |
+| 12 | Run DESK.EXE in headless DOSBox |
+| 13 | A Rust panic reports through C and exits non-zero |
+| 14 | Spike s1-dxe3: Rust format and lints for the modules |
+| 15 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
+| 16 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
+| 17 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
+| 18 | Spike s5-jsdos: Rust format and lints for the probes |
+| 19 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
+| 20 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
+| 21 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
+| 22 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
+| 23 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
+| 24 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
 Four more steps run only when asked, because the CI image lacks what they need: the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
@@ -115,6 +116,7 @@ In every place this project says *verified*, it means *in an emulator or on the 
 | Where | What it holds |
 |---|---|
 | [`tools/check.sh`](repo:tools/check.sh) | The pre-pull-request gate: every step above, in order |
+| [`tools/ci-scope.sh`](repo:tools/ci-scope.sh) | Chooses the groups a pull request needs from its paths, with a self-test of its rules, the path dependencies, what each group's steps read and the coverage |
 | [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI job: the pinned image, the tool set-up and `tools/check.sh` |
 | [`hal/platform/mock/`](repo:hal/platform/mock/) | The mock platform: [`MockPortBus`](sym:hal/platform/mock/src/bus.rs::MockPortBus) and its devices |
 | [`tools/native-check.py`](repo:tools/native-check.py) | The transcript checker ([M5](chapter:m-boot)) |
@@ -268,3 +270,4 @@ at: explainer m-negatives
 - 2026-10-23: first written, against `44f0265`. The step table matches the `step` lines of `tools/check.sh` in order (a test checks it); the commands in the try block were run on the host. No disagreement was found between the documents and the scripts for this layer.
 - 2026-11-11: the steps of `tools/check.sh` are in groups (`--groups`, `--list`); the step table is unchanged, the frame tools' step now also holds the goldens' checks and the live translations, and a test checks that every step is in a group.
 - 2026-11-11: the module loader's crates (`module/`) are the part `rust:module` of `tools/check.sh`, one step after the shell's, so the step table has a row for it and the rows after it moved down by one.
+- 2026-11-11: `tools/ci-scope.sh --self-test` is a step of the `base` group (the CI scope table), so the step table has a row for it and the rows after it moved down by one.

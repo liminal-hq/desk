@@ -1,5 +1,5 @@
 #!/bin/bash
-# Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links),
+# Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links, the CI scope table),
 # report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
 # rust (format, lints, host tests and cross builds of core/, hal/, shell/ and the spike workspaces checked on their own), dos (the
 # DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes), stdstubs (the e-std-stubs
@@ -37,7 +37,7 @@ parts() { local v="PARTS_$1"; printf '%s' "${!v:-}"; }
 
 list_groups() {
   cat << 'LIST'
-base       licence headers, markdown style and links
+base       licence headers, markdown style and links, the CI scope table
 report     the progress report generator's tests and dry run, the frame tools' tests, the goldens and the live scenarios' translations
 fonts      the font build check (bun; fails instead of skipping when CI is set)
 rust       core       core/ format and lints
@@ -124,6 +124,9 @@ tools/check-headers.sh
 
 step "Markdown style and links"
 python3 -I tools/check-docs.py
+
+step "CI scope table: one test per rule, the path dependencies and every tracked file covered"
+tools/ci-scope.sh --self-test
 fi
 
 if run report; then
