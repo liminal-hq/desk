@@ -46,6 +46,8 @@ pub const SH_INFO: usize = 28;
 pub const SH_ENTSIZE: usize = 36;
 
 pub const PT_LOAD: u32 = 1;
+pub const PT_DYNAMIC: u32 = 2;
+pub const PT_INTERP: u32 = 3;
 pub const PT_TLS: u32 = 7;
 pub const PF_X: u32 = 1;
 pub const PF_W: u32 = 2;
@@ -393,6 +395,8 @@ fn word(v: u32) -> [u8; 4] {
 
 /// A valid module. Addresses (from `BASE`, image offsets in brackets):
 ///
+/// Every relocated word holds the address it points at (the linker's value, `S + A`), as the container requires.
+///
 /// - segment 0, R E: `.text`, 0x40 bytes at 0x400000 [0]. `app_start` [0], `app_event` [0x10], `app_stop` [0x20]. Relocations:
 ///   `R_386_32` at [0x08] (against `.rodata`) and [0x0c] (against the import `desk_log`), `R_386_PC32` at [0x30], `R_386_NONE` at [0x34].
 /// - segment 1, R: `.rodata`, 0x20 bytes at 0x401000 [0x1000]; `R_386_32` at [0x1008] against `.rodata`.
@@ -402,6 +406,7 @@ fn word(v: u32) -> [u8; 4] {
 pub fn good() -> Elf {
     let mut text = vec![0u8; 0x40];
     text[0x08..0x0c].copy_from_slice(&word(BASE + 0x1000));
+    text[0x0c..0x10].copy_from_slice(&word(BASE + 0x2000));
     text[0x30..0x34].copy_from_slice(&word(0xffff_ffec));
     let mut rodata = vec![0u8; 0x20];
     rodata[0..8].copy_from_slice(b"hello\n\0\0");

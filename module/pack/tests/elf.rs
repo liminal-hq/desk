@@ -13,6 +13,7 @@ use elfgen::*;
 const REL_TEXT: usize = 10;
 const REL_RODATA: usize = 11;
 const REL_DATA: usize = 12;
+const SHF_TLS: u32 = 0x400;
 
 fn ok(e: &Elf) -> Extract {
     read(&e.build(), BASE, KIND_MODULE).unwrap_or_else(|err| panic!("refused a good file: {err}"))
@@ -739,6 +740,7 @@ fn refuses_a_relocated_word_that_runs_past_the_file_bytes_of_its_segment() {
     );
     // At 0x200c the word is the last four bytes: allowed.
     let mut e = good();
+    e.segments[2].data[0xc..0x10].copy_from_slice(&(BASE + 0x2000).to_le_bytes());
     e.add_rel(
         ".rel.data",
         Rel {
@@ -1261,4 +1263,271 @@ fn damaged_files_are_refused_or_read_but_never_panic() {
             let _ = read(&c, BASE, kind);
         }
     }
+}
+
+// ---- Dynamic linking, relocation values, and the rest of the review ----
+
+fn push_segment(e: &mut Elf, p_type: u32) {
+    e.segments.push(Segment {
+        p_type,
+        vaddr: 0,
+        flags: PF_R,
+        data: vec![],
+        bss: 0,
+    });
+}
+
+#[test]
+fn refuses_a_dynamic_segment() {
+    let mut e = good();
+    push_segment(&mut e, PT_DYNAMIC);
+    refuse_elf(&e, ElfError::DynamicSegment { index: 3 });
+}
+
+#[test]
+fn refuses_an_interpreter_segment() {
+    let mut e = good();
+    push_segment(&mut e, PT_INTERP);
+    refuse_elf(&e, ElfError::InterpreterSegment { index: 3 });
+}
+
+#[test]
+fn refuses_a_dynamic_relocation_section_that_applies_to_no_section() {
+    for (name, rela) in [(".rel.dyn", false), (".rela.dyn", true)] {
+        let mut e = good();
+        let rels = vec![Rel {
+            offset: BASE + 0x08,
+            r_type: 8,
+            symbol: 0,
+        }];
+        e.sections.push(Section {
+            name: name.into(),
+            flags: 0,
+            addr: 0,
+            body: Body::Rel { target: 0, rels, rela },
+        });
+        refuse_elf(&e, ElfError::RelocationSectionWithoutTarget { index: 14 });
+    }
+}
+
+#[test]
+fn refuses_a_relocation_section_that_is_itself_allocated() {
+    let mut e = good();
+    e.section(".rel.rodata").flags = SHF_ALLOC;
+    refuse_elf(&e, ElfError::AllocatedRelocationSection { index: REL_RODATA });
+    // Whatever its target, and whether it is REL or RELA.
+    let mut e = good();
+    e.sections.push(Section {
+        name: ".rela.plt".into(),
+        flags: SHF_ALLOC,
+        addr: 0,
+        body: Body::Rel {
+            target: 6,
+            rels: vec![],
+            rela: true,
+        },
+    });
+    refuse_elf(&e, ElfError::AllocatedRelocationSection { index: 14 });
+}
+
+fn with_external_symbol(shndx: Shndx) -> Elf {
+    let mut e = good();
+    e.symbols.push(Symbol {
+        name: "ext".into(),
+        value: 0,
+        size: 0,
+        kind: STT_NOTYPE,
+        shndx,
+    });
+    e
+}
+
+#[test]
+fn refuses_an_r_386_pc32_against_an_undefined_symbol() {
+    let mut e = with_external_symbol(Shndx::Undef);
+    e.add_rel(
+        ".rel.text",
+        Rel {
+            offset: BASE + 0x38,
+            r_type: R_386_PC32,
+            symbol: 8,
+        },
+    );
+    refuse_elf(
+        &e,
+        ElfError::RelocationAgainstUndefined {
+            section: REL_TEXT,
+            index: 4,
+            symbol: 8,
+        },
+    );
+    let mut e = good();
+    e.add_rel(
+        ".rel.text",
+        Rel {
+            offset: BASE + 0x38,
+            r_type: R_386_PC32,
+            symbol: 0,
+        },
+    );
+    refuse_elf(
+        &e,
+        ElfError::RelocationAgainstUndefined {
+            section: REL_TEXT,
+            index: 4,
+            symbol: 0,
+        },
+    );
+}
+
+#[test]
+fn refuses_an_r_386_pc32_against_an_absolute_symbol() {
+    let mut e = with_external_symbol(Shndx::Abs);
+    e.add_rel(
+        ".rel.text",
+        Rel {
+            offset: BASE + 0x38,
+            r_type: R_386_PC32,
+            symbol: 8,
+        },
+    );
+    refuse_elf(
+        &e,
+        ElfError::RelocationAgainstAbsolute {
+            section: REL_TEXT,
+            index: 4,
+            symbol: 8,
+        },
+    );
+}
+
+#[test]
+fn refuses_an_r_386_pc32_against_a_symbol_that_does_not_exist() {
+    let mut e = good();
+    e.add_rel(
+        ".rel.text",
+        Rel {
+            offset: BASE + 0x38,
+            r_type: R_386_PC32,
+            symbol: 99,
+        },
+    );
+    refuse_elf(
+        &e,
+        ElfError::BadSymbolIndex {
+            section: REL_TEXT,
+            index: 4,
+            symbol: 99,
+        },
+    );
+}
+
+#[test]
+fn refuses_a_read_only_part_larger_than_the_image() {
+    // A read-only segment with a zero-filled tail at the end: nothing writable follows, so the image ends before the read-only part.
+    let mut e = good();
+    e.segments.pop();
+    e.segments[1].bss = 0x10;
+    refuse_elf(
+        &e,
+        ElfError::ReadOnlyLargerThanImage {
+            ro_size: 0x1030,
+            image_size: 0x1020,
+        },
+    );
+}
+
+#[test]
+fn refuses_a_relocated_word_whose_value_is_outside_the_image() {
+    let set = |e: &mut Elf, value: u32| e.segments[0].data[0x08..0x0c].copy_from_slice(&value.to_le_bytes());
+    for value in [0, BASE - 1, BASE + 0x2041, 0xffff_ffff] {
+        let mut e = good();
+        set(&mut e, value);
+        refuse_elf(&e, ElfError::RelocationValueOutOfRange { offset: 0x08, value });
+    }
+    // The first byte, and one past the last byte of memory, are valid pointers.
+    for value in [BASE, BASE + 0x2040] {
+        let mut e = good();
+        set(&mut e, value);
+        assert_eq!(ok(&e).relocs, ok(&good()).relocs);
+    }
+}
+
+#[test]
+fn refuses_a_name_that_is_not_utf8() {
+    let g = good().build();
+    let find = |b: &[u8], what: &[u8]| b.windows(what.len()).position(|w| w == what).unwrap();
+    // A symbol name.
+    let mut b = g.clone();
+    let at = find(&b, b"app_start");
+    b[at] = 0xff;
+    let strtab = get32(&b, shdr(&b, 8) + SH_OFFSET) as usize;
+    refuse(
+        &b,
+        ElfError::BadString {
+            index: 8,
+            offset: (at - strtab) as u32,
+        },
+    );
+    // A section name.
+    let mut b = g.clone();
+    let at = find(&b, b".desk.imp");
+    b[at + 1] = 0xc3;
+    let shstrtab = get32(&b, shdr(&b, 9) + SH_OFFSET) as usize;
+    refuse(
+        &b,
+        ElfError::BadString {
+            index: 3,
+            offset: (at - shstrtab) as u32,
+        },
+    );
+}
+
+#[test]
+fn refuses_a_section_flagged_thread_local_whatever_its_name() {
+    let mut e = good();
+    e.sections.push(Section {
+        name: ".cell".into(),
+        flags: SHF_TLS,
+        addr: 0,
+        body: Body::Bytes(vec![]),
+    });
+    refuse_elf(&e, ElfError::ThreadLocalSection { index: 14 });
+}
+
+#[test]
+fn an_import_name_longer_than_the_reader_looks_at_is_still_a_bad_name() {
+    let mut e = good();
+    e.symbol("__desk_imp_desk_log").name = format!("__desk_imp_{}", "a".repeat(5000));
+    refuse_elf(&e, ElfError::ImportBadName { symbol: 6 });
+    // The cut can fall inside a character.
+    let mut e = good();
+    e.symbol("__desk_imp_desk_log").name = format!("__desk_imp_{}", "\u{e9}".repeat(2000));
+    refuse_elf(&e, ElfError::ImportBadName { symbol: 6 });
+}
+
+#[test]
+fn stops_at_the_257th_import_however_many_there_are() {
+    let mut e = good();
+    e.set_rels(".rel.data", vec![]);
+    e.set_rels(
+        ".rel.text",
+        vec![Rel {
+            offset: BASE + 0x08,
+            r_type: R_386_32,
+            symbol: 1,
+        }],
+    );
+    e.segments[2].data = vec![0; 5000 * 4];
+    e.symbols.retain(|s| !s.name.starts_with("__desk_imp_"));
+    for i in 0..5000 {
+        e.symbols.push(Symbol {
+            name: format!("__desk_imp_f{i}"),
+            value: BASE + 0x2000 + 4 * i as u32,
+            size: 4,
+            kind: STT_OBJECT,
+            shndx: Shndx::Section(".desk.imp".into()),
+        });
+    }
+    refuse_elf(&e, ElfError::TooManyImports { count: 257 });
 }
