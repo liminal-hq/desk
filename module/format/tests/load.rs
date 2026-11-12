@@ -10,6 +10,7 @@ use common::*;
 use desk_module::{
     crc32, load_into, Builder, FormatError, Import, LoadError, Module, Placed, KIND_APP, KIND_LIBRARY, KIND_MODULE, LINK_BASE,
 };
+use std::cell::{Cell, RefCell};
 
 const LOG: u32 = 0x0001_0000;
 const ALLOC: u32 = 0x0002_0000;
@@ -201,7 +202,7 @@ fn loading_at_eight_addresses_from_a_generator() {
     let mut addrs = vec![
         0xFFFF_FEF0, // MEM_SIZE below the top of the address space: the end is 0xFFFF_FFF0
         0x0000_0010, // below the link base
-        0x0000_0000,
+        0x0000_0020,
     ];
     while addrs.len() < 8 {
         // Multiples of the alignment (16), anywhere up to the top; the last 0x100 bytes are left for the image.
@@ -326,8 +327,131 @@ fn a_destination_that_runs_off_the_top_of_memory() {
             need: MEM_SIZE
         })
     );
-    // Ending exactly at the top is a place that exists (one past the last byte is 2^32, which a u32 cannot hold, so it is refused too).
+    // The last place that fits ends at 0xFFFF_FFF0.
     assert!(load_into(&m, KIND_MODULE, &mut dest, 0xFFFF_FEF0, &resolve).is_ok());
+}
+
+#[test]
+fn a_destination_ending_exactly_at_two_to_the_thirty_second() {
+    // The end address (one past the last byte) is 2^32, which a u32 cannot hold, so the placement is refused.
+    let bytes = sample_bytes();
+    let m = parse(&bytes).unwrap();
+    let mut dest = vec![0xAA; MEM_SIZE as usize];
+    let addr = 0xFFFF_FF00;
+    assert_eq!(addr as u64 + MEM_SIZE as u64, 1 << 32);
+    assert_eq!(
+        load_into(&m, KIND_MODULE, &mut dest, addr, &resolve),
+        Err(LoadError::DestWraps { addr, need: MEM_SIZE })
+    );
+    assert!(dest.iter().all(|&b| b == 0xAA));
+}
+
+#[test]
+fn a_destination_at_address_zero() {
+    let bytes = sample_bytes();
+    let m = parse(&bytes).unwrap();
+    let mut dest = vec![0xAA; MEM_SIZE as usize];
+    assert_eq!(load_into(&m, KIND_MODULE, &mut dest, 0, &resolve), Err(LoadError::DestNull));
+    assert!(dest.iter().all(|&b| b == 0xAA));
+    assert!(LoadError::DestNull.to_string().contains("null"));
+    // The next aligned address is a place.
+    assert!(load_into(&m, KIND_MODULE, &mut dest, 16, &resolve).is_ok());
+}
+
+#[test]
+fn each_import_is_resolved_exactly_once() {
+    let bytes = sample_bytes();
+    let m = parse(&bytes).unwrap();
+    let mut dest = vec![0xAA; MEM_SIZE as usize];
+    let calls = Cell::new(0);
+    let counting = |name: &str| {
+        calls.set(calls.get() + 1);
+        resolve(name)
+    };
+    load_into(&m, KIND_MODULE, &mut dest, LINK_BASE, &counting).unwrap();
+    assert_eq!(calls.get(), 2, "two imports, two calls");
+    // A refusal stops at the first missing name.
+    calls.set(0);
+    let first_missing = |_: &str| {
+        calls.set(calls.get() + 1);
+        None
+    };
+    assert!(load_into(&m, KIND_MODULE, &mut dest, LINK_BASE, &first_missing).is_err());
+    assert_eq!(calls.get(), 1);
+}
+
+#[test]
+fn a_resolver_whose_answer_changes_cannot_leave_a_slot_unbound() {
+    let bytes = sample_bytes();
+    let m = parse(&bytes).unwrap();
+    // Answers on the first call for each name and then never again: the answers of the first call are the ones written.
+    let seen = RefCell::new(Vec::new());
+    let once = |name: &str| {
+        let mut seen = seen.borrow_mut();
+        if seen.iter().any(|n: &String| n == name) {
+            return None;
+        }
+        seen.push(name.to_string());
+        resolve(name)
+    };
+    let mut dest = vec![0xAA; MEM_SIZE as usize];
+    load_into(&m, KIND_MODULE, &mut dest, LINK_BASE, &once).unwrap();
+    assert_eq!(get32(&dest, SLOT_LOG as usize), LOG);
+    assert_eq!(get32(&dest, SLOT_ALLOC as usize), ALLOC);
+    // And a resolver that starts answering only on the second round gets a refusal, never an unbound slot.
+    let calls = Cell::new(0);
+    let late = |name: &str| {
+        calls.set(calls.get() + 1);
+        if calls.get() > 2 {
+            resolve(name)
+        } else {
+            None
+        }
+    };
+    let mut dest = vec![0xAA; MEM_SIZE as usize];
+    assert_eq!(
+        load_into(&m, KIND_MODULE, &mut dest, LINK_BASE, &late),
+        Err(LoadError::MissingImport {
+            index: 0,
+            name: "desk_log"
+        })
+    );
+    assert!(dest.iter().all(|&b| b == 0xAA));
+}
+
+#[test]
+fn a_grown_header_is_accepted() {
+    // A later revision may grow the header: 4 more bytes, every table moved down by 4. A reader of version 1 reads the fields it knows.
+    let mut bytes = sample_bytes();
+    for _ in 0..4 {
+        bytes.insert(96, 0);
+    }
+    set16(&mut bytes, off::HEADER_SIZE, 100);
+    for at in [
+        off::IMAGE_OFFSET,
+        off::RELOC_OFFSET,
+        off::IMPORT_OFFSET,
+        off::EXPORT_OFFSET,
+        off::STRINGS_OFFSET,
+    ] {
+        let v = get32(&bytes, at);
+        set32(&mut bytes, at, v + 4);
+    }
+    refresh_crc(&mut bytes);
+    let m = parse(&bytes).unwrap();
+    assert_eq!(m.header().header_size, 100);
+    assert_eq!(m.image(), &sample().image[..]);
+    assert_eq!(m.imports().count(), 2);
+    let mut dest = vec![0; MEM_SIZE as usize];
+    assert!(load_into(&m, KIND_MODULE, &mut dest, LINK_BASE, &resolve).is_ok());
+    // Padding in the grown part is not the reader's to judge, but the image must start where the header ends.
+    let mut gap = bytes.clone();
+    set32(&mut gap, off::IMAGE_OFFSET, 104);
+    refresh_crc(&mut gap);
+    assert!(matches!(
+        refusal(&gap),
+        FormatError::TableGap { table: "image", .. } | FormatError::TableOutsideFile { .. }
+    ));
 }
 
 #[test]

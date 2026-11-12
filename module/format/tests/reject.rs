@@ -719,3 +719,213 @@ fn a_slot_that_is_also_a_relocation() {
     // Words right next to the slots (0x5C and 0x68 in the sample) are not in the way.
     assert!(parse(&sample_bytes()).is_ok());
 }
+
+// The magic is read first.
+
+#[test]
+fn a_short_file_says_what_it_is_before_it_says_it_is_short() {
+    // Fewer than 4 bytes cannot be told apart from anything.
+    for n in 0..4 {
+        assert_eq!(refusal(&b"DMD1"[..n]), FormatError::TooShort { len: n });
+    }
+    assert_eq!(refusal(b"DMD2"), FormatError::UnsupportedVersion(2));
+    assert_eq!(refusal(b"DMD2 and a few more bytes"), FormatError::UnsupportedVersion(2));
+    assert_eq!(refusal(b"MZ\x90\0"), FormatError::BadMagic);
+    assert_eq!(refusal(b"hello, world"), FormatError::BadMagic);
+    // The right magic and then nothing: short.
+    assert_eq!(refusal(b"DMD1"), FormatError::TooShort { len: 4 });
+    assert_eq!(refusal(b"DMD1 and a few more bytes"), FormatError::TooShort { len: 25 });
+}
+
+// More layout.
+
+#[test]
+fn the_relocation_table_with_a_gap_before_it() {
+    let good = get32(&sample_bytes(), off::RELOC_OFFSET);
+    let bytes = damaged(|b| set32(b, off::RELOC_OFFSET, good + 4));
+    assert_eq!(
+        refusal(&bytes),
+        FormatError::TableGap {
+            table: "relocations",
+            offset: good + 4,
+            expected: good
+        }
+    );
+}
+
+#[test]
+fn the_string_table_with_a_gap_before_it() {
+    // Four zero bytes between the exports and the strings.
+    let good = get32(&sample_bytes(), off::STRINGS_OFFSET);
+    let bytes = damaged(|b| {
+        for _ in 0..4 {
+            b.insert(good as usize, 0);
+        }
+        set32(b, off::STRINGS_OFFSET, good + 4);
+    });
+    assert_eq!(
+        refusal(&bytes),
+        FormatError::TableGap {
+            table: "strings",
+            offset: good + 4,
+            expected: good
+        }
+    );
+}
+
+#[test]
+fn an_import_name_that_is_not_utf8() {
+    let strings = get32(&sample_bytes(), off::STRINGS_OFFSET) as usize;
+    for byte in [0xFF, 0xC3, 0x80] {
+        let bytes = damaged(|b| b[strings] = byte);
+        assert_eq!(refusal(&bytes), FormatError::BadImportName { index: 0 }, "{byte:#x}");
+    }
+    // A well-formed multi-byte character is UTF-8 but still not a name.
+    let bytes = damaged(|b| b[strings..strings + 2].copy_from_slice("é".as_bytes()));
+    assert_eq!(refusal(&bytes), FormatError::BadImportName { index: 0 });
+}
+
+// A flipped bit in the header: the exact error, field by field.
+
+#[test]
+fn a_flipped_header_bit_gives_the_error_of_its_field() {
+    use FormatError as E;
+    let good = sample_bytes();
+    let word = |at: usize, len: usize| -> u32 {
+        let mut a = [0u8; 4];
+        a[..len].copy_from_slice(&good[at..at + len]);
+        u32::from_le_bytes(a)
+    };
+    for at in 0..96 {
+        for bit in 0..8 {
+            let mut bytes = good.clone();
+            bytes[at] ^= 1 << bit;
+            let e = refusal(&bytes);
+            // The 16- or 32-bit field the byte belongs to, and the value the flip makes of it.
+            let (start, len) = match at {
+                4..=5 => (4, 2),
+                6..=7 => (6, 2),
+                8..=9 => (8, 2),
+                10..=11 => (10, 2),
+                12..=13 => (12, 2),
+                14..=15 => (14, 2),
+                _ => (at & !3, 4),
+            };
+            let flipped = {
+                let mut w = word(start, len);
+                w ^= (1u32 << bit) << (8 * (at - start));
+                w
+            };
+            let ok = match at {
+                0..=2 => e == E::BadMagic,
+                3 => {
+                    let c = bytes[3];
+                    if c.is_ascii_digit() {
+                        e == E::UnsupportedVersion(c - b'0')
+                    } else {
+                        e == E::BadMagic
+                    }
+                }
+                4..=5 => {
+                    let size = flipped as u16;
+                    if size.is_multiple_of(4) && size >= 96 {
+                        // A header that has grown: the image no longer starts where it ends.
+                        e == E::TablesOverlap {
+                            table: "image",
+                            offset: 96,
+                        }
+                    } else {
+                        e == E::BadHeaderSize(size)
+                    }
+                }
+                6..=7 => e == E::UnknownFlags(flipped as u16),
+                8..=9 => e == E::UnsupportedAbi(flipped as u16),
+                10..=11 => match flipped {
+                    0 => matches!(e, E::BadChecksum { .. }),
+                    v => {
+                        e == E::SdkTooNew {
+                            needs: v as u16,
+                            have: 1,
+                        }
+                    }
+                },
+                12..=13 => match flipped {
+                    3 => e == E::KindNotSupported(3),
+                    v => e == E::UnknownKind(v as u16),
+                },
+                14..=15 => e == E::ReservedNotZero { offset: 14 },
+                88..=95 => e == E::ReservedNotZero { offset: 88 },
+                // The sample's alignment is 16, so any single flip leaves a value that is not a power of two from 16 to 4096.
+                20..=23 => e == E::BadAlignment(flipped),
+                // Bits below 4096 or the only set bit make a bad base; any other flip is a valid base and the checksum finds it.
+                16..=19 => {
+                    if flipped == 0 || !flipped.is_multiple_of(4096) {
+                        e == E::BadLinkBase(flipped)
+                    } else {
+                        matches!(e, E::BadChecksum { .. })
+                    }
+                }
+                // The entry points are read after the checksum.
+                40..=51 => matches!(e, E::BadChecksum { .. }),
+                84..=87 => matches!(e, E::BadChecksum { .. }),
+                24..=27 => matches!(
+                    e,
+                    E::TableOutsideFile { table: "image", .. }
+                        | E::TablesOverlap { table: "image", .. }
+                        | E::TableGap { table: "image", .. }
+                ),
+                28..=31 => matches!(
+                    e,
+                    E::SizesOutOfOrder
+                        | E::TableOutsideFile { table: "image", .. }
+                        | E::TablesOverlap {
+                            table: "relocations",
+                            ..
+                        }
+                        | E::TableGap {
+                            table: "relocations",
+                            ..
+                        }
+                        | E::NonZeroPadding { .. }
+                        | E::BadChecksum { .. }
+                ),
+                32..=35 => matches!(
+                    e,
+                    E::SizesOutOfOrder | E::TooLarge(_) | E::BadLinkBase(_) | E::BadChecksum { .. }
+                ),
+                36..=39 => matches!(e, E::SizesOutOfOrder | E::BadChecksum { .. }),
+                52..=59 => matches!(
+                    e,
+                    E::TableOutsideFile {
+                        table: "relocations",
+                        ..
+                    } | E::TablesOverlap {
+                        table: "relocations",
+                        ..
+                    } | E::TableGap {
+                        table: "relocations",
+                        ..
+                    } | E::TableOutsideFile { table: "imports", .. }
+                        | E::TablesOverlap { table: "imports", .. }
+                        | E::TableGap { table: "imports", .. }
+                        | E::BadChecksum { .. }
+                ),
+                60..=71 => matches!(
+                    e,
+                    E::TooManyImports(_) | E::ExportTableMisplaced { .. } | E::ExportsNotSupported { .. }
+                ),
+                72..=75 => e == E::ExportsNotSupported { count: flipped },
+                76..=83 => matches!(
+                    e,
+                    E::TableOutsideFile { table: "strings", .. }
+                        | E::TablesOverlap { table: "strings", .. }
+                        | E::TableGap { table: "strings", .. }
+                        | E::TrailingBytes { .. }
+                        | E::BadChecksum { .. }
+                ),
+                _ => unreachable!(),
+            };
+            assert!(ok, "byte {at} bit {bit}: {e}");
+        }
+    }
+}
