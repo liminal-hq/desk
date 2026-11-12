@@ -1,5 +1,10 @@
-# Runs tools/check.sh: licence headers, the markdown style and link check, the font build check, Rust format and lints, the DOS build and a
-# headless DOSBox run of DESK.EXE, then the native boot test under QEMU.
+# Runs tools/check.sh one group per job, so a pull request's checks list names what passed or failed. A first job chooses the groups
+# a change can affect (tools/ci-scope.sh; a push to main or a manual run takes them all); then the licence headers and docs, the
+# progress report, the fonts, the Rust workspaces, the DOS programs and spikes, the e-std-stubs spike, the shell on DOS, the native
+# boot test under QEMU, and the two tracks' frames compared from the artefacts of the last two.
+#
+# Every job writes its log and step times to dist/ci/ (check.log, check.times) so a later step can publish them as a results-<job>
+# artefact without changing the jobs; nothing publishes them yet.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -7,9 +12,11 @@
 name: CI
 
 on:
+  # Every base branch, so each pull request of a stack gets its checks against the branch below it.
+  pull_request:
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,30 +25,368 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    # bash -e -o pipefail, so `tools/check.sh ... | tee` fails when the check does.
+    shell: bash
+
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    # The shared DOS build image from liminal-hq/.github (docker/ci/Dockerfile, target ci-dos), pinned by digest. Updating the pin is
-    # a pull request, and its checks run in the new image.
-    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+  scope:
+    name: Choose check groups
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.scope.outputs.groups }}
     steps:
-      - uses: actions/checkout@v7
+      # The whole history, so the merge base with the pull request's base branch is known.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # A pull request runs the groups its changed paths can affect, measured from its own base branch (for a stacked pull request,
+      # the branch below it). Every other run runs them all. A table that fails its self-test selects every group, with a warning,
+      # and the base job's "CI scope table" step fails with the reason, so the table's fault is one red row and nothing else is skipped.
+      - name: Choose the check groups
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          : > scope.txt
+          if [ "$EVENT" != pull_request ]; then
+            groups=all
+            echo "ci-scope: a $EVENT run runs every group" > scope.txt
+          elif ! tools/ci-scope.sh --self-test > /dev/null 2>&1; then
+            groups=all
+            echo "::warning::tools/ci-scope.sh --self-test failed, so every group runs; the base job's CI scope table step says why"
+            echo "ci-scope: the self-test failed, so every group runs" > scope.txt
+          else
+            groups="$(tools/ci-scope.sh --base "origin/$BASE_REF" 2> scope.txt)"
+          fi
+          if [ "$groups" = all ]; then groups="$(tools/check.sh --names | paste -sd, -)"; fi
+          echo "groups=,${groups}," >> "$GITHUB_OUTPUT"
+          {
+            echo "## Choose check groups"
+            echo "- Groups: \`${groups}\`"
+            echo
+            echo "<details><summary>Why, path by path</summary>"
+            echo
+            echo '```text'
+            cat scope.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  base:
+    name: Licence headers, docs and the scope table
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',base,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # The shared DOS build image from liminal-hq/.github (docker/ci/Dockerfile, target ci-dos), pinned by digest. Every job names the
+    # same digest (a test checks it); updating it is a pull request whose checks run in the new image.
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: base
+      TITLE: Licence headers, docs and the scope table
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The checkout is owned by another user inside the container, and git refuses to list its files without this.
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      # The font tools (opentype.js) come from the lockfile; the image carries Bun. Without them the font check fails under CI.
+      - name: tools/check.sh --groups base
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: Progress report and frame tools
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',report,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: report
+      TITLE: Progress report and frame tools
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: tools/check.sh --groups report
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  fonts:
+    name: Fonts
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',fonts,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: fonts
+      TITLE: Fonts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The font tools (opentype.js) come from the lockfile; the image carries Bun. With CI set, tools/check.sh fails rather than
+      # skips without them.
       - name: Install the font tools
         run: bun install --frozen-lockfile
         working-directory: fonts
-      # The image already holds Rust 1.98.0 with rust-src, QEMU, NASM and mtools, and DJGPP, DOSBox Staging and CWSDPMI under
-      # DOS_TOOLCHAIN; setup links vendor/ to the last three and confirms each one runs. Cargo downloads the crates that
-      # -Zbuild-std's standard library sources depend on, so the job needs network access.
+      - name: tools/check.sh --groups fonts
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  rust:
+    name: ${{ matrix.title }}
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',rust,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    strategy:
+      fail-fast: false
+      # Every part of the group (tools/check.sh --units) is in exactly one leg; a test checks it.
+      matrix:
+        include:
+          - { groups: "rust:hal", title: "Rust: HAL" }
+          - { groups: "rust:shell", title: "Rust: shell" }
+          - { groups: "rust:core,rust:module,rust:spikes", title: "Rust: core, module and spike lints" }
+    env:
+      CHECK_GROUPS: ${{ matrix.groups }}
+      TITLE: ${{ matrix.title }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The image holds the pinned Rust toolchain with rust-src, clippy, rustfmt and cargo-nextest; setup confirms it and links vendor/.
+      # Cargo downloads the crates that -Zbuild-std's sources depend on, so the job needs network access.
+      - name: Set up the toolchain
+        run: tools/setup.sh
+      - name: tools/check.sh --groups ${{ matrix.groups }}
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  dos:
+    name: ${{ matrix.title }}
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',dos,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    strategy:
+      fail-fast: false
+      # Every part of the group (tools/check.sh --units) is in exactly one leg; a test checks it.
+      matrix:
+        include:
+          - { groups: "dos:skeleton,dos:s1,dos:d0,dos:vga", title: "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe" }
+          - { groups: "dos:input", title: "DOS: b-dos-input" }
+    env:
+      CHECK_GROUPS: ${{ matrix.groups }}
+      TITLE: ${{ matrix.title }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # DJGPP, DOSBox Staging and CWSDPMI are under DOS_TOOLCHAIN in the image; setup links vendor/ to them and confirms each runs.
       - name: Set up the DOS toolchain
         run: tools/setup.sh
-      - name: Check
-        run: tools/check.sh
+      - name: tools/check.sh --groups ${{ matrix.groups }}
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  stdstubs:
+    name: Spike e-std-stubs
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',stdstubs,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: stdstubs
+      TITLE: Spike e-std-stubs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # Setup links vendor/ to the DOS tools in the image and confirms each runs.
+      - name: Set up the DOS toolchain
+        run: tools/setup.sh
+      - name: tools/check.sh --groups stdstubs
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  shelldos:
+    name: Shell on DOS
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',shelldos,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: shelldos
+      TITLE: Shell on DOS
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # Setup links vendor/ to the DOS tools in the image and confirms each runs.
+      - name: Set up the DOS toolchain
+        run: tools/setup.sh
+      - name: tools/check.sh --groups shelldos
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      # The comparison job reads the DOS read-back of the frame buffer and the DAC. One tar file, so the paths inside dist/ come back
+      # exactly as they were, whatever the artefact action does with several paths.
+      - name: Keep the DOS read-back for the comparison
+        run: tar -cf dist/ci/frames-dos.tar dist/shell/dumps-8 dist/shell/dumps-4 dist/shell/dumps-vga
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frames-dos
+          path: dist/ci/frames-dos.tar
+          if-no-files-found: error
+          retention-days: 3
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  native:
+    name: Native boot in QEMU
+    needs: scope
+    if: contains(needs.scope.outputs.groups, ',native,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: native
+      TITLE: Native boot in QEMU
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # QEMU, NASM and mtools are in the image; setup confirms the Rust toolchain.
+      - name: Set up the toolchain
+        run: tools/setup.sh
+      - name: tools/check.sh --groups native
+        id: check
+        run: |
+          mkdir -p dist/ci
+          CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Keep the QEMU screendumps for the comparison
+        run: tar -cf dist/ci/frames-native.tar dist/shell-native-8 dist/shell-native-4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frames-native
+          path: dist/ci/frames-native.tar
+          if-no-files-found: error
+          retention-days: 3
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+
+  compare:
+    name: Both tracks compared
+    # Runs only when both tracks passed (the implicit success() of a job's needs); the scope always selects shelldos and
+    # native with compare.
+    needs: [scope, shelldos, native]
+    if: contains(needs.scope.outputs.groups, ',compare,')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    container: ghcr.io/liminal-hq/ci-dos@sha256:6b8c6308baaa4d05ee0f1af25512bece544ef79bbe653c31c7b5cab54ff52e2a
+    env:
+      CHECK_GROUPS: compare
+      TITLE: Both tracks compared
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frames-dos
+          path: dist/ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frames-native
+          path: dist/ci
+      - name: Unpack the frames
+        run: |
+          tar -xf dist/ci/frames-dos.tar
+          tar -xf dist/ci/frames-native.tar
+          find dist -maxdepth 2 -type d | sort
+      - name: tools/check.sh --groups compare
+        id: check
+        run: CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
+      - name: Job summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.check.outcome }}
+        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
