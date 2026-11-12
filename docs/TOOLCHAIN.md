@@ -38,6 +38,8 @@ tools/check.sh     # headers, docs, Rust format and lints, build, headless run, 
 tools/check.sh --groups rust:hal,dos   # only the named groups or parts; --list names them
 ```
 
+The CI runs each group of `tools/check.sh` as its own job in the `ci-dos` image (`.github/workflows/ci.yml`), after a first job that chooses the groups a pull request needs from its paths (`tools/ci-scope.sh`); the comparison of the two tracks gets the DOS read-back and the QEMU screendumps from the shell-on-DOS and native jobs as artefacts. Each job leaves its log and step times in `dist/ci/` so a later change can publish them per job; nothing publishes them yet.
+
 Individual steps:
 
 ```bash

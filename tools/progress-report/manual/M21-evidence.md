@@ -63,7 +63,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 
 ### CI and `tools/check.sh`
 
-`tools/check.sh` is the pre-pull-request gate and what the CI runs. Its steps are in nine groups, `base`, `report`, `fonts`, `rust`, `dos`, `stdstubs`, `shelldos`, `native` and `compare`, and some groups in parts (`rust:hal`, `dos:input`); `tools/check.sh --groups LIST` runs only those, and `tools/check.sh --list` names them. The CI is one job: a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml`, a checkout, the font tools, the DOS toolchain, QEMU and NASM if the image lacks them, and `tools/check.sh`. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
+`tools/check.sh` is the pre-pull-request gate and what the CI runs. Its steps are in nine groups, `base`, `report`, `fonts`, `rust`, `dos`, `stdstubs`, `shelldos`, `native` and `compare`, and some groups in parts (`rust:hal`, `dos:input`); `tools/check.sh --groups LIST` runs only those, and `tools/check.sh --list` names them. The CI runs one job per group, some groups as several jobs of their parts, each a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml` running `tools/check.sh --groups` for its share. A first job, `scope`, chooses the groups a pull request needs from the paths it changes (`tools/ci-scope.sh`; a push to `main` and a manual run take every group), and the comparison job receives the two tracks' frames as artefacts from the shell-on-DOS and native jobs. There is no job that gathers the others' results: each job is its own check. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
 
 | No. | Step |
 |---|---|
@@ -92,7 +92,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 23 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
 | 24 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
-Four more steps run only when asked, because the CI image lacks what they need: the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
+Four more steps run only when asked, because the CI image lacks what they need (the Bochs and js-dos steps come after the comparison and run only when their whole group is selected, so the Bochs run never rewrites the native screendumps before they are compared): the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
 ### The three shelves and the four tags
 
@@ -117,7 +117,7 @@ In every place this project says *verified*, it means *in an emulator or on the 
 |---|---|
 | [`tools/check.sh`](repo:tools/check.sh) | The pre-pull-request gate: every step above, in order |
 | [`tools/ci-scope.sh`](repo:tools/ci-scope.sh) | Chooses the groups a pull request needs from its paths, with a self-test of its rules, the path dependencies, what each group's steps read and the coverage |
-| [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI job: the pinned image, the tool set-up and `tools/check.sh` |
+| [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI: the scope job, one job per group (or part), the pinned image and the artefacts between the tracks |
 | [`hal/platform/mock/`](repo:hal/platform/mock/) | The mock platform: [`MockPortBus`](sym:hal/platform/mock/src/bus.rs::MockPortBus) and its devices |
 | [`tools/native-check.py`](repo:tools/native-check.py) | The transcript checker ([M5](chapter:m-boot)) |
 | [`tools/native-inject.py`](repo:tools/native-inject.py) | Sends scripted keys, mouse motion and screendump commands through the QEMU monitor |
@@ -271,3 +271,4 @@ at: explainer m-negatives
 - 2026-11-11: the steps of `tools/check.sh` are in groups (`--groups`, `--list`); the step table is unchanged, the frame tools' step now also holds the goldens' checks and the live translations, and a test checks that every step is in a group.
 - 2026-11-11: the module loader's crates (`module/`) are the part `rust:module` of `tools/check.sh`, one step after the shell's, so the step table has a row for it and the rows after it moved down by one.
 - 2026-11-11: `tools/ci-scope.sh --self-test` is a step of the `base` group (the CI scope table), so the step table has a row for it and the rows after it moved down by one.
+- 2026-11-11: the CI runs one job per group (and per part for `rust` and `dos`) after a `scope` job that chooses the groups from the changed paths, and the comparison job reads the DOS read-back and the QEMU screendumps as artefacts of the shell-on-DOS and native jobs; the step table is unchanged.
