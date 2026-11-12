@@ -74,21 +74,22 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 5 | Rust format and lints |
 | 6 | HAL: host tests and no_std builds |
 | 7 | Shell: host tests and no_std builds |
-| 8 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
-| 9 | Build DESK.EXE |
-| 10 | Run DESK.EXE in headless DOSBox |
-| 11 | A Rust panic reports through C and exits non-zero |
-| 12 | Spike s1-dxe3: Rust format and lints for the modules |
-| 13 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
-| 14 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
-| 15 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
-| 16 | Spike s5-jsdos: Rust format and lints for the probes |
-| 17 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
-| 18 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
-| 19 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
-| 20 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
-| 21 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
-| 22 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
+| 8 | Module loader: host tests and no_std builds |
+| 9 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
+| 10 | Build DESK.EXE |
+| 11 | Run DESK.EXE in headless DOSBox |
+| 12 | A Rust panic reports through C and exits non-zero |
+| 13 | Spike s1-dxe3: Rust format and lints for the modules |
+| 14 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
+| 15 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
+| 16 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
+| 17 | Spike s5-jsdos: Rust format and lints for the probes |
+| 18 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
+| 19 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
+| 20 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
+| 21 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
+| 22 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
+| 23 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
 Four more steps run only when asked, because the CI image lacks what they need: the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
@@ -266,3 +267,4 @@ at: explainer m-negatives
 
 - 2026-10-23: first written, against `44f0265`. The step table matches the `step` lines of `tools/check.sh` in order (a test checks it); the commands in the try block were run on the host. No disagreement was found between the documents and the scripts for this layer.
 - 2026-11-11: the steps of `tools/check.sh` are in groups (`--groups`, `--list`); the step table is unchanged, the frame tools' step now also holds the goldens' checks and the live translations, and a test checks that every step is in a group.
+- 2026-11-11: the module loader's crates (`module/`) are the part `rust:module` of `tools/check.sh`, one step after the shell's, so the step table has a row for it and the rows after it moved down by one.

@@ -28,7 +28,7 @@ cd "$(dirname "$0")/.."
 # The groups, in order, and the parts of the groups that have them. A group without parts is one unit.
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
 # shellcheck disable=SC2034 # read through parts()
-PARTS_rust="core hal shell spikes"
+PARTS_rust="core hal shell module spikes"
 # shellcheck disable=SC2034 # read through parts()
 PARTS_dos="skeleton s1 d0 vga input"
 
@@ -42,6 +42,7 @@ fonts      the font build check (bun; fails instead of skipping when CI is set)
 rust       core       core/ format and lints
            hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
            shell      shell/ format, lints, host tests and the cross builds
+           module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
            s1         spike s1-dxe3: the modules built, loaded, called, crashed and unloaded
@@ -153,6 +154,17 @@ step "Shell: host tests and no_std builds"
 (cd shell && cargo test --locked --quiet)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+fi
+
+# The module loader's crates: host tests for both, and the format crate's no_std builds (the packer uses std, so the cross builds name
+# -p desk-module). DMD_REQUIRE_REAL_MODULE=1 makes the packer's real-linker test (rust-src and rust-lld) fail instead of skip. See docs/LOADER.md.
+if run rust module; then
+step "Module loader: host tests and no_std builds"
+(cd module && cargo fmt --check)
+(cd module && cargo clippy --locked --all-targets -- -D warnings)
+(cd module && DMD_REQUIRE_REAL_MODULE=1 cargo test --locked --quiet)
+(cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
+(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
 
 if run report; then
