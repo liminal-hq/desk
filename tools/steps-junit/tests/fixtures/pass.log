@@ -1,0 +1,12 @@
+check: groups: base
+
+== base: Licence headers
+licence headers: ok
+
+== base: Markdown style and links
+docs: ok
+
+== base: CI scope table: one test per rule
+ci-scope: self-test ok (100 tests)
+
+All checks passed.
