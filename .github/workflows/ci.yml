@@ -106,7 +106,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   report:
     name: Progress report and frame tools
@@ -133,7 +138,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   fonts:
     name: Fonts
@@ -165,7 +175,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   rust:
     name: ${{ matrix.title }}
@@ -204,7 +219,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   dos:
     name: ${{ matrix.title }}
@@ -241,7 +261,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   stdstubs:
     name: Spike e-std-stubs
@@ -271,7 +296,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   shelldos:
     name: Shell on DOS
@@ -311,7 +341,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   native:
     name: Native boot in QEMU
@@ -349,7 +384,12 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   compare:
     name: Both tracks compared
@@ -389,4 +429,9 @@ jobs:
         if: always()
         env:
           OUTCOME: ${{ steps.check.outcome }}
-        run: printf '## %s\n- Result: `%s`\n- Command: `tools/check.sh --groups %s`\n' "$TITLE" "$OUTCOME" "$CHECK_GROUPS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "## $TITLE"
+            echo "- Result: \`$OUTCOME\`"
+            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
