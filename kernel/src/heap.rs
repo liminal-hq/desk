@@ -27,7 +27,10 @@ struct FreeList {
 
 impl FreeList {
     fn round(layout: Layout) -> (usize, usize) {
-        (layout.size().max(1).next_multiple_of(GRAIN).max(size_of::<Node>()), layout.align().max(GRAIN))
+        (
+            layout.size().max(1).next_multiple_of(GRAIN).max(size_of::<Node>()),
+            layout.align().max(GRAIN),
+        )
     }
 
     /// Adds a block, merging it with a neighbour on either side.
@@ -65,7 +68,10 @@ impl FreeList {
             let start = cur as usize;
             let end = start + (*cur).size;
             let at = start.next_multiple_of(align);
-            if at + size <= end && (at == start || at - start >= size_of::<Node>()) && (at + size == end || end - (at + size) >= size_of::<Node>()) {
+            if at + size <= end
+                && (at == start || at - start >= size_of::<Node>())
+                && (at + size == end || end - (at + size) >= size_of::<Node>())
+            {
                 let next = (*cur).next;
                 // Unlink the block, then give back whatever is left in front of and behind the allocation.
                 if prev.is_null() {
@@ -110,7 +116,10 @@ unsafe impl GlobalAlloc for Heap {
 }
 
 #[global_allocator]
-static HEAP: Heap = Heap(UnsafeCell::new(FreeList { head: null_mut(), free: 0 }));
+static HEAP: Heap = Heap(UnsafeCell::new(FreeList {
+    head: null_mut(),
+    free: 0,
+}));
 
 /// Takes a contiguous run of frames from the frame allocator and hands it to the heap.
 pub fn init() {

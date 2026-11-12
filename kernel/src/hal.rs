@@ -33,7 +33,9 @@ pub struct IrqTable {
 // half-written entry, and an entry is a pair of words that is copied out whole.
 unsafe impl Sync for IrqTable {}
 
-pub static IRQS: IrqTable = IrqTable { handlers: UnsafeCell::new([None; 16]) };
+pub static IRQS: IrqTable = IrqTable {
+    handlers: UnsafeCell::new([None; 16]),
+};
 
 impl IrqRegistry for IrqTable {
     /// Installs the handler and the IDT gate for the line and unmasks it (and the cascade, for IRQ 8 to 15). The kernel always sends the end-of-interrupt itself, so only

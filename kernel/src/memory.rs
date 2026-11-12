@@ -110,7 +110,11 @@ pub fn overlaps_ram(info: &BootInfo, base: u32, len: u32) -> bool {
     let (b, e) = (u64::from(base), u64::from(base) + u64::from(len));
     let hit = |lo: u64, hi: u64| b < hi && lo < e;
     let (ks, ke) = kernel_range();
-    hit(0, 0x10_0000) || hit(u64::from(ks), u64::from(ke)) || regions(info).iter().any(|r| r.kind == KIND_USABLE && hit(r.base, r.base + r.len))
+    hit(0, 0x10_0000)
+        || hit(u64::from(ks), u64::from(ke))
+        || regions(info)
+            .iter()
+            .any(|r| r.kind == KIND_USABLE && hit(r.base, r.base + r.len))
 }
 
 /// Marks the frames of `base..base + len` as in use, so the allocator never hands out device memory. Frames beyond what the bitmap
@@ -126,7 +130,10 @@ pub fn reserve(base: u32, len: u32) {
 
 /// The physical range the kernel image and its .bss and stack occupy.
 pub fn kernel_range() -> (u32, u32) {
-    (core::ptr::addr_of!(__kernel_start) as u32, core::ptr::addr_of!(__kernel_end) as u32)
+    (
+        core::ptr::addr_of!(__kernel_start) as u32,
+        core::ptr::addr_of!(__kernel_end) as u32,
+    )
 }
 
 /// Prints the map and the totals the boot transcript records.
@@ -149,7 +156,11 @@ pub fn report(info: &BootInfo) {
     println!("memory: usable RAM {} KiB", usable_kib);
     let (start, end) = kernel_range();
     println!("memory: kernel image {:#x}-{:#x}", start, end);
-    println!("memory: {} frames of {} KiB free after reservations", free_frames(), FRAME_SIZE / 1024);
+    println!(
+        "memory: {} frames of {} KiB free after reservations",
+        free_frames(),
+        FRAME_SIZE / 1024
+    );
 }
 
 pub fn free_frames() -> usize {

@@ -62,7 +62,10 @@ fn show_picture<C: Canvas>(c: &mut C, depth: Depth, label: &str, hosted: Option<
     scene::draw(c, depth);
     let sum = checksum(c).expect("checksum");
     let want = reference(c.width(), c.height(), depth);
-    println!("gfx: {}: frame buffer checksum {:#010x}, picture in memory {:#010x}", label, sum, want);
+    println!(
+        "gfx: {}: frame buffer checksum {:#010x}, picture in memory {:#010x}",
+        label, sum, want
+    );
     assert_eq!(sum, want, "{}: the frame buffer does not hold the picture", label);
     if let Some(h) = hosted {
         println!("gfx: {}: spike A's DOSBox checksum {:#010x}, equal: {}", label, h, sum == h);
@@ -89,7 +92,10 @@ pub(crate) fn leave_vbe() {
     }
     // Not a Bochs card (QEMU's Cirrus, a real S3, Trident or ET4000): the register programming of the text and graphics modes does
     // not undo its extended registers, so the BIOS does it, by setting text mode 3 through the real-mode trampoline.
-    println!("gfx: leaving VBE: no Bochs VBE registers (read {:#06x}), asking the BIOS: INT 10h AX=0003h", id);
+    println!(
+        "gfx: leaving VBE: no Bochs VBE registers (read {:#06x}), asking the BIOS: INT 10h AX=0003h",
+        id
+    );
     let mut regs = bios::RealModeRegs::with_eax(0x0003);
     match bios::call(0x10, &mut regs) {
         Ok(()) => println!("gfx: leaving VBE: the BIOS set text mode 3"),
@@ -154,8 +160,21 @@ fn fade_demo(ps2: &mut Ps2Input, label: &str, base: &[Rgb6; ENTRIES], pause: Opt
     let t2 = pit::ticks();
     dac::read_palette(&PORTS, 0, &mut now).expect("read the palette");
     let restored = now == *base;
-    println!("gfx: {}: paced fade out, {} steps of {} ticks, took {} ticks (including any screenshot pause), ends black: {}", label, dac::FADE_STEPS, FADE_STEP_TICKS, t1 - t0, black);
-    println!("gfx: {}: paced fade in, {} steps, took {} ticks, palette restored: {}", label, dac::FADE_STEPS, t2 - t1, restored);
+    println!(
+        "gfx: {}: paced fade out, {} steps of {} ticks, took {} ticks (including any screenshot pause), ends black: {}",
+        label,
+        dac::FADE_STEPS,
+        FADE_STEP_TICKS,
+        t1 - t0,
+        black
+    );
+    println!(
+        "gfx: {}: paced fade in, {} steps, took {} ticks, palette restored: {}",
+        label,
+        dac::FADE_STEPS,
+        t2 - t1,
+        restored
+    );
     assert!(black && restored, "{}: the fade did not end where it should", label);
     // The driver's fade waits for vertical retrace before each step. A real VGA takes 16 frames (about 230 ms at 70 Hz) for it;
     // QEMU's VGA toggles the retrace bit on every read, so it "synchronises" at once and the fade takes no time at all.
@@ -197,7 +216,10 @@ fn perf<C: Canvas>(c: &mut C, label: &str, cursor_colours: (u8, u8)) {
     let (w, h) = (c.width(), c.height());
     let (n, t) = for_a_second(|i| c.fill_rect(0, 0, w, h, (i % 15 + 1) as u8));
     let (a, b) = rate(n, t);
-    println!("gfx: perf: {}: {} full-screen fills in {} ticks, {}.{} per second (emulated speed, not real hardware)", label, n, t, a, b);
+    println!(
+        "gfx: perf: {}: {} full-screen fills in {} ticks, {}.{} per second (emulated speed, not real hardware)",
+        label, n, t, a, b
+    );
     let mut cursor = Cursor::new(cursor_colours);
     cursor.show(c);
     let (n, t) = for_a_second(|i| {
@@ -207,7 +229,10 @@ fn perf<C: Canvas>(c: &mut C, label: &str, cursor_colours: (u8, u8)) {
         cursor.show(c);
     });
     let (a, b) = rate(n, t);
-    println!("gfx: perf: {}: {} cursor moves in {} ticks, {}.{} per second (emulated speed, not real hardware)", label, n, t, a, b);
+    println!(
+        "gfx: perf: {}: {} cursor moves in {} ticks, {}.{} per second (emulated speed, not real hardware)",
+        label, n, t, a, b
+    );
 }
 
 /// The full-screen fill as one `pixel` call per pixel, the slowest way to use the driver and what a fill cost before `fill8`.
@@ -234,7 +259,10 @@ fn perf_raw_fill(l: &Lfb) {
         unsafe { core::ptr::write_bytes(base, (i % 15 + 1) as u8, bytes) };
     });
     let (a, b) = rate(n, t);
-    println!("gfx: perf: vbe memset fill: {} full-screen fills in {} ticks, {}.{} per second (emulated speed, not real hardware)", n, t, a, b);
+    println!(
+        "gfx: perf: vbe memset fill: {} full-screen fills in {} ticks, {}.{} per second (emulated speed, not real hardware)",
+        n, t, a, b
+    );
 }
 
 // ---- The cursor
@@ -277,7 +305,14 @@ struct Cursor {
 
 impl Cursor {
     const fn new(colours: (u8, u8)) -> Cursor {
-        Cursor { x: 0, y: 0, shown: false, saved: [0; CURSOR_W * CURSOR_H], outline: colours.0, fill: colours.1 }
+        Cursor {
+            x: 0,
+            y: 0,
+            shown: false,
+            saved: [0; CURSOR_W * CURSOR_H],
+            outline: colours.0,
+            fill: colours.1,
+        }
     }
 
     /// Saves what is under the arrow and draws it. Does nothing if it is already shown.
@@ -323,9 +358,15 @@ struct Looks {
 
 impl Looks {
     const CURSOR_256: (u8, u8) = (240, 241);
-    const COLOURS_256: Looks = Looks { bands: &[16, 17, 18, 19, 20, 21, 22], cursor: Looks::CURSOR_256 };
+    const COLOURS_256: Looks = Looks {
+        bands: &[16, 17, 18, 19, 20, 21, 22],
+        cursor: Looks::CURSOR_256,
+    };
     /// Slots 10, 9 and 8 are the horizon's three bands in 16 colours; the cursor uses the void and the text colour.
-    const COLOURS_16: Looks = Looks { bands: &[10, 9, 8], cursor: (0, 7) };
+    const COLOURS_16: Looks = Looks {
+        bands: &[10, 9, 8],
+        cursor: (0, 7),
+    };
 }
 
 // Slots of the 16-colour set that are the same in both palettes (docs/PALETTE.md).
@@ -352,7 +393,14 @@ fn glyph<C: Canvas>(c: &mut C, font: &[u8; FONT_BYTES], x: i32, y: i32, ch: u8, 
 fn label<C: Canvas>(c: &mut C, font: Option<&[u8; FONT_BYTES]>, x: i32, y: i32, s: &str, colour: u8) {
     let Some(font) = font else { return };
     for (i, b) in s.bytes().enumerate() {
-        glyph(c, font, x + i as i32 * 8, y, if (0x20..0x7F).contains(&b) { b } else { b'?' }, colour);
+        glyph(
+            c,
+            font,
+            x + i as i32 * 8,
+            y,
+            if (0x20..0x7F).contains(&b) { b } else { b'?' },
+            colour,
+        );
     }
 }
 
@@ -368,7 +416,12 @@ const TITLE_H: u32 = 22;
 
 impl Window {
     fn new(sw: u32, sh: u32) -> Window {
-        Window { x: (sw * 3 / 20) as i32, y: (sh / 6) as i32, w: sw * 7 / 10, h: sh * 11 / 20 }
+        Window {
+            x: (sw * 3 / 20) as i32,
+            y: (sh / 6) as i32,
+            w: sw * 7 / 10,
+            h: sh * 11 / 20,
+        }
     }
 
     fn body_y(&self) -> i32 {
@@ -393,7 +446,14 @@ fn draw_desktop<C: Canvas>(c: &mut C, looks: &Looks, win: &Window, font: Option<
     c.hline(win.x, win.body_y() - 1, win.w, LINE);
     label(c, font, win.x + 10, win.y + 3, "Desk: first window", VOID);
     c.rect(win.x + win.w as i32 - 20, win.y + 5, 12, 12, VOID);
-    label(c, font, win.x + 12, win.body_y() + 12, "Move the mouse. Type here. Esc leaves.", MUTED);
+    label(
+        c,
+        font,
+        win.x + 12,
+        win.body_y() + 12,
+        "Move the mouse. Type here. Esc leaves.",
+        MUTED,
+    );
     draw_echo(c, font, win, "");
 }
 
@@ -512,7 +572,10 @@ pub(crate) fn restore_text(font: Option<&[u8; FONT_BYTES]>) {
 
 /// The 640 × 480 × 8 linear frame buffer the loader set: the picture, the fade, the speed, the window with the cursor.
 fn tour_vbe(l: &Lfb, ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
-    println!("gfx: VBE mode {:#06x}, {}x{}, pitch {}, frame buffer at {:#x}", l.mode, l.width, l.height, l.pitch, l.phys);
+    println!(
+        "gfx: VBE mode {:#06x}, {}x{}, pitch {}, frame buffer at {:#x}",
+        l.mode, l.width, l.height, l.pitch, l.phys
+    );
     let mut region = lfb_region(l);
     let mut c = Linear8::new(&mut region, l.width, l.height, l.pitch).expect("the frame buffer surface");
     let mut palette = palette_of(&scene::palette256());
@@ -532,7 +595,10 @@ fn tour_vbe(l: &Lfb, ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
 fn tour_13h(ps2: &mut Ps2Input) {
     regs::set_mode_13h(&PORTS);
     let readback = regs::read_mode_registers(&PORTS);
-    println!("gfx: mode 13h by registers, no BIOS: registers read back equal the table: {}", readback == regs::MODE_13H);
+    println!(
+        "gfx: mode 13h by registers, no BIOS: registers read back equal the table: {}",
+        readback == regs::MODE_13H
+    );
     assert!(readback == regs::MODE_13H);
     let palette = palette_of(&scene::palette256());
     dac::set_palette(&PORTS, 0, &palette).expect("palette");
@@ -547,7 +613,10 @@ fn tour_13h(ps2: &mut Ps2Input) {
 fn tour_12h(ps2: &mut Ps2Input, font: Option<&[u8; FONT_BYTES]>) {
     regs::set_mode_12h(&PORTS);
     let readback = regs::read_mode_registers(&PORTS);
-    println!("gfx: mode 12h by registers, no BIOS: registers read back equal the table: {}", readback == regs::MODE_12H);
+    println!(
+        "gfx: mode 12h by registers, no BIOS: registers read back equal the table: {}",
+        readback == regs::MODE_12H
+    );
     assert!(readback == regs::MODE_12H);
     let palette = palette_of(&scene::DESK16);
     dac::set_palette(&PORTS, 0, &palette).expect("palette");

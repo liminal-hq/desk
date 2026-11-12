@@ -48,7 +48,10 @@ pub fn demo() {
     for i in 1..=10 {
         harmonic += 1.0 / f64::from(i);
     }
-    println!("fpu: control word {:#06x}, sqrt(2) = {:.6}, H(10) = {:.6}", cw, root, harmonic);
+    println!(
+        "fpu: control word {:#06x}, sqrt(2) = {:.6}, H(10) = {:.6}",
+        cw, root, harmonic
+    );
     assert!((root * root - 2.0).abs() < 1e-12);
     assert!((harmonic - 2.928_968_253_968_254).abs() < 1e-12);
     println!("fpu: results check out");
