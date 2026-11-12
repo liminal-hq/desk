@@ -63,7 +63,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 
 ### CI and `tools/check.sh`
 
-`tools/check.sh` is the pre-pull-request gate and what the CI runs. The CI is one job: a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml`, a checkout, the font tools, the DOS toolchain, QEMU and NASM if the image lacks them, and `tools/check.sh`. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
+`tools/check.sh` is the pre-pull-request gate and what the CI runs. Its steps are in nine groups, `base`, `report`, `fonts`, `rust`, `dos`, `stdstubs`, `shelldos`, `native` and `compare`, and some groups in parts (`rust:hal`, `dos:input`); `tools/check.sh --groups LIST` runs only those, and `tools/check.sh --list` names them. The CI is one job: a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml`, a checkout, the font tools, the DOS toolchain, QEMU and NASM if the image lacks them, and `tools/check.sh`. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
 
 | No. | Step |
 |---|---|
@@ -265,3 +265,4 @@ at: explainer m-negatives
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The step table matches the `step` lines of `tools/check.sh` in order (a test checks it); the commands in the try block were run on the host. No disagreement was found between the documents and the scripts for this layer.
+- 2026-11-11: the steps of `tools/check.sh` are in groups (`--groups`, `--list`); the step table is unchanged, the frame tools' step now also holds the goldens' checks and the live translations, and a test checks that every step is in a group.
