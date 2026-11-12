@@ -61,6 +61,10 @@ RULES=(
   'hal/*;report,rust,dos,stdstubs,shelldos,native,compare;hal/drivers/kbd/src/lib.rs'
   'shell/dos/*;report,shelldos,compare;shell/dos/src/main.rs'
   'shell/*;report,rust,shelldos,native,compare;shell/gfx/src/lib.rs'
+  # The module loader's host crates (the format reader and the packer, whose real-linker test builds a module for the kernel's target
+  # specification, a path the kernel rules above already send to rust). module/mods and module/dos are excluded from the workspace and
+  # will be built for the native and DOS tracks: give them rules of their own when those directories exist.
+  'module/*;report,rust;module/format/src/lib.rs'
   # The hosted track's skeleton and its build tools.
   'core/*;report,rust,dos;core/src/lib.rs'
   'c/*;report,dos;c/main.c'
@@ -199,6 +203,7 @@ self_test() {
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs
+  expect base,report,rust module/pack/tests/real.rs module/Cargo.lock
   expect base,report,shelldos,native,compare tools/shell-compare.sh
   expect base,report,shelldos,native,compare kernel/src/main.rs boot/stage1.asm
   expect base,report,fonts fonts/src/emoji/README.txt
