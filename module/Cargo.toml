@@ -1,0 +1,16 @@
+# The module loader's crates (docs/LOADER.md): the format crate `desk-module` shared by the loaders and the packer, and those that follow it.
+#
+# Every library crate here that runs in the core is `no_std` + `alloc` and builds for three places: the host, where `cargo test` runs
+# the host tests; the native kernel's target (`kernel/i486-desk-none.json`); and the pure-Rust DOS target
+# (`spikes/d0-rust-dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line, so the default target
+# stays the host's. `mods/` and `dos/` have their own workspaces, because their default target is not the host's.
+[workspace]
+members = ["format"]
+exclude = ["mods", "dos"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
