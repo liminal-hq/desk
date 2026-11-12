@@ -112,6 +112,20 @@ step() {
   [ -z "${CHECK_TIMES:-}" ] || printf 'start\t%s\t%s\t%s\n' "$(date +%s%3N)" "$CUR" "$1" >> "$CHECK_TIMES"
 }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+# host_tests: the host tests of the workspace in the current directory. cargo-nextest runs them where it is installed (the CI image
+# has it); with CI set it must be, because the `ci` profile's JUnit report (<workspace>/target/nextest/ci/junit.xml) goes to the pull
+# request. Doc-tests, which nextest does not run, follow. Without nextest (a laptop) cargo test runs everything, as before.
+ROOT=$PWD
+host_tests() {
+  if cargo nextest --version > /dev/null 2>&1; then
+    cargo nextest run --locked --config-file "$ROOT/.config/nextest.toml" --profile "$([ -n "${CI:-}" ] && echo ci || echo default)"
+    cargo test --doc --locked --quiet
+  else
+    [ -z "${CI:-}" ] || fail "cargo-nextest is missing (CI is set, so the host tests do not fall back to cargo test)"
+    cargo test --locked --quiet
+  fi
+}
 [ -z "${CHECK_TIMES:-}" ] || trap 'status=$?; printf "end\t%s\t%s\n" "$(date +%s%3N)" "$status" >> "$CHECK_TIMES"' EXIT
 
 # Each group's steps are in `if run GROUP [PART]; then` blocks whose bodies are not indented: a step at the start of a line runs whenever
@@ -157,7 +171,7 @@ if run rust hal; then
 step "HAL: host tests and no_std builds"
 (cd hal && cargo fmt --check)
 (cd hal && cargo clippy --locked --all-targets -- -D warnings)
-(cd hal && cargo test --locked --quiet)
+(cd hal && host_tests)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
@@ -167,7 +181,7 @@ if run rust shell; then
 step "Shell: host tests and no_std builds"
 (cd shell && cargo fmt --check)
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
-(cd shell && cargo test --locked --quiet)
+(cd shell && host_tests)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
@@ -178,7 +192,7 @@ if run rust module; then
 step "Module loader: host tests and no_std builds"
 (cd module && cargo fmt --check)
 (cd module && cargo clippy --locked --all-targets -- -D warnings)
-(cd module && DMD_REQUIRE_REAL_MODULE=1 cargo test --locked --quiet)
+(cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
