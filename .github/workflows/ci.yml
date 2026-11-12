@@ -1,7 +1,8 @@
 # Runs tools/check.sh one group per job, so a pull request's checks list names what passed or failed. A first job chooses the groups
 # a change can affect (tools/ci-scope.sh; a push to main or a manual run takes them all); then the licence headers and docs, the
 # progress report, the fonts, the Rust workspaces, the DOS programs and spikes, the e-std-stubs spike, the shell on DOS, the native
-# boot test under QEMU, and the two tracks' frames compared from the artefacts of the last two.
+# boot test under QEMU, and the two tracks' frames compared from the artefacts of the last two. A last job, "CI passed", gathers the
+# results of all the others and is the one status to require.
 #
 # Every job writes its log and step times to dist/ci/ (check.log, check.times) so a later step can publish them as a results-<job>
 # artefact without changing the jobs; nothing publishes them yet.
@@ -440,3 +441,36 @@ jobs:
             echo "- Result: \`$OUTCOME\`"
             echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # The one status to require, named "CI passed". (The single job of the old workflow was named "check"; that status no longer
+  # exists, so a branch protection rule that names it must be changed.) A job skipped by the scope counts as passing for a required status, so this job runs always() and
+  # decides itself: a group job the scope did not select is skipped, which is fine; but when `scope` did not succeed its dependants
+  # are skipped too, and then a skip is a failure. Runs on the runner's own bash and jq, not in the pinned image.
+  ci-passed:
+    name: CI passed
+    needs: [scope, base, report, fonts, rust, dos, stdstubs, shelldos, native, compare]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      NEEDS: ${{ toJSON(needs) }}
+    steps:
+      - name: Every job passed or was legitimately skipped
+        run: |
+          scope=$(jq -r '.scope.result' <<< "$NEEDS")
+          bad=0
+          {
+            echo "## CI passed"
+            echo "| Job | Result |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r job result; do
+            echo "| $job | $result |" >> "$GITHUB_STEP_SUMMARY"
+            case "$result" in
+              success) ;;
+              skipped) if [ "$scope" != success ]; then echo "::error::$job was skipped because scope did not succeed"; bad=1; fi ;;
+              *) echo "::error::$job: $result"; bad=1 ;;
+            esac
+          done < <(jq -r 'to_entries[] | [.key, .value.result] | @tsv' <<< "$NEEDS")
+          exit "$bad"
