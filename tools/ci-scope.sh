@@ -30,6 +30,9 @@ set -euo pipefail
 SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
 
+# The script steps_closure parses; the self-test points it at mutated copies to prove the parser notices what it drops.
+CHECK_SH="${CI_SCOPE_CHECK_SH:-tools/check.sh}"
+
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
 
 # Paths with non-ASCII characters come out of git unquoted, so they match the rules as they are written.
@@ -237,11 +240,15 @@ self_test() {
   # Paths with non-ASCII characters come out of git unquoted.
   scratch_repo_test || bad=1
   n=$((n + 1))
+  PT=0
   # The path dependencies: a change in a directory something depends on must select every group the dependent selects.
   closure || bad=1
   # The files each group's steps read: the scripts and directories its steps in tools/check.sh name, what those scripts and the font
   # and Rust tests read.
   steps_closure || bad=1
+  # The parser of tools/check.sh must notice what it cannot read: each mutated copy fails, a harmless one passes.
+  parser_tests || bad=1
+  n=$((n + PT))
   # Coverage: every tracked file reaches a rule (a file that falls to `all` means a missing rule).
   local f missing=0
   while IFS= read -r f; do
@@ -250,6 +257,36 @@ self_test() {
   [ "$missing" = 0 ] || { echo "ci-scope: $missing tracked files fall to all; add rules for them" >&2; bad=1; }
   [ "$bad" = 0 ] || fail "the self-test found problems (above)"
   echo "ci-scope: self-test ok ($n tests, $(git ls-files | wc -l) tracked files covered)"
+}
+
+# parser_tests: steps_closure on mutated copies of tools/check.sh. Extra spaces and a one-line `if ...; fi` must still read as before;
+# a deleted block, a stray or missing `fi` and a block name the parser cannot read must fail
+parser_tests() {
+  local dir m ok=0 want
+  dir="$(mktemp -d)"
+  # name|sed script|expected: fail or pass
+  local -a muts=(
+    'double space after if|s/^if run native; then/if  run native; then/|pass'
+    'a block name the parser cannot read|s/^if run native; then/if run 9native; then/|fail'
+    'deleted native block|/^if run native; then/,/^fi$/d|fail'
+    'stray fi before native|s/^if run native; then/fi\nif run native; then/|fail'
+    'missing fi in the native block|/^tools\/native-test.sh$/{n;d}|fail'
+    'one-line if inside a block|s/^step "Native boot: NASM.*/&\nif true; then :; fi/|pass'
+    'extra spaces in if run|s/^if run compare; then/if   run   compare; then/|pass'
+  )
+  for m in "${muts[@]}"; do
+    IFS='|' read -r name script want <<< "$m"
+    sed -E "$script" tools/check.sh > "$dir/check.sh"
+    if cmp -s tools/check.sh "$dir/check.sh"; then echo "ci-scope: parser test '$name' changed nothing" >&2; ok=1; continue; fi
+    if CI_SCOPE_CHECK_SH="$dir/check.sh" bash "$SELF" --steps > /dev/null 2>&1; then got=pass; else got=fail; fi
+    case "$want" in
+      "$got") ;;
+      *) echo "ci-scope: parser test '$name': the closure should $want on the mutated tools/check.sh and did $got" >&2; ok=1 ;;
+    esac
+    PT=$((PT + 1))
+  done
+  rm -rf "$dir"
+  return "$ok"
 }
 
 # norm DIR REL: REL resolved against DIR, relative to the repository root
@@ -436,21 +473,44 @@ steps_closure() {
     TRACKED[$f]=1
     case "$f" in *.md) DOCS_BY_BASE[${f##*/}]+="$f " ;; esac
   done < <(git ls-files)
-  declare -A blocks=()
+  declare -A blocks=() reads=()
   # The text of each `if run GROUP` block, indented opt-in steps included; the opt-in blocks that rerun a whole group are not CI.
+  # The nesting is counted from the `if` and `fi` keywords at any indentation (a one-line `if ...; fi` opens and closes at once), so a
+  # block ends at its own `fi` and a nested `fi` does not end it early.
+  local t delta prev optin_floor=0 parsed=0 loose
   while IFS= read -r line; do
-    if [ "$depth" = 0 ]; then
-      if [[ "$line" =~ ^if\ run\ ([a-z]+) ]]; then block="${BASH_REMATCH[1]}"; depth=1; elif [[ "$line" =~ ^if\  ]]; then block=; depth=1; fi
+    t="${line#"${line%%[![:space:]]*}"}"
+    delta=0
+    if [[ "$t" =~ ^if[[:space:]] ]]; then
+      delta=1
+      [[ "$t" =~ (^|[[:space:];])fi[[:space:]]*$ ]] && delta=0
+    elif [[ "$t" =~ ^fi([[:space:];]|$) ]]; then
+      delta=-1
+    fi
+    prev=$depth
+    depth=$((depth + delta))
+    [ "$depth" -ge 0 ] || { echo "ci-scope: tools/check.sh has a 'fi' with no 'if' before it: $line" >&2; bad=1; depth=0; }
+    if [ "$prev" = 0 ]; then
+      block=
+      if [ "$delta" = 1 ] && [[ "$t" =~ ^if[[:space:]]+run[[:space:]]+([a-z]+) ]]; then block="${BASH_REMATCH[1]}"; parsed=$((parsed + 1)); fi
       continue
     fi
-    # An `if [ -n "${..._EXTRA:-}" ]` is an opt-in run the CI does not make: its lines are skipped up to its `fi`.
-    if [ "$optin" = 1 ]; then [ "$line" = "fi" ] && optin=0; continue; fi
-    if [[ "$line" =~ ^if\ .*_EXTRA ]]; then optin=1; continue; fi
-    [[ "$line" =~ ^if\  ]] && depth=$((depth + 1))
-    if [ "$line" = "fi" ]; then depth=$((depth - 1)); [ "$depth" = 0 ] && block=; continue; fi
+    # An `if [ -n "${..._EXTRA:-}" ]` is an opt-in run the CI does not make: its lines are skipped up to its own `fi`.
+    if [ "$optin" = 1 ]; then [ "$depth" -le "$optin_floor" ] && optin=0; continue; fi
+    if [ "$delta" = 1 ] && [[ "$t" =~ ^if[[:space:]].*_EXTRA ]]; then optin=1; optin_floor=$prev; continue; fi
+    if [ "$depth" = 0 ]; then block=; continue; fi
     [ -z "$block" ] || blocks[$block]+="$line"$'\n'
-  done < tools/check.sh
+  done < "$CHECK_SH"
+  [ "$depth" = 0 ] || { echo "ci-scope: tools/check.sh ends inside an 'if' (depth $depth)" >&2; bad=1; }
+  # The parser must see every `if run` block, and every group must have one that reads files: a block it silently dropped would
+  # leave its group's steps unchecked.
+  loose="$(grep -cE '^[[:space:]]*if[[:space:]]+run[[:space:]]' "$CHECK_SH" || true)"
+  [ "$loose" = "$parsed" ] || { echo "ci-scope: tools/check.sh has $loose 'if run' lines but the parser read $parsed blocks" >&2; bad=1; }
+  for g in $ALL_GROUPS; do
+    [[ "${blocks[$g]:-}" =~ [^[:space:]] ]] || { echo "ci-scope: the parser found no 'if run $g' block with steps in tools/check.sh" >&2; bad=1; }
+  done
   for g in "${!blocks[@]}"; do
+    reads[$g]=$STEP_EDGES
     # Level 1: the tracked files named on a step's lines, and the directories of `(cd DIR && ...)`, with the files they run there.
     while IFS= read -r line; do
       [[ "$line" =~ ^[[:space:]]*# ]] && continue
@@ -467,6 +527,10 @@ steps_closure() {
         case "$tok" in *.sh | *.py) scan_script "$tok" "$g" || bad=1 ;; esac
       done
     done <<< "${blocks[$g]}"
+    reads[$g]=$((STEP_EDGES - reads[$g]))
+  done
+  for g in $ALL_GROUPS; do
+    [ "${reads[$g]:-0}" -gt 0 ] || { echo "ci-scope: the steps of group '$g' read no files" >&2; bad=1; }
   done
   # Rust sources that include or read other files: include_bytes!, include_str!, include!, #[path] (indented too) and file reads
   # through string literals. Test code needs only the rust group, which runs the host tests.
@@ -494,9 +558,10 @@ changed_since() {
 expand() { if [ "$1" = all ]; then echo "${ALL_GROUPS// /,}"; else echo "$1"; fi; }
 
 case "${1:-}" in
-  --self-test) self_test ;;
-  --files) answer="$(classify)"; expand "$answer" ;;
-  --base) [ $# -ge 2 ] || fail "--base needs a ref"; paths="$(changed_since "$2")"; answer="$(classify <<< "$paths")"; expand "$answer" ;;
+  --self-test) [ $# -eq 1 ] || { echo "ci-scope: --self-test takes no argument" >&2; exit 2; }; self_test ;;
+  --steps) steps_closure ;;
+  --files) [ $# -eq 1 ] || { echo "ci-scope: --files takes no argument (the paths come from standard input)" >&2; exit 2; }; answer="$(classify)"; expand "$answer" ;;
+  --base) [ $# -eq 2 ] || { echo "ci-scope: --base needs exactly one ref" >&2; exit 2; }; paths="$(changed_since "$2")"; answer="$(classify <<< "$paths")"; expand "$answer" ;;
   "") paths="$(changed_since origin/main)"; answer="$(classify <<< "$paths")"; expand "$answer" ;;
   *) fail "unknown argument $1 (see the usage at the top of the script)" ;;
 esac
