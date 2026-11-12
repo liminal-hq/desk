@@ -21,7 +21,10 @@ struct Pointer {
 /// Loads the GDT and reloads every segment register. The loader already left a similar GDT in use, but it lives in the loader's
 /// memory, which the kernel is free to overwrite.
 pub fn init() {
-    let ptr = Pointer { limit: (core::mem::size_of_val(&GDT) - 1) as u16, base: GDT.as_ptr() as u32 };
+    let ptr = Pointer {
+        limit: (core::mem::size_of_val(&GDT) - 1) as u16,
+        base: GDT.as_ptr() as u32,
+    };
     // SAFETY: the table is static and valid; the far return reloads CS with the new code selector and the moves reload the
     // data segments with the new data selector.
     unsafe {

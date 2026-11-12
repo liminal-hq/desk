@@ -14,7 +14,8 @@ pub const HZ: u32 = 100;
 /// the IRQ 0 handler.
 pub fn init(hz: u32) {
     Pit::new(PORTS).program_clock(&CLOCK, hz).expect("a rate the PIT can produce");
-    IRQS.register(Irq::TIMER, IrqHandler::from_shared(CLOCK.counter()), Chain::None).expect("IRQ 0 is free");
+    IRQS.register(Irq::TIMER, IrqHandler::from_shared(CLOCK.counter()), Chain::None)
+        .expect("IRQ 0 is free");
 }
 
 pub fn ticks() -> u32 {

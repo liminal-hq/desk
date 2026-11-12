@@ -1,0 +1,27 @@
+# cargo-nextest settings for the host tests that tools/check.sh runs. Each workspace (hal/, shell/, module/, tools/steps-junit/) has its
+# own root, so check.sh passes this file with --config-file and chooses the profile.
+#
+# The `ci` profile is the one the CI uses: every test runs to the end, and the results go to <workspace>/target/nextest/ci/junit.xml for
+# the pull request's report (.github/pr-results.toml reads them as the `nextest` flavour). Neither profile retries: the tests are
+# deterministic, so a test that fails once is a bug to fix, not a flake to retry (a retry would show as "flaky" and pass).
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[profile.default]
+retries = 0
+status-level = "fail"
+final-status-level = "fail"
+failure-output = "immediate-final"
+
+[profile.ci]
+retries = 0
+fail-fast = false
+status-level = "fail"
+final-status-level = "fail"
+failure-output = "immediate-final"
+
+[profile.ci.junit]
+path = "junit.xml"
+store-success-output = false
+store-failure-output = true

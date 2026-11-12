@@ -13,8 +13,8 @@ mod biostest;
 mod console;
 mod exit;
 mod fpu;
-mod gfx;
 mod gdt;
+mod gfx;
 mod hal;
 mod heap;
 mod idt;
@@ -131,8 +131,11 @@ impl TestMode {
     }
 }
 
+/// # Safety
+///
+/// Called once, only by the start-up stub, with the address of the loader's boot-info block.
 #[no_mangle]
-pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
+pub unsafe extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     serial::init();
     console::init();
     println!("Desk native kernel {} (i486)", env!("CARGO_PKG_VERSION"));
@@ -142,7 +145,12 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
         panic!("boot info magic {:#x} is wrong", info.magic);
     }
     let mode = TestMode::from_u32(info.test_mode);
-    println!("boot: drive {:#04x}, memory map from {} ({} entries)", info.boot_drive, memory::source_name(info.map_source), info.map_count);
+    println!(
+        "boot: drive {:#04x}, memory map from {} ({} entries)",
+        info.boot_drive,
+        memory::source_name(info.map_source),
+        info.map_count
+    );
 
     gdt::init();
     println!("gdt: loaded, flat 4 GiB code and data segments");
@@ -158,7 +166,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     let free_before = memory::free_frames();
     let a = memory::alloc_frame().expect("no frame");
     let b = memory::alloc_frame().expect("no frame");
-    assert!(a != b && a % 4096 == 0 && b % 4096 == 0);
+    assert!(a != b && a.is_multiple_of(4096) && b.is_multiple_of(4096));
     memory::free_frame(a);
     memory::free_frame(b);
     assert_eq!(memory::free_frames(), free_before);
@@ -226,7 +234,11 @@ fn timer_demo() {
 /// masked so the wait must fail, and `InputIdle` waits long enough that the run script's watchdog ends the run. `Gfx` hands the
 /// devices to the graphics tour.
 fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
-    let fault = if mode == TestMode::InputMasked { input::Fault::KeyboardMasked } else { input::Fault::None };
+    let fault = if mode == TestMode::InputMasked {
+        input::Fault::KeyboardMasked
+    } else {
+        input::Fault::None
+    };
     let Some(mut ps2) = input::init(fault) else {
         if mode == TestMode::Normal {
             return;
@@ -270,7 +282,17 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
 /// Deliberate failures for the negative checks; the loader's `test_mode` byte selects one.
 fn run_test_mode(mode: TestMode) {
     match mode {
-        TestMode::Normal | TestMode::NoTick | TestMode::Input | TestMode::InputMasked | TestMode::InputIdle | TestMode::Gfx | TestMode::Bios | TestMode::BiosSolo | TestMode::Shell | TestMode::ShellCorrupt | TestMode::ShellLive => {}
+        TestMode::Normal
+        | TestMode::NoTick
+        | TestMode::Input
+        | TestMode::InputMasked
+        | TestMode::InputIdle
+        | TestMode::Gfx
+        | TestMode::Bios
+        | TestMode::BiosSolo
+        | TestMode::Shell
+        | TestMode::ShellCorrupt
+        | TestMode::ShellLive => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

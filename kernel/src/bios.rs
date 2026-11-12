@@ -67,7 +67,10 @@ impl RealModeRegs {
 
     /// Registers with only `eax` set, the common start of a call.
     pub fn with_eax(eax: u32) -> RealModeRegs {
-        RealModeRegs { eax, ..RealModeRegs::default() }
+        RealModeRegs {
+            eax,
+            ..RealModeRegs::default()
+        }
     }
 
     pub fn carry(&self) -> bool {
@@ -170,7 +173,12 @@ pub struct Stats {
     pub input_bytes: AtomicU32,
 }
 
-pub static STATS: Stats = Stats { calls: AtomicU32::new(0), ticks_added: AtomicU32::new(0), pending_ticks: AtomicU32::new(0), input_bytes: AtomicU32::new(0) };
+pub static STATS: Stats = Stats {
+    calls: AtomicU32::new(0),
+    ticks_added: AtomicU32::new(0),
+    pending_ticks: AtomicU32::new(0),
+    input_bytes: AtomicU32::new(0),
+};
 
 /// The lock-free re-entry guard: set with an `xchg`, cleared on drop.
 struct Guard;
@@ -195,7 +203,11 @@ impl Drop for Guard {
 /// kernel's. Call once at boot, before the first call, with interrupts in any state.
 pub fn init() -> Result<(), BiosError> {
     // The blob reloads the kernel's selectors by number.
-    assert_eq!((gdt::KERNEL_CODE, gdt::KERNEL_DATA), (0x08, 0x10), "bios16.asm assumes the kernel's flat selectors are 0x08 and 0x10");
+    assert_eq!(
+        (gdt::KERNEL_CODE, gdt::KERNEL_DATA),
+        (0x08, 0x10),
+        "bios16.asm assumes the kernel's flat selectors are 0x08 and 0x10"
+    );
     let magic = u32::from_le_bytes([BLOB[0], BLOB[1], BLOB[2], BLOB[3]]);
     if magic != MAGIC {
         return Err(BiosError::NotReady);
@@ -226,7 +238,9 @@ fn copy_from_low(addr: u32, out: &mut [u8]) {
         let byte: u8;
         // SAFETY: the callers keep `addr + out.len()` inside the first megabyte, which the flat segments map one to one; a load
         // from there has no side effect beyond the read (the video and ROM windows are plain memory reads).
-        unsafe { asm!("mov {0}, byte ptr [{1}]", out(reg_byte) byte, in(reg) addr as usize + i, options(nostack, preserves_flags, readonly)) };
+        unsafe {
+            asm!("mov {0}, byte ptr [{1}]", out(reg_byte) byte, in(reg) addr as usize + i, options(nostack, preserves_flags, readonly))
+        };
         *slot = byte;
     }
 }
@@ -281,7 +295,12 @@ impl Bounce {
 /// The BIOS tick count and the midnight flag, as the timer handler keeps them.
 fn bda_ticks() -> (u32, u8) {
     // SAFETY: the BIOS data area is ordinary memory in the first megabyte, never handed out by the allocator.
-    unsafe { (read_volatile(BDA_TICKS as *const u32), read_volatile(BDA_MIDNIGHT as *const u8)) }
+    unsafe {
+        (
+            read_volatile(BDA_TICKS as *const u32),
+            read_volatile(BDA_MIDNIGHT as *const u8),
+        )
+    }
 }
 
 /// The vector table's entry for `vector` (offset in the low word, segment in the high word).
@@ -296,7 +315,9 @@ pub fn vector_entry(vector: u8) -> u32 {
 pub fn set_vector_entry(vector: u8, value: u32) {
     // SAFETY: the table is the first kilobyte of memory, which the kernel owns and no Rust reference points into; a store in
     // assembly avoids forming a pointer to address 0.
-    unsafe { asm!("mov dword ptr [{0}], {1}", in(reg) usize::from(vector) * 4, in(reg) value, options(nostack, preserves_flags)) };
+    unsafe {
+        asm!("mov dword ptr [{0}], {1}", in(reg) usize::from(vector) * 4, in(reg) value, options(nostack, preserves_flags))
+    };
 }
 
 /// Runs BIOS interrupt `vector` with `regs`, in real mode, and stores the registers it returns. The whole of the unsafe part:
@@ -363,7 +384,11 @@ pub unsafe fn bios_int(vector: u8, regs: &mut RealModeRegs) -> Result<(), BiosEr
         if status & KBC_OUTPUT_FULL == 0 {
             break;
         }
-        let line = if status & KBC_FROM_MOUSE != 0 { Irq::MOUSE } else { Irq::KEYBOARD };
+        let line = if status & KBC_FROM_MOUSE != 0 {
+            Irq::MOUSE
+        } else {
+            Irq::KEYBOARD
+        };
         if !IRQS.run_handler(line) {
             break;
         }

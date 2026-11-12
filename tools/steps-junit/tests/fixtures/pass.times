@@ -1,0 +1,4 @@
+start	1000	base	Licence headers
+start	1500	base	Markdown style and links
+start	4250	base	CI scope table: one test per rule
+end	4900	0

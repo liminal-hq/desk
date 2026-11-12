@@ -68,15 +68,9 @@ fn reason_text(reason: u16) -> &'static str {
 
 /// Reads the block, checks the frame buffer against the memory map, prints what it found and returns it.
 pub fn init(info: &BootInfo) -> Video {
-    let mut video = Video {
-        lfb: None,
-        font: None,
-    };
+    let mut video = Video { lfb: None, font: None };
     if info.version < 1 {
-        println!(
-            "video: boot info version {} has no video block",
-            info.version
-        );
+        println!("video: boot info version {} has no video block", info.version);
         return video;
     }
     println!("video: boot info version {}", info.version);
@@ -95,10 +89,7 @@ pub fn init(info: &BootInfo) -> Video {
     let v = unsafe { &*(info.video as *const VideoBlock) };
     match v.state {
         0 => println!("video: the loader did not try VBE (the screen is in text mode)"),
-        2 => println!(
-            "video: the loader found no usable VBE mode: {}",
-            reason_text(v.reason)
-        ),
+        2 => println!("video: the loader found no usable VBE mode: {}", reason_text(v.reason)),
         1 => {
             println!(
                 "video: the loader set VBE {}.{} mode {:#06x}: {}x{}x{}, pitch {}, memory model {}, {} KiB on the card",

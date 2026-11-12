@@ -50,13 +50,21 @@ pub fn init(fault: Fault) -> Option<Ps2Input> {
     match kbd {
         Ok(Some(k)) => println!(
             "input: keyboard ready, scancode set 1 {}",
-            if k.translated { "translated by the controller" } else { "selected on the keyboard" }
+            if k.translated {
+                "translated by the controller"
+            } else {
+                "selected on the keyboard"
+            }
         ),
         Ok(None) => println!("input: keyboard unavailable: scancode set 1 could not be selected"),
         Err(e) => println!("input: keyboard unavailable: {}", e),
     }
     let kbd_ok = matches!(kbd, Ok(Some(_)));
-    let mouse = if info.dual_channel { ctl.init_mouse(true) } else { Err(desk_i8042::Error::NoDevice) };
+    let mouse = if info.dual_channel {
+        ctl.init_mouse(true)
+    } else {
+        Err(desk_i8042::Error::NoDevice)
+    };
     match mouse {
         Ok(m) => println!("input: mouse ready, id {} ({}-byte packets)", m.id, m.packet_len()),
         Err(e) => println!("input: mouse unavailable: {}", e),
@@ -69,18 +77,21 @@ pub fn init(fault: Fault) -> Option<Ps2Input> {
     let mouse_irq = Box::leak(Box::new(MouseIrq::new(PORTS, mtx, &STATS, wheel)));
     // Registering a handler unmasks its line; a device that is not there gets none, and the negative test masks IRQ 1 again.
     if kbd_ok {
-        IRQS.register(Irq::KEYBOARD, IrqHandler::from_static(kbd_irq), Chain::None).expect("IRQ 1 is free");
+        IRQS.register(Irq::KEYBOARD, IrqHandler::from_static(kbd_irq), Chain::None)
+            .expect("IRQ 1 is free");
         if fault == Fault::KeyboardMasked {
             crate::pic::mask(Irq::KEYBOARD);
         }
     }
     if mouse.is_ok() {
-        IRQS.register(Irq::MOUSE, IrqHandler::from_static(mouse_irq), Chain::None).expect("IRQ 12 is free");
+        IRQS.register(Irq::MOUSE, IrqHandler::from_static(mouse_irq), Chain::None)
+            .expect("IRQ 12 is free");
     }
     // A byte that arrived since the set-up would sit in the output buffer, and a controller may raise no interrupt for a byte
     // that was already there when the interrupts were enabled. Drop it so the next byte raises the edge.
     ctl.flush();
-    ctl.set_interrupts(kbd_ok, mouse.is_ok()).expect("enabling the controller's interrupts");
+    ctl.set_interrupts(kbd_ok, mouse.is_ok())
+        .expect("enabling the controller's interrupts");
     println!("input: IRQ 1 and IRQ 12 handlers registered, controller interrupts on");
     Some(Ps2Input::new(krx, mrx))
 }
@@ -110,10 +121,19 @@ fn modifier_names(m: Modifiers) -> alloc::string::String {
 }
 
 pub fn print_key(e: KeyEvent) {
-    let ch = if e.pressed { desk_kbd::char_for(e.code, e.modifiers) } else { None };
+    let ch = if e.pressed {
+        desk_kbd::char_for(e.code, e.modifiers)
+    } else {
+        None
+    };
     match ch {
         Some(c) => println!("key: {:?} down mods={} char={:?}", e.code, modifier_names(e.modifiers), c),
-        None => println!("key: {:?} {} mods={}", e.code, if e.pressed { "down" } else { "up" }, modifier_names(e.modifiers)),
+        None => println!(
+            "key: {:?} {} mods={}",
+            e.code,
+            if e.pressed { "down" } else { "up" },
+            modifier_names(e.modifiers)
+        ),
     }
 }
 
@@ -146,7 +166,10 @@ pub fn run(input: &mut Ps2Input, timeout_ticks: u32) {
             }
         }
         if pit::ticks().wrapping_sub(start) > timeout_ticks {
-            panic!("input: no Escape within {} ticks ({} key events, {} mouse events)", timeout_ticks, keys, mice);
+            panic!(
+                "input: no Escape within {} ticks ({} key events, {} mouse events)",
+                timeout_ticks, keys, mice
+            );
         }
         idle(input);
     }

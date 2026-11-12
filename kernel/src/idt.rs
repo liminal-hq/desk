@@ -82,7 +82,13 @@ struct Gate {
     offset_high: u16,
 }
 
-const MISSING: Gate = Gate { offset_low: 0, selector: 0, zero: 0, flags: 0, offset_high: 0 };
+const MISSING: Gate = Gate {
+    offset_low: 0,
+    selector: 0,
+    zero: 0,
+    flags: 0,
+    offset_high: 0,
+};
 
 static mut IDT: [Gate; 256] = [MISSING; 256];
 
@@ -94,7 +100,13 @@ struct Pointer {
 
 fn gate(handler: u32) -> Gate {
     // 0x8E: present, ring 0, 32-bit interrupt gate (clears IF on entry).
-    Gate { offset_low: handler as u16, selector: gdt::KERNEL_CODE, zero: 0, flags: 0x8E, offset_high: (handler >> 16) as u16 }
+    Gate {
+        offset_low: handler as u16,
+        selector: gdt::KERNEL_CODE,
+        zero: 0,
+        flags: 0x8E,
+        offset_high: (handler >> 16) as u16,
+    }
 }
 
 /// The vector of the first hardware interrupt line (the PIC is remapped to it).
@@ -119,7 +131,10 @@ pub fn init() {
             *slot = gate(isr_table[v]);
         }
         idt[0x20] = gate(irq_stubs[0]);
-        let ptr = Pointer { limit: (core::mem::size_of::<[Gate; 256]>() - 1) as u16, base: idt.as_ptr() as u32 };
+        let ptr = Pointer {
+            limit: (core::mem::size_of::<[Gate; 256]>() - 1) as u16,
+            base: idt.as_ptr() as u32,
+        };
         asm!("lidt [{0}]", in(reg) &ptr);
     }
 }
@@ -197,8 +212,14 @@ extern "C" fn exception_handler(f: &Frame) -> ! {
     println!("\nEXCEPTION {:#04x}: {}", f.vector, name);
     println!("error code {:#010x}", f.error);
     println!("EIP {:#010x}  CS {:#06x}  EFLAGS {:#010x}", f.eip, f.cs, f.eflags);
-    println!("EAX {:#010x}  EBX {:#010x}  ECX {:#010x}  EDX {:#010x}", f.eax, f.ebx, f.ecx, f.edx);
-    println!("ESI {:#010x}  EDI {:#010x}  EBP {:#010x}  ESP {:#010x}", f.esi, f.edi, f.ebp, f.esp_at_pushad);
+    println!(
+        "EAX {:#010x}  EBX {:#010x}  ECX {:#010x}  EDX {:#010x}",
+        f.eax, f.ebx, f.ecx, f.edx
+    );
+    println!(
+        "ESI {:#010x}  EDI {:#010x}  EBP {:#010x}  ESP {:#010x}",
+        f.esi, f.edi, f.ebp, f.esp_at_pushad
+    );
     println!("CR0 {:#010x}  CR2 {:#010x}  CR3 {:#010x}", cr(0), cr(2), cr(3));
     println!("halting with a failure status");
     exit::failure()
