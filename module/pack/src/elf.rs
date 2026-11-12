@@ -21,6 +21,8 @@ const SYM_SIZE: usize = 16;
 const REL_SIZE: usize = 8;
 
 const PT_LOAD: u32 = 1;
+const PT_DYNAMIC: u32 = 2;
+const PT_INTERP: u32 = 3;
 const PT_TLS: u32 = 7;
 const PF_W: u32 = 2;
 
@@ -43,6 +45,9 @@ const R_386_PC32: u32 = 2;
 
 const IMPORT_PREFIX: &str = "__desk_imp_";
 const IMPORT_SECTION: &str = ".desk.imp";
+/// Names are only ever compared with short fixed strings, so a name is read up to this length and no further. A longer one is
+/// returned cut off, which keeps a header table that points many entries at one long string from costing time or memory.
+const MAX_STR: usize = 256;
 
 /// Everything a `.DMD` or `.DKX` needs from the linked ELF file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -92,6 +97,8 @@ pub enum ElfError {
     WritableBeforeReadOnly { index: usize },
     WrongLinkBase { found: u32, wanted: u32 },
     TooLarge { mem_size: u64 },
+    DynamicSegment { index: usize },
+    InterpreterSegment { index: usize },
     ThreadLocalSegment { index: usize },
     ThreadLocalSection { index: usize },
     ThreadLocalRelocation { section: usize, index: usize, r_type: u32 },
@@ -106,6 +113,10 @@ pub enum ElfError {
     RelocationAgainstAbsolute { section: usize, index: usize, symbol: u32 },
     RelocationAgainstReserved { section: usize, index: usize, symbol: u32 },
     RelocationOutsideImage { section: usize, index: usize, address: u32 },
+    AllocatedRelocationSection { index: usize },
+    RelocationSectionWithoutTarget { index: usize },
+    ReadOnlyLargerThanImage { ro_size: u32, image_size: u32 },
+    RelocationValueOutOfRange { offset: u32, value: u32 },
     RelocationsOverlap { offset: u32 },
     RelocationAtImportSlot { offset: u32 },
     ImportNotObject { symbol: usize },
@@ -188,6 +199,27 @@ impl fmt::Display for ElfError {
             WritableBeforeReadOnly { index } => write!(f, "segment {index} is read-only but follows a writable segment"),
             WrongLinkBase { found, wanted } => write!(f, "linked at {found:#x}, not at {wanted:#x}"),
             TooLarge { mem_size } => write!(f, "the image needs {mem_size:#x} bytes of memory, above the limit"),
+            DynamicSegment { index } => write!(
+                f,
+                "segment {index} is PT_DYNAMIC: the file is dynamically linked, which version 1 does not support"
+            ),
+            InterpreterSegment { index } => write!(f, "segment {index} is PT_INTERP: the file names a program interpreter"),
+            AllocatedRelocationSection { index } => write!(
+                f,
+                "section {index} holds relocations but is itself allocated (a dynamic relocation section)"
+            ),
+            RelocationSectionWithoutTarget { index } => write!(
+                f,
+                "section {index} holds relocations but names no section they apply to (a dynamic relocation section)"
+            ),
+            ReadOnlyLargerThanImage { ro_size, image_size } => write!(
+                f,
+                "the read-only part is {ro_size:#x} bytes, more than the {image_size:#x} bytes of the image"
+            ),
+            RelocationValueOutOfRange { offset, value } => write!(
+                f,
+                "the relocated word at image offset {offset:#x} holds {value:#x}, outside the image"
+            ),
             ThreadLocalSegment { index } => write!(f, "segment {index} is thread-local storage, which version 1 does not have"),
             ThreadLocalSection { index } => write!(f, "section {index} is thread-local data, which version 1 does not have"),
             ThreadLocalRelocation { section, index, r_type } => {
@@ -219,19 +251,19 @@ impl fmt::Display for ElfError {
             RelocationAgainstUndefined { section, index, symbol } => {
                 write!(
                     f,
-                    "relocation {index} of section {section}: R_386_32 against undefined symbol {symbol}"
+                    "relocation {index} of section {section}: relocation against undefined symbol {symbol}"
                 )
             }
             RelocationAgainstAbsolute { section, index, symbol } => {
                 write!(
                     f,
-                    "relocation {index} of section {section}: R_386_32 against absolute symbol {symbol}"
+                    "relocation {index} of section {section}: relocation against absolute symbol {symbol}"
                 )
             }
             RelocationAgainstReserved { section, index, symbol } => {
                 write!(
                     f,
-                    "relocation {index} of section {section}: R_386_32 against symbol {symbol} in a reserved section"
+                    "relocation {index} of section {section}: relocation against symbol {symbol} in a reserved section"
                 )
             }
             RelocationOutsideImage { section, index, address } => {
@@ -295,8 +327,8 @@ struct Load {
     writable: bool,
 }
 
-struct Section {
-    name: String,
+struct Section<'a> {
+    name: &'a str,
     sh_type: u32,
     flags: u32,
     offset: u32,
@@ -306,19 +338,32 @@ struct Section {
     entsize: u32,
 }
 
-struct Symbol {
-    name: String,
+struct Symbol<'a> {
+    name: &'a str,
     value: u32,
     size: u32,
     info: u8,
     shndx: u16,
 }
 
-/// A NUL-terminated string at `offset` in the string table `table`, or `None` if it is out of range, unterminated or not UTF-8.
+/// The NUL-terminated string at `offset` in the string table `table`, cut off after `MAX_STR` bytes, or `None` if it is out of range,
+/// unterminated or not UTF-8. At most `MAX_STR + 1` bytes are looked at.
 fn string_at(table: &[u8], offset: u32) -> Option<&str> {
     let rest = table.get(offset as usize..)?;
-    let end = rest.iter().position(|&c| c == 0)?;
-    std::str::from_utf8(&rest[..end]).ok()
+    let window = &rest[..rest.len().min(MAX_STR + 1)];
+    match window.iter().position(|&c| c == 0) {
+        Some(end) => std::str::from_utf8(&window[..end]).ok(),
+        None if rest.len() > MAX_STR => {
+            // Longer than any name that matters: keep the first `MAX_STR` bytes, less a character the cut may have split.
+            let head = &window[..MAX_STR];
+            match std::str::from_utf8(head) {
+                Ok(text) => Some(text),
+                Err(e) if e.error_len().is_none() => std::str::from_utf8(&head[..e.valid_up_to()]).ok(),
+                Err(_) => None,
+            }
+        }
+        None => None,
+    }
 }
 
 fn valid_import_name(name: &str) -> bool {
@@ -426,11 +471,20 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
         image[at..at + l.file_size as usize].copy_from_slice(&bytes[from..from + l.file_size as usize]);
     }
     let ro_size = (ro_end - u64::from(link_base)) as u32;
+    // The segments are ascending and disjoint, so the only one that can hold an address is the last one that starts at or below it.
     let file_backed = |address: u32, size: u32| {
-        loads
-            .iter()
-            .any(|l| u64::from(address) >= u64::from(l.vaddr) && u64::from(address) + u64::from(size) <= end_of(l, l.file_size))
+        let after = loads.partition_point(|l| l.vaddr <= address);
+        after > 0 && {
+            let l = &loads[after - 1];
+            u64::from(address) + u64::from(size) <= end_of(l, l.file_size)
+        }
     };
+    if ro_size > image.len() as u32 {
+        return Err(ElfError::ReadOnlyLargerThanImage {
+            ro_size,
+            image_size: image.len() as u32,
+        });
+    }
 
     let sections = read_sections(bytes, shoff, usize::from(shnum), usize::from(shstrndx))?;
 
@@ -443,8 +497,7 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
     }
 
     let mut imports: Vec<(String, u32)> = Vec::new();
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut slots: Vec<(u32, String)> = Vec::new();
+    let mut seen: HashSet<&str> = HashSet::new();
     for (i, sym) in symbols.iter().enumerate() {
         let Some(name) = sym.name.strip_prefix(IMPORT_PREFIX) else {
             continue;
@@ -469,7 +522,7 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
             Some(s) => {
                 return Err(ElfError::ImportWrongSection {
                     name: name.into(),
-                    section: s.name.clone(),
+                    section: s.name.to_string(),
                 })
             }
             None => {
@@ -479,7 +532,7 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
                 })
             }
         }
-        if !seen.insert(name.to_string()) {
+        if !seen.insert(name) {
             return Err(ElfError::ImportDuplicate { name: name.into() });
         }
         if sym.value % 4 != 0 {
@@ -504,17 +557,19 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
         if image[offset as usize..offset as usize + 4] != [0; 4] {
             return Err(ElfError::ImportNotZero { name: name.into() });
         }
-        if let Some((_, other)) = slots.iter().find(|(o, _)| *o == offset) {
+        // At most `MAX_IMPORTS` entries, so a scan is cheap, and the limit is enforced before the list can grow past it.
+        if let Some((other, _)) = imports.iter().find(|(_, o)| *o == offset) {
             return Err(ElfError::ImportSlotShared {
                 name: name.into(),
                 other: other.clone(),
             });
         }
-        slots.push((offset, name.to_string()));
+        if imports.len() >= MAX_IMPORTS {
+            return Err(ElfError::TooManyImports {
+                count: imports.len() + 1,
+            });
+        }
         imports.push((name.to_string(), offset));
-    }
-    if imports.len() > MAX_IMPORTS {
-        return Err(ElfError::TooManyImports { count: imports.len() });
     }
     imports.sort_by_key(|(_, slot)| *slot);
 
@@ -556,6 +611,13 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
         if sec.sh_type != SHT_REL && sec.sh_type != SHT_RELA {
             continue;
         }
+        // A relocation section of the dynamic linker (`.rel.dyn`, `.rela.plt`): it is allocated, or applies to no section.
+        if sec.flags & SHF_ALLOC != 0 {
+            return Err(ElfError::AllocatedRelocationSection { index: si });
+        }
+        if sec.info == 0 {
+            return Err(ElfError::RelocationSectionWithoutTarget { index: si });
+        }
         let Some(target) = sections.get(sec.info as usize) else {
             return Err(ElfError::BadSectionLink { index: si });
         };
@@ -588,8 +650,8 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
             let info = rd32(rel, 4);
             let (r_type, symbol) = (info & 0xff, info >> 8);
             match r_type {
-                R_386_NONE | R_386_PC32 => continue,
-                R_386_32 => {}
+                R_386_NONE => continue,
+                R_386_32 | R_386_PC32 => {}
                 t if is_tls_relocation(t) => {
                     return Err(ElfError::ThreadLocalRelocation {
                         section: si,
@@ -643,6 +705,11 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
                 }
                 _ => {}
             }
+            if r_type == R_386_PC32 {
+                // Relative to a place inside the image, so it needs nothing when the image moves as a whole; against a symbol
+                // outside it, it would break.
+                continue;
+            }
             if !file_backed(address, 4) {
                 return Err(ElfError::RelocationOutsideImage {
                     section: si,
@@ -658,8 +725,18 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
     if let Some(w) = relocs.windows(2).find(|w| w[1] - w[0] < 4) {
         return Err(ElfError::RelocationsOverlap { offset: w[1] });
     }
-    if let Some(r) = relocs.iter().find(|r| imports.iter().any(|(_, slot)| slot == *r)) {
-        return Err(ElfError::RelocationAtImportSlot { offset: *r });
+    let mut slots: Vec<u32> = imports.iter().map(|(_, slot)| *slot).collect();
+    slots.sort_unstable();
+    if let Some(slot) = slots.iter().find(|slot| relocs.binary_search(slot).is_ok()) {
+        return Err(ElfError::RelocationAtImportSlot { offset: *slot });
+    }
+    // The word of a relocation holds the address it points at, which the loader will move: it must lie in the image.
+    let limit = u64::from(link_base) + mem_size;
+    for &offset in &relocs {
+        let value = rd32(&image, offset as usize);
+        if value < link_base || u64::from(value) > limit {
+            return Err(ElfError::RelocationValueOutOfRange { offset, value });
+        }
     }
 
     Ok(Extract {
@@ -681,6 +758,12 @@ fn read_loads(bytes: &[u8], phoff: u32, phnum: usize) -> Result<Vec<Load>, ElfEr
     for index in 0..phnum {
         let at = phoff as usize + index * PHDR_SIZE;
         let p_type = rd32(bytes, at);
+        if p_type == PT_DYNAMIC {
+            return Err(ElfError::DynamicSegment { index });
+        }
+        if p_type == PT_INTERP {
+            return Err(ElfError::InterpreterSegment { index });
+        }
         if p_type == PT_TLS {
             return Err(ElfError::ThreadLocalSegment { index });
         }
@@ -751,14 +834,14 @@ fn read_loads(bytes: &[u8], phoff: u32, phnum: usize) -> Result<Vec<Load>, ElfEr
 }
 
 /// The section headers with their names. A section's contents are not read here.
-fn read_sections(bytes: &[u8], shoff: u32, shnum: usize, shstrndx: usize) -> Result<Vec<Section>, ElfError> {
+fn read_sections(bytes: &[u8], shoff: u32, shnum: usize, shstrndx: usize) -> Result<Vec<Section<'_>>, ElfError> {
     let mut raw: Vec<(u32, Section)> = Vec::new();
     for index in 0..shnum {
         let at = shoff as usize + index * SHDR_SIZE;
         raw.push((
             rd32(bytes, at),
             Section {
-                name: String::new(),
+                name: "",
                 sh_type: rd32(bytes, at + 4),
                 flags: rd32(bytes, at + 8),
                 offset: rd32(bytes, at + 16),
@@ -787,12 +870,10 @@ fn read_sections(bytes: &[u8], shoff: u32, shnum: usize, shstrndx: usize) -> Res
     let names = &bytes[table.offset as usize..(table.offset + table.size) as usize];
     let mut sections = Vec::with_capacity(shnum);
     for (index, (name_offset, mut sec)) in raw.into_iter().enumerate() {
-        sec.name = string_at(names, name_offset)
-            .ok_or(ElfError::BadString {
-                index,
-                offset: name_offset,
-            })?
-            .to_string();
+        sec.name = string_at(names, name_offset).ok_or(ElfError::BadString {
+            index,
+            offset: name_offset,
+        })?;
         if sec.name == ".tdata" || sec.name == ".tbss" || sec.flags & SHF_TLS != 0 {
             return Err(ElfError::ThreadLocalSection { index });
         }
@@ -802,7 +883,7 @@ fn read_sections(bytes: &[u8], shoff: u32, shnum: usize, shstrndx: usize) -> Res
 }
 
 /// The symbol table at section `si` with every name resolved through its string table.
-fn read_symbols(bytes: &[u8], sections: &[Section], si: usize) -> Result<Vec<Symbol>, ElfError> {
+fn read_symbols<'a>(bytes: &'a [u8], sections: &[Section], si: usize) -> Result<Vec<Symbol<'a>>, ElfError> {
     let sec = &sections[si];
     if sec.entsize as usize != SYM_SIZE || !(sec.size as usize).is_multiple_of(SYM_SIZE) {
         return Err(ElfError::BadEntrySize {
@@ -834,7 +915,7 @@ fn read_symbols(bytes: &[u8], sections: &[Section], si: usize) -> Result<Vec<Sym
             offset: name_offset,
         })?;
         symbols.push(Symbol {
-            name: name.to_string(),
+            name,
             value: rd32(raw, 4),
             size: rd32(raw, 8),
             info: raw[12],
