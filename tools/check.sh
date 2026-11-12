@@ -1,57 +1,163 @@
 #!/bin/bash
-# Everything the CI runs: licence headers, markdown style and links, the progress report generator's tests, the font build check (skipped where bun is not set up), Rust format
-# and lints, the HAL's and the shell's host tests and cross builds, the frame tools' tests, the DOS build and a headless run, the s1-dxe3 module scenarios, the d0-rust-dos
-# checks, the e-std-stubs checks, the s5-jsdos probe lints, the a-vga-vbe checks, the b-dos-input checks, the shell on DOS, then the native boot test under QEMU, then the comparison of the two tracks' frames.
+# Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links),
+# report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
+# rust (format, lints, host tests and cross builds of core/, hal/, shell/ and the spike workspaces checked on their own), dos (the
+# DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes), stdstubs (the e-std-stubs
+# spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks' frames compared, from
+# what shelldos and native left in dist/).
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
-# INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike (network, Node and Chromium needed).
+# INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike
+# (network, Node and Chromium needed).
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/check.sh        (run tools/setup.sh once first)
-#        NATIVE_EXTRA=1 tools/check.sh    (adds the Bochs run)
+# usage: tools/check.sh                      every group, in order (run tools/setup.sh once first)
+#        tools/check.sh --groups LIST        only the named groups or parts, a comma list such as `rust:hal,dos`, in script order;
+#                                            `all` is every group; compare needs what shelldos and native left in dist/
+#        tools/check.sh --list               the groups, their parts and what each checks
+#        tools/check.sh --names              the group names, one per line
+#        tools/check.sh --units              every group or group:part a CI job can be given, one per line
+#        NATIVE_EXTRA=1 tools/check.sh       (adds the Bochs run)
+#
+# CHECK_TIMES=FILE appends one line per step (`start`, milliseconds, group, title) and one at the end (`end`, milliseconds, exit
+# status), tab-separated, for the CI's step report (tools/steps-junit).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-step() { printf '\n== %s\n' "$1"; }
-fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
+# The groups, in order, and the parts of the groups that have them. A group without parts is one unit.
+ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
+# shellcheck disable=SC2034 # read through parts()
+PARTS_rust="core hal shell spikes"
+# shellcheck disable=SC2034 # read through parts()
+PARTS_dos="skeleton s1 d0 vga input"
+
+parts() { local v="PARTS_$1"; printf '%s' "${!v:-}"; }
+
+list_groups() {
+  cat << 'LIST'
+base       licence headers, markdown style and links
+report     the progress report generator's tests and dry run, the frame tools' tests, the goldens and the live scenarios' translations
+fonts      the font build check (bun; fails instead of skipping when CI is set)
+rust       core       core/ format and lints
+           hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
+           shell      shell/ format, lints, host tests and the cross builds
+           spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
+dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
+           s1         spike s1-dxe3: the modules built, loaded, called, crashed and unloaded
+           d0         spike d0-rust-dos
+           vga        spike a-vga-vbe
+           input      spike b-dos-input (INPUT_EXTRA=1: the Xvfb mouse run)
+stdstubs   spike e-std-stubs
+shelldos   the shell on DOS (INPUT_EXTRA=1: the Xvfb live run)
+native     the native boot test under QEMU (NATIVE_EXTRA=1: under Bochs too, at the end)
+compare    the DOS read-back against the QEMU screendumps, from dist/
+LIST
+}
+
+SELECTED=all
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --list) list_groups; exit 0 ;;
+    --names) tr ' ' '\n' <<< "$ALL_GROUPS"; exit 0 ;;
+    --units)
+      for g in $ALL_GROUPS; do
+        if [ -n "$(parts "$g")" ]; then for p in $(parts "$g"); do echo "$g:$p"; done; else echo "$g"; fi
+      done
+      exit 0 ;;
+    --groups) [ $# -ge 2 ] || { echo "check: --groups needs a list (try --list)" >&2; exit 2; }; SELECTED="$2"; shift 2 ;;
+    --groups=*) SELECTED="${1#--groups=}"; shift ;;
+    -h | --help) sed -n '/^# usage/,/^set -e/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+    *) echo "check: unknown argument '$1' (try --list)" >&2; exit 2 ;;
+  esac
+done
+if [ "$SELECTED" != all ]; then
+  [ -n "$SELECTED" ] || { echo "check: --groups needs a list (try --list)" >&2; exit 2; }
+  IFS=, read -r -a picked <<< "$SELECTED"
+  for u in "${picked[@]}"; do
+    g="${u%%:*}"
+    case " all $ALL_GROUPS " in *" $g "*) ;; *) echo "check: unknown group '$g' (try --list)" >&2; exit 2 ;; esac
+    if [ "$u" != "$g" ]; then
+      case " $(parts "$g") " in *" ${u#*:} "*) ;; *) echo "check: '$g' has no part '${u#*:}' (try --list)" >&2; exit 2 ;; esac
+    fi
+  done
+  case ",$SELECTED," in *,all,*) SELECTED=all ;; esac
+fi
+echo "check: groups: $SELECTED"
+
+# whole GROUP: the whole group was asked for (by name, or by `all`)
+whole() { [ "$SELECTED" = all ] || case ",$SELECTED," in *",$1,"*) true ;; *) false ;; esac; }
+# run GROUP [PART]: the group, or that part of it, was asked for; the steps that follow are reported under GROUP
+run() {
+  whole "$1" || { [ -n "${2:-}" ] && case ",$SELECTED," in *",$1:$2,"*) true ;; *) false ;; esac; } || return 1
+  CUR="$1"
+}
+CUR=check
+step() {
+  printf '\n== %s: %s\n' "$CUR" "$1"
+  [ -z "${CHECK_TIMES:-}" ] || printf 'start\t%s\t%s\t%s\n' "$(date +%s%3N)" "$CUR" "$1" >> "$CHECK_TIMES"
+}
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+[ -z "${CHECK_TIMES:-}" ] || trap 'printf "end\t%s\t%s\n" "$(date +%s%3N)" "$?" >> "$CHECK_TIMES"' EXIT
+
+# Each group's steps are in `if run GROUP [PART]; then` blocks whose bodies are not indented: a step at the start of a line runs whenever
+# its block does, an indented one is opt-in, and the manual's step table (tools/progress-report/manual/M21-evidence.md) is checked
+# against that, in order. A group may have several blocks; `--groups` runs the asked-for blocks in this order.
+
+if run base; then
 step "Licence headers"
 tools/check-headers.sh
 
 step "Markdown style and links"
 python3 -I tools/check-docs.py
+fi
 
+if run report; then
 step "Progress report generator: unit tests and a dry run of the data gather"
 python3 -I tools/progress-report/tests/test_report.py
 python3 -I tools/progress-report/gather.py --dry-run
-
-step "Fonts"
-if command -v bun >/dev/null && [ -d fonts/node_modules ]; then
-  (cd fonts && bun build.ts --check && bun test)
-else
-  echo "skipped: needs bun and \`bun install\` in fonts/"
 fi
 
+if run fonts; then
+step "Fonts"
+if command -v bun > /dev/null && [ -d fonts/node_modules ]; then
+  (cd fonts && bun build.ts --check && bun test)
+else
+  [ -z "${CI:-}" ] || fail "the font check needs bun and \`bun install\` in fonts/ (CI is set, so it does not skip)"
+  echo "skipped: needs bun and \`bun install\` in fonts/"
+fi
+fi
+
+if run rust core; then
 step "Rust format and lints"
 (cd core && cargo fmt --check)
 (cd core && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+fi
 
 # The shared HAL and drivers: host tests against the mock port bus, then the no_std crates built for the kernel's target and for the
 # pure-Rust DOS target (cargo check; clippy for the kernel target, where the x86 port instructions are compiled).
+if run rust hal; then
 step "HAL: host tests and no_std builds"
 (cd hal && cargo fmt --check)
 (cd hal && cargo clippy --locked --all-targets -- -D warnings)
 (cd hal && cargo test --locked --quiet)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+fi
 
 # The shell's crates (desk-gfx and those that follow): host tests and the same two cross builds as the HAL's. See docs/FIRST-WINDOW.md.
+if run rust shell; then
 step "Shell: host tests and no_std builds"
 (cd shell && cargo fmt --check)
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
 (cd shell && cargo test --locked --quiet)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+fi
+
+if run report; then
+step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
+python3 -I tools/test_frames.py
 python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
 python3 -I tools/frames.py goldens tests/shell/keys.sums tests/shell/golden/keys
 python3 -I tools/frames.py goldens tests/shell/live.sums tests/shell/golden/live
@@ -67,10 +173,9 @@ python3 -I tools/frames.py live tests/shell/live-keys.scn --autotype > /dev/null
 if python3 -I tools/frames.py live tests/shell/live.scn --autotype > /dev/null 2>&1; then
   fail "frames.py live accepted a mouse scenario for AUTOTYPE"
 fi
+fi
 
-step "Frame tools: PNG, PPM and digest reading, checks and the monitor script"
-python3 -I tools/test_frames.py
-
+if run dos skeleton; then
 step "Build DESK.EXE"
 tools/build.sh
 
@@ -101,30 +206,44 @@ case "$actual" in
 esac
 grep -q 'DESK-SKELETON PANIC' dist/OUT.TXT || fail "the panic report is missing from OUT.TXT"
 echo "$actual (exit status $status)"
+fi
 
+if run rust spikes; then
 step "Spike s1-dxe3: Rust format and lints for the modules"
 (cd spikes/s1-dxe3/modules && cargo fmt --check)
 (cd spikes/s1-dxe3/modules && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+fi
 
+if run dos s1; then
 step "Spike s1-dxe3: build the Rust modules (DXE3) and the host"
 spikes/s1-dxe3/build.sh
 
 step "Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox"
 spikes/s1-dxe3/run.sh
+fi
 
+if run dos d0; then
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
 spikes/d0-rust-dos/check.sh
+fi
 
+if run rust spikes; then
 step "Spike s5-jsdos: Rust format and lints for the probes"
 (cd spikes/s5-jsdos/probes && cargo fmt --check)
 (cd spikes/s5-jsdos/probes && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+fi
 
+if run stdstubs; then
 step "Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer"
 spikes/e-std-stubs/check.sh
+fi
 
+if run dos vga; then
 step "Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime"
 spikes/a-vga-vbe/check.sh
+fi
 
+if run dos input; then
 step "Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE"
 spikes/b-dos-input/check.sh
 
@@ -134,7 +253,9 @@ if [ -n "${INPUT_EXTRA:-}" ]; then
   step "Spike b-dos-input (opt-in, INPUT_EXTRA=1): the mouse moved and clicked by xdotool under Xvfb"
   spikes/b-dos-input/check-xvfb.sh
 fi
+fi
 
+if run shelldos; then
 step "Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens"
 shell/dos/check.sh
 
@@ -144,23 +265,32 @@ if [ -n "${INPUT_EXTRA:-}" ]; then
   step "Shell on DOS (opt-in, INPUT_EXTRA=1): the live scenario's mouse and keys through DOSBox's window under Xvfb"
   shell/dos/check-xvfb.sh
 fi
+fi
 
+if run native; then
 step "Native boot: NASM loader, Rust kernel, QEMU as a 486"
 tools/native-test.sh
+fi
 
-# Cheap: it only reads the dumps the two steps above kept in dist/. `tools/shell-compare.sh --run` runs both tracks first.
+# Cheap: it only reads the dumps the two groups above kept in dist/. `tools/shell-compare.sh --run` runs both tracks first.
+if run compare; then
 step "Both tracks: the DOS read-back and the QEMU screendumps are the same pictures"
 tools/shell-compare.sh
+fi
 
-if [ "${NATIVE_EXTRA:-}" = 1 ]; then
+# The opt-in reruns of a whole group come last, so the Bochs run never rewrites dist/shell-native-* before the comparison. Each runs
+# only when its whole group was asked for.
+if [ "${NATIVE_EXTRA:-}" = 1 ] && whole native; then
+  CUR=native
   step "Native boot: the same checks in Bochs as a 486 (opt-in, needs Docker)"
   tools/native-test-bochs.sh
 fi
 
 # Opt-in: needs the network, Node and a Chromium, none of which the CI image carries. See docs/S5-JSDOS.md.
-if [ "${JSDOS:-}" = 1 ]; then
+if [ "${JSDOS:-}" = 1 ] && whole dos; then
+  CUR=dos
   step "Spike s5-jsdos: the DOS programs in js-dos, in headless Chromium"
   tools/check-jsdos.sh
 fi
 
-printf '\nAll checks passed.\n'
+if [ "$SELECTED" = all ]; then printf '\nAll checks passed.\n'; else printf '\nChecks passed: %s.\n' "$SELECTED"; fi
