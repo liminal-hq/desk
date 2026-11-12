@@ -23,7 +23,9 @@ pub use core::sync::atomic::Ordering as __Ordering;
 /// slot that is linked, and `#[used]` keeps it linked).
 ///
 /// The call is unsafe because the core is trusted to take the arguments as the service documents them, and the slot holds a
-/// valid address only after the loader ran.
+/// valid address only after the loader ran. A slot that is still zero (a call made before the module is loaded, or by a loader that
+/// skipped the binding) is not called: jumping to address 0 is undefined behaviour, so the function halts in place instead, which
+/// is the defined way to fail when no service can be reported (the panic service is itself an import).
 #[macro_export]
 macro_rules! import {
     ($(#[$meta:meta])* $vis:vis fn $name:ident($($arg:ident: $ty:ty),* $(,)?) $(-> $ret:ty)?) => {
@@ -36,7 +38,12 @@ macro_rules! import {
             let address = SLOT.load($crate::__Ordering::Relaxed);
             // SAFETY: the loader stores the address of the service of this name in the slot before the module's first entry point
             // runs, and refuses the module if the core has no such service; the service has the signature written here.
-            let service: extern "C" fn($($ty),*) $(-> $ret)? = unsafe { core::mem::transmute::<usize, _>(address) };
+            if address == 0 {
+                loop {
+                    ::core::hint::spin_loop();
+                }
+            }
+            let service: extern "C" fn($($ty),*) $(-> $ret)? = unsafe { ::core::mem::transmute::<usize, _>(address) };
             service($($arg),*)
         }
     };
@@ -59,7 +66,7 @@ macro_rules! desk_app {
             } else {
                 // SAFETY: the core passes `args_len` readable bytes at `args` for the duration of this call, which is what
                 // calling this entry point requires.
-                unsafe { core::slice::from_raw_parts(args, args_len as usize) }
+                unsafe { ::core::slice::from_raw_parts(args, args_len as usize) }
             };
             $start(app, args)
         }
@@ -187,31 +194,39 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     }
 }
 
-/// The panic message, cut at `LINE_BYTES` on a character boundary.
-#[cfg(all(feature = "panic-handler", not(test)))]
+/// The panic message, cut at `LINE_BYTES` on a character boundary. Once a piece does not fit, nothing after it is kept: a later,
+/// shorter piece must not follow a truncated one.
+#[cfg(any(test, all(feature = "panic-handler", not(test))))]
 struct Message {
     buf: [u8; LINE_BYTES],
     len: usize,
+    full: bool,
 }
 
-#[cfg(all(feature = "panic-handler", not(test)))]
+#[cfg(any(test, all(feature = "panic-handler", not(test))))]
 impl Message {
     const fn new() -> Message {
         Message {
             buf: [0; LINE_BYTES],
             len: 0,
+            full: false,
         }
     }
 }
 
-#[cfg(all(feature = "panic-handler", not(test)))]
+#[cfg(any(test, all(feature = "panic-handler", not(test))))]
 impl fmt::Write for Message {
+    /// Keeps what fits and returns an error at the first character that does not, which also ends the formatting that called it.
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        if self.full {
+            return Err(fmt::Error);
+        }
         for c in s.chars() {
             let mut one = [0u8; 4];
             let bytes = c.encode_utf8(&mut one).as_bytes();
             if self.len + bytes.len() > LINE_BYTES {
-                break;
+                self.full = true;
+                return Err(fmt::Error);
             }
             self.buf[self.len..self.len + bytes.len()].copy_from_slice(bytes);
             self.len += bytes.len();
@@ -275,6 +290,29 @@ mod tests {
         let got = sent();
         assert_eq!(got.iter().map(|s| s.len()).collect::<Vec<_>>(), [LINE_BYTES, LINE_BYTES, 5]);
         assert_eq!(got.concat(), long);
+    }
+
+    #[test]
+    fn a_message_stops_at_the_first_piece_that_does_not_fit() {
+        let mut m = Message::new();
+        m.write_str(&"a".repeat(LINE_BYTES - 2)).unwrap();
+        // A long piece keeps what fits, then reports the overflow.
+        assert!(m.write_str("bcdef").is_err());
+        assert_eq!(&m.buf[..m.len], format!("{}bc", "a".repeat(LINE_BYTES - 2)).as_bytes());
+        // A later piece that would fit is not appended after the cut.
+        assert!(m.write_str("x").is_err());
+        assert_eq!(m.len, LINE_BYTES);
+    }
+
+    #[test]
+    fn a_message_is_cut_on_a_character_boundary() {
+        let mut m = Message::new();
+        m.write_str(&"a".repeat(LINE_BYTES - 1)).unwrap();
+        // A two-byte character does not fit in the one byte left, so it is dropped whole and the message is full.
+        assert!(m.write_str("é").is_err());
+        assert!(core::str::from_utf8(&m.buf[..m.len]).is_ok());
+        assert!(m.write_str("z").is_err());
+        assert_eq!(m.len, LINE_BYTES - 1);
     }
 
     fn start(app: u32, args: &[u8]) -> i32 {
