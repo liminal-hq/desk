@@ -203,12 +203,16 @@ fn two_links_of_one_module_agree() {
 #[test]
 fn a_move_that_changes_the_middle_bytes_exercises_more_than_the_high_half() {
     // A link base is a multiple of 4096, so a move never changes the low 12 bits of a word, but 0x35000 changes bytes 1 and 2 where
-    // a move of 0x400000 changes only byte 2 and the top (a loader that added to the high half alone would pass that one). Carries
+    // a move of 0x400000 changes only byte 2 (a loader that added to the high half alone would pass that one). Carries
     // across the bytes are in it too, and the other direction.
     let a = packed();
     let moved = rebased(&a, BASE + 0x35000);
     assert_eq!(cross(&a, &moved), Ok(()));
     assert_eq!(cross(&moved, &a), Ok(()));
+    // 0x4000_0000 more changes byte 3 (a link base up to the end of the 32-bit space is allowed).
+    let high = rebased(&a, BASE + 0x4000_0000);
+    assert_eq!(cross(&a, &high), Ok(()));
+    assert_eq!(cross(&high, &a), Ok(()));
     // A relocated word with any one of its four bytes wrong is caught, so the comparison covers every byte of every word.
     let m = Module::parse(&moved, u16::MAX).unwrap();
     let word = m.header().image_offset as usize + m.relocations().next().unwrap() as usize;

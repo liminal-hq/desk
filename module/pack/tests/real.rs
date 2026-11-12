@@ -123,7 +123,11 @@ fn check_common(elf: &[u8], x: &Extract) {
     slots.sort();
     assert_eq!(slots[1], slots[0] + 4);
     assert!(slots[0] >= x.ro_size);
-    assert_eq!(slots[0] % 0x1000, 0, "the script starts the import section on a page");
+    assert_eq!(
+        slots[0] % 16,
+        0,
+        "the script starts the import section on the header's 16-byte alignment"
+    );
     for s in &slots {
         assert_eq!(word(&x.image, *s as usize), 0);
     }

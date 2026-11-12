@@ -112,12 +112,16 @@ tools/build-modules.sh --link-base 0x00800000 --out dist/modules-0080
 "$dmdpack" cross dist/modules-0080/HELLO.DMD $modules/HELLO.DMD
 "$dmdpack" cross $modules/APPMAIN.DKX dist/modules-0080/APPMAIN.DKX
 # A move by 0x3000 changes the second byte of every relocated word as well as the high ones (a move by 0x400000 leaves the low
-# 16 bits alone). A link base is a multiple of 4096, so the low 12 bits cannot change; the packer's tests cover each byte.
+# 16 bits alone and changes byte 2 only; 0x40400000, a move of 0x40000000 more, changes byte 3). A link base is a multiple of 4096, so the low 12 bits cannot change; the packer's tests cover each byte.
 rm -rf dist/modules-3000
 tools/build-modules.sh --link-base 0x00403000 --out dist/modules-3000
 "$dmdpack" cross $modules/HELLO.DMD dist/modules-3000/HELLO.DMD
 "$dmdpack" cross dist/modules-3000/HELLO.DMD dist/modules-0080/HELLO.DMD
 "$dmdpack" cross $modules/APPMAIN.DKX dist/modules-3000/APPMAIN.DKX
+rm -rf dist/modules-4040
+tools/build-modules.sh --link-base 0x40400000 --out dist/modules-4040
+"$dmdpack" cross $modules/HELLO.DMD dist/modules-4040/HELLO.DMD
+"$dmdpack" cross dist/modules-4040/HELLO.DMD dist/modules-3000/HELLO.DMD
 # Two files linked at one base prove nothing, so cross refuses them with a clear error.
 if "$dmdpack" cross $modules/HELLO.DMD $modules/HELLO.DMD 2> dist/modules-3000/same.err; then
   fail "cross accepted two files linked at the same base"
