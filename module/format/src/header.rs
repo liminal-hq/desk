@@ -81,58 +81,70 @@ pub struct Header {
     pub crc: u32,
 }
 
-pub(crate) fn rd16(b: &[u8], o: usize) -> u16 {
-    let mut a = [0u8; 2];
-    if let Some(s) = o.checked_add(2).and_then(|e| b.get(o..e)) {
-        a.copy_from_slice(s);
-    }
-    u16::from_le_bytes(a)
+/// The little-endian word at `o`, or `None` when it is not entirely inside `b`.
+pub(crate) fn get16(b: &[u8], o: usize) -> Option<u16> {
+    let s = b.get(o..o.checked_add(2)?)?;
+    Some(u16::from_le_bytes([s[0], s[1]]))
 }
 
+pub(crate) fn get32(b: &[u8], o: usize) -> Option<u32> {
+    let s = b.get(o..o.checked_add(4)?)?;
+    Some(u32::from_le_bytes([s[0], s[1], s[2], s[3]]))
+}
+
+/// `get32` for reads the layout checks have already put in bounds. An out-of-bounds read here is a bug in this crate, not a bad
+/// file: it fails a debug build loudly, and a release build reads 0, which the checks behind it (the CRC, the table checks) do not
+/// let through as a valid file.
 pub(crate) fn rd32(b: &[u8], o: usize) -> u32 {
-    let mut a = [0u8; 4];
-    if let Some(s) = o.checked_add(4).and_then(|e| b.get(o..e)) {
-        a.copy_from_slice(s);
-    }
-    u32::from_le_bytes(a)
+    get32(b, o).unwrap_or_else(|| {
+        debug_assert!(false, "read of 4 bytes at {o} is outside a {}-byte slice", b.len());
+        0
+    })
 }
 
 /// Checks every rule that needs only the header's own fields, in the order of the specification, and returns the fields.
 /// `core_sdk` is the newest service table the caller provides.
 pub fn parse_header(bytes: &[u8], core_sdk: u16) -> Result<Header, FormatError> {
+    // The magic comes first, so a short file that is plainly another version or not a module says so.
+    let Some(magic) = bytes.get(0..4) else {
+        return Err(FormatError::TooShort { len: bytes.len() });
+    };
+    if magic[0..3] == MAGIC[0..3] && magic[3] != MAGIC[3] && magic[3].is_ascii_digit() {
+        return Err(FormatError::UnsupportedVersion(magic[3] - b'0'));
+    }
+    if magic != MAGIC {
+        return Err(FormatError::BadMagic);
+    }
     if bytes.len() < HEADER_SIZE as usize {
         return Err(FormatError::TooShort { len: bytes.len() });
     }
-    if bytes[0..3] == MAGIC[0..3] && bytes[3] != MAGIC[3] && bytes[3].is_ascii_digit() {
-        return Err(FormatError::UnsupportedVersion(bytes[3] - b'0'));
-    }
-    if bytes[0..4] != MAGIC {
-        return Err(FormatError::BadMagic);
-    }
+    let too_short = FormatError::TooShort { len: bytes.len() };
+    let r16 = |o: usize| get16(bytes, o).ok_or_else(|| too_short.clone());
+    let r32 = |o: usize| get32(bytes, o).ok_or_else(|| too_short.clone());
     let h = Header {
-        header_size: rd16(bytes, at::HEADER_SIZE),
-        flags: rd16(bytes, at::FLAGS),
-        abi: rd16(bytes, at::ABI),
-        sdk: rd16(bytes, at::SDK),
-        kind: rd16(bytes, at::KIND),
-        link_base: rd32(bytes, at::LINK_BASE),
-        align: rd32(bytes, at::ALIGN),
-        image_offset: rd32(bytes, at::IMAGE_OFFSET),
-        file_size: rd32(bytes, at::FILE_SIZE),
-        mem_size: rd32(bytes, at::MEM_SIZE),
-        ro_size: rd32(bytes, at::RO_SIZE),
-        start: rd32(bytes, at::START),
-        event: rd32(bytes, at::EVENT),
-        stop: rd32(bytes, at::STOP),
-        reloc_offset: rd32(bytes, at::RELOC_OFFSET),
-        reloc_count: rd32(bytes, at::RELOC_COUNT),
-        import_offset: rd32(bytes, at::IMPORT_OFFSET),
-        import_count: rd32(bytes, at::IMPORT_COUNT),
-        export_offset: rd32(bytes, at::EXPORT_OFFSET),
-        export_count: rd32(bytes, at::EXPORT_COUNT),
-        strings_offset: rd32(bytes, at::STRINGS_OFFSET),
-        strings_size: rd32(bytes, at::STRINGS_SIZE),
-        crc: rd32(bytes, at::CRC),
+        header_size: r16(at::HEADER_SIZE)?,
+        flags: r16(at::FLAGS)?,
+        abi: r16(at::ABI)?,
+        sdk: r16(at::SDK)?,
+        kind: r16(at::KIND)?,
+        link_base: r32(at::LINK_BASE)?,
+        align: r32(at::ALIGN)?,
+        image_offset: r32(at::IMAGE_OFFSET)?,
+        file_size: r32(at::FILE_SIZE)?,
+        mem_size: r32(at::MEM_SIZE)?,
+        ro_size: r32(at::RO_SIZE)?,
+        start: r32(at::START)?,
+        event: r32(at::EVENT)?,
+        stop: r32(at::STOP)?,
+        reloc_offset: r32(at::RELOC_OFFSET)?,
+        reloc_count: r32(at::RELOC_COUNT)?,
+        import_offset: r32(at::IMPORT_OFFSET)?,
+        import_count: r32(at::IMPORT_COUNT)?,
+        export_offset: r32(at::EXPORT_OFFSET)?,
+        export_count: r32(at::EXPORT_COUNT)?,
+        strings_offset: r32(at::STRINGS_OFFSET)?,
+        strings_size: r32(at::STRINGS_SIZE)?,
+        crc: r32(at::CRC)?,
     };
     if h.header_size < HEADER_SIZE || !h.header_size.is_multiple_of(4) {
         return Err(FormatError::BadHeaderSize(h.header_size));
@@ -140,7 +152,7 @@ pub fn parse_header(bytes: &[u8], core_sdk: u16) -> Result<Header, FormatError> 
     if h.flags != 0 {
         return Err(FormatError::UnknownFlags(h.flags));
     }
-    if rd16(bytes, at::RESERVED_A) != 0 {
+    if r16(at::RESERVED_A)? != 0 {
         return Err(FormatError::ReservedNotZero {
             offset: at::RESERVED_A as u32,
         });
@@ -192,4 +204,29 @@ pub fn parse_header(bytes: &[u8], core_sdk: u16) -> Result<Header, FormatError> 
         return Err(FormatError::ExportTableMisplaced { offset: h.export_offset });
     }
     Ok(h)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_outside_the_slice_are_none() {
+        let b = [1u8, 2, 3, 4, 5];
+        assert_eq!(get32(&b, 0), Some(0x0403_0201));
+        assert_eq!(get32(&b, 1), Some(0x0504_0302));
+        assert_eq!(get32(&b, 2), None);
+        assert_eq!(get32(&b, usize::MAX), None);
+        assert_eq!(get16(&b, 3), Some(0x0504));
+        assert_eq!(get16(&b, 4), None);
+        assert_eq!(get16(&b, usize::MAX - 1), None);
+    }
+
+    // The failure path of `rd32` is reachable only through a bug in this crate; a debug build says so.
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "outside a 3-byte slice")]
+    fn an_unchecked_read_outside_the_slice_fails_a_debug_build() {
+        rd32(&[1, 2, 3], 0);
+    }
 }

@@ -129,7 +129,9 @@ pub enum LoadError<'a> {
         addr: u32,
         align: u32,
     },
-    /// The destination would run past the top of the 32-bit address space.
+    /// A load address of 0, the null pointer.
+    DestNull,
+    /// The destination would end at or past 2^32, the end of the 32-bit address space (its end address must fit in a `u32`).
     DestWraps {
         addr: u32,
         need: u32,
@@ -201,6 +203,7 @@ impl fmt::Display for LoadError<'_> {
             LoadError::KindNotLoadable { kind, wanted } => {
                 write!(f, "kind {kind} is not loadable here (this loader takes kind {wanted})")
             }
+            LoadError::DestNull => write!(f, "destination is address 0, the null pointer"),
             LoadError::DestTooSmall { need, have } => write!(f, "destination too small: needs {need} bytes, has {have}"),
             LoadError::DestMisaligned { addr, align } => write!(f, "destination {addr:#x} is not a multiple of {align}"),
             LoadError::DestWraps { addr, need } => write!(f, "destination {addr:#x} plus {need} bytes passes the top of memory"),

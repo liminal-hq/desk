@@ -3,6 +3,8 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use alloc::vec::Vec;
+
 use crate::error::LoadError;
 use crate::header::rd32;
 use crate::module::Module;
@@ -37,6 +39,10 @@ pub fn load_into<'a>(
             kind: h.kind,
             wanted: kind,
         });
+    }
+    // Address 0 is the null pointer, so no image goes there (for the same reason the link base is not 0).
+    if dest_addr == 0 {
+        return Err(LoadError::DestNull);
     }
     if !dest_addr.is_multiple_of(h.align) {
         return Err(LoadError::DestMisaligned {
@@ -74,12 +80,18 @@ pub fn load_into<'a>(
             });
         }
     }
+    // Each import is resolved once, before anything is written, and the answers are what get written: a resolver whose answer
+    // changes between two calls cannot leave a slot unbound.
+    let mut addresses: Vec<u32> = Vec::with_capacity(h.import_count as usize);
     for (index, import) in m.imports().enumerate() {
-        if resolve(import.name).is_none() {
-            return Err(LoadError::MissingImport {
-                index: index as u32,
-                name: import.name,
-            });
+        match resolve(import.name) {
+            Some(address) => addresses.push(address),
+            None => {
+                return Err(LoadError::MissingImport {
+                    index: index as u32,
+                    name: import.name,
+                })
+            }
         }
     }
 
@@ -92,11 +104,9 @@ pub fn load_into<'a>(
         let value = rd32(&dest[..file_size], o).wrapping_add(delta);
         dest[o..o + 4].copy_from_slice(&value.to_le_bytes());
     }
-    for import in m.imports() {
-        if let Some(address) = resolve(import.name) {
-            let o = import.slot as usize;
-            dest[o..o + 4].copy_from_slice(&address.to_le_bytes());
-        }
+    for (import, address) in m.imports().zip(addresses) {
+        let o = import.slot as usize;
+        dest[o..o + 4].copy_from_slice(&address.to_le_bytes());
     }
 
     let entry = |offset: u32| dest_addr.wrapping_add(offset);
