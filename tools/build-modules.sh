@@ -39,7 +39,15 @@ if [ -n "$base" ]; then
   pack_args=(--link-base "$base")
   export DESK_LINK_BASE="$base"
 fi
-(cd module/mods && RUSTC_BOOTSTRAP=1 cargo build --release --locked --quiet --target-dir "$root/$mods_target")
+
+# The panic handler's file and line and the toolchain's own paths end up in the image, so the checkout's location would change the
+# bytes and the checksum. Each prefix that can appear is mapped to a fixed name: the checkout to /desk, the toolchain's sysroot to
+# /rust and the cargo home (the registry, build-std's dependencies) to /cargo. A rustflags array given with --config is joined to the
+# ones in module/mods/.cargo/config.toml; the later prefix wins, so the checkout, the most specific, comes last.
+sysroot=$(rustc --print sysroot)
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+remap="build.rustflags=['--remap-path-prefix=$cargo_home=/cargo', '--remap-path-prefix=$sysroot=/rust', '--remap-path-prefix=$root=/desk']"
+(cd module/mods && RUSTC_BOOTSTRAP=1 cargo build --release --locked --quiet --config "$remap" --target-dir "$root/$mods_target")
 
 for entry in "${modules[@]}"; do
   name=${entry%%:*}

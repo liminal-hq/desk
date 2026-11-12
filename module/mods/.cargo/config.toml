@@ -1,6 +1,9 @@
 # Builds the modules for the kernel's target specification, which the hosted loader shares. `RUSTC_BOOTSTRAP=1` lets the pinned
 # stable toolchain use `build-std`. The flags every module needs are here; the linker script, the entry points and the link base are
-# each crate's build script (`link.rs`), because a module and an application keep different symbols alive.
+# each crate's build script (`link.rs`), because a module and an application keep different symbols alive. The paths that end up in an
+# image (the panic handler's file name, the toolchain's sources) are mapped to fixed names by `tools/build-modules.sh`, which adds
+# `--remap-path-prefix` flags for the checkout, the sysroot and the cargo home with `--config`: they are absolute paths, which a
+# config file cannot know. A bare `cargo build` here is therefore not reproducible across checkouts.
 [build]
 target = "../../kernel/i486-desk-none.json"
 rustflags = ["-Clink-arg=-nostdlib", "-Clink-arg=--emit-relocs", "-Clink-arg=-zmax-page-size=0x1000"]

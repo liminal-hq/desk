@@ -12,6 +12,32 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 step() { printf '\n== %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+for tool in objdump strings gcc file; do
+  command -v "$tool" > /dev/null || fail "$tool is missing: the checks below need it (the CI image has it)"
+done
+
+# Succeeds if the ELF file or object has an instruction a module must not use. objdump's output is captured first, so an objdump that
+# fails stops the check instead of reading as a clean file, and an output with no disassembly at all is an error too.
+uses_forbidden_instruction() {
+  local listing
+  listing=$(objdump -d "$1") || fail "objdump failed on $1"
+  grep -q 'Disassembly of section' <<< "$listing" || fail "objdump printed no disassembly of $1"
+  grep -Eq '\b(cmpxchg|cmpxchg8b|cli|sti)\b' <<< "$listing"
+}
+
+# Succeeds if a file names a path of the machine that built it: a home or temporary directory, the CI image's /w checkout, or the
+# directories this run built from. Image paths are mapped to /desk, /rust and /cargo by tools/build-modules.sh.
+names_a_build_host_path() {
+  local text
+  text=$(strings -a "$1") || fail "strings failed on $1"
+  grep -Eq '(^|[^A-Za-z0-9_.])/(home|w|root|tmp|Users|builds?)/' <<< "$text" && return 0
+  local dir
+  for dir in "$@"; do
+    [ "$dir" = "$1" ] && continue
+    grep -qF -- "$dir" <<< "$text" && return 0
+  done
+  return 1
+}
 
 step "Module loader: host tests and no_std builds"
 (cd module && cargo fmt --check)
@@ -24,26 +50,79 @@ step "Module loader: host tests and no_std builds"
 step "Test modules: format, lints, build and pack"
 (cd module/mods && cargo fmt --check)
 (cd module/mods && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
-rm -rf dist/modules dist/modules-0080 dist/modules-norelocs
+rm -rf dist/modules dist/modules-0080 dist/modules-3000 dist/modules-norelocs dist/modules-repro
 tools/build-modules.sh
 dmdpack=${CARGO_TARGET_DIR:-module/target}/release/dmdpack
 modules=dist/modules
 python3 -I tools/native-check.py tests/module/hello-info.txt <("$dmdpack" info $modules/HELLO.DMD) || fail "dmdpack info HELLO.DMD differs from tests/module/hello-info.txt"
 "$dmdpack" info $modules/APPMAIN.DKX | grep -q '^kind          application (.DKX)$' || fail "APPMAIN.DKX is not an application"
 
+step "Reproducible: the same bytes from two checkouts, and no build-host path in an image"
+# Two copies of the sources at different paths (one longer than the other) build the same packed files: the panic handler's file name and the
+# toolchain's paths are in the image, so only the path mapping of tools/build-modules.sh makes the bytes independent of the checkout.
+repro="$PWD/dist/modules-repro"
+rm -rf "$repro"
+for name in a/desk b/a-longer-checkout-name/desk; do
+  mkdir -p "$repro/$name"
+  tar --exclude=target -cf - module kernel/i486-desk-none.json tools/build-modules.sh | tar -xf - -C "$repro/$name"
+  (cd "$repro/$name" && CARGO_TARGET_DIR="$repro/module-target" tools/build-modules.sh --out "$repro/$name/out")
+done
+# (The linked ELF files are debugging aids and are not compared: rustc mangles symbol names with a hash of the crate's location, so their
+# symbol tables differ between checkouts. Nothing of that is in the packed files, which carry only the image.)
+for file in HELLO.DMD APPMAIN.DKX; do
+  cmp "$repro/a/desk/out/$file" "$repro/b/a-longer-checkout-name/desk/out/$file" || fail "$file differs between two checkouts"
+  cmp "$repro/a/desk/out/$file" "$modules/$file" || fail "$file built in $PWD differs from the same build in another checkout"
+done
+for file in HELLO.DMD APPMAIN.DKX hello.elf appmain.elf; do
+  if names_a_build_host_path "$modules/$file" "$PWD" "$(rustc --print sysroot)" "${CARGO_HOME:-$HOME/.cargo}"; then
+    fail "$file names a path of the machine that built it: $(strings -a "$modules/$file" | grep -E '/' | head -3)"
+  fi
+done
+# The scan must be able to fail: a file naming a home directory, a /w checkout or the current directory is caught.
+printf 'panicked at /home/someone/desk/module/guest/src/lib.rs:12\0' > "$repro/leaky-home.bin"
+printf 'panicked at /w/src/module/guest/src/lib.rs:12\0' > "$repro/leaky-w.bin"
+printf 'panicked at %s/module/guest/src/lib.rs:12\0' "$PWD" > "$repro/leaky-cwd.bin"
+for leak in home w cwd; do
+  names_a_build_host_path "$repro/leaky-$leak.bin" "$PWD" || fail "the path scan missed a leaked $leak path"
+done
+echo "identical from two checkouts; no build-host path in HELLO.DMD, APPMAIN.DKX or their ELF files; the scan catches planted paths"
+
 step "Disassembly: no cmpxchg, no cli or sti"
 for elf in hello appmain; do
-  if objdump -d "$modules/$elf.elf" | grep -E '\b(cmpxchg|cmpxchg8b|cli|sti)\b'; then
+  if uses_forbidden_instruction "$modules/$elf.elf"; then
     fail "$elf.elf contains an instruction a module must not use"
   fi
 done
 echo "no cmpxchg, cli or sti in hello.elf or appmain.elf"
+# The scan must be able to fail: an object with each of them is refused, and a clean one is not.
+cat > "$repro/bad.c" <<'C'
+void bad(int *p) { __asm__ volatile("lock cmpxchgl %1, (%0)" : : "r"(p), "r"(1) : "eax", "memory"); __asm__ volatile("cli"); __asm__ volatile("sti"); }
+C
+printf 'int fine(int x) { return x + 1; }\n' > "$repro/fine.c"
+gcc -m32 -O1 -c "$repro/bad.c" -o "$repro/bad.o"
+gcc -m32 -O1 -c "$repro/fine.c" -o "$repro/fine.o"
+uses_forbidden_instruction "$repro/bad.o" || fail "the instruction scan missed cmpxchg, cli and sti"
+! uses_forbidden_instruction "$repro/fine.o" || fail "the instruction scan refused a clean object"
+objdump -d "$repro/bad.o" | grep -Eo '\b(cmpxchg|cli|sti)[a-z]*' | sort -u | tr '\n' ' '
+echo "<- the scan refuses an object that has them"
 
 step "Relocation: the same module linked at a second base"
 tools/build-modules.sh --link-base 0x00800000 --out dist/modules-0080
 "$dmdpack" cross $modules/HELLO.DMD dist/modules-0080/HELLO.DMD
 "$dmdpack" cross dist/modules-0080/HELLO.DMD $modules/HELLO.DMD
 "$dmdpack" cross $modules/APPMAIN.DKX dist/modules-0080/APPMAIN.DKX
+# A move by 0x3000 changes the second byte of every relocated word as well as the high ones (a move by 0x400000 leaves the low
+# 16 bits alone). A link base is a multiple of 4096, so the low 12 bits cannot change; the packer's tests cover each byte.
+rm -rf dist/modules-3000
+tools/build-modules.sh --link-base 0x00403000 --out dist/modules-3000
+"$dmdpack" cross $modules/HELLO.DMD dist/modules-3000/HELLO.DMD
+"$dmdpack" cross dist/modules-3000/HELLO.DMD dist/modules-0080/HELLO.DMD
+"$dmdpack" cross $modules/APPMAIN.DKX dist/modules-3000/APPMAIN.DKX
+# Two files linked at one base prove nothing, so cross refuses them with a clear error.
+if "$dmdpack" cross $modules/HELLO.DMD $modules/HELLO.DMD 2> dist/modules-3000/same.err; then
+  fail "cross accepted two files linked at the same base"
+fi
+grep -q 'both files are linked at 0x400000' dist/modules-3000/same.err || fail "unexpected refusal: $(cat dist/modules-3000/same.err)"
 
 # One relocated word of the second link changed (and the checksum made right): the cross check must refuse and name the offset.
 python3 -I - dist/modules-0080/HELLO.DMD dist/modules-0080/TAMPER.DMD <<'PY'
