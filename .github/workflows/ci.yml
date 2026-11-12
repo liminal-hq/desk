@@ -198,7 +198,7 @@ jobs:
         include:
           - { groups: "rust:hal", title: "Rust: HAL" }
           - { groups: "rust:shell", title: "Rust: shell" }
-          - { groups: "rust:core,rust:module,rust:spikes", title: "Rust: core, module and spike lints" }
+          - { groups: "rust:core,rust:module,rust:tools,rust:spikes", title: "Rust: core, module, tools and spike lints" }
     env:
       CHECK_GROUPS: ${{ matrix.groups }}
       TITLE: ${{ matrix.title }}

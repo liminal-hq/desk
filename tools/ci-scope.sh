@@ -63,6 +63,10 @@ RULES=(
   'tools/check.sh;all;tools/check.sh'
   'tools/ci-scope.sh;all;tools/ci-scope.sh'
   'tools/setup.sh;all;tools/setup.sh'
+  # The step report converter: every job builds and runs it after its checks, so a change to it can break any job.
+  'tools/steps-junit/*;all;tools/steps-junit/src/lib.rs'
+  # cargo-nextest's settings: the host tests of the Rust workspaces read them.
+  '.config/*;rust;.config/nextest.toml'
   'tools/fetch-tools.sh;all;tools/fetch-tools.sh'
   'rust-toolchain.toml;all;rust-toolchain.toml'
   # The base checks themselves (and report inputs, as above).
@@ -219,6 +223,8 @@ self_test() {
   expect all docs/SPEC.md some/new/file.rs
   expect all .github/workflows/ci.yml
   expect all tools/check.sh
+  expect all tools/steps-junit/src/main.rs tools/steps-junit/tests/convert.rs
+  expect base,rust .config/nextest.toml
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs

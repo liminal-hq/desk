@@ -1,10 +1,10 @@
 #!/bin/bash
 # Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links, the CI scope table),
 # report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
-# rust (format, lints, host tests and cross builds of core/, hal/, shell/ and the spike workspaces checked on their own), dos (the
-# DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes), stdstubs (the e-std-stubs
-# spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks' frames compared, from
-# what shelldos and native left in dist/).
+# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/, and the spike workspaces
+# checked on their own), dos (the DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes),
+# stdstubs (the e-std-stubs spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks'
+# frames compared, from what shelldos and native left in dist/).
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 # INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike
 # (network, Node and Chromium needed).
@@ -29,7 +29,7 @@ cd "$(dirname "$0")/.."
 # The groups, in order, and the parts of the groups that have them. A group without parts is one unit.
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
 # shellcheck disable=SC2034 # read through parts()
-PARTS_rust="core hal shell module spikes"
+PARTS_rust="core hal shell module tools spikes"
 # shellcheck disable=SC2034 # read through parts()
 PARTS_dos="skeleton s1 d0 vga input"
 
@@ -44,6 +44,7 @@ rust       core       core/ format and lints
            hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
+           tools      tools/steps-junit/ (the step report converter the CI posts) format, lints and host tests
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
            s1         spike s1-dxe3: the modules built, loaded, called, crashed and unloaded
@@ -195,6 +196,15 @@ step "Module loader: host tests and no_std builds"
 (cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+fi
+
+# The converter that turns this script's step times and log into the JUnit report on the pull request (tools/steps-junit). Every CI job
+# builds and runs it after its checks, so its own tests run in this part.
+if run rust tools; then
+step "Step report converter: format, lints and host tests"
+(cd tools/steps-junit && cargo fmt --check)
+(cd tools/steps-junit && cargo clippy --locked --all-targets -- -D warnings)
+(cd tools/steps-junit && host_tests)
 fi
 
 if run report; then
