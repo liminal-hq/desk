@@ -12,7 +12,10 @@ SECTIONS
     .text : { *(.text .text.*) }
     .rodata : ALIGN(4) { *(.rodata .rodata.*) }
 
-    . = ALIGN(0x1000);
+    /* The writable part starts on the header's 16-byte alignment, not on a page: a page boundary here padded the image with about
+       3.6 KiB of zeros (44% of HELLO.DMD). Page alignment of the writable part comes only once a loader can protect pages (R78),
+       and then the packer, not the script, can place it. */
+    . = ALIGN(16);
     .desk.imp : ALIGN(4) { KEEP(*(.desk.imp)) }
     .data : ALIGN(4) { *(.data .data.*) }
     .bss : ALIGN(4) { *(.bss .bss.*) *(COMMON) }
