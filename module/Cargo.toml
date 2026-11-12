@@ -1,0 +1,15 @@
+# The module loader's crates (docs/LOADER.md): the packer that turns a linked ELF into a loadable image, and (from the format crate on)
+# the format both loaders and the packer share.
+#
+# `desk-module` and the loaders are `no_std` + `alloc` under the shell's rules; `dmdpack` is `std`, runs on the host and is
+# `#![forbid(unsafe_code)]`. `mods/` (the modules, built for the kernel's target) and `dos/` (the hosted loader) have their own workspaces.
+[workspace]
+members = ["pack"]
+exclude = ["mods", "dos"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
