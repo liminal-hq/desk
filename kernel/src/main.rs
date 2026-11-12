@@ -163,7 +163,7 @@ pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     let free_before = memory::free_frames();
     let a = memory::alloc_frame().expect("no frame");
     let b = memory::alloc_frame().expect("no frame");
-    assert!(a != b && a % 4096 == 0 && b % 4096 == 0);
+    assert!(a != b && a.is_multiple_of(4096) && b.is_multiple_of(4096));
     memory::free_frame(a);
     memory::free_frame(b);
     assert_eq!(memory::free_frames(), free_before);

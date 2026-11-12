@@ -82,7 +82,7 @@ pub fn init(info: &BootInfo) {
     let limit = MAX_FRAMES as u64;
     let fs = FRAME_SIZE as u64;
     for r in regions(info).iter().filter(|r| r.kind == KIND_USABLE) {
-        let first = (r.base + fs - 1) / fs;
+        let first = r.base.div_ceil(fs);
         let last = (r.base + r.len) / fs;
         for f in first..last.min(limit) {
             set_free(f as usize);
@@ -90,7 +90,7 @@ pub fn init(info: &BootInfo) {
     }
     for r in regions(info).iter().filter(|r| r.kind != KIND_USABLE && r.len != 0) {
         let first = r.base / fs;
-        let last = (r.base + r.len + fs - 1) / fs;
+        let last = (r.base + r.len).div_ceil(fs);
         for f in first..last.min(limit) {
             set_used(f as usize);
         }
