@@ -1,10 +1,13 @@
-# The module loader's crates (docs/LOADER.md): the packer that turns a linked ELF into a loadable image, and (from the format crate on)
-# the format both loaders and the packer share.
+# The module loader's crates (docs/LOADER.md): the format crate `desk-module`, shared by the loaders and the packer, the host packer
+# `dmdpack`, and those that follow them.
 #
-# `desk-module` and the loaders are `no_std` + `alloc` under the shell's rules; `dmdpack` is `std`, runs on the host and is
-# `#![forbid(unsafe_code)]`. `mods/` (the modules, built for the kernel's target) and `dos/` (the hosted loader) have their own workspaces.
+# The library crates that run in the core (`desk-module` and the loaders) are `no_std` + `alloc` and build for three places: the host,
+# where `cargo test` runs the host tests; the native kernel's target (`kernel/i486-desk-none.json`); and the pure-Rust DOS target
+# (`spikes/d0-rust-dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line, so the default target
+# stays the host's. `dmdpack` is `std`, runs on the host only and is not built for those targets. `mods/` and `dos/` have their own
+# workspaces, because their default target is not the host's.
 [workspace]
-members = ["pack"]
+members = ["format", "pack"]
 exclude = ["mods", "dos"]
 resolver = "2"
 

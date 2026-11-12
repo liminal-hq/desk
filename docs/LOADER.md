@@ -2,7 +2,7 @@
 
 The design for roadmap item R48, the executable-format and loader spike: what a Desk app is on disk, and how a program gets from a file into the running system, on the native kernel and on the hosted DOS track, with the same file on both. It is the first step on the roadmap's path to the first OS milestone (R80, a separate app loaded from disk). The build plan is [`LOADER-PLAN.md`](LOADER-PLAN.md). What a program is on Desk beyond the file (tasks, threads, scheduling, the window system as a task, libraries) is designed in [`APP-MODEL.md`](APP-MODEL.md); this document is the format and the loader.
 
-> **Status.** A design, written on 2026-11-11 against `main` at `eaede0f` and revised the same day with the owner's decisions ([Decisions](#decisions)). Nothing in it is built. The one experiment behind it (an app-shaped Rust module linked by `rust-lld` and read with `readelf`, under [Evidence](#evidence-gathered-for-this-design)) ran on the development machine in a scratch directory and is not committed; every other number is a target or an estimate and says so. Nothing here has run on real hardware. Where this document says "the loader" it means the module loader; the boot stage that loads the kernel (`boot/stage2.asm`), which [`NATIVE-BOOT.md`](NATIVE-BOOT.md) also calls the loader, is unrelated.
+> **Status.** A design, written on 2026-11-11 against `main` at `eaede0f` and revised the same day with the owner's decisions ([Decisions](#decisions)). The format crate `desk-module` (`module/format/`, task M1 of [`LOADER-PLAN.md`](LOADER-PLAN.md)) is built and host-tested; nothing else in it is. The one experiment behind it (an app-shaped Rust module linked by `rust-lld` and read with `readelf`, under [Evidence](#evidence-gathered-for-this-design)) ran on the development machine in a scratch directory and is not committed; every other number is a target or an estimate and says so. Nothing here has run on real hardware. Where this document says "the loader" it means the module loader; the boot stage that loads the kernel (`boot/stage2.asm`), which [`NATIVE-BOOT.md`](NATIVE-BOOT.md) also calls the loader, is unrelated.
 
 ## Contents
 
@@ -147,22 +147,22 @@ Rejected, in short: plain ELF at a fixed address (no address to fix on today's m
 
 ## Format specification sketch: `.DMD`
 
-To be added to [`FORMATS.md`](FORMATS.md) once the spike's result confirms it. All numbers little-endian. The sections follow each other in this order, each starting at a multiple of 4: header, image, relocations, imports, exports (empty in version 1), strings. The file ends exactly where the strings end.
+To be added to [`FORMATS.md`](FORMATS.md) once the spike's result confirms it. All numbers little-endian. The sections follow each other in this order, each starting at the next multiple of 4 after the one before it, with zero bytes between: header, image, relocations, imports, exports (empty in version 1), strings. The file ends exactly where the strings end.
 
 **Header, 96 bytes in version 1.**
 
 | Offset | Size | Field | Rule |
 |---|---|---|---|
 | 0 | 4 | magic `DMD1` | The digit is the major version; `DMD` with another digit is refused as an unsupported version, anything else as not a module. The magic is the same for every kind and both extensions |
-| 4 | 2 | header size | 96 in version 1; a later minor revision may grow it, and a loader reads only the fields it knows |
+| 4 | 2 | header size | 96 in version 1; a later minor revision may grow it (a multiple of 4, never under 96), and a loader reads only the fields it knows |
 | 6 | 2 | flags | 0; a loader refuses any bit it does not know |
 | 8 | 2 | ABI | 1 = i486, flat 32-bit near pointers, cdecl, x87 present |
 | 10 | 2 | SDK | The version of the service table the file needs; refused if newer than the core's (the role of `sdk=` in `APP.INF`) |
 | 12 | 2 | kind | 1 = module (loaded into the caller's address space; `.DMD`), 2 = application (becomes a new task; `.DKX`), 3 = library (reserved: refused in version 1); any other value is refused |
-| 14 | 2 | reserved | 0 |
-| 16 | 4 | link base | The address the image was linked for: `0x0040_0000` for every file the build ships; a loader accepts any non-zero multiple of 4096, which the packer's cross check uses |
+| 14 | 2 | reserved | 0; refused otherwise |
+| 16 | 4 | link base | The address the image was linked for: `0x0040_0000` for every file the build ships; a loader accepts any non-zero multiple of 4096 that leaves room for the memory size below 4 GiB (so a relocated word never wraps), which the packer's cross check uses |
 | 20 | 4 | alignment | A power of two from 16 to 4096; the load address must be a multiple |
-| 24 | 4 | image offset | Where the image starts in the file; at least the header size |
+| 24 | 4 | image offset | Where the image starts in the file: the header size, with nothing between the header and the image |
 | 28 | 4 | file size | Bytes of image stored in the file |
 | 32 | 4 | memory size | At least the file size; the bytes past the file size are zeroed at load (`.bss`); at most 16 MiB in version 1 |
 | 36 | 4 | read-only size | At most the file size: the leading part of the image that is code and read-only data, which paging may later protect |
@@ -178,7 +178,7 @@ To be added to [`FORMATS.md`](FORMATS.md) once the spike's result confirms it. A
 | 76 | 4 | strings offset | File offset of the string table |
 | 80 | 4 | strings size | Bytes in it |
 | 84 | 4 | CRC-32 | Of the whole file with these four bytes taken as zero (the IEEE polynomial, the same CRC as `zlib.crc32` and `desk-gfx`'s `crc32`) |
-| 88 | 8 | reserved | 0 |
+| 88 | 8 | reserved | 0; refused otherwise |
 
 **Image.** The bytes of `.text`, `.rodata` and `.data` laid out at their link addresses relative to the link base, with any gap between segments filled with zeros. Import slots are words in the writable part, stored as zero.
 
@@ -188,11 +188,11 @@ To be added to [`FORMATS.md`](FORMATS.md) once the spike's result confirms it. A
 
 **Exports.** Reserved for the `library` kind ([Libraries](#libraries-std-and-data-files)): 8-byte records of a name offset in the string table and an image offset, sorted by name. Version 1 requires the table to be empty and in its place; a file with exports, or of kind library, is refused as unsupported, so a version-1 loader never half-understands one.
 
-**Strings.** The import names, each followed by a NUL. Nothing else in version 1.
+**Strings.** The import names in import order, each followed by a NUL, with each record's name offset pointing at its name. Nothing else in version 1: a string table with bytes no import uses is refused.
 
-**Loading.** Given the file, a destination of at least `memory size` bytes at an address that is a multiple of `alignment`, and a function from a name to an address: check the header, the layout and the CRC; check every relocation and import record; resolve every import (refusing the module with the first missing name); then copy the image, zero the tail, add the delta to each relocation, and write each import's address into its slot. The result is the absolute address of each entry point and the image's range. Nothing is called by the loader.
+**Loading.** Given the file, a destination of at least `memory size` bytes at a non-zero address that is a multiple of `alignment` (address 0 is the null pointer, so no image goes there, for the same reason the link base is not 0), whose end address is below 2^32, and a function from a name to an address: check the header, the layout and the CRC; check every relocation and import record; resolve every import once (refusing the module with the first missing name, and writing the answers of that one call, so a resolver whose answers change cannot leave a slot unbound); then copy the image, zero the tail, add the delta to each relocation, and write each import's address into its slot. Every check that can fail runs before the destination is written, so a refused module leaves it as it was. The result is the absolute address of each entry point and the image's range. Nothing is called by the loader.
 
-**Errors.** Every check above is its own error, with the index or offset it concerns, so a refused module says why: too short, bad magic, unsupported version, bad header size, unknown flags, unsupported ABI, SDK too new, unknown kind, kind not supported (a library), exports not supported, kind not loadable here (an application given to a module loader, or the reverse), bad alignment, a table truncated or outside the file, tables overlapping or out of order, trailing bytes, sizes out of order (file size above memory size, read-only size above file size), too large, bad checksum, entry out of range, relocation outside the image, relocations out of order or overlapping, relocation target out of range, bad import name, duplicate import, bad import slot, missing import, destination too small, destination misaligned.
+**Errors.** Every check above is its own error, with the index or offset it concerns, so a refused module says why: too short, bad magic, unsupported version, bad header size, unknown flags, unsupported ABI, SDK too new, unknown kind, kind not supported (a library), exports not supported, kind not loadable here (an application given to a module loader, or the reverse), bad alignment, a table truncated or outside the file, tables overlapping or out of order, trailing bytes, sizes out of order (file size above memory size, read-only size above file size), too large, bad checksum, entry out of range, relocation outside the image, relocations out of order or overlapping, relocation target out of range, bad import name, duplicate import, bad import slot, missing import, destination too small, destination misaligned, destination at address 0, destination ending at or past 2^32. Four rules have errors of their own: a table that starts later than the next multiple of 4 after the previous one (a gap), a non-zero padding byte, a string table with bytes no import uses, and a non-zero reserved field. The magic is checked first: fewer than 4 bytes is too short, and otherwise a wrong magic or another version is reported even when the file is shorter than a header.
 
 **Versioning.** The major version is in the magic and changes only for an incompatible layout. Compatible additions grow the header and set a flag bit that old loaders refuse when the addition matters, or leave the flags alone when it does not. The SDK version is separate and belongs to the service table, not to the layout. The ABI field changes only for another machine model (for example ring 3 with system calls, if the stubs ever need a different calling convention).
 
@@ -227,7 +227,7 @@ The reader (`module/pack/src/elf.rs`, built by R48's M2) takes the image from th
 
 | Path | Crate | What | Rules |
 |---|---|---|---|
-| `module/format/` | `desk-module` | The format: `Header`, `parse`, `Module`, `write` (used by the packer and the tests), `load_into`, the CRC, `LoadError` | `no_std` + `alloc`, `#![forbid(unsafe_code)]`, no float, no compare-and-swap, no external crates; host-tested; built for both 486 targets |
+| `module/format/` | `desk-module` | The format: `Header`, `parse`, `Module`, `write` (used by the packer and the tests), `load_into`, the CRC, `LoadError` | `no_std` + `alloc`, `#![forbid(unsafe_code)]`, no float, no compare-and-swap, no external crates; host-tested; built for both 486 targets. `Builder::write` lays a file out without judging it, so the tests can damage what it makes; `Module::parse` is the judge |
 | `module/pack/` | `dmdpack` | The host tool: a strict ELF32 reader, `pack`, `info`, `cross` | `std`, `#![forbid(unsafe_code)]`, no external crates |
 | `module/guest/` | `desk-guest` | The app side: `import!`, `desk_app!`, the panic handler that calls `desk_panic`, the allocator that forwards to `desk_alloc` | `no_std` + `alloc`; `unsafe` only to call through a slot, each with its `SAFETY:` line; the seed of R79's SDK crate, not the SDK |
 | `module/mods/` | `hello`, `appmain`, `count`, `needs`, `alloc`, `panicky`, `faulty` | The test modules, one workspace with `module.ld` and the target by path | As `desk-guest` |
