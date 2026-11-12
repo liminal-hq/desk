@@ -6,7 +6,7 @@ title: Testing and the evidence method
 summary: Nothing is promoted without evidence: host tests against the mock bus, expected transcripts, negative checks, key injection, golden frames and their digests, the comparison of the two tracks, CI, the three shelves and the manual's four tags, and what verified never means.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [tools/check.sh, tools/ci-scope.sh, tools/native-check.py, tools/native-inject.py, tools/frames.py, tools/shell-compare.sh, tools/shell-goldens.sh, tests/native/, tests/shell/, hal/platform/mock/, .github/workflows/]
+watches: [tools/check.sh, tools/ci-scope.sh, tools/steps-junit/, .config/nextest.toml, .github/pr-results.toml, tools/native-check.py, tools/native-inject.py, tools/frames.py, tools/shell-compare.sh, tools/shell-goldens.sh, tests/native/, tests/shell/, hal/platform/mock/, .github/workflows/]
 log: [boot, hal, input, firstwindow, archive]
 anatomy: []
 ---
@@ -63,7 +63,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 
 ### CI and `tools/check.sh`
 
-`tools/check.sh` is the pre-pull-request gate and what the CI runs. Its steps are in nine groups, `base`, `report`, `fonts`, `rust`, `dos`, `stdstubs`, `shelldos`, `native` and `compare`, and some groups in parts (`rust:hal`, `dos:input`); `tools/check.sh --groups LIST` runs only those, and `tools/check.sh --list` names them. The CI runs one job per group, some groups as several jobs of their parts, each a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml` running `tools/check.sh --groups` for its share. A first job, `scope`, chooses the groups a pull request needs from the paths it changes (`tools/ci-scope.sh`; a push to `main` and a manual run take every group), and the comparison job receives the two tracks' frames as artefacts from the shell-on-DOS and native jobs. A last job, `ci-passed` (shown as `CI passed`), needs all the others and runs always: it fails when one failed or was cancelled, or was skipped because `scope` did not succeed, and passes when each succeeded or was skipped by the scope's choice. It is the one status to require, and replaces the old single job's `check` status. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
+`tools/check.sh` is the pre-pull-request gate and what the CI runs. Its steps are in nine groups, `base`, `report`, `fonts`, `rust`, `dos`, `stdstubs`, `shelldos`, `native` and `compare`, and some groups in parts (`rust:hal`, `dos:input`); `tools/check.sh --groups LIST` runs only those, and `tools/check.sh --list` names them. The CI runs one job per group, some groups as several jobs of their parts, each a container from the shared `ci-dos` image pinned by digest in `.github/workflows/ci.yml` running `tools/check.sh --groups` for its share. A first job, `scope`, chooses the groups a pull request needs from the paths it changes (`tools/ci-scope.sh`; a push to `main` and a manual run take every group), and the comparison job receives the two tracks' frames as artefacts from the shell-on-DOS and native jobs. A last job, `ci-passed` (shown as `CI passed`), needs all the others and runs always: it fails when one failed or was cancelled, or was skipped because `scope` did not succeed, and passes when each succeeded or was skipped by the scope's choice. It is the one status to require, and replaces the old single job's `check` status. Each job also reports its steps to the pull request: a last step, non-fatal (`continue-on-error`, the only step that is), so that a broken report never changes the job's result, turns the job's step times and log into JUnit (`tools/steps-junit`, one test case per step of `tools/check.sh`, the tail of the failing step's output in its failure) and uploads it as a `results-<job>` artefact with cargo-nextest's JUnit for the host tests of the HAL, the shell, the module loader and the converter itself, and the `scope` job uploads the event file. A second workflow, `publish-test-results.yml`, runs after the CI run finishes and posts one comment and two check runs, `Desk steps` and `Desk Rust tests`, with [pr-results](https://github.com/liminal-hq-labs/pr-results) v0.1.0, pinned by commit. It is a `workflow_run` workflow, so it works for pull requests from forks, and so it runs only from `main`: it does nothing on the pull request that adds it, and the first comment is the evidence that it works. Updating the image is a pull request whose checks run in the new image. The steps, in order, with the opt-in ones last:
 
 | No. | Step |
 |---|---|
@@ -76,21 +76,22 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 7 | HAL: host tests and no_std builds |
 | 8 | Shell: host tests and no_std builds |
 | 9 | Module loader: host tests and no_std builds |
-| 10 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
-| 11 | Build DESK.EXE |
-| 12 | Run DESK.EXE in headless DOSBox |
-| 13 | A Rust panic reports through C and exits non-zero |
-| 14 | Spike s1-dxe3: Rust format and lints for the modules |
-| 15 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
-| 16 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
-| 17 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
-| 18 | Spike s5-jsdos: Rust format and lints for the probes |
-| 19 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
-| 20 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
-| 21 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
-| 22 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
-| 23 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
-| 24 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
+| 10 | Step report converter: format, lints and host tests |
+| 11 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
+| 12 | Build DESK.EXE |
+| 13 | Run DESK.EXE in headless DOSBox |
+| 14 | A Rust panic reports through C and exits non-zero |
+| 15 | Spike s1-dxe3: Rust format and lints for the modules |
+| 16 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
+| 17 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
+| 18 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
+| 19 | Spike s5-jsdos: Rust format and lints for the probes |
+| 20 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
+| 21 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
+| 22 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
+| 23 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
+| 24 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
+| 25 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
 Four more steps run only when asked, because the CI image lacks what they need (the Bochs and js-dos steps come after the comparison and run only when their whole group is selected, so the Bochs run never rewrites the native screendumps before they are compared): the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
@@ -117,7 +118,10 @@ In every place this project says *verified*, it means *in an emulator or on the 
 |---|---|
 | [`tools/check.sh`](repo:tools/check.sh) | The pre-pull-request gate: every step above, in order |
 | [`tools/ci-scope.sh`](repo:tools/ci-scope.sh) | Chooses the groups a pull request needs from its paths, with a self-test of its rules, the path dependencies, what each group's steps read and the coverage |
-| [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI: the scope job, one job per group (or part), the pinned image and the artefacts between the tracks |
+| [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI: the scope job, one job per group (or part), the pinned image, the artefacts between the tracks and each job's JUnit results |
+| [`.github/workflows/publish-test-results.yml`](repo:.github/workflows/publish-test-results.yml) | Posts the results of a finished CI run on its pull request with pr-results; runs from the default branch with four permissions and never checks out the pull request |
+| [`tools/steps-junit/`](repo:tools/steps-junit/) | The converter from a run's step times and log to JUnit, with its tests and the shape pr-results reads |
+| [`.config/nextest.toml`](repo:.config/nextest.toml) | cargo-nextest's profiles: the `ci` profile writes the JUnit of the host tests |
 | [`hal/platform/mock/`](repo:hal/platform/mock/) | The mock platform: [`MockPortBus`](sym:hal/platform/mock/src/bus.rs::MockPortBus) and its devices |
 | [`tools/native-check.py`](repo:tools/native-check.py) | The transcript checker ([M5](chapter:m-boot)) |
 | [`tools/native-inject.py`](repo:tools/native-inject.py) | Sends scripted keys, mouse motion and screendump commands through the QEMU monitor |
@@ -149,7 +153,7 @@ Change one pixel of the golden and `frames.py goldens` reports `moved` as the fr
 id: evidence.hosttests
 label: Host tests of the drivers and the core against the mock platform
 state: built-verified
-evidence: sym:hal/platform/mock/src/bus.rs::MockPortBus, test:tools/check.sh::cargo test --locked --quiet, test:.github/workflows/ci.yml::tools/check.sh
+evidence: sym:hal/platform/mock/src/bus.rs::MockPortBus, test:tools/check.sh::cargo nextest run, test:.github/workflows/ci.yml::tools/check.sh
 note: Run by CI on every pull request. The mock is the author's model of the hardware.
 
 id: evidence.transcripts
@@ -185,6 +189,12 @@ id: evidence.ci
 label: The CI job: a pinned image and tools/check.sh
 state: built-verified
 evidence: test:.github/workflows/ci.yml::tools/check.sh, doc:docs/NATIVE-BOOT.md#what-was-and-was-not-verified
+
+id: evidence.report
+label: The CI's per-step and per-test report on the pull request: JUnit from every job, posted by pr-results
+state: built-unverified
+evidence: test:tools/steps-junit/tests/convert.rs::the_output_has_the_shape_pr_results_reads, test:tools/progress-report/tests/test_chapter_evidence_frontier.py::test_every_job_uploads_its_results_and_the_scope_job_the_event_file, repo:.github/workflows/publish-test-results.yml
+note: The converter's output was rendered locally by pr-results v0.1.0 from a real check run, but the publisher is a workflow_run workflow that runs only from main, so no comment or check run has been seen on GitHub.
 
 id: evidence.tags
 label: The manual's four tags and the rule that a verified record needs run evidence
@@ -273,3 +283,5 @@ at: explainer m-negatives
 - 2026-11-11: `tools/ci-scope.sh --self-test` is a step of the `base` group (the CI scope table), so the step table has a row for it and the rows after it moved down by one.
 - 2026-11-11: the CI runs one job per group (and per part for `rust` and `dos`) after a `scope` job that chooses the groups from the changed paths, and the comparison job reads the DOS read-back and the QEMU screendumps as artefacts of the shell-on-DOS and native jobs; the step table is unchanged.
 - 2026-11-12: a last CI job, `CI passed`, gathers every other job's result and is the one status to require; the step table is unchanged.
+- 2026-11-12: every CI job uploads JUnit for its steps (`tools/steps-junit`, a new part `rust:tools`, so the step table has a row and the rows after it moved down by one) and for the host tests (cargo-nextest, `.config/nextest.toml`), and `publish-test-results.yml` posts them on the pull request with pr-results; the publisher could not be run before merge, so its record is built, not verified.
+- 2026-11-12: the report step of each CI job is non-fatal, a test allows `continue-on-error` on that step only, and the converter drops C1 controls and the Unicode line and paragraph separators from the text it writes.

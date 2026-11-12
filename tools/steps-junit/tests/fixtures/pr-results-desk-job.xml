@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Desk's converter output: one testsuite per job, the group in the class name after a full stop, one failing step holding the tail of its log, and no skipped steps.
+
+  (c) Copyright 2026 Liminal HQ, Scott Morris
+  SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<testsuites name="check" tests="4" failures="1" time="21.684">
+    <testsuite name="check (host)" tests="4" failures="1" time="21.684">
+        <testcase classname="check.Format" name="Format check" time="0.842"/>
+        <testcase classname="check.Host tests" name="shell crates, host tests" time="6.277">
+            <failure message="exit status 101" type="step">   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [1/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [2/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [3/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [4/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [5/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [6/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [7/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [8/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [9/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [10/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [11/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [12/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [13/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [14/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [15/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [16/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [17/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [18/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [19/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [20/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [21/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [22/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [23/24]
+   Compiling desk-shell v0.1.0 (shell/crates/desk-shell) [24/24]
+error[E0308]: mismatched types
+  --> shell/desk-gfx/src/fill.rs:33:9
+   |
+33 |         pixel == 0x0f
+   |         ^^^^^^^^^^^^^ expected `u8`, found `bool`
+
+error: could not compile `desk-gfx` (lib test) due to 1 previous error
+</failure>
+        </testcase>
+        <testcase classname="check.Targets" name="Build for i486-unknown-none" time="13.152"/>
+        <testcase classname="check.Targets" name="Build for i586-unknown-none" time="1.413"/>
+    </testsuite>
+</testsuites>

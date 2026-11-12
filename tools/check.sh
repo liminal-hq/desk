@@ -1,10 +1,10 @@
 #!/bin/bash
 # Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links, the CI scope table),
 # report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
-# rust (format, lints, host tests and cross builds of core/, hal/, shell/ and the spike workspaces checked on their own), dos (the
-# DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes), stdstubs (the e-std-stubs
-# spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks' frames compared, from
-# what shelldos and native left in dist/).
+# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/, and the spike workspaces
+# checked on their own), dos (the DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes),
+# stdstubs (the e-std-stubs spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks'
+# frames compared, from what shelldos and native left in dist/).
 # With NATIVE_EXTRA=1 it also runs the native boot test under Bochs as a 486, which needs Docker (not in the CI image).
 # INPUT_EXTRA=1 adds the mouse runs under Xvfb in Docker (spike B's and the shell's). JSDOS=1 adds the browser run of the s5-jsdos spike
 # (network, Node and Chromium needed).
@@ -29,7 +29,7 @@ cd "$(dirname "$0")/.."
 # The groups, in order, and the parts of the groups that have them. A group without parts is one unit.
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
 # shellcheck disable=SC2034 # read through parts()
-PARTS_rust="core hal shell module spikes"
+PARTS_rust="core hal shell module tools spikes"
 # shellcheck disable=SC2034 # read through parts()
 PARTS_dos="skeleton s1 d0 vga input"
 
@@ -44,6 +44,7 @@ rust       core       core/ format and lints
            hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
+           tools      tools/steps-junit/ (the step report converter the CI posts) format, lints and host tests
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
            s1         spike s1-dxe3: the modules built, loaded, called, crashed and unloaded
@@ -112,6 +113,20 @@ step() {
   [ -z "${CHECK_TIMES:-}" ] || printf 'start\t%s\t%s\t%s\n' "$(date +%s%3N)" "$CUR" "$1" >> "$CHECK_TIMES"
 }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+# host_tests: the host tests of the workspace in the current directory. cargo-nextest runs them where it is installed (the CI image
+# has it); with CI set it must be, because the `ci` profile's JUnit report (<workspace>/target/nextest/ci/junit.xml) goes to the pull
+# request. Doc-tests, which nextest does not run, follow. Without nextest (a laptop) cargo test runs everything, as before.
+ROOT=$PWD
+host_tests() {
+  if cargo nextest --version > /dev/null 2>&1; then
+    cargo nextest run --locked --config-file "$ROOT/.config/nextest.toml" --profile "$([ -n "${CI:-}" ] && echo ci || echo default)"
+    cargo test --doc --locked --quiet
+  else
+    [ -z "${CI:-}" ] || fail "cargo-nextest is missing (CI is set, so the host tests do not fall back to cargo test)"
+    cargo test --locked --quiet
+  fi
+}
 [ -z "${CHECK_TIMES:-}" ] || trap 'status=$?; printf "end\t%s\t%s\n" "$(date +%s%3N)" "$status" >> "$CHECK_TIMES"' EXIT
 
 # Each group's steps are in `if run GROUP [PART]; then` blocks whose bodies are not indented: a step at the start of a line runs whenever
@@ -157,7 +172,7 @@ if run rust hal; then
 step "HAL: host tests and no_std builds"
 (cd hal && cargo fmt --check)
 (cd hal && cargo clippy --locked --all-targets -- -D warnings)
-(cd hal && cargo test --locked --quiet)
+(cd hal && host_tests)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
@@ -167,7 +182,7 @@ if run rust shell; then
 step "Shell: host tests and no_std builds"
 (cd shell && cargo fmt --check)
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
-(cd shell && cargo test --locked --quiet)
+(cd shell && host_tests)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
@@ -178,9 +193,18 @@ if run rust module; then
 step "Module loader: host tests and no_std builds"
 (cd module && cargo fmt --check)
 (cd module && cargo clippy --locked --all-targets -- -D warnings)
-(cd module && DMD_REQUIRE_REAL_MODULE=1 cargo test --locked --quiet)
+(cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+fi
+
+# The converter that turns this script's step times and log into the JUnit report on the pull request (tools/steps-junit). Every CI job
+# builds and runs it after its checks, so its own tests run in this part.
+if run rust tools; then
+step "Step report converter: format, lints and host tests"
+(cd tools/steps-junit && cargo fmt --check)
+(cd tools/steps-junit && cargo clippy --locked --all-targets -- -D warnings)
+(cd tools/steps-junit && host_tests)
 fi
 
 if run report; then

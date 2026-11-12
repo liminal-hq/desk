@@ -4,8 +4,9 @@
 # boot test under QEMU, and the two tracks' frames compared from the artefacts of the last two. A last job, "CI passed", gathers the
 # results of all the others and is the one status to require.
 #
-# Every job writes its log and step times to dist/ci/ (check.log, check.times) so a later step can publish them as a results-<job>
-# artefact without changing the jobs; nothing publishes them yet.
+# Every job writes its log and step times to dist/ci/ (check.log, check.times), turns them into JUnit with tools/steps-junit and uploads
+# that, with cargo-nextest's JUnit where the job ran host tests, as a results-<job> artefact; the scope job uploads the event file.
+# publish-test-results.yml posts them on the pull request once this run has finished.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -79,6 +80,19 @@ jobs:
             echo '```'
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
+      # Read by publish-test-results.yml. A pull request's own token is read-only for fork and Dependabot pull requests, so the results
+      # are published from a workflow_run workflow, which runs with this repository's permissions; it reads this file only to choose
+      # among pull requests GitHub already matched to the run. Uploaded from the job that always runs, so a skipped group never loses it.
+      - name: Upload the event file
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: event-file
+          path: ${{ github.event_path }}
+          if-no-files-found: error
+          # A re-run uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   base:
     name: Licence headers, docs and the scope table
@@ -104,16 +118,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-base
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   report:
     name: Progress report and frame tools
@@ -136,16 +165,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-report
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   fonts:
     name: Fonts
@@ -173,16 +217,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-fonts
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   rust:
     name: ${{ matrix.title }}
@@ -196,9 +255,9 @@ jobs:
       # Every part of the group (tools/check.sh --units) is in exactly one leg; a test checks it.
       matrix:
         include:
-          - { groups: "rust:hal", title: "Rust: HAL" }
-          - { groups: "rust:shell", title: "Rust: shell" }
-          - { groups: "rust:core,rust:module,rust:spikes", title: "Rust: core, module and spike lints" }
+          - { key: hal, groups: "rust:hal", title: "Rust: HAL" }
+          - { key: shell, groups: "rust:shell", title: "Rust: shell" }
+          - { key: core, groups: "rust:core,rust:module,rust:tools,rust:spikes", title: "Rust: core, module, tools and spike lints" }
     env:
       CHECK_GROUPS: ${{ matrix.groups }}
       TITLE: ${{ matrix.title }}
@@ -217,16 +276,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-rust-${{ matrix.key }}
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   dos:
     name: ${{ matrix.title }}
@@ -240,8 +314,8 @@ jobs:
       # Every part of the group (tools/check.sh --units) is in exactly one leg; a test checks it.
       matrix:
         include:
-          - { groups: "dos:skeleton,dos:s1,dos:d0,dos:vga", title: "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe" }
-          - { groups: "dos:input", title: "DOS: b-dos-input" }
+          - { key: main, groups: "dos:skeleton,dos:s1,dos:d0,dos:vga", title: "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe" }
+          - { key: input, groups: "dos:input", title: "DOS: b-dos-input" }
     env:
       CHECK_GROUPS: ${{ matrix.groups }}
       TITLE: ${{ matrix.title }}
@@ -259,16 +333,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-dos-${{ matrix.key }}
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   stdstubs:
     name: Spike e-std-stubs
@@ -294,16 +383,31 @@ jobs:
         run: |
           mkdir -p dist/ci
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-stdstubs
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   shelldos:
     name: Shell on DOS
@@ -341,16 +445,31 @@ jobs:
           # A re-run of the job uploads the same name again; without this it fails.
           overwrite: true
           retention-days: 3
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-shelldos
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   native:
     name: Native boot in QEMU
@@ -386,16 +505,31 @@ jobs:
           # A re-run of the job uploads the same name again; without this it fails.
           overwrite: true
           retention-days: 3
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-native
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   compare:
     name: Both tracks compared
@@ -431,16 +565,31 @@ jobs:
       - name: tools/check.sh --groups compare
         id: check
         run: CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
-      - name: Job summary
+      # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
+      # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
+      - name: Step report
         if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
+        continue-on-error: true
         run: |
-          {
-            echo "## $TITLE"
-            echo "- Result: \`$OUTCOME\`"
-            echo "- Command: \`tools/check.sh --groups $CHECK_GROUPS\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p dist/ci/results
+          for ws in hal shell module tools/steps-junit; do
+            if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
+          done
+          cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
+          tools/steps-junit/target/release/steps-junit --times dist/ci/check.times --log dist/ci/check.log \
+            --suite "$TITLE" --junit dist/ci/results/steps.xml --summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: results-compare
+          path: dist/ci/results/
+          if-no-files-found: warn
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
+          retention-days: 7
 
   # The one status to require, named "CI passed". (The single job of the old workflow was named "check"; that status no longer
   # exists, so a branch protection rule that names it must be changed.) A job skipped by the scope counts as passing for a required status, so this job runs always() and

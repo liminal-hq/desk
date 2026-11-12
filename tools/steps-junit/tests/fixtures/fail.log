@@ -1,0 +1,10 @@
+check: groups: report
+
+== report: Unit tests
+ok
+
+== report: Frame tools: PNG, PPM
+== depth 8: this line looks like a step but belongs to the section
+== fontfile: the faces read the same
+tests/shell/first-window.sums: 3 lines
+FAIL: moved 8 differs from the golden
