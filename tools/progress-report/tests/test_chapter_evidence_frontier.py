@@ -126,7 +126,7 @@ class EvidenceChapterTests(unittest.TestCase):
             self.assertEqual(found.group(1).split(), names)
         if os.path.exists(os.path.join(gather.ROOT, ".github/workflows/ci.yml")):
             text = rd(".github/workflows/ci.yml")
-            for lst in re.findall(r'(?:CHECK_GROUPS:|groups:) "?([a-z:,]+)"?\s*$', text, flags=re.M):
+            for lst in re.findall(r'(?:CHECK_GROUPS:|groups:) "?([a-z0-9:,]+)"?\s*$', text, flags=re.M):
                 for u in lst.split(","):
                     self.assertTrue(u in units or u in names, f"ci.yml names '{u}', which tools/check.sh does not have")
 
@@ -161,8 +161,82 @@ class EvidenceChapterTests(unittest.TestCase):
         self.assertIn("pinned", rd(".github/workflows/ci.yml").lower() + "pinned")
         self.assertIn("ghcr.io/liminal-hq/ci-dos@sha256", rd(".github/workflows/ci.yml"))
 
-    def test_the_ci_job_runs_check_sh(self):
-        self.assertIn("run: tools/check.sh", rd(".github/workflows/ci.yml"))
+    def test_the_ci_runs_every_unit_of_check_sh_once(self):
+        ci = rd(".github/workflows/ci.yml")
+        units = subprocess.run(["bash", "tools/check.sh", "--units"], cwd=gather.ROOT, capture_output=True, text=True, check=True).stdout.split()
+        names = subprocess.run(["bash", "tools/check.sh", "--names"], cwd=gather.ROOT, capture_output=True, text=True, check=True).stdout.split()
+        # A job's CHECK_GROUPS, or a matrix leg's groups; a ${{ }} value is the matrix's and is read from its entries.
+        lists = re.findall(r'^\s+CHECK_GROUPS: ([a-z0-9:,]+)\s*$', ci, flags=re.M) + re.findall(r'\bgroups: "([a-z0-9:,]+)"', ci)
+        run = []
+        for lst in lists:
+            for u in lst.split(","):
+                run += [x for x in units if x == u or x.startswith(u + ":")] if u in names else [u]
+        self.assertEqual(sorted(run), sorted(units), "each unit of tools/check.sh runs in exactly one job")
+        for g in names:
+            self.assertIn("contains(needs.scope.outputs.groups, ',%s,')" % g, ci, g)
+        self.assertIn("needs: [scope, shelldos, native]", ci)
+        self.assertIn('tools/check.sh --groups "$CHECK_GROUPS"', ci)
+        # The aggregate job: the one status to require. It needs every other job, runs always(), reads the results through env:
+        # and fails on failure, cancelled, or a skip when scope did not succeed.
+        jobs = re.findall(r"(?m)^  ([a-z0-9-]+):\n", ci.split("\njobs:\n", 1)[1])
+        self.assertEqual(jobs[-1], "ci-passed", "the aggregate job is the last job")
+        agg = ci.split("\n  ci-passed:\n", 1)[1]
+        self.assertIn("    name: CI passed\n", agg)
+        self.assertIn("    runs-on: ubuntu-24.04\n", agg)
+        self.assertIn("    timeout-minutes: 5\n", agg)
+        self.assertIn("    if: always()\n", agg)
+        self.assertIn("    permissions: {}\n", agg)
+        self.assertNotIn("container:", agg)
+        self.assertIn("NEEDS: ${{ toJSON(needs) }}", agg)
+        needs = re.search(r"(?m)^    needs: \[([^\]]+)\]$", agg)
+        self.assertIsNotNone(needs)
+        self.assertEqual(sorted(x.strip() for x in needs.group(1).split(",")), sorted(j for j in jobs if j != "ci-passed"), "ci-passed needs every other job")
+        self.assertIn('scope=$(jq -r \'.scope.result\' <<< "$NEEDS")', agg)
+        self.assertIn("success) ;;", agg)
+        self.assertIn('skipped) if [ "$scope" != success ]; then', agg)
+        self.assertIn('*) echo "::error::$job: $result"; bad=1 ;;', agg)
+        self.assertIn('echo "::error::$job was skipped because scope did not succeed"; bad=1', agg)
+        self.assertIn('exit "$bad"', agg)
+        self.assertIn(">> \"$GITHUB_STEP_SUMMARY\"", agg)
+        scope = re.search(r'^ALL_GROUPS="([^"]+)"', rd("tools/ci-scope.sh"), flags=re.M)
+        check = re.search(r'^ALL_GROUPS="([^"]+)"', rd("tools/check.sh"), flags=re.M)
+        self.assertEqual(scope.group(1), check.group(1))
+
+    def test_the_ci_names_one_image_and_pins_its_actions(self):
+        ci = rd(".github/workflows/ci.yml")
+        images = re.findall(r"ghcr\.io/liminal-hq/ci-dos@sha256:[0-9a-f]{64}", ci)
+        self.assertGreaterEqual(len(images), 9)
+        self.assertEqual(len(set(images)), 1, "every job runs in the same pinned image")
+        self.assertEqual(len(re.findall(r"(?m)^\s+container: ", ci)), len(images), "every container is the image, none is a tag")
+        for use in re.findall(r"uses: (\S+)", ci):
+            self.assertRegex(use, r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", "actions are pinned to a commit")
+        self.assertEqual(ci.count("persist-credentials: false"), ci.count("actions/checkout@"))
+        # A failing check must fail its job, and a run must not cancel a push to main or a manual run.
+        self.assertNotIn("continue-on-error", ci)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", ci)
+        # Every job runs the group it is selected by: the command takes "$CHECK_GROUPS", and a job with a literal group has that
+        # group in its if: and its step name.
+        self.assertEqual(len(re.findall(r'tools/check\.sh --groups "\$CHECK_GROUPS"', ci)), 9, "each of the nine check jobs runs its CHECK_GROUPS")
+        for job in re.split(r"(?m)^  (?=[a-z]+:\n)", ci)[2:]:
+            m = re.search(r"(?m)^      CHECK_GROUPS: ([a-z]+)$", job)
+            if not m:
+                continue
+            g = m.group(1)
+            self.assertIn("contains(needs.scope.outputs.groups, ',%s,')" % g, job, g)
+            self.assertIn("- name: tools/check.sh --groups %s\n" % g, job, g)
+        # No expression is spliced into a script: a ${{ }} reaches a run: block only through env:.
+        block = None
+        for line in ci.splitlines():
+            indent = len(line) - len(line.lstrip())
+            if block is not None and line.strip() and indent <= block:
+                block = None
+            if block is not None:
+                self.assertNotIn("${{", line, line)
+            m = re.match(r"(\s*)(?:- )?run:\s*(.*)$", line)
+            if m:
+                self.assertNotIn("${{", m.group(2), line)
+                if m.group(2) in ("|", ">"):
+                    block = len(m.group(1)) + (2 if line.lstrip().startswith("- ") else 0)
 
 
 class FrontierChapterTests(unittest.TestCase):
