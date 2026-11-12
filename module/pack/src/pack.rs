@@ -122,6 +122,8 @@ pub enum CrossError {
     Format { which: char, error: FormatError },
     /// The first file could not be loaded at the second's link base.
     Load(String),
+    /// Both files are linked at this base, so loading one at the other's base moves nothing and proves nothing.
+    SameBase(u32),
     /// A header field that does not depend on the base differs.
     Layout { field: &'static str, a: u32, b: u32 },
     /// The first file, loaded at the second's link base, differs from the second at this image offset.
@@ -137,6 +139,10 @@ impl fmt::Display for CrossError {
         match self {
             CrossError::Format { which, error } => write!(f, "file {which} is not a valid image: {error}"),
             CrossError::Load(e) => write!(f, "the first file cannot be loaded at the second's link base: {e}"),
+            CrossError::SameBase(base) => write!(
+                f,
+                "both files are linked at {base:#x}: a cross check needs two different link bases, or it compares a file with itself"
+            ),
             CrossError::Layout { field, a, b } => write!(f, "the {field} differs: {a:#x} against {b:#x}"),
             CrossError::ImageDiffers { offset, a, b } => write!(
                 f,
@@ -159,6 +165,9 @@ pub fn cross(a: &[u8], b: &[u8]) -> Result<(), CrossError> {
     let ma = Module::parse(a, u16::MAX).map_err(|error| CrossError::Format { which: 'a', error })?;
     let mb = Module::parse(b, u16::MAX).map_err(|error| CrossError::Format { which: 'b', error })?;
     let (ha, hb) = (ma.header(), mb.header());
+    if ha.link_base == hb.link_base {
+        return Err(CrossError::SameBase(ha.link_base));
+    }
     let same: [(&'static str, u32, u32); 8] = [
         ("kind", ha.kind.into(), hb.kind.into()),
         ("image size", ha.file_size, hb.file_size),

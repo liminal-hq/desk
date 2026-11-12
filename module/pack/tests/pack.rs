@@ -198,8 +198,38 @@ fn two_links_of_one_module_agree() {
     let low = rebased(&a, 0x0010_0000);
     assert_eq!(cross(&a, &low), Ok(()));
     assert_eq!(cross(&low, &a), Ok(()));
-    // A file against itself.
-    assert_eq!(cross(&a, &a), Ok(()));
+}
+
+#[test]
+fn a_move_that_changes_the_middle_bytes_exercises_more_than_the_high_half() {
+    // A link base is a multiple of 4096, so a move never changes the low 12 bits of a word, but 0x35000 changes bytes 1 and 2 where
+    // a move of 0x400000 changes only byte 2 and the top (a loader that added to the high half alone would pass that one). Carries
+    // across the bytes are in it too, and the other direction.
+    let a = packed();
+    let moved = rebased(&a, BASE + 0x35000);
+    assert_eq!(cross(&a, &moved), Ok(()));
+    assert_eq!(cross(&moved, &a), Ok(()));
+    // A relocated word with any one of its four bytes wrong is caught, so the comparison covers every byte of every word.
+    let m = Module::parse(&moved, u16::MAX).unwrap();
+    let word = m.header().image_offset as usize + m.relocations().next().unwrap() as usize;
+    for byte in 0..4 {
+        let mut bad = moved.clone();
+        bad[word + byte] ^= 0x01;
+        match cross(&a, &resum(bad)) {
+            Err(CrossError::ImageDiffers { .. }) => {}
+            other => panic!("a wrong byte {byte} of a relocated word was not caught: {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn two_files_at_one_link_base_prove_nothing_and_are_refused() {
+    let a = packed();
+    assert_eq!(cross(&a, &a), Err(CrossError::SameBase(BASE)));
+    // A copy that differs only in its checksum is the same case: the base is what is compared, before anything else.
+    let b = rebased(&a, BASE);
+    assert_eq!(cross(&a, &b), Err(CrossError::SameBase(BASE)));
+    assert!(CrossError::SameBase(BASE).to_string().contains("0x400000"));
 }
 
 #[test]
@@ -390,6 +420,7 @@ fn every_cross_error_prints_one_line() {
             error: FormatError::BadMagic,
         },
         CrossError::Load("x".into()),
+        CrossError::SameBase(0x40_0000),
         CrossError::Layout {
             field: "start",
             a: 1,
