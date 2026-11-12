@@ -120,9 +120,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -165,9 +167,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -215,9 +219,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -272,9 +278,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -327,9 +335,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -375,9 +385,11 @@ jobs:
           CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -435,9 +447,11 @@ jobs:
           retention-days: 3
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -493,9 +507,11 @@ jobs:
           retention-days: 3
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do
@@ -551,9 +567,11 @@ jobs:
         run: CHECK_TIMES=dist/ci/check.times tools/check.sh --groups "$CHECK_GROUPS" 2>&1 | tee dist/ci/check.log
       # The step table for the job summary, and the JUnit that publish-test-results.yml posts on the pull request: one test case per step
       # of tools/check.sh (tools/steps-junit, built here from the checkout) and cargo-nextest's report of each workspace that ran
-      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them.
+      # host tests. The nextest files are copied first, so a converter that fails to build does not lose them. The step is non-fatal:
+      # a broken report shows as a failed step in the log and never changes the job's result, which the check decides.
       - name: Step report
         if: always()
+        continue-on-error: true
         run: |
           mkdir -p dist/ci/results
           for ws in hal shell module tools/steps-junit; do

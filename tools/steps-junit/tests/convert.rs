@@ -269,6 +269,17 @@ fn xml_is_escaped_and_forbidden_characters_are_removed() {
 }
 
 #[test]
+fn c1_controls_and_unicode_line_separators_are_dropped() {
+    let times = "start\t0\tg\tt\u{85}itle\u{2028}x\nend\t5\t1\n";
+    let x = run("s\u{9f}uite", times, "== g: t\u{85}itle\u{2028}x\nbo\u{80}dy\u{2029}end\n").to_junit();
+    for bad in ['\u{80}', '\u{85}', '\u{9f}', '\u{2028}', '\u{2029}'] {
+        assert!(!x.contains(bad), "{bad:?} in {x}");
+    }
+    assert!(x.contains("name=\"suite\"") && x.contains("name=\"titlex\""), "{x}");
+    assert!(x.contains("body"), "{x}");
+}
+
+#[test]
 fn ansi_sequences_and_a_non_utf8_byte_are_handled() {
     assert_eq!(
         clean("\u{1b}[1;32mok\u{1b}[0m \u{1b}]0;title\u{7}done \u{1b}]8;;x\u{1b}\\end"),

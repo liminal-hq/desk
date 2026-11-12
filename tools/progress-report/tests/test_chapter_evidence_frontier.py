@@ -226,7 +226,14 @@ class EvidenceChapterTests(unittest.TestCase):
             self.assertRegex(use, r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", "actions are pinned to a commit")
         self.assertEqual(ci.count("persist-credentials: false"), ci.count("actions/checkout@"))
         # A failing check must fail its job, and a run must not cancel a push to main or a manual run.
-        self.assertNotIn("continue-on-error", ci)
+        # Only the report steps may be non-fatal: a failing check must fail its job.
+        steps = re.split(r"\n      - ", ci)[1:]
+        for step in steps:
+            if step.startswith("name: Step report\n"):
+                self.assertIn("\n        continue-on-error: true\n", step)
+            else:
+                self.assertNotIn("continue-on-error", step, step.splitlines()[0])
+        self.assertEqual(ci.count("continue-on-error"), 9, "only the nine Step report steps")
         self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", ci)
         # Every job runs the group it is selected by: the command takes "$CHECK_GROUPS", and a job with a literal group has that
         # group in its if: and its step name.
@@ -253,7 +260,7 @@ class EvidenceChapterTests(unittest.TestCase):
             ("dos", "results-dos-${{ matrix.key }}"),
         ]:
             body = by_id[job]
-            self.assertIn("      - name: Step report\n        if: always()\n        run: |\n", body, job)
+            self.assertIn("      - name: Step report\n        if: always()\n        continue-on-error: true\n        run: |\n", body, job)
             self.assertIn("--suite \"$TITLE\" --junit dist/ci/results/steps.xml --summary >> \"$GITHUB_STEP_SUMMARY\"", body, job)
             self.assertIn("cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml", body, job)
             self.assertIn("--times dist/ci/check.times --log dist/ci/check.log", body, job)

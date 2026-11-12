@@ -307,6 +307,8 @@ fn escape(s: &str, attribute: bool) -> String {
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&apos;"),
             '\n' | '\t' if attribute => out.push(' '),
+            // Legal in XML, but the C1 controls and the Unicode line and paragraph separators can disturb how a comment renders.
+            '\u{80}'..='\u{9f}' | '\u{2028}' | '\u{2029}' => {}
             c => out.push(c),
         }
     }
