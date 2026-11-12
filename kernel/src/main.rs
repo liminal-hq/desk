@@ -131,8 +131,11 @@ impl TestMode {
     }
 }
 
+/// # Safety
+///
+/// Called once, only by the start-up stub, with the address of the loader's boot-info block.
 #[no_mangle]
-pub extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
+pub unsafe extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
     serial::init();
     console::init();
     println!("Desk native kernel {} (i486)", env!("CARGO_PKG_VERSION"));
