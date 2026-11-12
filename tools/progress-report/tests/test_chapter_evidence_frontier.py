@@ -102,6 +102,23 @@ class EvidenceChapterTests(unittest.TestCase):
             ).stdout.split()
 
         names, units = check_sh("--names"), check_sh("--units")
+        # --list is hand-written text: every group and every part of the script must have a line in it, and no other.
+        listed, current = [], None
+        for line in subprocess.run(
+            ["bash", "tools/check.sh", "--list"], cwd=gather.ROOT, check=True, capture_output=True, text=True
+        ).stdout.splitlines():
+            first = line.split()[0]
+            if not line[0].isspace() and first in names:
+                current = first
+                words = line.split()
+                if first in {u.split(":")[0] for u in units if ":" in u}:
+                    listed.append(f"{first}:{words[1]}")
+                else:
+                    listed.append(first)
+            else:
+                self.assertIsNotNone(current, line)
+                listed.append(f"{current}:{first}")
+        self.assertEqual(listed, units, "--list names every group and part, in order")
         # The CI scope script and the workflow name the same groups; each is held to tools/check.sh once it exists.
         if os.path.exists(os.path.join(gather.ROOT, "tools/ci-scope.sh")):
             found = re.search(r'^ALL_GROUPS="([^"]+)"', rd("tools/ci-scope.sh"), flags=re.M)
@@ -112,6 +129,24 @@ class EvidenceChapterTests(unittest.TestCase):
             for lst in re.findall(r'(?:CHECK_GROUPS:|groups:) "?([a-z:,]+)"?\s*$', text, flags=re.M):
                 for u in lst.split(","):
                     self.assertTrue(u in units or u in names, f"ci.yml names '{u}', which tools/check.sh does not have")
+
+    def test_check_sh_rejects_bad_group_lists(self):
+        for args in (
+            ["--groups", "base,base,"],
+            ["--groups", ",base"],
+            ["--groups", "base,,rust"],
+            ["--groups=base,base"],
+            ["--groups", "rust:hal,rust:hal"],
+            ["--groups", "base", "--groups", "rust"],
+            ["--groups", "nope"],
+            ["--groups", "rust:nope"],
+            ["--groups", ""],
+            ["--groups"],
+        ):
+            r = subprocess.run(["bash", "tools/check.sh", *args], cwd=gather.ROOT, capture_output=True, text=True)
+            self.assertEqual(r.returncode, 2, args)
+            self.assertTrue(r.stderr.startswith("check: "), args)
+            self.assertNotIn("check: groups:", r.stdout, args)
 
     def test_the_numbers_it_quotes_are_the_ones_in_the_files(self):
         sums = rd("tests/shell/first-window.sums")

@@ -21,7 +21,8 @@
 #        NATIVE_EXTRA=1 tools/check.sh       (adds the Bochs run)
 #
 # CHECK_TIMES=FILE appends one line per step (`start`, milliseconds, group, title) and one at the end (`end`, milliseconds, exit
-# status), tab-separated, for the CI's step report (tools/steps-junit).
+# status), tab-separated, for the CI's step report (tools/steps-junit). A relative FILE resolves against the repository root, since the
+# script changes into it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -57,6 +58,7 @@ LIST
 }
 
 SELECTED=all
+GROUPS_GIVEN=
 while [ $# -gt 0 ]; do
   case "$1" in
     --list) list_groups; exit 0 ;;
@@ -66,16 +68,27 @@ while [ $# -gt 0 ]; do
         if [ -n "$(parts "$g")" ]; then for p in $(parts "$g"); do echo "$g:$p"; done; else echo "$g"; fi
       done
       exit 0 ;;
-    --groups) [ $# -ge 2 ] || { echo "check: --groups needs a list (try --list)" >&2; exit 2; }; SELECTED="$2"; shift 2 ;;
-    --groups=*) SELECTED="${1#--groups=}"; shift ;;
+    --groups)
+      [ $# -ge 2 ] || { echo "check: --groups needs a list (try --list)" >&2; exit 2; }
+      [ -z "$GROUPS_GIVEN" ] || { echo "check: --groups given twice (join the lists with commas)" >&2; exit 2; }
+      GROUPS_GIVEN=1; SELECTED="$2"; shift 2 ;;
+    --groups=*)
+      [ -z "$GROUPS_GIVEN" ] || { echo "check: --groups given twice (join the lists with commas)" >&2; exit 2; }
+      GROUPS_GIVEN=1; SELECTED="${1#--groups=}"; shift ;;
     -h | --help) sed -n '/^# usage/,/^set -e/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     *) echo "check: unknown argument '$1' (try --list)" >&2; exit 2 ;;
   esac
 done
 if [ "$SELECTED" != all ]; then
   [ -n "$SELECTED" ] || { echo "check: --groups needs a list (try --list)" >&2; exit 2; }
+  case ",$SELECTED," in
+    *,,*) echo "check: --groups has an empty item in '$SELECTED' (try --list)" >&2; exit 2 ;;
+  esac
   IFS=, read -r -a picked <<< "$SELECTED"
+  seen_units=","
   for u in "${picked[@]}"; do
+    case "$seen_units" in *",$u,"*) echo "check: --groups names '$u' twice" >&2; exit 2 ;; esac
+    seen_units="$seen_units$u,"
     g="${u%%:*}"
     case " all $ALL_GROUPS " in *" $g "*) ;; *) echo "check: unknown group '$g' (try --list)" >&2; exit 2 ;; esac
     if [ "$u" != "$g" ]; then
