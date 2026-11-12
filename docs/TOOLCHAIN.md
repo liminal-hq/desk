@@ -35,6 +35,7 @@ The versions and SHA-256 sums of the three DOS tools are those of the `ci-dos` s
 ```bash
 tools/setup.sh     # once: checks host tools, installs the pinned Rust pieces, links or downloads vendor/
 tools/check.sh     # headers, docs, Rust format and lints, build, headless run, panic run
+tools/check.sh --groups rust:hal,dos   # only the named groups or parts; --list names them
 ```
 
 Individual steps:
