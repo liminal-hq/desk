@@ -1,0 +1,21 @@
+kind          module (.DMD)
+abi           i486 flat
+sdk           1
+header size   96
+flags         0x0
+link base     0x00400000
+alignment     16
+file size     {N:2000..20000}
+image bytes   {N:1000..20000}
+memory bytes  {N:1000..20000}
+read-only     {N:500..16000}
+start         {HEX}
+event         0x0
+stop          {HEX}
+relocations   {N:1..2000}
+imports       2
+exports       0
+strings       20
+crc           {HEX}
+  import desk_log at {HEX}
+  import desk_panic at {HEX}
