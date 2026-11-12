@@ -1,0 +1,23 @@
+# steps-junit: turns the step times and log of one `tools/check.sh` run into JUnit XML for the pull request's report.
+#
+# A workspace of its own, like the other tools and spikes, so the repository's workspaces do not build it and it builds on the host
+# alone. std, no external crates: JUnit is a few elements and five escapes.
+[workspace]
+members = ["."]
+resolver = "2"
+
+[package]
+name = "steps-junit"
+description = "Converts the step times and log of a tools/check.sh run into JUnit XML (the `steps` flavour of pr-results)"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[lib]
+name = "steps_junit"
+path = "src/lib.rs"
+
+[[bin]]
+name = "steps-junit"
+path = "src/main.rs"
