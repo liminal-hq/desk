@@ -23,7 +23,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a pull request's superseded run is cancelled; a push to main or a manual run finishes, so main always has a full result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -336,6 +337,8 @@ jobs:
           name: frames-dos
           path: dist/ci/frames-dos.tar
           if-no-files-found: error
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
           retention-days: 3
       - name: Job summary
         if: always()
@@ -379,6 +382,8 @@ jobs:
           name: frames-native
           path: dist/ci/frames-native.tar
           if-no-files-found: error
+          # A re-run of the job uploads the same name again; without this it fails.
+          overwrite: true
           retention-days: 3
       - name: Job summary
         if: always()

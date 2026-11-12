@@ -191,6 +191,19 @@ class EvidenceChapterTests(unittest.TestCase):
         for use in re.findall(r"uses: (\S+)", ci):
             self.assertRegex(use, r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", "actions are pinned to a commit")
         self.assertEqual(ci.count("persist-credentials: false"), ci.count("actions/checkout@"))
+        # A failing check must fail its job, and a run must not cancel a push to main or a manual run.
+        self.assertNotIn("continue-on-error", ci)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", ci)
+        # Every job runs the group it is selected by: the command takes "$CHECK_GROUPS", and a job with a literal group has that
+        # group in its if: and its step name.
+        self.assertEqual(len(re.findall(r'tools/check\.sh --groups "\$CHECK_GROUPS"', ci)), 9, "each of the nine check jobs runs its CHECK_GROUPS")
+        for job in re.split(r"(?m)^  (?=[a-z]+:\n)", ci)[2:]:
+            m = re.search(r"(?m)^      CHECK_GROUPS: ([a-z]+)$", job)
+            if not m:
+                continue
+            g = m.group(1)
+            self.assertIn("contains(needs.scope.outputs.groups, ',%s,')" % g, job, g)
+            self.assertIn("- name: tools/check.sh --groups %s\n" % g, job, g)
         # No expression is spliced into a script: a ${{ }} reaches a run: block only through env:.
         block = None
         for line in ci.splitlines():
