@@ -9,3 +9,6 @@ version = "0.0.0"
 [[package]]
 name = "dmdpack"
 version = "0.0.0"
+dependencies = [
+ "desk-module",
+]
