@@ -1,0 +1,25 @@
+# pr-results settings for Desk: one comment, and a check run each for the step results and the Rust host tests, read from the
+# results-<job> artefacts that every job of ci.yml uploads (tools/steps-junit's steps.xml and cargo-nextest's nextest-*.xml).
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+schema = 1
+title = "Desk"
+
+# One test case per step of tools/check.sh. Required: a run that uploaded no step results is a failure, not a neutral check.
+[[suite]]
+name = "Check steps"
+check = "Desk steps"
+artifact = "results-*"
+files = ["**/steps.xml"]
+flavour = "steps"
+required = true
+
+# The host tests of the HAL, the shell, the module loader and the step report converter.
+[[suite]]
+name = "Rust tests"
+check = "Desk Rust tests"
+artifact = "results-*"
+files = ["**/nextest-*.xml"]
+flavour = "nextest"

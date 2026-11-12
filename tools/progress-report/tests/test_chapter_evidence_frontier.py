@@ -202,6 +202,20 @@ class EvidenceChapterTests(unittest.TestCase):
         check = re.search(r'^ALL_GROUPS="([^"]+)"', rd("tools/check.sh"), flags=re.M)
         self.assertEqual(scope.group(1), check.group(1))
 
+    def assert_no_expression_in_run(self, text):
+        block = None
+        for line in text.splitlines():
+            indent = len(line) - len(line.lstrip())
+            if block is not None and line.strip() and indent <= block:
+                block = None
+            if block is not None:
+                self.assertNotIn("${{", line, line)
+            m = re.match(r"(\s*)(?:- )?run:\s*(.*)$", line)
+            if m:
+                self.assertNotIn("${{", m.group(2), line)
+                if m.group(2) in ("|", ">"):
+                    block = len(m.group(1)) + (2 if line.lstrip().startswith("- ") else 0)
+
     def test_the_ci_names_one_image_and_pins_its_actions(self):
         ci = rd(".github/workflows/ci.yml")
         images = re.findall(r"ghcr\.io/liminal-hq/ci-dos@sha256:[0-9a-f]{64}", ci)
@@ -225,18 +239,115 @@ class EvidenceChapterTests(unittest.TestCase):
             self.assertIn("contains(needs.scope.outputs.groups, ',%s,')" % g, job, g)
             self.assertIn("- name: tools/check.sh --groups %s\n" % g, job, g)
         # No expression is spliced into a script: a ${{ }} reaches a run: block only through env:.
-        block = None
-        for line in ci.splitlines():
-            indent = len(line) - len(line.lstrip())
-            if block is not None and line.strip() and indent <= block:
-                block = None
-            if block is not None:
-                self.assertNotIn("${{", line, line)
-            m = re.match(r"(\s*)(?:- )?run:\s*(.*)$", line)
-            if m:
-                self.assertNotIn("${{", m.group(2), line)
-                if m.group(2) in ("|", ">"):
-                    block = len(m.group(1)) + (2 if line.lstrip().startswith("- ") else 0)
+        self.assert_no_expression_in_run(ci)
+    def test_every_job_uploads_its_results_and_the_scope_job_the_event_file(self):
+        ci = rd(".github/workflows/ci.yml")
+        upload = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2"
+        jobs = [j for j in re.split(r"(?m)^  (?=[a-z0-9-]+:\n)", ci.split("\njobs:\n", 1)[1]) if j.strip()]
+        by_id = {j.split(":", 1)[0]: j for j in jobs}
+        self.assertEqual(list(by_id), ["scope", "base", "report", "fonts", "rust", "dos", "stdstubs", "shelldos", "native", "compare", "ci-passed"])
+        # Every check job: the converter runs after the check, whatever the check's result, and the results are uploaded under a name of
+        # its own (a matrix leg adds its key).
+        for job, name in [(j, "results-" + j) for j in by_id if j not in ("scope", "ci-passed", "rust", "dos")] + [
+            ("rust", "results-rust-${{ matrix.key }}"),
+            ("dos", "results-dos-${{ matrix.key }}"),
+        ]:
+            body = by_id[job]
+            self.assertIn("      - name: Step report\n        if: always()\n        run: |\n", body, job)
+            self.assertIn("--suite \"$TITLE\" --junit dist/ci/results/steps.xml --summary >> \"$GITHUB_STEP_SUMMARY\"", body, job)
+            self.assertIn("cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml", body, job)
+            self.assertIn("--times dist/ci/check.times --log dist/ci/check.log", body, job)
+            self.assertIn("nextest/ci/junit.xml", body, job)
+            tail = body.split("      - name: Upload the results\n", 1)[1]
+            self.assertTrue(
+                tail.startswith("        if: always()\n        uses: %s\n        with:\n          name: %s\n          path: dist/ci/results/\n" % (upload, name)),
+                job,
+            )
+            self.assertIn("          retention-days: 7\n", tail, job)
+            self.assertLess(body.index("name: Step report"), body.index("name: Upload the results"), job)
+            self.assertLess(body.index("--groups \"$CHECK_GROUPS\""), body.index("name: Step report"), job)
+        # A matrix leg's key is unique within its job, so no two legs upload the same artefact.
+        for job in ("rust", "dos"):
+            keys = re.findall(r"- \{ key: ([a-z]+), groups:", by_id[job])
+            self.assertEqual(len(keys), len(set(keys)), job)
+            self.assertEqual(len(keys), len(re.findall(r"- \{ .*groups:", by_id[job])), "every leg has a key")
+        # The event file, once, from the job that always runs, and only that job.
+        self.assertEqual(ci.count("name: event-file"), 1)
+        scope = by_id["scope"]
+        self.assertIn(
+            "      - name: Upload the event file\n        if: always()\n        uses: %s\n        with:\n          name: event-file\n"
+            "          path: ${{ github.event_path }}\n" % upload,
+            scope,
+        )
+        # Every artefact the workflow uploads is one the publisher reads or one the comparison job downloads.
+        names = re.findall(r"(?m)^          name: (.+)$", ci)
+        results = [n for n in names if n.startswith("results-")]
+        self.assertEqual(len(results), 9, "one results upload per check job")
+        self.assertEqual(len(results), len(set(results)), "no two jobs upload the same artefact")
+        for n in names:
+            self.assertTrue(n.startswith(("results-", "frames-")) or n == "event-file", n)
+        # The aggregate job needs every job that uploads (a new job id would have to be listed there too).
+        needs = re.search(r"(?m)^    needs: \[([^\]]+)\]$", by_id["ci-passed"]).group(1)
+        self.assertEqual(sorted(x.strip() for x in needs.split(",")), sorted(j for j in by_id if j != "ci-passed"))
+
+    def test_the_publisher_runs_only_the_default_branch_with_four_permissions(self):
+        pub = rd(".github/workflows/publish-test-results.yml")
+        ci = rd(".github/workflows/ci.yml")
+        # The trigger: a finished run of the workflow named CI. No pull_request_target, and the zizmor exception is explained.
+        self.assertRegex(ci, r"(?m)^name: CI$")
+        self.assertIn(
+            "on:\n  # zizmor: ignore[dangerous-triggers] This is the publisher the design needs: it holds the write token but runs only the "
+            "default\n  # branch's code, reads the run's artefacts as untrusted data and never checks out a pull request.\n"
+            "  workflow_run:\n    workflows: [CI]\n    types: [completed]\n",
+            pub,
+        )
+        self.assertEqual(pub.count("zizmor: ignore"), 1)
+        self.assertNotIn("pull_request_target", pub)
+        self.assertNotRegex(pub, r"(?m)^  (pull_request|push|workflow_dispatch):")
+        # No token at the top, and exactly the four permissions on the one job.
+        self.assertRegex(pub, r"(?m)^permissions: \{\}$")
+        top = re.findall(r"(?m)^permissions:.*$", pub)
+        self.assertEqual(top, ["permissions: {}"])
+        job_perms = re.search(r"(?m)^    permissions:\n((?:      [a-z-]+: [a-z]+.*\n)+)", pub)
+        self.assertIsNotNone(job_perms)
+        got = dict(re.findall(r"^      ([a-z-]+): ([a-z]+)", job_perms.group(1), flags=re.M))
+        self.assertEqual(got, {"actions": "read", "checks": "write", "pull-requests": "write", "contents": "read"})
+        self.assertEqual(len(re.findall(r"(?m)^[ ]+permissions:", pub)), 1, "one job, one permissions block")
+        self.assertIn("    if: github.event.workflow_run.conclusion != 'skipped' && github.event.workflow_run.conclusion != 'cancelled'\n", pub)
+        self.assertIn("concurrency:\n  group: pr-results-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}\n"
+                      "  cancel-in-progress: false\n", pub)
+        # The checkout: the default branch only, no credentials, and nothing else from the pull request is checked out or run.
+        self.assertEqual(pub.count("actions/checkout@"), 1)
+        self.assertIn("          ref: ${{ github.event.repository.default_branch }}\n          sparse-checkout: .github\n          persist-credentials: false\n", pub)
+        for line in re.findall(r"(?m)^\s+ref: .*$", pub):
+            self.assertIn("default_branch", line)
+        for bad in ("head_sha", "head_ref", "refs/pull", "pull_request.head", "event.workflow_run.head_commit", "pull_request.number"):
+            self.assertNotIn(bad, pub, bad)
+        # Every action is pinned by commit, and pr-results by the commit of v0.1.0 with the version in a comment.
+        for use in re.findall(r"uses: (\S+)", pub):
+            self.assertRegex(use, r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", "actions are pinned to a commit")
+        self.assertIn("uses: liminal-hq-labs/pr-results@8afc480363b3c8f09a4db221d1c4814415ab6eb2 # v0.1.0\n", pub)
+        self.assertEqual(len(re.findall(r"(?m)^ +- name:", pub)), 2, "the checkout and the publish step, nothing else")
+        self.assertIn("          command: publish\n", pub)
+        self.assertNotIn("build: source", pub, "the release binary, checked against its digest")
+        self.assertNotIn("continue-on-error", pub)
+        self.assert_no_expression_in_run(pub)
+        # Its settings: two suites that read the artefacts every job uploads; the step results are required.
+        toml = rd(".github/pr-results.toml")
+        self.assertIn('schema = 1\ntitle = "Desk"\n', toml)
+        suites = toml.split("[[suite]]\n")[1:]
+        self.assertEqual(len(suites), 2)
+        self.assertIn('artifact = "results-*"\nfiles = ["**/steps.xml"]\nflavour = "steps"\nrequired = true\n', suites[0])
+        self.assertIn('artifact = "results-*"\nfiles = ["**/nextest-*.xml"]\nflavour = "nextest"\n', suites[1])
+        self.assertNotIn("required", suites[1])
+        checks = re.findall(r'(?m)^check = "([^"]+)"$', toml)
+        self.assertEqual(checks, ["Desk steps", "Desk Rust tests"])
+        # A check run must not share a name with a job of the CI.
+        jobs = set(re.findall(r"(?m)^    name: (.+)$", ci)) | set(re.findall(r'title: "([^"]+)"', ci))
+        for c in checks:
+            self.assertNotIn(c, jobs)
+        # The files the Rust jobs upload are the ones the second suite reads.
+        self.assertIn('"dist/ci/results/nextest-${ws//\\//-}.xml"', ci)
 
 
 class FrontierChapterTests(unittest.TestCase):
