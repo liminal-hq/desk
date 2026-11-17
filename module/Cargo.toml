@@ -7,7 +7,7 @@
 # stays the host's. `dmdpack` is `std`, runs on the host only and is not built for those targets. `mods/` and `dos/` have their own
 # workspaces, because their default target is not the host's.
 [workspace]
-members = ["format", "pack"]
+members = ["format", "pack", "guest"]
 exclude = ["mods", "dos"]
 resolver = "2"
 

@@ -1,0 +1,3 @@
+Desk loadable image, version 1, module (.DMD), i486 flat, SDK 1, 96-byte header
+Desk loadable image, version 1, application (.DKX), i486 flat, SDK 1, 96-byte header
+data

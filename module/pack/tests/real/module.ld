@@ -13,7 +13,7 @@ SECTIONS
     .text : { *(.text .text.*) }
     .rodata : ALIGN(4) { *(.rodata .rodata.*) }
 
-    . = ALIGN(0x1000);
+    . = ALIGN(16);
     .desk.imp : ALIGN(4) { KEEP(*(.desk.imp)) }
     .data : ALIGN(4) { *(.data .data.*) }
     .bss : ALIGN(4) { *(.bss .bss.*) *(COMMON) }

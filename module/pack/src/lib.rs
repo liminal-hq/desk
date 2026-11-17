@@ -1,12 +1,15 @@
-// The module packer's library: a strict reader of the ELF files `rust-lld` links for Desk modules and applications.
+// The module packer's library: a strict reader of the ELF files `rust-lld` links for Desk modules and applications, and the packing
+// of what it reads into the container.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 #![forbid(unsafe_code)]
 
 pub mod elf;
+pub mod pack;
 
 pub use elf::{read, ElfError, Extract};
+pub use pack::{cross, info, kind_name, pack, CrossError, PackError};
 
 /// The kind of a module (`.DMD`): `app_start`, with `app_event` and `app_stop` optional.
 pub const KIND_MODULE: u16 = 1;

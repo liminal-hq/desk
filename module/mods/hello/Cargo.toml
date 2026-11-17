@@ -1,0 +1,17 @@
+[package]
+name = "hello"
+description = "The first module: two lines from app_start, one from app_stop, and a counter in its own statics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+desk-guest = { path = "../../guest" }
+
+[[bin]]
+name = "hello"
+path = "src/main.rs"
+test = false
+bench = false

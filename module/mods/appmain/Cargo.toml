@@ -1,0 +1,17 @@
+[package]
+name = "appmain"
+description = "The first application: a desk_main that logs a line. Packed as a .DKX, which the spike's loaders refuse"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+desk-guest = { path = "../../guest" }
+
+[[bin]]
+name = "appmain"
+path = "src/main.rs"
+test = false
+bench = false
