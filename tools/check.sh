@@ -196,6 +196,12 @@ step "Module loader: host tests and no_std builds"
 (cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
 (cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+
+# The test modules built for the module target, packed and compared with their expected description, relocation proved by a second and
+# a third link base, a reproducible build, the instruction scan and the negative runs. Needs the network (or a warm cargo home) for
+# -Zbuild-std, and objdump, strings, gcc and file, which the CI image has. See docs/LOADER.md.
+step "Module loader: test modules built, packed, relocated and compared, and the negative runs"
+tools/check-modules.sh
 fi
 
 # The converter that turns this script's step times and log into the JUnit report on the pull request (tools/steps-junit). Every CI job

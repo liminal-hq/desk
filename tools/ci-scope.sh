@@ -88,6 +88,13 @@ RULES=(
   # specification, a path the kernel rules above already send to rust). module/mods and module/dos are excluded from the workspace and
   # will be built for the native and DOS tracks: give them rules of their own when those directories exist.
   'module/*;report,rust;module/format/src/lib.rs'
+  # The module loader's checks (tools/check.sh's rust:module part runs tools/check-modules.sh): the build script, the expected transcripts,
+  # the file(1) magic for the container and the transcript checker, which the native test shares.
+  'tools/check-modules.sh;report,rust;tools/check-modules.sh'
+  'tools/build-modules.sh;report,rust;tools/build-modules.sh'
+  'tools/desk.magic;report,rust;tools/desk.magic'
+  'tools/native-check.py;report,rust,native,compare;tools/native-check.py'
+  'tests/module/*;report,rust;tests/module/hello-info.txt'
   # The hosted track's skeleton and its build tools.
   'core/*;report,rust,dos;core/src/lib.rs'
   'c/*;report,dos;c/main.c'
@@ -130,7 +137,6 @@ RULES=(
   'tools/check-jsdos.sh;report;tools/check-jsdos.sh'
   'tools/docker/*;report;tools/docker/Dockerfile.native-bochs'
   'tools/86box/*;report;tools/86box/86box.cfg'
-  'tools/desk.magic;report;tools/desk.magic'
   'tools/build-*;report;tools/build-runtime-presentation.py'
 )
 
@@ -228,7 +234,8 @@ self_test() {
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs
-  expect base,report,rust module/pack/tests/real.rs module/Cargo.lock
+  expect base,report,rust module/pack/tests/real.rs module/Cargo.lock module/mods/module.ld module/guest/src/lib.rs
+  expect base,report,rust tools/check-modules.sh tools/build-modules.sh tests/module/file-magic.txt tools/desk.magic
   expect base,report,shelldos,native,compare tools/shell-compare.sh
   expect base,report,shelldos,native,compare kernel/src/main.rs boot/stage1.asm
   expect base,report,fonts fonts/src/emoji/README.txt
