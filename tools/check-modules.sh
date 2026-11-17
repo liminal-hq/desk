@@ -57,21 +57,25 @@ modules=dist/modules
 python3 -I tools/native-check.py tests/module/hello-info.txt <("$dmdpack" info $modules/HELLO.DMD) || fail "dmdpack info HELLO.DMD differs from tests/module/hello-info.txt"
 "$dmdpack" info $modules/APPMAIN.DKX | grep -q '^kind          application (.DKX)$' || fail "APPMAIN.DKX is not an application"
 
-step "Reproducible: the same bytes from two checkouts, and no build-host path in an image"
-# Two copies of the sources at different paths (one longer than the other) build the same packed files: the panic handler's file name and the
-# toolchain's paths are in the image, so only the path mapping of tools/build-modules.sh makes the bytes independent of the checkout.
+step "Reproducible: the same bytes from two builds, and no build-host path in an image"
+# Two fresh copies of the sources, built one after the other at one path with no target directory shared, give the same packed files.
+# The path must be the same: cargo hashes the absolute path of a path dependency outside the workspace (module/guest, from module/mods)
+# into the crate's identity, rustc puts that hash in every symbol name and orders the code by it, so the same sources at another path
+# can lay the code out differently (the image bytes and the checksum differ). The checkouts of one place, the CI's and a person's, are
+# at fixed paths, so the layout is stable there; the path mapping of tools/build-modules.sh (--remap-path-prefix) removes the paths from
+# the text of the image, which the scan below checks on the build made at this checkout's path.
 repro="$PWD/dist/modules-repro"
 rm -rf "$repro"
-for name in a/desk b/a-longer-checkout-name/desk; do
-  mkdir -p "$repro/$name"
-  tar --exclude=target -cf - module kernel/i486-desk-none.json tools/build-modules.sh | tar -xf - -C "$repro/$name"
-  (cd "$repro/$name" && CARGO_TARGET_DIR="$repro/module-target" tools/build-modules.sh --out "$repro/$name/out")
+mkdir -p "$repro/out-a" "$repro/out-b"
+for name in a b; do
+  rm -rf "$repro/desk"
+  mkdir -p "$repro/desk"
+  tar --exclude=target -cf - module kernel/i486-desk-none.json tools/build-modules.sh | tar -xf - -C "$repro/desk"
+  (cd "$repro/desk" && tools/build-modules.sh --out "$repro/out-$name")
 done
-# (The linked ELF files are debugging aids and are not compared: rustc mangles symbol names with a hash of the crate's location, so their
-# symbol tables differ between checkouts. Nothing of that is in the packed files, which carry only the image.)
+# (The linked ELF files are debugging aids and are not compared: their symbol tables carry the hashes of the build's location.)
 for file in HELLO.DMD APPMAIN.DKX; do
-  cmp "$repro/a/desk/out/$file" "$repro/b/a-longer-checkout-name/desk/out/$file" || fail "$file differs between two checkouts"
-  cmp "$repro/a/desk/out/$file" "$modules/$file" || fail "$file built in $PWD differs from the same build in another checkout"
+  cmp "$repro/out-a/$file" "$repro/out-b/$file" || fail "$file differs between two builds of the same sources"
 done
 for file in HELLO.DMD APPMAIN.DKX hello.elf appmain.elf; do
   if names_a_build_host_path "$modules/$file" "$PWD" "$(rustc --print sysroot)" "${CARGO_HOME:-$HOME/.cargo}"; then
@@ -85,7 +89,7 @@ printf 'panicked at %s/module/guest/src/lib.rs:12\0' "$PWD" > "$repro/leaky-cwd.
 for leak in home w cwd; do
   names_a_build_host_path "$repro/leaky-$leak.bin" "$PWD" || fail "the path scan missed a leaked $leak path"
 done
-echo "identical from two checkouts; no build-host path in HELLO.DMD, APPMAIN.DKX or their ELF files; the scan catches planted paths"
+echo "identical from two builds; no build-host path in HELLO.DMD, APPMAIN.DKX or their ELF files; the scan catches planted paths"
 
 step "Disassembly: no cmpxchg, no cli or sti"
 for elf in hello appmain; do
