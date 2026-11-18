@@ -109,7 +109,7 @@ RULES=(
   'spikes/d0-rust-dos/link.ld;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/link.ld'
   'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/progs/src/hello.rs'
   # The kernel compiles spike A's scene drawing in (a #[path] module), so the native test redraws it.
-  'spikes/a-vga-vbe/prog/src/scene.rs;report,dos,native,compare;spikes/a-vga-vbe/prog/src/scene.rs'
+  'spikes/a-vga-vbe/prog/src/scene.rs;report,rust,dos,native,compare;spikes/a-vga-vbe/prog/src/scene.rs'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
   'spikes/b-dos-input/expected/*;report,rust,dos;spikes/b-dos-input/expected/keys.txt'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'
@@ -118,7 +118,7 @@ RULES=(
   'spikes/s5-jsdos/*;report,rust;spikes/s5-jsdos/probes/Cargo.toml'
   # The native track.
   'kernel/i486-desk-none.json;report,rust,native,compare;kernel/i486-desk-none.json'
-  'kernel/*;report,native,compare;kernel/src/main.rs'
+  'kernel/*;report,rust,native,compare;kernel/src/main.rs'
   'boot/*;report,native,compare;boot/stage2.asm'
   'tools/native-test-bochs.sh;report;tools/native-test-bochs.sh'
   'tools/native-run-bochs.sh;report;tools/native-run-bochs.sh'
@@ -237,7 +237,7 @@ self_test() {
   expect base,report,rust module/pack/tests/real.rs module/Cargo.lock module/mods/module.ld module/guest/src/lib.rs
   expect base,report,rust tools/check-modules.sh tools/build-modules.sh tests/module/file-magic.txt tools/desk.magic
   expect base,report,shelldos,native,compare tools/shell-compare.sh
-  expect base,report,shelldos,native,compare kernel/src/main.rs boot/stage1.asm
+  expect base,report,rust,shelldos,native,compare kernel/src/main.rs boot/stage1.asm
   expect base,report,fonts fonts/src/emoji/README.txt
   expect base,report,stdstubs spikes/e-std-stubs/shim/src/lib.rs
   expect base LICENSE-MIT assets/hero.svg
