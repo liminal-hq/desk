@@ -29,7 +29,7 @@ cd "$(dirname "$0")/.."
 # The groups, in order, and the parts of the groups that have them. A group without parts is one unit.
 ALL_GROUPS="base report fonts rust dos stdstubs shelldos native compare"
 # shellcheck disable=SC2034 # read through parts()
-PARTS_rust="core hal shell module tools spikes"
+PARTS_rust="core hal shell module tools kernel spikes"
 # shellcheck disable=SC2034 # read through parts()
 PARTS_dos="skeleton s1 d0 vga input"
 
@@ -45,6 +45,7 @@ rust       core       core/ format and lints
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
            tools      tools/steps-junit/ (the step report converter the CI posts) format, lints and host tests
+           kernel     kernel/ (the native track's Rust kernel) format and lints, built for its own target
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
            s1         spike s1-dxe3: the modules built, loaded, called, crashed and unloaded
@@ -211,6 +212,16 @@ step "Step report converter: format, lints and host tests"
 (cd tools/steps-junit && cargo fmt --check)
 (cd tools/steps-junit && cargo clippy --locked --all-targets -- -D warnings)
 (cd tools/steps-junit && host_tests)
+fi
+
+# The native track's kernel: format and lints (the build and the boot are the native group's). The kernel embeds the real-mode trampoline
+# (kernel/src/bios.rs includes dist/native/bios16.bin), so it is assembled first, as tools/native-build.sh does. See kernel/README.md.
+if run rust kernel; then
+step "Kernel: format and lints"
+(cd kernel && cargo fmt --check)
+mkdir -p dist/native
+nasm -f bin -Werror kernel/bios16.asm -o dist/native/bios16.bin
+(cd kernel && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 fi
 
 if run report; then

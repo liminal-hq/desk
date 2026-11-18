@@ -257,6 +257,7 @@ jobs:
         include:
           - { key: hal, groups: "rust:hal", title: "Rust: HAL" }
           - { key: shell, groups: "rust:shell", title: "Rust: shell" }
+          - { key: kernel, groups: "rust:kernel", title: "Rust: kernel" }
           - { key: core, groups: "rust:core,rust:module,rust:tools,rust:spikes", title: "Rust: core, module, tools and spike lints" }
     env:
       CHECK_GROUPS: ${{ matrix.groups }}
