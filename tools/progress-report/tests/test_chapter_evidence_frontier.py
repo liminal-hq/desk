@@ -330,10 +330,10 @@ class EvidenceChapterTests(unittest.TestCase):
             self.assertIn("default_branch", line)
         for bad in ("head_sha", "head_ref", "refs/pull", "pull_request.head", "event.workflow_run.head_commit", "pull_request.number"):
             self.assertNotIn(bad, pub, bad)
-        # Every action is pinned by commit, and pr-results by the commit of v0.1.0 with the version in a comment.
+        # Every action is pinned by commit, and pr-results by the commit of v0.4.1 with the version in a comment.
         for use in re.findall(r"uses: (\S+)", pub):
             self.assertRegex(use, r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", "actions are pinned to a commit")
-        self.assertIn("uses: liminal-hq-labs/pr-results@8afc480363b3c8f09a4db221d1c4814415ab6eb2 # v0.1.0\n", pub)
+        self.assertIn("uses: liminal-hq-labs/pr-results@a70c20d946cfe13ed8199018feee88578a96ae51 # v0.4.1\n", pub)
         self.assertEqual(len(re.findall(r"(?m)^ +- name:", pub)), 2, "the checkout and the publish step, nothing else")
         self.assertIn("          command: publish\n", pub)
         self.assertNotIn("build: source", pub, "the release binary, checked against its digest")

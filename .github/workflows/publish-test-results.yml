@@ -45,6 +45,6 @@ jobs:
           persist-credentials: false
       # The action pins its binary by SHA-256 in the commit named here, and checks it before running it.
       - name: Publish the results
-        uses: liminal-hq-labs/pr-results@8afc480363b3c8f09a4db221d1c4814415ab6eb2 # v0.1.0
+        uses: liminal-hq-labs/pr-results@a70c20d946cfe13ed8199018feee88578a96ae51 # v0.4.1
         with:
           command: publish
