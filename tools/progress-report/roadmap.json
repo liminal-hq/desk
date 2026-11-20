@@ -848,16 +848,8 @@
    ],
    "what": "R148: Desk stays one repository and its layers are made explicit: the DOS runtime, target specification and linker script move from spikes/d0-rust-dos to a top-level dos/, the packer and DOSBox harness to dos/tools/, and a check (tools/layers, read from tools/layers/layers.txt) fails when a lower layer names a higher one. Moves and path fixes only.",
    "why": "Follows the owner's decision of 2026-11-19 to keep one repository, so that a later extraction is a matter of copying directories.",
-   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148. Merged: pull requests #90 to #94 and #96 to #99 (there is no #95 pull request) went into main together in the merge commit `fb6eba6` on 2026-11-20. CI passed on every one before it merged: the host gate, and on the code pull requests the DOS, std-stubs, shell-on-DOS, native and compare groups; #98 and #99 changed documents and the report only, so the heavy groups were skipped on them. Those checks, not this page, are the evidence that the moves broke nothing. The opt-in js-dos and Bochs steps were not run, and nothing ran on real hardware.",
+   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148. Merged: pull requests #90 to #94 and #96 to #99 (there is no #95 pull request) went into main together in the merge commit `fb6eba6` on 2026-11-20. Only #99 is listed in prs, because the generator reads pull requests from the first-parent merge commits of main and the other eight merged inside it. CI passed on every one before it merged: the host gate, and on the code pull requests the DOS, std-stubs, shell-on-DOS, native and compare groups; #98 and #99 changed documents and the report only, so the heavy groups were skipped on them. Those checks, not this page, are the evidence that the moves broke nothing. The opt-in js-dos and Bochs steps were not run, and nothing ran on real hardware.",
    "prs": [
-    90,
-    91,
-    92,
-    93,
-    94,
-    96,
-    97,
-    98,
     99
    ]
   },
