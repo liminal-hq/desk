@@ -78,22 +78,23 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 9 | Module loader: host tests and no_std builds |
 | 10 | Module loader: test modules built, packed, relocated and compared, and the negative runs |
 | 11 | Step report converter: format, lints and host tests |
-| 12 | Kernel: format and lints |
-| 13 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
-| 14 | Build DESK.EXE |
-| 15 | Run DESK.EXE in headless DOSBox |
-| 16 | A Rust panic reports through C and exits non-zero |
-| 17 | Spike s1-dxe3: Rust format and lints for the modules |
-| 18 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
-| 19 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
-| 20 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
-| 21 | Spike s5-jsdos: Rust format and lints for the probes |
-| 22 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
-| 23 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
-| 24 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
-| 25 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
-| 26 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
-| 27 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
+| 12 | Layering: format, lints, host tests and the repository's layers |
+| 13 | Kernel: format and lints |
+| 14 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
+| 15 | Build DESK.EXE |
+| 16 | Run DESK.EXE in headless DOSBox |
+| 17 | A Rust panic reports through C and exits non-zero |
+| 18 | Spike s1-dxe3: Rust format and lints for the modules |
+| 19 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
+| 20 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
+| 21 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
+| 22 | Spike s5-jsdos: Rust format and lints for the probes |
+| 23 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
+| 24 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
+| 25 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
+| 26 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
+| 27 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
+| 28 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
 Four more steps run only when asked, because the CI image lacks what they need (the Bochs and js-dos steps come after the comparison and run only when their whole group is selected, so the Bochs run never rewrites the native screendumps before they are compared): the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
@@ -123,6 +124,7 @@ In every place this project says *verified*, it means *in an emulator or on the 
 | [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI: the scope job, one job per group (or part), the pinned image, the artefacts between the tracks and each job's JUnit results |
 | [`.github/workflows/publish-test-results.yml`](repo:.github/workflows/publish-test-results.yml) | Posts the results of a finished CI run on its pull request with pr-results; runs from the default branch with four permissions and never checks out the pull request |
 | [`tools/steps-junit/`](repo:tools/steps-junit/) | The converter from a run's step times and log to JUnit, with its tests and the shape pr-results reads |
+| [`tools/layers/`](repo:tools/layers/) | The layering check: which layer may name which, from the tracked manifests and sources, with the recorded exceptions in `layers.txt` |
 | [`.config/nextest.toml`](repo:.config/nextest.toml) | cargo-nextest's profiles: the `ci` profile writes the JUnit of the host tests |
 | [`hal/platform/mock/`](repo:hal/platform/mock/) | The mock platform: [`MockPortBus`](sym:hal/platform/mock/src/bus.rs::MockPortBus) and its devices |
 | [`tools/native-check.py`](repo:tools/native-check.py) | The transcript checker ([M5](chapter:m-boot)) |

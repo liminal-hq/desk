@@ -65,6 +65,9 @@ RULES=(
   'tools/setup.sh;all;tools/setup.sh'
   # The step report converter: every job builds and runs it after its checks, so a change to it can break any job.
   'tools/steps-junit/*;all;tools/steps-junit/src/lib.rs'
+  # The layering check reads every tracked manifest and Rust file, but it runs in the rust:tools part, and any file that can hold an
+  # edge already selects rust. Its edge extraction mirrors closure() below; change one and read the other.
+  'tools/layers/*;report,rust;tools/layers/src/lib.rs'
   # cargo-nextest's settings: the host tests of the Rust workspaces read them.
   '.config/*;rust;.config/nextest.toml'
   'tools/fetch-tools.sh;all;tools/fetch-tools.sh'
@@ -231,6 +234,7 @@ self_test() {
   expect all tools/check.sh
   expect all tools/steps-junit/src/main.rs tools/steps-junit/tests/convert.rs
   expect base,rust .config/nextest.toml
+  expect base,report,rust tools/layers/src/lib.rs tools/layers/layers.txt
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs

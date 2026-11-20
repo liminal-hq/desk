@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links, the CI scope table),
 # report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
-# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/, and the spike workspaces
+# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/ and tools/layers/, and the spike workspaces
 # checked on their own), dos (the DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes),
 # stdstubs (the e-std-stubs spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks'
 # frames compared, from what shelldos and native left in dist/).
@@ -44,7 +44,7 @@ rust       core       core/ format and lints
            hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
-           tools      tools/steps-junit/ (the step report converter the CI posts) format, lints and host tests
+           tools      tools/steps-junit/ (the step report converter the CI posts) and tools/layers/ (the layering check) format, lints and host tests
            kernel     kernel/ (the native track's Rust kernel) format and lints, built for its own target
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
@@ -212,6 +212,17 @@ step "Step report converter: format, lints and host tests"
 (cd tools/steps-junit && cargo fmt --check)
 (cd tools/steps-junit && cargo clippy --locked --all-targets -- -D warnings)
 (cd tools/steps-junit && host_tests)
+fi
+
+# The layering check (tools/layers, docs/LAYERS.md): its own format, lints and tests, then the check itself over the tracked files, which
+# fails when a file names one in a layer it may not use. It runs here and not in base because it needs the toolchain, and every file
+# that can hold an edge already selects the rust group.
+if run rust tools; then
+step "Layering: format, lints, host tests and the repository's layers"
+(cd tools/layers && cargo fmt --check)
+(cd tools/layers && cargo clippy --locked --all-targets -- -D warnings)
+(cd tools/layers && host_tests)
+cargo run --release --locked --quiet --manifest-path tools/layers/Cargo.toml
 fi
 
 # The native track's kernel: format and lints (the build and the boot are the native group's). The kernel embeds the real-mode trampoline

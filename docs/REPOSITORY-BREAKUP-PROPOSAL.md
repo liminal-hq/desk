@@ -1,5 +1,7 @@
 # Repository breakup: three ways to separate Desk from its platform
 
+> **Decided 2026-11-19: one repository, with the layers made explicit inside it.** The owner chose not to split yet. [`LAYERS.md`](LAYERS.md) records the layers and the check that holds them, and R148 in [`ROADMAP.md`](ROADMAP.md) does the moves. This page stays as the analysis of the options.
+
 Proposal date: 2026-10-24. Status: suggested structures and migration slips, not an approved extraction or a change to [Direction](DIRECTION.md). Repository names below are working names under `liminal-hq`; their availability has not been checked. No repositories have been created or content moved.
 
 The aim is to make **Desk the shell** a clear product above reusable Rust/DOS machinery and a native operating-system foundation. The complete bootable product can still be called Desk; its release assembly need not live beside its desktop implementation. These are ownership and release boundaries, independent of future decisions about processes, protection or module formats.

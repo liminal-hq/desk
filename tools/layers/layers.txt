@@ -1,0 +1,47 @@
+# The layers of the repository and what each may name. Read by tools/layers; explained in docs/LAYERS.md, which says why.
+#
+#   layer NAME PREFIX...      the paths under each prefix are in layer NAME (the longest prefix wins)
+#   may-use NAME LAYER...     what NAME may name besides itself (`*` is every layer)
+#   allow FROM TO REASON...   one recorded exception: edges from a path under FROM to a path under TO are accepted. A line no
+#                             edge needs is itself an error, so an exception is deleted in the change that removes its edge.
+#
+# An edge is a Cargo path dependency, a target specification or linker script named by a .cargo/config.toml, a file compiled in
+# with include_bytes!, include_str! or include!, or a module named by #[path]. Edges into dist/ and vendor/ are not edges.
+
+# The hardware abstraction layer: the traits, the drivers written against them and the host-test platform. Names nothing else.
+layer hal hal
+
+# The Rust-on-DOS foundation: the runtime, the target specification and the linker script (promoted from spikes/d0-rust-dos).
+layer dos dos
+may-use dos hal
+
+# The shared core: the shell crates, the module format and loader, the fonts and the goldens they are tested against.
+layer shared shell module fonts tests/shell tests/module
+may-use shared hal
+
+# The shell on DOS: the hosted adapter over the shared core and the DOS runtime.
+layer adapter-dos shell/dos
+may-use adapter-dos shared dos hal
+
+# The native track: the boot sector, the kernel (which composes the shell for now) and the native test inputs.
+layer system-native kernel boot tests/native
+may-use system-native shared hal
+
+# The hosted track's first skeleton: DESK.EXE in C over a Rust core.
+layer hosted-skeleton core c launcher sdk tests/dos
+may-use hosted-skeleton hal
+
+# Experiments. A spike may name anything; nothing outside spikes/ may name a spike.
+layer spikes spikes
+may-use spikes *
+
+# What is not code in a layer: the tools, the documents and the repository's own files. It names anything, and nothing names it.
+layer outside tools docs design assets .github .config vendor dist
+may-use outside *
+
+# Recorded exceptions. The first three go when the files they name move (R148, steps 3 to 5); the last stays until the module target
+# stops being the kernel's (the string at module/pack/tests/real.rs:76 names the same file and is not an edge the lint can see).
+allow hal/drivers/int33 spikes/b-dos-input the key fixture still lives in the spike (R148 step 3)
+allow kernel/src/main.rs spikes/a-vga-vbe the scene drawing is still a spike's file (R148 step 4)
+allow shell/dos spikes/d0-rust-dos the DOS runtime, target and linker script are still in the spike (R148 step 5)
+allow module/mods kernel/i486-desk-none.json the loader's test modules are built for the kernel's target

@@ -1,0 +1,23 @@
+# layers: checks that every dependency between the repository's layers points down (docs/LAYERS.md).
+#
+# A workspace of its own, like the other tools and spikes, so the repository's workspaces do not build it and it builds on the host
+# alone. std, no external crates: the edges are read from a few line shapes, the same ones tools/ci-scope.sh's closure() reads.
+[workspace]
+members = ["."]
+resolver = "2"
+
+[package]
+name = "layers"
+description = "Fails when a file in one layer of the repository names a file in a layer it may not use"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[lib]
+name = "layers"
+path = "src/lib.rs"
+
+[[bin]]
+name = "layers"
+path = "src/main.rs"
