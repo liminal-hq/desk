@@ -16,7 +16,7 @@ A DOS program that does anything useful has to solve a problem the native kernel
 
 On the map ([M1](chapter:m-map)) this is the [hosted track](term:hosted-track)'s platform: the DOS-side counterpart of the native kernel's start-up code, interrupt tables and memory manager ([M5](chapter:m-boot) to [M8](chapter:m-bioscalls)). The [hardware abstraction layer](term:hal) ([M9](chapter:m-hal)) is the contract; `rt` is one [platform](term:platform) that implements it, and its two implementing types, `DosBios` and `DosDisplay`, are the last part of the runtime below. The anatomy page of the hosted program draws fourteen boxes for this chapter, from the stub that starts first to CWSDPMI underneath; the front matter lists them. After it you should be able to say what happens between typing `SHELL` and the first line of Rust, explain why every DOS file call goes through a buffer, follow one memory request to the DPMI host and back, build `SHELL.EXE` and say which byte of it came from where, and tell the live pipeline from the legacy one that the last section describes.
 
-A caution about names. The runtime lives under `spikes/` because it began as spike d0 (`purerust`, PR #7), and `docs/D0-RUST-DOS.md` recommends promoting it to a top-level `rt/` crate. That has not happened: `shell/dos/Cargo.toml` still depends on `../../dos/rt`, and `docs/FIRST-WINDOW.md` records the promotion as a separate, open decision. This chapter calls it `rt` as the code does.
+A note about names. The runtime began as spike d0 (`purerust`, PR #7) and lived in `spikes/d0-rust-dos/rt` until R148, the layered layout of the repository. On the branch in review it is `dos/rt`, in a top-level directory of its own, `dos/`, with the target specification, the linker script, the packer, the DOSBox harness and the example programs beside it, one layer above the HAL and below everything that runs on DOS ([M1](chapter:m-map) draws the layers, from `docs/LAYERS.md`). The move is not merged: on `main` the runtime is still under `spikes/`. `docs/D0-RUST-DOS.md` had recommended a top-level `rt/` crate; what the layout did instead was to promote the whole foundation, so the crate is `dos/rt` and not `rt/`. `shell/dos/Cargo.toml` depends on `../../dos/rt`. This chapter calls the crate `rt` as the code does, and where it says "the spike" it means the d0 work as it was recorded, whose programs are now `dos/examples/`.
 
 ## How it works
 
@@ -168,7 +168,7 @@ None of this carries over to the live pipeline as it stands. A module format for
 | [`dos/dos-elf.json`](repo:dos/dos-elf.json), [`link.ld`](repo:dos/link.ld) | The target and the linker script |
 | [`dos/tools/elf2go32.py`](repo:dos/tools/elf2go32.py) | [`parse_elf`](sym:dos/tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
 | [`shell/dos/build.sh`](repo:shell/dos/build.sh), [`shell/dos/check.sh`](repo:shell/dos/check.sh) | The build of `SHELL.EXE` and the checks that run it in DOSBox |
-| [`dos/build.sh`](repo:dos/build.sh), [`check.sh`](repo:dos/check.sh) | The same pipeline for the spike's programs, and their checks |
+| [`dos/build.sh`](repo:dos/build.sh), [`check.sh`](repo:dos/check.sh) | The same pipeline for the example programs (`dos/examples/`), and their checks against `dos/expected/` |
 | [`core/`](repo:core/), [`c/`](repo:c/), [`tools/coff2go32.py`](repo:tools/coff2go32.py) | Legacy: the first Rust core, the C layer and the converter |
 
 For depth: [`docs/D0-RUST-DOS.md`](doc:docs/D0-RUST-DOS.md#2-the-runtime-contract), [`docs/TOOLCHAIN.md`](doc:docs/TOOLCHAIN.md#the-pipeline) (the legacy pipeline), [`docs/S1-DXE3.md`](doc:docs/S1-DXE3.md#answers) and [`docs/FIRST-WINDOW.md`](repo:docs/FIRST-WINDOW.md).
@@ -266,9 +266,10 @@ state: planned
 evidence: doc:docs/D0-RUST-DOS.md#verdict-and-recommendation
 
 id: rt.promote
-label: rt promoted to a top-level crate
-state: planned
-evidence: doc:docs/D0-RUST-DOS.md#verdict-and-recommendation
+label: rt promoted out of the spike, to the top-level dos/ directory (R148, in review)
+state: built-unverified
+evidence: repo:dos/rt/Cargo.toml, doc:docs/LAYERS.md#the-layers
+note: The files are at dos/rt on the branch in review, and tools/layers reported its layers ok on it (1,119 files, 111 edges) when this was revised. The pull requests are open and not merged, and the opt-in js-dos and Bochs steps were not run, so nothing here is shown as verified.
 
 id: rt.hardware
 label: Any of this on a real machine, under another DPMI host or another memory manager
@@ -276,7 +277,7 @@ state: planned
 evidence: doc:docs/D0-RUST-DOS.md#what-was-and-was-not-verified
 ```
 
-The runtime is {{state.rt.entry}} for its entry and {{state.rt.dpmi}} for its DPMI client, and the build is {{state.rt.build}}, all in DOSBox. CWSDPMI is {{state.rt.cws}}. The legacy skeleton is {{state.rt.legacy}} by a committed check, and the exception handler, the promotion of `rt` and a run on real hardware are {{state.rt.hardware}}. Nothing here ran on a real machine.
+The runtime is {{state.rt.entry}} for its entry and {{state.rt.dpmi}} for its DPMI client, and the build is {{state.rt.build}}, all in DOSBox. CWSDPMI is {{state.rt.cws}}. The legacy skeleton is {{state.rt.legacy}} by a committed check, the promotion of `rt` to `dos/` is {{state.rt.promote}}, and the exception handler and a run on real hardware are {{state.rt.hardware}}. Nothing here ran on a real machine.
 
 ## Try it yourself
 
@@ -284,7 +285,7 @@ These need Docker for the DOS toolchain (DJGPP, DOSBox Staging, CWSDPMI), which 
 
 ```try
 needs: Docker with the image ghcr.io/liminal-hq/ci-dos (pinned by digest in .github/workflows/ci.yml), python3 and xxd on the host
-ran: 2026-10-23, Docker for the DOS steps, the host for the last three; DOSBox Staging 0.83.0 and CWSDPMI r7 inside the image
+ran: 2026-10-23, Docker for the DOS steps, the host for the last three; DOSBox Staging 0.83.0 and CWSDPMI r7 inside the image; the outputs are from that run, when the files were still at `spikes/d0-rust-dos/` and `tools/` (R148 has since moved them, and the paths in the commands follow the move, but the commands were not rerun at the new paths)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'tools/setup.sh > /dev/null && shell/dos/build.sh 2>&1 | tail -1'
 build: dist/shell/SHELL.EXE (101888 bytes)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'shell/dos/check.sh 2>&1 | tail -1'
@@ -342,3 +343,4 @@ at: explainer modules
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The runtime was read from the source and the contract from `expected/ctx.txt`; the SHELL.EXE and spike builds, `shell/dos/check.sh` and the out-of-memory run were done in the CI image, and the packer's output on the host. Found while writing: `docs/D0-RUST-DOS.md` is out of date about the size of `rt` (about 1,600 lines in 13 files against 2,304 in 16), the line counts of the skeleton's C and converter (about 75 and 91 against 88 and 112) and the programs' sizes; the exception handler it recommends does not exist; and `rt` has not been promoted out of `spikes/`.
+- 2026-11-20: reviewed against R148 (in review). The caution about names said the runtime lived under `spikes/` and that its promotion had not happened; it now says what the move did (the whole foundation is in `dos/`, so the crate is `dos/rt`), that it is not merged, and where the example programs went. The status record `rt.promote` is built, not verified, with the reason. The try block's outputs are from 2026-10-23 and its commands were not rerun at the new paths (Docker and the CI image were not available to this revision). The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.

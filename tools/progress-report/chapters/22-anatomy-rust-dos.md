@@ -8,7 +8,7 @@ summary: One real program, SHELL.EXE, followed from its Rust source to the hardw
 prs: [7, 30]
 section: reference
 ---
-This page follows one real program, `SHELL.EXE`, the first window on DOS ([pull request #30](pr:30)), from its Rust source down to the hardware it touches and back to the DOS prompt. Every box below is tied to a file, a crate or a document in the repository, so you can open whatever the picture names. The program stands on the pure-Rust DOS runtime of spike d0 ([#7](pr:7), `docs/D0-RUST-DOS.md`). The page is finished for now; it will be revised if the runtime moves (`rt` is still under `spikes/d0-rust-dos/`, and promoting it to the top level is an open decision).
+This page follows one real program, `SHELL.EXE`, the first window on DOS ([pull request #30](pr:30)), from its Rust source down to the hardware it touches and back to the DOS prompt. Every box below is tied to a file, a crate or a document in the repository, so you can open whatever the picture names. The program stands on the pure-Rust DOS runtime of spike d0 ([#7](pr:7), `docs/D0-RUST-DOS.md`). The page is finished for now. The runtime has moved in the pull requests of R148 that are open as this is written: `rt`, the target specification, the linker script, the packer and the DOSBox harness are in `dos/` (a layer above the HAL, drawn in [M1 of the manual](chapter:m-map)) and no longer under `spikes/d0-rust-dos/`, so the paths in the boxes below are those of that branch, and on `main`, until the stack merges, they are the old ones.
 
 <!-- figure anatomy-dos -->
 

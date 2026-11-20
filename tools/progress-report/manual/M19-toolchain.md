@@ -6,7 +6,7 @@ title: The toolchain and the custom targets
 summary: The pinned Rust, the three target specification files compared field by field, build-std, rust-lld and the linker scripts, the two packers that replace objcopy and a linker, NASM, the Docker images and the setup scripts, and the std question.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [rust-toolchain.toml, kernel/.cargo/config.toml, kernel/i486-desk-none.json, kernel/link.ld, dos/dos-elf.json, dos/link.ld, spikes/d0-rust-dos/.cargo/config.toml, shell/dos/.cargo/config.toml, core/dos.json, core/.cargo/config.toml, tools/elf2bin.py, tools/native-build.sh, tools/setup.sh, tools/fetch-tools.sh, tools/docker/]
+watches: [rust-toolchain.toml, kernel/.cargo/config.toml, kernel/i486-desk-none.json, kernel/link.ld, dos/dos-elf.json, dos/link.ld, dos/.cargo/config.toml, shell/dos/.cargo/config.toml, core/dos.json, core/.cargo/config.toml, tools/elf2bin.py, tools/native-build.sh, tools/setup.sh, tools/fetch-tools.sh, tools/docker/]
 log: [scaffold, wheels, std]
 anatomy: [dos:target, dos:lld]
 ---
@@ -76,7 +76,7 @@ Eight fields are the same in all three files: `arch`, `cpu`, `max-atomic-width`,
 
 ### Building `core` and `alloc`: `-Zbuild-std` and the memory functions
 
-All three builds ask cargo for `build-std = ["core", "alloc", "compiler_builtins"]` and `json-target-spec = true`. Two of them add `build-std-features = ["compiler-builtins-mem"]`: `kernel/.cargo/config.toml` and `spikes/d0-rust-dos/.cargo/config.toml`, which `shell/dos` repeats. The feature makes the `compiler_builtins` crate provide `memcpy`, `memmove`, `memset` and `memcmp`, which the compiler calls for copies and comparisons and which nothing else supplies when there is no C library (the comment in the d0 config says so). `core/.cargo/config.toml` does not set it, because on that path DJGPP's C library supplies them; and a fourth, quite different, request, `["std", "panic_abort"]`, belongs to spike E. The same crate supplies the helpers the 32-bit target has no instruction for, such as 64-bit division. On the legacy path the converter drops the crate's objects, because of their weak externals, and DJGPP's `libc` and `libgcc` supply those functions instead ([M17](chapter:m-rt), legacy section).
+All three builds ask cargo for `build-std = ["core", "alloc", "compiler_builtins"]` and `json-target-spec = true`. Two of them add `build-std-features = ["compiler-builtins-mem"]`: `kernel/.cargo/config.toml` and `dos/.cargo/config.toml`, which `shell/dos` repeats (the d0 spike's own stage 1 keeps a copy under `spikes/d0-rust-dos/.cargo/`). The feature makes the `compiler_builtins` crate provide `memcpy`, `memmove`, `memset` and `memcmp`, which the compiler calls for copies and comparisons and which nothing else supplies when there is no C library (the comment in the d0 config says so). `core/.cargo/config.toml` does not set it, because on that path DJGPP's C library supplies them; and a fourth, quite different, request, `["std", "panic_abort"]`, belongs to spike E. The same crate supplies the helpers the 32-bit target has no instruction for, such as 64-bit division. On the legacy path the converter drops the crate's objects, because of their weak externals, and DJGPP's `libc` and `libgcc` supply those functions instead ([M17](chapter:m-rt), legacy section).
 
 ### Linking: `rust-lld` and the linker scripts
 
@@ -139,8 +139,8 @@ The document's recommendation, which `docs/RUST-TARGETS.md` repeats, is a split:
 | [`kernel/i486-desk-none.json`](repo:kernel/i486-desk-none.json) | The native kernel's target specification |
 | [`kernel/.cargo/config.toml`](repo:kernel/.cargo/config.toml) | The kernel's default target, link arguments and `build-std` options |
 | [`kernel/link.ld`](repo:kernel/link.ld) | The kernel's linker script: load address `0x100000` |
-| [`dos/dos-elf.json`](repo:dos/dos-elf.json) | The freestanding DOS target used by `rt`, the spike's programs and `SHELL.EXE` |
-| [`spikes/d0-rust-dos/.cargo/config.toml`](repo:spikes/d0-rust-dos/.cargo/config.toml) | `build-std`, `compiler-builtins-mem` and the link arguments of the DOS programs |
+| [`dos/dos-elf.json`](repo:dos/dos-elf.json) | The freestanding DOS target used by `rt`, the example programs in `dos/examples/` and `SHELL.EXE` |
+| [`dos/.cargo/config.toml`](repo:dos/.cargo/config.toml) | `build-std`, `compiler-builtins-mem` and the link arguments of the DOS programs |
 | [`dos/link.ld`](repo:dos/link.ld) | The DOS linker script: two loadable segments from `0x1000` |
 | [`shell/dos/.cargo/config.toml`](repo:shell/dos/.cargo/config.toml) | The same target and script, reached by relative paths |
 | [`core/dos.json`](repo:core/dos.json) | The first, legacy, target: borrowed MinGW triple, COFF, library only |
@@ -203,7 +203,7 @@ note: Rests on the committed check in tools/check.sh, which was not rerun.
 id: toolchain.buildstd
 label: build-std with compiler-builtins-mem supplies core, alloc and the memory functions for both ELF targets
 state: built-verified
-evidence: sym:kernel/.cargo/config.toml::compiler-builtins-mem, sym:spikes/d0-rust-dos/.cargo/config.toml::compiler-builtins-mem, test:tests/native/expected.txt::alloc: Vec sum 385
+evidence: sym:kernel/.cargo/config.toml::compiler-builtins-mem, sym:dos/.cargo/config.toml::compiler-builtins-mem, test:tests/native/expected.txt::alloc: Vec sum 385
 note: Both builds ran for this chapter; the alloc line is the kernel's.
 
 id: toolchain.elf2bin
@@ -302,3 +302,4 @@ thumb: steps
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The target table was computed from the three files; the build, the packer output and the bootstrap error were run on the host and in the CI image. Found while writing: `docs/RUST-TARGETS.md` calls `elf2bin.py` a linker and still lists the first target's files as living on other branches; `docs/E-STD-STUBS.md` gives the shim as 450 lines in one place and 330 in another. The target-comparison explainer (`m-targets`) now follows the table.
+- 2026-11-20: reviewed against R148 (in review). The DOS target's cargo configuration is `dos/.cargo/config.toml` (the spike's stage 1 keeps its own copy), and the chapter's pointers, watches and evidence follow; the target and linker script are `dos/dos-elf.json` and `dos/link.ld`. The target-file comparison and its numbers are unchanged. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
