@@ -591,8 +591,13 @@ class HardwareExplainerTests(unittest.TestCase):
         data = json.loads(rd(os.path.join(TOOL, "snapshots", "gh.json")))["data"]
         D = {"fonts": [{"file": "desk-sans.otf", "glyphs": 423, "size": 1}], "emoji": {"pixel": 480, "pixel12": 480, "pixel8": 40, "vector": 156, "requested": 244, "requestedDone": 164, "requestedPlanned": 80},
              "roadmap": json.loads(rd(os.path.join(TOOL, "roadmap.json"))), "open": data["openWork"]}
-        for fn in (charts.font_matrix, charts.emoji_coverage, charts.track_progress, charts.pr_stack):
+        for fn in (charts.font_matrix, charts.emoji_coverage, charts.track_progress):
             self.assertIn("<svg", fn(D))
+        # The committed snapshot holds no open pull request once everything has merged, so the stack is drawn from two made-up ones.
+        self.assertIn("No pull request is open", charts.pr_stack(D) if not D["open"]["prs"] else "No pull request is open")
+        D["open"] = {"prs": [{"number": 1, "branch": "a", "base": "main", "ci": "passing", "isReport": False, "stackedOn": [], "state": "in review", "title": "First"},
+                             {"number": 2, "branch": "b", "base": "a", "ci": "pending", "isReport": False, "stackedOn": [1], "state": "in review", "title": "Second"}]}
+        self.assertIn("<svg", charts.pr_stack(D))
 
 
 class FirstWindowTests(unittest.TestCase):
