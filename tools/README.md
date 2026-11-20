@@ -1,32 +1,50 @@
 # tools
 
+
 Scripts for working on the repository: the repo checks, the DOS build pipeline and the hero-banner builder. `docs/TOOLCHAIN.md` explains the pipeline.
+
+The runtime for DOS programs and its packer and DOSBox harness are not here: they are in [`../dos/`](../dos/) (`dos/tools/elf2go32.py`, `dos/tools/dosrun.sh`; see [`../docs/LAYERS.md`](../docs/LAYERS.md)).
+
+### Checks and the CI
 
 | Script | What it does |
 |---|---|
 | `check.sh` | Runs every check the CI runs: headers, docs, the progress report generator's tests, the font build check in `fonts/` when Bun is set up, Rust format and lints, the HAL's host tests and `no_std` builds for the kernel and DOS targets (`hal/`), the module loader's host tests, real-linker test and `no_std` builds (`module/`), and its test modules built, packed, relocated and compared with `check-modules.sh`, the DOS build, headless runs of `DESK.EXE`, the s1-dxe3 module scenarios, the d0-rust-dos and e-std-stubs checks, the s5-jsdos probe lints (and, with `JSDOS=1`, the browser run), the a-vga-vbe checks, the b-dos-input checks (and with `INPUT_EXTRA=1` the Xvfb mouse runs of spike B and of the shell's live scenario), and the native boot test (with its keyboard, mouse, graphics and BIOS-call sections); `tools/check.sh --groups LIST` runs only the named groups or parts (`--list` names them), and the CI runs each group as its own job, with a last `CI passed` job that gathers their results; `CHECK_TIMES=FILE` appends the start time of each step and the exit status, which `steps-junit/` turns into the CI's step report; the host tests run under cargo-nextest (`../.config/nextest.toml`) where it is installed |
 | `check-modules.sh`, `build-modules.sh` | The module loader's checks (the last step of `rust:module`) and the build it runs: the test modules in `module/mods/` built for the module target, packed by `module/pack` into `dist/modules/`, compared with `tests/module/`, relocation proved by links at other bases, a reproducible-build check, the forbidden-instruction scan and the negative runs; needs the network for `-Zbuild-std` |
 | `ci-scope.sh` | Chooses the groups of `check.sh` a pull request needs from the paths it changes: `--base REF` (default `origin/main`) reads them from the merge base with `REF`, `--files` from standard input, and the answer is a comma list such as `base,report`, or every group for a path no rule knows. `--self-test` (a step of the `base` group) checks one example per rule, the Cargo path dependencies (a change to a crate must select every group of the crates that use it), the files each group's steps and their scripts read, that the parser reads every `if run` block of `check.sh` (mutated copies must fail or pass as expected), and that every tracked file has a rule. `all` is printed as every group name, so a workflow can test `contains(..., ',rust,')` |
-| `steps-junit/` | A std-only Rust program (its own workspace, no external crates) that reads one `check.sh` run's `CHECK_TIMES` file and log and writes JUnit for the pull request's report: a test case per step with its time, and the tail of the failing step's output. `--summary` prints the step table for the job summary. The CI builds it in every job after the checks and uploads the result as a `results-<job>` artefact; `.github/workflows/publish-test-results.yml` posts those with pr-results (`../.github/pr-results.toml`). Its checks are the `rust:tools` part of `check.sh` |
 | `layers/` | A std-only Rust program (its own workspace, no external crates) that reads the tracked manifests, `.cargo/config.toml` files and Rust sources and fails when a file names one in a layer it may not use, or when a recorded exception no edge needs any more. The layers and exceptions are in `layers/layers.txt`, explained in [`docs/LAYERS.md`](../docs/LAYERS.md). Its checks and the check itself are the `rust:tools` part of `check.sh` |
+| `steps-junit/` | A std-only Rust program (its own workspace, no external crates) that reads one `check.sh` run's `CHECK_TIMES` file and log and writes JUnit for the pull request's report: a test case per step with its time, and the tail of the failing step's output. `--summary` prints the step table for the job summary. The CI builds it in every job after the checks and uploads the result as a `results-<job>` artefact; `.github/workflows/publish-test-results.yml` posts those with pr-results (`../.github/pr-results.toml`). Its checks are the `rust:tools` part of `check.sh` |
+| `check-headers.sh` | Checks the licence header on source and script files |
+| `check-docs.py` | Checks the markdown house style and that relative links resolve |
+| `check-jsdos.sh` | Opt-in (`JSDOS=1 tools/check.sh`): fetches js-dos, builds the s5 bundles and runs every DOS program in headless Chromium, comparing text, screenshots and sound with the expectations; needs the network, Node 22 and a Chromium |
+
+### The hosted track and the DOS tools
+
+| Script | What it does |
+|---|---|
 | `setup.sh` | Checks host tools, installs the pinned Rust pieces, and links `vendor/` to `DOS_TOOLCHAIN` or downloads the tools |
 | `fetch-tools.sh` | Downloads DJGPP, DOSBox Staging and CWSDPMI into `vendor/` with SHA-256 checks, using the versions of the CI image |
 | `build.sh` | Cargo for `core/dos.json`, `coff2go32.py`, DJGPP's gcc for `c/`, then `dist/DESK.EXE` beside `CWSDPMI.EXE` |
 | `coff2go32.py` | Converts rustc's COFF objects so DJGPP's linker lays them out and relocates them correctly |
 | `desk.magic` | `file(1)` magic for the Desk loadable image (`.DMD` modules, `.DKX` applications; [`../docs/LOADER.md`](../docs/LOADER.md)): `file -b -m tools/desk.magic FILE` names the kind, ABI and SDK version without installing anything |
-| `elf2go32.py` | Packs a linked 32-bit ELF into a DJGPP go32 `.EXE` (used by the d0-rust-dos and e-std-stubs spikes, whose `build.sh` scripts and checks run through `dosrun.sh`) |
-| `dosrun.sh` | Runs a DOS command in headless DOSBox Staging; prints its output and returns its exit status. `DOS_AUTOTYPE` types keys into the program with DOSBox's `AUTOTYPE`, `DOS_CONF` appends configuration, `DOS_X11=1` uses a real display; `DOS_MACHINE` picks the emulated card for one run (default `svga_s3`; `vgaonly` has no VBE) |
 | `xvfb-dos.sh` | Runs a DOS program in DOSBox's SDL window on a virtual X server in Docker, with `xdotool` lines from a script moving, clicking and typing over it (`frames.py live --xdotool` writes one); `--mouse off`, `--start-wait` and `--step-wait` as options. Spike B's and the shell's Xvfb checks use it |
 | `docker/Dockerfile.dos-xvfb` | Xvfb and `xdotool` for driving DOSBox's SDL window with a pointer; `tools/xvfb-dos.sh` builds it once as `desk-dos-xvfb:1` |
-| `frames.py`, `test_frames.py` | The shell's frame tools: PNG and digest reading, `check`, `transcript`, `goldens`, `same` and `diff` for captures, `inject` for the scripted native run, and, for live input (`../docs/LIVE-INPUT.md`), `live` (a live scenario as QEMU monitor commands, DOSBox `AUTOTYPE` arguments or `xdotool` lines) and `marks` (a live run's `shell: mark NN` lines against the scenario's sums, renaming DOS dumps); `test_frames.py` holds the tests |
-| `shell-goldens.sh` | Re-records every `tests/shell/*.scn`'s sums and golden PNGs from the host test |
 | `run-shell.sh` | For a person: opens the first window in an emulator window on the desktop, `run-shell.sh native` (the kernel's `shell-live` mode in QEMU's GTK or SDL window; needs the host's QEMU) or `run-shell.sh dos` (`SHELL.EXE` in DOSBox Staging from `vendor/`), with `--depth 8\|4`, `--display gtk\|sdl`, `--nomouse` and `--demo` (plays the live scenario into the window); it prints the hotkeys that give the pointer back and says in one line what is missing ([`../docs/LIVE-INPUT.md`](../docs/LIVE-INPUT.md)). `native-run.sh --window gtk\|sdl` and `DOS_WINDOW=1 dos/tools/dosrun.sh` are what it uses |
 | `raw2png.py` | Turns a frame buffer dump and a DAC dump into an indexed PNG (`docs/A-VGA-VBE.md`) |
-| `check-jsdos.sh` | Opt-in (`JSDOS=1 tools/check.sh`): fetches js-dos, builds the s5 bundles and runs every DOS program in headless Chromium, comparing text, screenshots and sound with the expectations; needs the network, Node 22 and a Chromium |
-| `check-headers.sh` | Checks the licence header on source and script files |
-| `check-docs.py` | Checks the markdown house style and that relative links resolve |
-| `build-hero.py` | Builds `assets/hero.svg`, the README banner |
+
+### The native track
+
+| Script | What it does |
+|---|---|
 | `native-run-bochs.sh`, `native-test-bochs.sh` | The same image in headless Bochs built as a 486, in Docker (`docker/Dockerfile.native-bochs`): the runner watches the serial transcript because Bochs has no exit device, and the test reruns `native-test.sh` against it plus instruction probes (`../tests/native/probe.asm`). Opt-in: `NATIVE_EXTRA=1 tools/check.sh` (see [`../docs/NATIVE-EMULATORS.md`](../docs/NATIVE-EMULATORS.md)) |
 | `native-run-86box.sh`, `native-test-86box.sh` | The same image in 86Box on an AMIBIOS 486 machine, headless on Xvfb in Docker (`docker/Dockerfile.native-86box`, config in `86box/`); experimental and slow, with a screenshot kept in `dist/` |
 | `native-build.sh`, `native-image.sh`, `native-run.sh`, `native-test.sh` | The native track: build the boot stages and the Rust kernel, assemble the floppy image, boot it headless in QEMU as a 486, and check the transcript and the negative cases (see [`../docs/NATIVE-BOOT.md`](../docs/NATIVE-BOOT.md)); `native-run.sh --inject SCRIPT` plays keys and mouse motion into QEMU's monitor with `native-inject.py` (and takes screenshots with `screendump {out}/NAME.ppm`, with `--vga CARD` and `--shots DIR`); `native-image.sh --test-mode gfx --video vbe` builds the graphics tour, `--test-mode bios` the BIOS-call scenarios (and `bios-solo` the same without typed keys; `native-build.sh` also assembles `kernel/bios16.asm`, the real-mode trampoline); `native-run.sh --hd FILE` attaches an IDE disk; `native-shot.py` converts, checksums and compares the screenshots; `native-check.py` and `elf2bin.py` are helpers |
+
+### Frames, goldens and the report
+
+| Script | What it does |
+|---|---|
+| `frames.py`, `test_frames.py` | The shell's frame tools: PNG and digest reading, `check`, `transcript`, `goldens`, `same` and `diff` for captures, `inject` for the scripted native run, and, for live input (`../docs/LIVE-INPUT.md`), `live` (a live scenario as QEMU monitor commands, DOSBox `AUTOTYPE` arguments or `xdotool` lines) and `marks` (a live run's `shell: mark NN` lines against the scenario's sums, renaming DOS dumps); `test_frames.py` holds the tests |
+| `shell-goldens.sh` | Re-records every `tests/shell/*.scn`'s sums and golden PNGs from the host test |
 | `progress-report/` | The generator for the Desk Progress Report, a multi-page archive built from the history of `main` and `gh`; see [`progress-report/README.md`](progress-report/README.md) |
+| `build-hero.py` | Builds `assets/hero.svg`, the README banner |
