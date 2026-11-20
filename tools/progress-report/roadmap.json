@@ -842,13 +842,13 @@
    "id": "layers",
    "label": "Layered layout of the repository",
    "branch": "foundations",
-   "state": "progress",
+   "state": "done",
    "deps": [
     "breakup"
    ],
    "what": "R148: Desk stays one repository and its layers are made explicit: the DOS runtime, target specification and linker script move from spikes/d0-rust-dos to a top-level dos/, the packer and DOSBox harness to dos/tools/, and a check (tools/layers, read from tools/layers/layers.txt) fails when a lower layer names a higher one. Moves and path fixes only.",
    "why": "Follows the owner's decision of 2026-11-19 to keep one repository, so that a later extraction is a matter of copying directories.",
-   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148 on the open branches. In review: nothing in the stack is merged. The pull requests' CI (the host gate and the DOS, std-stubs, shell-on-DOS, native and compare groups) passed on all eight, #90 to #94 and #96 to #98; those checks, not this page, are the evidence that the moves broke nothing. The opt-in js-dos and Bochs steps were not run.",
+   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148. Merged: pull requests #90 to #94 and #96 to #99 (there is no #95 pull request) went into main together in the merge commit `fb6eba6` on 2026-11-20. CI passed on every one before it merged: the host gate, and on the code pull requests the DOS, std-stubs, shell-on-DOS, native and compare groups; #98 and #99 changed documents and the report only, so the heavy groups were skipped on them. Those checks, not this page, are the evidence that the moves broke nothing. The opt-in js-dos and Bochs steps were not run, and nothing ran on real hardware.",
    "prs": [
     90,
     91,
@@ -857,7 +857,8 @@
     94,
     96,
     97,
-    98
+    98,
+    99
    ]
   },
   {
@@ -1587,7 +1588,7 @@
     "ru-sound",
     "ru-transcript"
    ],
-   "what": "R139: The promotion of R53 (spikes/d0-rust-dos/rt to rt/), done so the promoted runtime is the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once.",
+   "what": "R139: The promotion of R53 (spikes/d0-rust-dos/rt to rt/), done so the promoted runtime is the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once. Note: since R148 that path is `dos/rt`, so the runtime already sits in `dos/`; this row is recorded as written.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
    "evidence": "docs/ROADMAP.md R139; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
   },
