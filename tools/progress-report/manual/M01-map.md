@@ -255,7 +255,7 @@ evidence: doc:docs/DIRECTION.md#dos-programs-bundle-freedos
 id: map.emu
 label: QEMU (-cpu 486) and DOSBox Staging, headless
 state: built-unverified
-evidence: repo:docs/FIRST-WINDOW.md, repo:tools/native-run.sh, repo:tools/dosrun.sh
+evidence: repo:docs/FIRST-WINDOW.md, repo:tools/native-run.sh, repo:dos/tools/dosrun.sh
 note: The anatomy diagram draws this box as verified on the strength of a document. It is the machine the other records ran on, but no test of its own cites it, so the manual's stricter rule shows it as built, not verified. The emulators chapter has the table of what each one showed.
 
 id: map.real

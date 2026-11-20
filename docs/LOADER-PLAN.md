@@ -179,7 +179,7 @@ pub fn read(bytes: &[u8], link_base: u32, kind: u16) -> Result<Extract, ElfError
 
 ## M3. Packing, the guest crate and the hello module
 
-**Goal.** `dmdpack pack`, `info` and `cross`, the Rust packer over the shared `desk-module` crate (it may later replace `tools/elf2go32.py`, which is not in this task); the app-side runtime; the module workspace with its linker script; `hello` built, packed and checked on the host, including relocation proved by linking at two bases.
+**Goal.** `dmdpack pack`, `info` and `cross`, the Rust packer over the shared `desk-module` crate (it may later replace `dos/tools/elf2go32.py`, which is not in this task); the app-side runtime; the module workspace with its linker script; `hello` built, packed and checked on the host, including relocation proved by linking at two bases.
 
 **Files.**
 
@@ -278,7 +278,7 @@ The kernel also embeds `APPMAIN.DKX` and the `module` mode ends with `module: re
 
 **Files.**
 
-- `module/dos/Cargo.toml` (its own `[workspace]`, as `shell/dos/`), `module/dos/Cargo.lock`, `module/dos/.cargo/config.toml` (as `shell/dos/.cargo/config.toml`), `module/dos/rustfmt.toml`, `module/dos/src/main.rs`, `module/dos/build.sh` (into `dist/module-dos/`: `DMDRUN.EXE` by `tools/elf2go32.py` behind the stub, `CWSDPMI.EXE`, and the `.DMD` files from `dist/modules/`), `module/dos/check.sh`, `tests/module/expected-dos-hello.txt`, `tests/module/expected-dos-bad.txt`, `tests/module/expected-dos-truncated.txt`.
+- `module/dos/Cargo.toml` (its own `[workspace]`, as `shell/dos/`), `module/dos/Cargo.lock`, `module/dos/.cargo/config.toml` (as `shell/dos/.cargo/config.toml`), `module/dos/rustfmt.toml`, `module/dos/src/main.rs`, `module/dos/build.sh` (into `dist/module-dos/`: `DMDRUN.EXE` by `dos/tools/elf2go32.py` behind the stub, `CWSDPMI.EXE`, and the `.DMD` files from `dist/modules/`), `module/dos/check.sh`, `tests/module/expected-dos-hello.txt`, `tests/module/expected-dos-bad.txt`, `tests/module/expected-dos-truncated.txt`.
 - `tools/check.sh`: a "Module loader on DOS" step after "Shell on DOS".
 
 **What `main` does.** First `widen_code_segment()`: DPMI 0008h on `CS` with limit `0xFFFF_FFFF`, then reload `CS` with a far return, and print `dmdrun: code segment covers 4 GiB`. Then read the file named on the command line with `rt::dos::File::read_to_vec`, allocate the image with `alloc::alloc::alloc` at the header's alignment, load it with `desk_module::load_into` (the address is `rt::dpmi::ptr_to_linear`'s offset form, which is what a near pointer is), bind `desk_log` (printing through `rt::println!`), call `app_start` and `app_stop`, free the image, and print the same lines as M4 (`memory as before` compares `rt`'s heap free bytes). Arguments: `DMDRUN.EXE HELLO.DMD`, and `nowiden HELLO.DMD`, which skips the widening.

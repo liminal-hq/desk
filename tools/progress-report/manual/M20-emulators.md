@@ -6,7 +6,7 @@ title: The machines we run on
 summary: QEMU as a 486, Bochs, 86Box, headless DOSBox Staging and js-dos; what each one is for, what each rejects or allows, how each run is driven and ended, and the standing fact that no real machine has run anything.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [tools/native-run.sh, tools/native-run-bochs.sh, tools/native-run-86box.sh, tools/native-test.sh, tools/native-test-bochs.sh, tools/native-test-86box.sh, tools/dosrun.sh, tools/86box/, docs/NATIVE-EMULATORS.md, docs/S5-JSDOS.md, docs/NATIVE-BOOT.md]
+watches: [tools/native-run.sh, tools/native-run-bochs.sh, tools/native-run-86box.sh, tools/native-test.sh, tools/native-test-bochs.sh, tools/native-test-86box.sh, dos/tools/dosrun.sh, tools/86box/, docs/NATIVE-EMULATORS.md, docs/S5-JSDOS.md, docs/NATIVE-BOOT.md]
 log: [emulators, browser, boot]
 anatomy: [desk:emu, dos:dosbox, desk:real]
 ---
@@ -84,7 +84,7 @@ Driving it is the awkward part, and `tools/86box/run-in-container.sh` does it in
 
 ### Headless DOSBox Staging
 
-`tools/dosrun.sh DIR COMMAND...` runs a DOS command in DOSBox Staging and hands back its output and exit status. The word [headless](term:headless) here means a program running with no display: `SDL_VIDEODRIVER=dummy` gives SDL a video driver that draws nowhere (and `SDL_AUDIODRIVER=dummy` the same for sound), `DISPLAY` and `WAYLAND_DISPLAY` are removed so a developer's desktop is never used by accident, and the configuration sets `output = texture`, the software renderer. The script generates a `dosbox.conf` and a batch file, mounts the program's directory as `C:` and a scratch directory as `D:`, and runs the command with its output redirected to `D:\STDOUT.TXT`.
+`dos/tools/dosrun.sh DIR COMMAND...` runs a DOS command in DOSBox Staging and hands back its output and exit status. The word [headless](term:headless) here means a program running with no display: `SDL_VIDEODRIVER=dummy` gives SDL a video driver that draws nowhere (and `SDL_AUDIODRIVER=dummy` the same for sound), `DISPLAY` and `WAYLAND_DISPLAY` are removed so a developer's desktop is never used by accident, and the configuration sets `output = texture`, the software renderer. The script generates a `dosbox.conf` and a batch file, mounts the program's directory as `C:` and a scratch directory as `D:`, and runs the command with its output redirected to `D:\STDOUT.TXT`.
 
 DOS has no way to hand an exit status to its host, and DOSBox Staging does not expand `%ERRORLEVEL%`. The batch file therefore recovers it with a ladder of 255 lines `if errorlevel n set RC=n`, each of which holds for every `n` up to the status, so the last one that matches is the status, and it writes that to `D:\EXITCODE.TXT`. The script exits with it. Two statuses are the script's own: 124 when the command outlived `DOS_TIMEOUT` seconds (default 60) and 125 when DOSBox itself failed.
 
@@ -129,7 +129,7 @@ js-dos 8 is the browser build of the hosted track: a fork of DOSBox compiled to 
 | [`tools/native-test-bochs.sh`](repo:tools/native-test-bochs.sh) | The CPU probes, then the whole check under Bochs |
 | [`tools/native-test-86box.sh`](repo:tools/native-test-86box.sh) | A normal boot and a divide error under 86Box, with a rewritten transcript |
 | [`tests/native/probe.asm`](repo:tests/native/probe.asm) | The one-sector probe that runs one instruction and reports `#UD` or not |
-| [`tools/dosrun.sh`](repo:tools/dosrun.sh) | Headless DOSBox Staging: the dummy video driver, the errorlevel ladder, `DOS_AUTOTYPE` |
+| [`dos/tools/dosrun.sh`](repo:dos/tools/dosrun.sh) | Headless DOSBox Staging: the dummy video driver, the errorlevel ladder, `DOS_AUTOTYPE` |
 | [`tools/docker/`](repo:tools/docker/) | The four Dockerfiles: QEMU, Bochs, 86Box, DOS with Xvfb |
 | [`tools/check-jsdos.sh`](repo:tools/check-jsdos.sh) | The opt-in js-dos check, with the driver in [`spikes/s5-jsdos/drive.mjs`](repo:spikes/s5-jsdos/drive.mjs) |
 
@@ -163,7 +163,7 @@ native-run: guest reported failure          (exit 1)
 
 Under Bochs there is no 35. The same kernel prints the same dump, ending `halting with a failure status`, and writes to a port nothing listens on. The runner has been polling the serial file: it sees a line starting `EXCEPTION 0x`, then five polls (one second) in which the file does not grow, and returns 1 with `native-run-bochs: guest reported failure`. Under 86Box the container script applies the same rule and writes `1` to `/vm/status`, which the host script reads and returns. And if the kernel had hung instead, the three runners would all end it by their timeout and return 124. That is why `tools/native-test.sh` can run unchanged against any of them: it wants, for the divide error, exactly exit 1 and a transcript that matches `tests/native/expected-div0.txt`.
 
-For the DOS emulators the same job is done another way. `tools/dosrun.sh dist DESK.EXE panic` makes a batch file with 255 lines `if errorlevel n set RC=n`. If the program exits with 7, the lines for 1 to 7 set `RC` and the lines for 8 and above do not, so `RC` ends as 7, and the script exits 7. The js-dos spike checked this in the browser: `HELLO.EXE exit 7` read back as 7 in js-dos and 7 natively.
+For the DOS emulators the same job is done another way. `dos/tools/dosrun.sh dist DESK.EXE panic` makes a batch file with 255 lines `if errorlevel n set RC=n`. If the program exits with 7, the lines for 1 to 7 set `RC` and the lines for 8 and above do not, so `RC` ends as 7, and the script exits 7. The js-dos spike checked this in the browser: `HELLO.EXE exit 7` read back as 7 in js-dos and 7 natively.
 
 ## State of this layer
 
@@ -195,7 +195,7 @@ note: Run by hand and recorded in the document; not rerun here, and the screensh
 id: emu.dosbox
 label: Headless DOSBox Staging runs the DOS programs and returns their exit status
 state: built-verified
-evidence: sym:tools/dosrun.sh::errorlevel, test:shell/dos/check.sh::DOS_AUTOTYPE
+evidence: sym:dos/tools/dosrun.sh::errorlevel, test:shell/dos/check.sh::DOS_AUTOTYPE
 note: The CI target for the hosted track according to docs/DIRECTION.md. Not rerun for this chapter: DOSBox is fetched by tools/setup.sh and was not set up in this worktree.
 
 id: emu.jsdos
@@ -229,7 +229,7 @@ QEMU is {{state.emu.qemu}} and DOSBox {{state.emu.dosbox}}, which are the two th
 
 ## Try it yourself
 
-These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-10-23. `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` and `tools/native-test-86box.sh` were not run: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
+These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-10-23. `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` and `tools/native-test-86box.sh` were not run: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `dos/tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386
@@ -258,7 +258,7 @@ native-run: timed out after 3s
 
 The first command is the run of [M5](chapter:m-boot). The second shows QEMU's raw status, 35, and the third the mapped status, 1. The fourth is the watchdog: the hung kernel never reports, so the run ends at the timeout with 124. The last two are the probe, and the "timed out" lines are expected: the probe prints and halts, and does not write to the exit port, so `native-run.sh` can only end it by the timeout (`rdtsc` executes under QEMU's 486, `cmov` raises `#UD`). The process ids in the first line will differ on your machine. The Bochs commands, if you have Docker and a few minutes, are `tools/native-test-bochs.sh` (about 20 seconds once the image exists) and `tools/native-run-86box.sh --screenshot out.png`.
 
-**Exercises.** (1) Without running it, predict what `probe: ...` prints for `mov eax, cr4` (`db 0x0f, 0x20, 0xe0`) under QEMU's 486 and under Bochs's, then check the QEMU half. (2) Without running it, say what each of the three native runners returns for a kernel that stops with interrupts off and writes nothing, and what the QEMU watchdog's `timeout` makes of the process. (3) Read `tools/dosrun.sh` and say what its exit status is for a program that exits with 3, and why the batch file has 255 `if errorlevel` lines and not a loop.
+**Exercises.** (1) Without running it, predict what `probe: ...` prints for `mov eax, cr4` (`db 0x0f, 0x20, 0xe0`) under QEMU's 486 and under Bochs's, then check the QEMU half. (2) Without running it, say what each of the three native runners returns for a kernel that stops with interrupts off and writes nothing, and what the QEMU watchdog's `timeout` makes of the process. (3) Read `dos/tools/dosrun.sh` and say what its exit status is for a program that exits with 3, and why the batch file has 255 `if errorlevel` lines and not a loop.
 
 ## Proved in the log
 

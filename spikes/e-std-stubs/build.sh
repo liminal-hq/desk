@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds the spike E programs into dist/e/: the no_std baseline, std on the stub platform, std on the borrowed Trusty platform and std on
-# the patched Desk platform (for both the "desk" and the "dos" flavour), each packed with tools/elf2go32.py.
+# the patched Desk platform (for both the "desk" and the "dos" flavour), each packed with dos/tools/elf2go32.py.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -36,7 +36,7 @@ $E/patch/mkstd.sh "$STD"
 pack() {
   mkdir -p "$OUT/$1"
   cp vendor/cwsdpmi/bin/CWSDPMI.EXE "$OUT/$1/CWSDPMI.EXE"
-  tools/elf2go32.py "$OUT/stub.exe" "$E/target/$2/release/$3" "$OUT/$1/$4.EXE"
+  dos/tools/elf2go32.py "$OUT/stub.exe" "$E/target/$2/release/$3" "$OUT/$1/$4.EXE"
 }
 
 # 1. The baseline: core and alloc only, the runtime's own panic handler.

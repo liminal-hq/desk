@@ -22,7 +22,7 @@ run() {
   local dir=$1 raw
   shift
   status=0
-  raw="$(tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
+  raw="$(dos/tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
   out="$(printf '%s\n' "$raw" | normalise || true)"
 }
 
@@ -39,7 +39,7 @@ step "Rust format and lints (spike workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
-step "Build: rust-lld, then tools/elf2go32.py (no gcc, no ld, no C library)"
+step "Build: rust-lld, then dos/tools/elf2go32.py (no gcc, no ld, no C library)"
 $DIR/build.sh
 
 step "Build, stage 1: DJGPP ld with -nostdlib (no gcc, no C library, no crt0)"

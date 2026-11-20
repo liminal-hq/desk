@@ -23,7 +23,7 @@ Optimisation should start with bounded resource use and device traffic. A smalle
 | Layer | Observed implementation | Evidence and remaining boundary |
 |---|---|---|
 | Original hosted executable | [Rust core](../core/src/lib.rs), [C entry](../c/main.c), [build script](../tools/build.sh), MinGW-flavoured COFF conversion and DJGPP linking | A walking skeleton with explicit normal and panic transcripts; it remains the `DESK.EXE` built by the main build script |
-| Rust-only DOS executable | [D0 runtime](../dos/rt/src/lib.rs), freestanding ELF, `rust-lld`, [ELF packer](../tools/elf2go32.py), DJGPP stub and CWSDPMI | A working route used by subsequent graphics, input and shell consumers; the runtime still lives under `spikes/` |
+| Rust-only DOS executable | [D0 runtime](../dos/rt/src/lib.rs), freestanding ELF, `rust-lld`, [ELF packer](../dos/tools/elf2go32.py), DJGPP stub and CWSDPMI | A working route used by subsequent graphics, input and shell consumers; the runtime still lives under `spikes/` |
 | Machine services | [DPMI wrappers](../dos/rt/src/dpmi.rs), [DOS file calls](../dos/rt/src/dos.rs), [DOS HAL](../dos/rt/src/hal.rs), [IRQ adapter](../dos/rt/src/irq.rs) | Real implementations exist; compatibility evidence is concentrated on CWSDPMI and DOSBox |
 | Shared shell | [Shell workspace](../shell/Cargo.toml), [DOS wiring](../shell/dos/src/main.rs), [kernel wiring](../kernel/src/shell.rs) | Shared deterministic behaviour, damage accounting and platform frame comparison; no complete app-host integration |
 | Loadable apps | [DXE3 host](../spikes/s1-dxe3/host/mod.c) and [module runtime](../spikes/s1-dxe3/modules/rt/src/lib.rs) | Load, call, unload, panic and leak scenarios exist in a separate DJGPP/C host; no equivalent loader in the Rust-only executable |
@@ -84,7 +84,7 @@ Keep these contracts explicit when extracting the runtime. Removing the C compil
 
 ### 6. The packer relies on linker discipline more than it validates it
 
-**Observed:** [the packer](../tools/elf2go32.py) checks basic ELF identity, executable type, machine, load-segment count, text memory size and some placement constraints. It does not comprehensively validate file-backed segment bounds, program-header bounds, segment permissions or all size/address arithmetic before slicing and packing.
+**Observed:** [the packer](../dos/tools/elf2go32.py) checks basic ELF identity, executable type, machine, load-segment count, text memory size and some placement constraints. It does not comprehensively validate file-backed segment bounds, program-header bounds, segment permissions or all size/address arithmetic before slicing and packing.
 
 **Probe run in this assessment:** a synthetic ELF whose load segment claimed bytes at file offset 4096 in an 84-byte input was accepted by `parse_elf`. A second input with `p_filesz > p_memsz` was also accepted by that parser. The executable path has an additional text-tail check, so parser acceptance alone is not evidence that every malformed input reaches a runnable output. It does demonstrate that the parser's contract is permissive.
 

@@ -9,7 +9,7 @@ json-target-spec = true
 [build]
 target = "../../dos/dos-elf.json"
 
-# rust-lld links the ELF with our script; tools/elf2go32.py then packs the ELF into the go32 image. Run cargo from this directory:
+# rust-lld links the ELF with our script; dos/tools/elf2go32.py then packs the ELF into the go32 image. Run cargo from this directory:
 # the script path is relative.
 [target.dos-elf]
 rustflags = ["-C", "link-arg=-T../../dos/link.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]

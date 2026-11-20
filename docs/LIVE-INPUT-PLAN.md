@@ -170,7 +170,7 @@ main
 
 - `tools/run-shell.sh` (new), as [`LIVE-INPUT.md`](LIVE-INPUT.md#the-launchers) describes, with `--depth`, `--display`, `--nomouse` and `--demo`, printing the capture hotkeys before it starts and a one-line reason when something is missing (no desktop session, no host QEMU, no DOSBox in `vendor/`).
 - `tools/native-run.sh`: `--window DISPLAY` (and `--timeout 0` honoured), the serial transcript shown as it arrives, the GTK and SDL options of the design, status 2 after a closed window reported as a normal end. Without `--window`, the arguments it passes QEMU are byte for byte what they were.
-- `tools/dosrun.sh`: `DOS_WINDOW=1` as the design describes. Without it, the generated `dosbox.conf` and environment are what they were.
+- `dos/tools/dosrun.sh`: `DOS_WINDOW=1` as the design describes. Without it, the generated `dosbox.conf` and environment are what they were.
 - `tools/README.md` and `README.md`: how to try each track.
 - [`LIVE-INPUT.md`](LIVE-INPUT.md): every option and hotkey marked "to confirm" checked against QEMU 11.1 and the DOSBox Staging in `vendor/` and corrected; whether QEMU's GTK window scales relative motion when zoomed, measured.
 

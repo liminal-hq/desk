@@ -7,8 +7,8 @@
 # usage: spikes/d0-rust-dos/build.sh        (after tools/setup.sh)
 #
 #   spikes/d0-rust-dos (Rust, no_std)  --cargo -Zbuild-std, target dos-elf.json, linked by rust-lld with link.ld--> ELF executables
-#   the ELF + the DJGPP stub           --tools/elf2go32.py-----------------------------------------------------> dist/d0/NAME.EXE
-#   the ELF + CWSDSTUB.EXE             --tools/elf2go32.py-----------------------------------------------------> dist/d0/solo/NAME.EXE
+#   the ELF + the DJGPP stub           --dos/tools/elf2go32.py-----------------------------------------------------> dist/d0/NAME.EXE
+#   the ELF + CWSDSTUB.EXE             --dos/tools/elf2go32.py-----------------------------------------------------> dist/d0/solo/NAME.EXE
 #   vendor/cwsdpmi                                                                                            --> dist/d0/CWSDPMI.EXE
 #
 # The DJGPP pieces still used are data, not a toolchain: the stub (written out by `stubify -g`) and, for the self-contained
@@ -29,13 +29,13 @@ STUBIFY="$PWD/vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify"
 rm -f "$OUT/obj/stub.exe"
 "$STUBIFY" -g "$OUT/obj/stub.exe" > /dev/null
 
-# 3. Pack. The unit of work is a byte shuffle: tools/elf2go32.py reads the linked ELF and writes stub + go32 COFF image.
+# 3. Pack. The unit of work is a byte shuffle: dos/tools/elf2go32.py reads the linked ELF and writes stub + go32 COFF image.
 for p in $PROGRAMS; do
   name="$(echo "$p" | tr '[:lower:]' '[:upper:]')"
   elf="spikes/d0-rust-dos/target/dos-elf/release/$p"
-  tools/elf2go32.py "$OUT/obj/stub.exe" "$elf" "$OUT/$name.EXE"
+  dos/tools/elf2go32.py "$OUT/obj/stub.exe" "$elf" "$OUT/$name.EXE"
 done
-tools/elf2go32.py vendor/cwsdpmi/bin/CWSDSTUB.EXE spikes/d0-rust-dos/target/dos-elf/release/hello "$OUT/solo/HELLO.EXE"
+dos/tools/elf2go32.py vendor/cwsdpmi/bin/CWSDSTUB.EXE spikes/d0-rust-dos/target/dos-elf/release/hello "$OUT/solo/HELLO.EXE"
 
 # 4. The DPMI host the plain executables load when none is running. It must sit beside them.
 cp vendor/cwsdpmi/bin/CWSDPMI.EXE "$OUT/CWSDPMI.EXE"

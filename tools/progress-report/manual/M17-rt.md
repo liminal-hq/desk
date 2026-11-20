@@ -6,7 +6,7 @@ title: The hosted runtime and the build to SHELL.EXE
 summary: What a DOS extender and a DPMI host are, the runtime that lets a Rust program start under one, its heap, DOS calls, panic, clean-up, interrupt stubs and hardware layer, then the build that turns Rust into SHELL.EXE; with the first hosted skeleton and the DXE3 result as a marked legacy section.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [dos/rt/, dos/dos-elf.json, dos/link.ld, spikes/d0-rust-dos/build.sh, spikes/d0-rust-dos/check.sh, tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
+watches: [dos/rt/, dos/dos-elf.json, dos/link.ld, spikes/d0-rust-dos/build.sh, spikes/d0-rust-dos/check.sh, dos/tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
 log: [wheels, module, purerust, firstwindow]
 anatomy: [dos:stubr, dos:start, dos:heap, dos:dosw, dos:dpmi, dos:irq, dos:rthal, dos:exit, dos:target, dos:lld, dos:pack, dos:stubf, dos:exe, dos:cws]
 ---
@@ -42,7 +42,7 @@ The stub is not documented in a form the project could read, so the contract was
 | `GS` | `0000` | Nothing |
 | `EFLAGS` | `00003212` | Interrupts on, direction flag clear (do not rely on it) |
 | x87 control word | `0x037f` | Whatever DOS left. Not promised, so the runtime resets the unit |
-| The block | `initial_size 0x50000` | The stub rounds the end of `.bss` up to 64 KiB, and no lower than 128 KiB (`tools/elf2go32.py`) |
+| The block | `initial_size 0x50000` | The stub rounds the end of `.bss` up to 64 KiB, and no lower than 128 KiB (`dos/tools/elf2go32.py`) |
 
 Nothing is passed on the stack and there is no return address worth using. The stub's information block also carries the memory handle, the selector for the program segment prefix (`psp_selector`, base the PSP's linear address), the environment size, and the name of the host to load if none is present (`dpmi_server`, here `CWSDPMI.EXE`).
 
@@ -87,7 +87,7 @@ The panic handler, `rt/src/panic.rs`, sets a flag with a swap (a second panic in
 | `255` | `dos::die`, before the runtime is up, with no allocation and no formatting | `rt/src/dos.rs` |
 | `110` | No `CWSDPMI.EXE` beside the program: the stub's own message, `Load error: no DPMI - Get csdpmi*b.zip` | `docs/D0-RUST-DOS.md`, section 6 |
 | `1`, with no output | A CPU exception inside the program; the host reports it on the console, which the harness does not capture | `docs/D0-RUST-DOS.md`, "What failed" |
-| `125` | DOSBox itself failed (`tools/dosrun.sh`'s own status) | `tools/dosrun.sh` |
+| `125` | DOSBox itself failed (`dos/tools/dosrun.sh`'s own status) | `dos/tools/dosrun.sh` |
 
 The recommendation in the document, an exception handler (DPMI 0203h) that prints a register dump so that a crash is visible, is not built; `rt` has no such handler.
 
@@ -118,10 +118,10 @@ The pipeline below is the build of the d0 programs and of `SHELL.EXE`, which dif
 1. **The target.** `dos/dos-elf.json` is a freestanding ELF target: `i486-unknown-none-elf`, x87 hard float, SIMD off, `panic-strategy: abort`, `rust-lld` as the linker. [M19](chapter:m-toolchain) compares it field by field with the other two. `.cargo/config.toml` makes it the default, asks for [build-std](term:build-std) with `compiler-builtins-mem` (which supplies `memcpy`, `memmove`, `memset` and `memcmp`), and passes `-Tlink.ld -nostdlib -static` to the linker. `RUSTC_BOOTSTRAP=1` is set by the build script.
 2. **The link.** `rust-lld` links the objects with `link.ld`, a [linker script](term:linker-script): `_start` as the entry, two loadable segments (`text`, flags `R E`, and `data`, flags `RW`), the image from `0x1000`, every section on a 512-byte boundary, `.bss` in the data segment, and `__image_start` and `__image_end` as symbols. Its own comment gives the reasons: the stub copies `.text` and `.data` from the file to the image's block and clears `.bss`, it places the image at offset 0 of the block (so the addresses are offsets, not linear addresses), and it reads the file in sectors.
 3. **The stub.** `stubify -g`, from DJGPP, writes DJGPP's `STUB.EXE`, 2 KiB, "and does nothing else". It is data now, and neither `gcc`, `ld`, `as`, DJGPP's C library nor `crt0` is run. The stub's location in `vendor/` comes from `tools/setup.sh` ([M19](chapter:m-toolchain)).
-4. **The pack.** `tools/elf2go32.py` reads the ELF's program headers, not its sections: the first `PT_LOAD` becomes `.text` (code and read-only data) and the second becomes `.data` and `.bss`. It writes a go32 COFF image: a 20-byte file header, a 28-byte a.out header and exactly three 40-byte section headers (`.text`, `.data`, `.bss`), 168 bytes in all, padded to 512; then the sections, each padded to 512, behind the stub. The stub, as found by reading its code, checks only the magic `0x014C`; takes the entry point as a plain offset; copies each section from `scnptr` to `vaddr`; zeroes `.bss`; and sizes the block as the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the image. The tool refuses what it cannot pack: a file that is not a 32-bit little-endian ELF, an executable that is not `ET_EXEC`, a text segment with a `.bss` tail, an entry outside the text. With `--dpmi NAME` it patches the host's name into the stub (the last field of the information block, at offset `0x244`).
+4. **The pack.** `dos/tools/elf2go32.py` reads the ELF's program headers, not its sections: the first `PT_LOAD` becomes `.text` (code and read-only data) and the second becomes `.data` and `.bss`. It writes a go32 COFF image: a 20-byte file header, a 28-byte a.out header and exactly three 40-byte section headers (`.text`, `.data`, `.bss`), 168 bytes in all, padded to 512; then the sections, each padded to 512, behind the stub. The stub, as found by reading its code, checks only the magic `0x014C`; takes the entry point as a plain offset; copies each section from `scnptr` to `vaddr`; zeroes `.bss`; and sizes the block as the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the image. The tool refuses what it cannot pack: a file that is not a 32-bit little-endian ELF, an executable that is not `ET_EXEC`, a text segment with a `.bss` tail, an entry outside the text. With `--dpmi NAME` it patches the host's name into the stub (the last field of the information block, at offset `0x244`).
 5. **The host beside it.** `CWSDPMI.EXE` is copied next to the program. If it is missing, the stub says so and exits with status 110, which `spikes/d0-rust-dos/check.sh` tests (it requires the "no DPMI" message and a non-zero status). The d0 build also packs one program onto `CWSDSTUB.EXE`, the host's own stub with the host built in, giving a single file that runs in a directory with no `CWSDPMI.EXE`: 70,144 bytes in the document's build, against 49,664 for the plain `HELLO.EXE`.
 
-`shell/dos/build.sh` is the same pipeline for the shell: `cargo build --release --locked` in `shell/dos`, `stubify -g`, `tools/elf2go32.py` on the `shell` ELF, and the copying of `CWSDPMI.EXE`, `UI.DFN`, `TITLE.DFN` and `OFL.txt` beside it. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes; a build for this chapter is in the worked example.
+`shell/dos/build.sh` is the same pipeline for the shell: `cargo build --release --locked` in `shell/dos`, `stubify -g`, `dos/tools/elf2go32.py` on the `shell` ELF, and the copying of `CWSDPMI.EXE`, `UI.DFN`, `TITLE.DFN` and `OFL.txt` beside it. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes; a build for this chapter is in the worked example.
 
 > **From the stacks — Where CWSDPMI came from.** The documentation shipped with release 7 of CWSDPMI is copyrighted 1995 to 2010 by Charles W Sandmann. It says the server was written to provide DPMI services for version 2 of DJGPP, and thanks DJ Delorie, who wrote the original GO32 code on which it is based, and Morten Welinder, who improved much of it. It says CWSDSTUB.EXE is a stub that includes the server, so that a program can be distributed as a single executable. It says the server does not support 16-bit DPMI applications.
 > Source: [CWSDPMI r7 (csdpmi7b.zip), cwsdpmi.doc](https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip)
@@ -166,7 +166,7 @@ None of this carries over to the live pipeline as it stands. A module format for
 | [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | [`DosBios`](sym:dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay) |
 | [`dos/rt/src/timer.rs`](repo:dos/rt/src/timer.rs), [`fpu.rs`](repo:dos/rt/src/fpu.rs), [`env.rs`](repo:dos/rt/src/env.rs), [`bios_kbd.rs`](repo:dos/rt/src/bios_kbd.rs) | The IRQ 0 proof, the x87 maths `core` lacks, the command tail and environment, and the BIOS keyboard state |
 | [`dos/dos-elf.json`](repo:dos/dos-elf.json), [`link.ld`](repo:dos/link.ld) | The target and the linker script |
-| [`tools/elf2go32.py`](repo:tools/elf2go32.py) | [`parse_elf`](sym:tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
+| [`dos/tools/elf2go32.py`](repo:dos/tools/elf2go32.py) | [`parse_elf`](sym:dos/tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
 | [`shell/dos/build.sh`](repo:shell/dos/build.sh), [`shell/dos/check.sh`](repo:shell/dos/check.sh) | The build of `SHELL.EXE` and the checks that run it in DOSBox |
 | [`spikes/d0-rust-dos/build.sh`](repo:spikes/d0-rust-dos/build.sh), [`check.sh`](repo:spikes/d0-rust-dos/check.sh) | The same pipeline for the spike's programs, and their checks |
 | [`core/`](repo:core/), [`c/`](repo:c/), [`tools/coff2go32.py`](repo:tools/coff2go32.py) | Legacy: the first Rust core, the C layer and the converter |
@@ -183,9 +183,9 @@ For depth: [`docs/D0-RUST-DOS.md`](doc:docs/D0-RUST-DOS.md#2-the-runtime-contrac
 4. The host cannot give it. The carry flag comes back set and `AX` holds the error; `call` turns that into `Err`, `grow` returns `false`, `alloc` returns null. (When it succeeds, `BX:CX` is the new block's linear address and `SI:DI` its handle; `alloc_block` stores the first as `linear` and `linear_to_ptr` subtracts the image base to make a pointer.)
 5. A null from the global allocator becomes the standard library's allocation-error panic. Its message names the size that was asked for, not the rounded one: `memory allocation of 943718400 bytes failed`. The panic handler runs the clean-up list, prints `RT PANIC: ` and the location and message, and exits with status 3.
 
-This was run on 2026-10-23 in the CI image (`spikes/d0-rust-dos/build.sh`, then `tools/dosrun.sh dist/d0 HELLO.EXE oom`). The last two lines of its output, and the status, are in the "Try it yourself" block. The location in the first line is the standard library's own source path in the toolchain, which `check.sh` normalises to `alloc.rs:L:C:` before comparing, since line numbers move.
+This was run on 2026-10-23 in the CI image (`spikes/d0-rust-dos/build.sh`, then `dos/tools/dosrun.sh dist/d0 HELLO.EXE oom`). The last two lines of its output, and the status, are in the "Try it yourself" block. The location in the first line is the standard library's own source path in the toolchain, which `check.sh` normalises to `alloc.rs:L:C:` before comparing, since line numbers move.
 
-**The pieces of `SHELL.EXE`.** `shell/dos/build.sh` was run in the same image. Its ELF, `shell/dos/target/dos-elf/release/shell`, is 127,232 bytes with two loadable segments: `.text` at `0x1000`, 0x18200 (98,816) bytes, and `.data` at `0x19200`, 0x200 (512) bytes followed by a `.bss` of 0x42400 (271,360) bytes, of which the runtime's stack is 262,144. `tools/elf2go32.py --info` reports the result:
+**The pieces of `SHELL.EXE`.** `shell/dos/build.sh` was run in the same image. Its ELF, `shell/dos/target/dos-elf/release/shell`, is 127,232 bytes with two loadable segments: `.text` at `0x1000`, 0x18200 (98,816) bytes, and `.data` at `0x19200`, 0x200 (512) bytes followed by a `.bss` of 0x42400 (271,360) bytes, of which the runtime's stack is 262,144. `dos/tools/elf2go32.py --info` reports the result:
 
 ```text
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
@@ -240,7 +240,7 @@ note: The frame buffer and the DAC are read back and compared with the goldens. 
 id: rt.build
 label: dos-elf.json, rust-lld, link.ld, elf2go32.py, the stub and CWSDPMI.EXE make SHELL.EXE
 state: built-verified
-evidence: sym:tools/elf2go32.py::parse_elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::Self-contained executable
+evidence: sym:dos/tools/elf2go32.py::parse_elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::Self-contained executable
 note: shell/dos/check.sh was run in the CI image on 2026-10-23 and printed that line.
 
 id: rt.cws
@@ -289,16 +289,16 @@ $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=
 build: dist/shell/SHELL.EXE (101888 bytes)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'shell/dos/check.sh 2>&1 | tail -1'
 All shell on DOS checks passed.
-$ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'spikes/d0-rust-dos/build.sh 2>&1 | tail -1; tools/dosrun.sh dist/d0 HELLO.EXE oom | tail -2; echo "status ${PIPESTATUS[0]}"'
+$ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'spikes/d0-rust-dos/build.sh 2>&1 | tail -1; dos/tools/dosrun.sh dist/d0 HELLO.EXE oom | tail -2; echo "status ${PIPESTATUS[0]}"'
 build: dist/d0/HELLO.EXE (50688 bytes), dist/d0/solo/HELLO.EXE (71168 bytes, host included)
 RT PANIC: panicked at /usr/local/rustup/toolchains/1.98.0-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:573:9:
 memory allocation of 943718400 bytes failed
 status 3
-$ python3 tools/elf2go32.py --info dist/shell/obj/stub.exe shell/dos/target/dos-elf/release/shell dist/shell/x.exe
+$ python3 dos/tools/elf2go32.py --info dist/shell/obj/stub.exe shell/dos/target/dos-elf/release/shell dist/shell/x.exe
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
 $ xxd -s 0x200 -l 16 dist/shell/obj/stub.exe
 00000200: 676f 3332 7374 7562 2c20 7620 322e 3035  go32stub, v 2.05
-$ python3 tools/elf2go32.py dist/shell/obj/stub.exe dist/shell/obj/stub.exe dist/shell/y.exe; echo "exit $?"
+$ python3 dos/tools/elf2go32.py dist/shell/obj/stub.exe dist/shell/obj/stub.exe dist/shell/y.exe; echo "exit $?"
 elf2go32: not a 32-bit little-endian ELF file
 exit 1
 ```

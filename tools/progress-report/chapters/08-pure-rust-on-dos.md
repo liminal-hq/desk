@@ -8,7 +8,7 @@ prs: [7]
 ---
 The hosted skeleton of chapter 4 still leaned on a C layer, DJGPP's compiler and linker and its C library. The pivot made that uncomfortable: a native kernel has none of those, and the owner wanted shared machinery that a future DOS game could use without them. Spike `d0-rust-dos` (PR #7, stacked on #3) asked how little of DJGPP a Rust program really needs, and the answer is **two small pieces of data**: the 2 KiB DJGPP stub, and CWSDPMI.
 
-The route is below. Rust objects are linked by the `rust-lld` that ships with the toolchain, and a {{m.packerLines}}-line Python script, `tools/elf2go32.py`, rearranges the linked ELF into the layout the stub expects. The sizes in the diagram are the ones the spike recorded in `docs/D0-RUST-DOS.md`, and the line counts are counted in the tree.
+The route is below. Rust objects are linked by the `rust-lld` that ships with the toolchain, and a {{m.packerLines}}-line Python script, `dos/tools/elf2go32.py`, rearranges the linked ELF into the layout the stub expects. The sizes in the diagram are the ones the spike recorded in `docs/D0-RUST-DOS.md`, and the line counts are counted in the tree.
 
 <!-- explainer pipeline -->
 

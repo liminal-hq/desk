@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds SHELL.EXE into dist/shell/ the way spike A builds VGAVBE.EXE: Rust, rust-lld, then tools/elf2go32.py behind DJGPP's stub. The
+# Builds SHELL.EXE into dist/shell/ the way spike A builds VGAVBE.EXE: Rust, rust-lld, then dos/tools/elf2go32.py behind DJGPP's stub. The
 # directory also gets CWSDPMI.EXE, the two faces for `fontfile` and the fonts' licence.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
@@ -19,7 +19,7 @@ STUBIFY="$PWD/vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify"
 rm -f "$OUT/obj/stub.exe"
 "$STUBIFY" -g "$OUT/obj/stub.exe" > /dev/null
 
-tools/elf2go32.py "$OUT/obj/stub.exe" shell/dos/target/dos-elf/release/shell "$OUT/SHELL.EXE"
+dos/tools/elf2go32.py "$OUT/obj/stub.exe" shell/dos/target/dos-elf/release/shell "$OUT/SHELL.EXE"
 cp vendor/cwsdpmi/bin/CWSDPMI.EXE "$OUT/CWSDPMI.EXE"
 cp fonts/generated/ui.dfn "$OUT/UI.DFN"
 cp fonts/generated/title.dfn "$OUT/TITLE.DFN"

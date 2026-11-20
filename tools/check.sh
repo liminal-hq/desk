@@ -268,7 +268,7 @@ EXPECTED='DESK-SKELETON ok: squares=10 sum=385 big=385001155 sqrt=19.621417'
 
 step "Run DESK.EXE in headless DOSBox"
 status=0
-actual="$(tools/dosrun.sh dist DESK.EXE)" || status=$?
+actual="$(dos/tools/dosrun.sh dist DESK.EXE)" || status=$?
 file="$(tr -d '\r' < dist/OUT.TXT 2> /dev/null || true)"
 [ "$status" = 0 ] || fail "DESK.EXE exited with status $status; output: $actual"
 [ "$actual" = "$EXPECTED" ] || fail "standard output is not the expected line
@@ -281,7 +281,7 @@ echo "$actual"
 
 step "A Rust panic reports through C and exits non-zero"
 status=0
-actual="$(tools/dosrun.sh dist DESK.EXE panic)" || status=$?
+actual="$(dos/tools/dosrun.sh dist DESK.EXE panic)" || status=$?
 [ "$status" = 3 ] || fail "DESK.EXE panic exited with status $status, not 3; output: $actual"
 case "$actual" in
   "DESK-SKELETON PANIC at line "*) ;;

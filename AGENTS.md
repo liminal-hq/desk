@@ -131,7 +131,7 @@ The stack is **Rust** (pinned in `rust-toolchain.toml`; the DOS target needs `-Z
 tools/setup.sh                           # once: Rust pieces, then DJGPP, DOSBox Staging and CWSDPMI in vendor/
 tools/check.sh                           # everything the CI runs: checks, build, headless run
 tools/build.sh                           # dist/DESK.EXE and dist/CWSDPMI.EXE
-tools/dosrun.sh dist DESK.EXE            # run a DOS program headless; prints its output, returns its exit status
+dos/tools/dosrun.sh dist DESK.EXE            # run a DOS program headless; prints its output, returns its exit status
 tools/check-headers.sh                   # licence headers on source, script and workflow files
 python3 -I tools/check-docs.py           # markdown style and links
 python3 -I tools/build-hero.py [name] > assets/hero.svg    # rebuild the README banner

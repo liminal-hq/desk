@@ -4,13 +4,13 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/dosrun.sh <dir> <command> [args...]
+# usage: dos/tools/dosrun.sh <dir> <command> [args...]
 #
 #   <dir>      mounted as C: and made the current directory; holds the program and CWSDPMI.EXE
 #   <command>  run there, e.g. `DESK.EXE panic`
 #
 # The program's standard output goes to this script's standard output (with DOS line ends removed) and its exit status becomes
-# this script's, so `tools/dosrun.sh dist DESK.EXE` behaves like running the program. Two statuses are the script's own: 124 when
+# this script's, so `dos/tools/dosrun.sh dist DESK.EXE` behaves like running the program. Two statuses are the script's own: 124 when
 # the command outlived DOS_TIMEOUT seconds (default 60), and 125 when DOSBox itself failed, in which case its log is printed to
 # standard error. Set DOS_VERBOSE=1 to always see DOSBox's log.
 #
@@ -38,7 +38,7 @@
 # recovers it with a ladder of `IF ERRORLEVEL n` tests, which hold for every n up to the status, so the last line that matches
 # is the status.
 set -euo pipefail
-HERE="$(cd "$(dirname "$0")/.." && pwd)"
+HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 
 [ $# -ge 2 ] || { sed -n '/^# usage/,/^$/p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 DIR="$(cd "$1" && pwd)"

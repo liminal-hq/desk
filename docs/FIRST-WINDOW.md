@@ -624,7 +624,7 @@ python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/gol
 
 ### Hosted: SHELL.EXE in DOSBox
 
-`shell/dos/` is its own Cargo workspace (excluded from `shell/`'s, because its default target is `dos-elf.json`), built like spikes A and B: `rt` by path from `dos/rt`, `rust-lld`, `tools/elf2go32.py` behind DJGPP's stub, `CWSDPMI.EXE` beside it, into `dist/shell/`.
+`shell/dos/` is its own Cargo workspace (excluded from `shell/`'s, because its default target is `dos-elf.json`), built like spikes A and B: `rt` by path from `dos/rt`, `rust-lld`, `dos/tools/elf2go32.py` behind DJGPP's stub, `CWSDPMI.EXE` beside it, into `dist/shell/`.
 
 ```
 SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]

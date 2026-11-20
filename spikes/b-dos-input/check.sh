@@ -29,7 +29,7 @@ run() {
   local keys=$1 raw
   shift
   status=0
-  raw="$(DOS_AUTOTYPE="$TYPE $keys" DOS_CONF="${CONF:-}" DOS_TIMEOUT=60 tools/dosrun.sh dist/b "$@" 2> /dev/null)" || status=$?
+  raw="$(DOS_AUTOTYPE="$TYPE $keys" DOS_CONF="${CONF:-}" DOS_TIMEOUT=60 dos/tools/dosrun.sh dist/b "$@" 2> /dev/null)" || status=$?
   out="$(printf '%s\n' "$raw" | normalise || true)"
 }
 
@@ -53,7 +53,7 @@ step "Rust format and lints (spike workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
-step "Build INPUT.EXE: rust-lld, then tools/elf2go32.py"
+step "Build INPUT.EXE: rust-lld, then dos/tools/elf2go32.py"
 $DIR/build.sh
 
 step "Host tests: the same keys through the mock 8042, the IRQ 1 service, the ring and the shared decoder; INT 33h against the model"

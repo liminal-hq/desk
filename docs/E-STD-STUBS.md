@@ -1,6 +1,6 @@
 # E: `std` for an invented OS
 
-Spike `e-std-stubs`: since we write our own target specifications, can Rust's `std` be built for a target whose `os` is a name we invent, what does the "unsupported" platform give us, what does it cost, and what is the cheapest path to a useful `std` for DOS programs and for future Desk apps? The code is in [`../spikes/e-std-stubs/`](../spikes/e-std-stubs/); it builds on the pure-Rust DOS runtime of [`D0-RUST-DOS.md`](D0-RUST-DOS.md) (`rt`) and its packer. Everything below was run with Rust 1.98.0 (the pinned toolchain), headless DOSBox Staging 0.83.0 and CWSDPMI r7 through [`../tools/dosrun.sh`](../tools/dosrun.sh), inside the `ci-dos` image. Nothing has run on real hardware.
+Spike `e-std-stubs`: since we write our own target specifications, can Rust's `std` be built for a target whose `os` is a name we invent, what does the "unsupported" platform give us, what does it cost, and what is the cheapest path to a useful `std` for DOS programs and for future Desk apps? The code is in [`../spikes/e-std-stubs/`](../spikes/e-std-stubs/); it builds on the pure-Rust DOS runtime of [`D0-RUST-DOS.md`](D0-RUST-DOS.md) (`rt`) and its packer. Everything below was run with Rust 1.98.0 (the pinned toolchain), headless DOSBox Staging 0.83.0 and CWSDPMI r7 through [`../dos/tools/dosrun.sh`](../dos/tools/dosrun.sh), inside the `ci-dos` image. Nothing has run on real hardware.
 
 ## Contents
 
@@ -34,7 +34,7 @@ spikes/e-std-stubs/build.sh               # builds every flavour into dist/e/{ba
 spikes/e-std-stubs/check.sh               # format, lints, builds, negative builds, and every probe run in headless DOSBox
 spikes/e-std-stubs/measure.sh             # sizes under the size flags, and cold -Zbuild-std times (not part of the checks)
 spikes/e-std-stubs/breakdown.py ELF       # where the bytes of a program go, by crate and by symbol
-tools/dosrun.sh dist/e/desk PROBE.EXE all
+dos/tools/dosrun.sh dist/e/desk PROBE.EXE all
 ```
 
 `check.sh` is a step of [`../tools/check.sh`](../tools/check.sh). The build, in short:
@@ -52,7 +52,7 @@ __CARGO_TESTS_ONLY_SRC_ROOT=$PWD/spikes/e-std-stubs/target/desk-src/library RUST
 RUSTC_BOOTSTRAP=1 cargo build --release --target targets/dos-std.json -p base -Zbuild-std=core,alloc,compiler_builtins
 ```
 
-[`.cargo/config.toml`](../spikes/e-std-stubs/.cargo/config.toml) sets `build-std = ["std", "panic_abort"]`, `build-std-features = ["compiler-builtins-mem"]` and `json-target-spec = true`; the profile is `opt-level = "s"`, LTO, one codegen unit and `panic = "abort"`. Each program is linked by `rust-lld` with the d0 linker script and packed by [`../tools/elf2go32.py`](../tools/elf2go32.py). Cargo downloads the crates that `std`'s sources depend on, so the build needs network access and a writable `CARGO_HOME`.
+[`.cargo/config.toml`](../spikes/e-std-stubs/.cargo/config.toml) sets `build-std = ["std", "panic_abort"]`, `build-std-features = ["compiler-builtins-mem"]` and `json-target-spec = true`; the profile is `opt-level = "s"`, LTO, one codegen unit and `panic = "abort"`. Each program is linked by `rust-lld` with the d0 linker script and packed by [`../dos/tools/elf2go32.py`](../dos/tools/elf2go32.py). Cargo downloads the crates that `std`'s sources depend on, so the build needs network access and a writable `CARGO_HOME`.
 
 How the pieces fit:
 

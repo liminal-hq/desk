@@ -75,7 +75,7 @@ The thread pieces are the change from E: E kept `std` on its `no_threads` arms, 
 | Dword `CMPXCHG` (`0F B1`, with or without `lock`) | Invalid opcode | Runs | Runs | Invalid | Runs |
 | Byte `CMPXCHG` (`0F B0`), `XADD`, `BSWAP` | Run | Run | Run | Invalid | Run |
 
-Where it ran, the succeeding and failing cases gave the right values and `ZF`. `tools/dosrun.sh` uses `core = normal` and `cputype = 486`, the failing combination. The early A-step encoding (`0F A6`/`A7`) was reported invalid everywhere; that is from memory and unverified, and nothing here says what any real 486 stepping does.
+Where it ran, the succeeding and failing cases gave the right values and `ZF`. `dos/tools/dosrun.sh` uses `core = normal` and `cputype = 486`, the failing combination. The early A-step encoding (`0F A6`/`A7`) was reported invalid everywhere; that is from memory and unverified, and nothing here says what any real 486 stepping does.
 
 **The decision, in two steps.** The owner first chose an interrupt-masking lock fallback: the locks' compare-and-swap through an imported helper and a trap for everything else, option (a) below. A fourth experiment then showed DOSBox's dynamic core running the instruction while staying strict about the rest, and the owner simplified the decision (below).
 
@@ -87,7 +87,7 @@ Where it ran, the succeeding and failing cases gave the right values and `ZF`. `
 | `BSWAP`, `XADD`, byte `CMPXCHG`, `INVD`, `WBINVD` | Run at 486 on every core; `386` rejects them all; nothing crashed or hung |
 | The repository's checks under both cores | Pass identically, with the same digests and goldens: `shell/dos/check.sh` (64 s normal, 53 s dynamic), `spikes/d0-rust-dos/check.sh` (26 s, 22 s), `spikes/b-dos-input/check.sh` (79 s, 80 s); most of the time is Rust builds, and DOSBox ran the shell scenario in 1.9 s on normal and 0.76 s on dynamic |
 | Differences | `RETSTART.EXE` (a program returning from `_start`) aborts under normal ("Pagefault didn't correct table", status 125) and exits 1 under dynamic, and the check needs only non-zero; the live runs' key counts varied (21, 23 or 24) under both cores, an existing flakiness the checks tolerate |
-| DOSBox-X | More lenient: its `486` accepts `CPUID` and dword `CMPXCHG` and rejects `RDTSC`, `CMOV`, `CMPXCHG8B`, `EMMS`; `486_prefetch` needs the normal core; `SHELL.EXE depth8 scenario dump` matched `tests/shell/expected-dos-8.txt` in six runs. `tools/dosrun.sh` stays on Staging for the strict check |
+| DOSBox-X | More lenient: its `486` accepts `CPUID` and dword `CMPXCHG` and rejects `RDTSC`, `CMOV`, `CMPXCHG8B`, `EMMS`; `486_prefetch` needs the normal core; `SHELL.EXE depth8 scenario dump` matched `tests/shell/expected-dos-8.txt` in six runs. `dos/tools/dosrun.sh` stays on Staging for the strict check |
 
 **The codegen experiment** (in the CI image, `ci-dos@sha256:6b8c6308`, Rust 1.98.0, `cargo rustc --release -Zbuild-std=core -Zjson-target-spec -- --emit=asm` on a `no_std` crate with `AtomicU32::compare_exchange`, `fetch_add` and `swap`; not committed):
 
@@ -101,7 +101,7 @@ Where it ran, the succeeding and failing cases gave the right values and `ZF`. `
 
 No helper call (`__sync_*`, `__atomic_*`) appeared in any variant, and `compiler_builtins` 1.98 provides `__sync_*` helpers only for ARM (`src/sync/arm_linux.rs`, `thumbv6k.rs`), none for x86. So **no target-specification setting found makes LLVM lower 32-bit x86 atomics to library calls**: with 32-bit atomics enabled, `compare_exchange` is inline `lock cmpxchg` even for an i386 CPU, and the switches that remove it remove the atomic types as well. (Other LLVM options were not searched exhaustively; none is known to the author.)
 
-**What that means for one file on both tracks.** A `.DMD` or `.DKX` is the same bytes on both tracks, so an inline `lock cmpxchg` anywhere in it faults under `tools/dosrun.sh`'s DOSBox. Locks are only part of it: in the 1.98 sources `compare_exchange` is also used by `alloc`'s `Arc` (five sites in `alloc/src/sync.rs`, `Weak::upgrade` among them), `std::sync::mpsc`'s channels, the thread id counter, the panic count and `process::exit`, and by any crate an app uses.
+**What that means for one file on both tracks.** A `.DMD` or `.DKX` is the same bytes on both tracks, so an inline `lock cmpxchg` anywhere in it faults under `dos/tools/dosrun.sh`'s DOSBox. Locks are only part of it: in the 1.98 sources `compare_exchange` is also used by `alloc`'s `Arc` (five sites in `alloc/src/sync.rs`, `Weak::upgrade` among them), `std::sync::mpsc`'s channels, the thread id counter, the panic count and `process::exit`, and by any crate an app uses.
 
 **What each atomic operation compiles to** (the same experiment, `kernel/i486-desk-none.json`, `-Zbuild-std=core,alloc`):
 
@@ -183,7 +183,7 @@ The patch follows each Rust release: [`E-STD-STUBS.md`](E-STD-STUBS.md#5-mainten
 1. **The loader spike (R48) stays `no_std`.** Its modules use `desk-guest`.
 2. **The hosted shim path first.** It already builds (E's 12-second `std` build); the steps are the `desk_*` import slots instead of `extern` blocks, `std::fs` over `rt::dos`, `fn main` through `lang_start`, and an app packed as a `.DKX` and run by the hosted runtime. Threads come with the hosted green threads.
 3. **Native after tasks and threads exist** (R77, R141): the same file, the functions resolved by the kernel.
-4. **A planned small task with the hosted step:** `tools/dosrun.sh` takes the DOSBox core from a variable (`DOS_CORE`, default `normal`, so nothing changes for the existing checks), the `std` apps' checks set `DOS_CORE=dynamic`, and the "Headless DOSBox" section of [`TOOLCHAIN.md`](TOOLCHAIN.md#headless-dosbox) states the rule. The matching wording for `AGENTS.md`'s testing section is a proposed edit for the owner, not made here.
+4. **A planned small task with the hosted step:** `dos/tools/dosrun.sh` takes the DOSBox core from a variable (`DOS_CORE`, default `normal`, so nothing changes for the existing checks), the `std` apps' checks set `DOS_CORE=dynamic`, and the "Headless DOSBox" section of [`TOOLCHAIN.md`](TOOLCHAIN.md#headless-dosbox) states the rule. The matching wording for `AGENTS.md`'s testing section is a proposed edit for the owner, not made here.
 
 ## Questions for the owner
 

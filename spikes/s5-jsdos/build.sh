@@ -8,7 +8,7 @@
 #
 #   tools/build.sh                           --> dist/DESK.EXE, dist/CWSDPMI.EXE        (C layer plus Rust core)
 #   spikes/d0-rust-dos/build.sh              --> dist/d0/HELLO.EXE, HW.EXE, solo/HELLO.EXE (pure Rust)
-#   spikes/s5-jsdos/probes (cargo, rust-lld) --> dist/s5/VGA13.EXE, VBE.EXE, TONE.EXE  (packed by tools/elf2go32.py)
+#   spikes/s5-jsdos/probes (cargo, rust-lld) --> dist/s5/VGA13.EXE, VBE.EXE, TONE.EXE  (packed by dos/tools/elf2go32.py)
 #   spikes/s5-jsdos/bundle.py                --> dist/s5/site/bundles/*.jsdos
 #   page/ + vendor/js-dos                    --> dist/s5/site/                          (what a Pages site would serve)
 #
@@ -33,10 +33,10 @@ STUBIFY="$PWD/vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify"
 rm -f "$OUT/obj/stub.exe"
 "$STUBIFY" -g "$OUT/obj/stub.exe" > /dev/null
 for p in vga13 vbe tone; do
-  tools/elf2go32.py "$OUT/obj/stub.exe" "$S5/probes/target/dos-elf/release/$p" "$OUT/$(echo "$p" | tr '[:lower:]' '[:upper:]').EXE"
+  dos/tools/elf2go32.py "$OUT/obj/stub.exe" "$S5/probes/target/dos-elf/release/$p" "$OUT/$(echo "$p" | tr '[:lower:]' '[:upper:]').EXE"
 done
 
-# S5RUN.BAT: run the command, keep its exit status (a ladder of IF ERRORLEVEL tests, as tools/dosrun.sh does, because the emulator
+# S5RUN.BAT: run the command, keep its exit status (a ladder of IF ERRORLEVEL tests, as dos/tools/dosrun.sh does, because the emulator
 # does not expand %ERRORLEVEL%), then say it is finished.
 batch() { # <command line>
   {
@@ -59,7 +59,7 @@ bundle() {
 }
 
 CWS=dist/CWSDPMI.EXE
-cp $CWS $OUT/CWSDPMI.EXE # so tools/dosrun.sh dist/s5 can run the probes natively
+cp $CWS $OUT/CWSDPMI.EXE # so dos/tools/dosrun.sh dist/s5 can run the probes natively
 bundle desk 'DESK.EXE' dist/DESK.EXE $CWS
 bundle hello 'HELLO.EXE' dist/d0/HELLO.EXE $CWS
 bundle hello-exit7 'HELLO.EXE exit 7' dist/d0/HELLO.EXE $CWS
@@ -71,7 +71,7 @@ bundle tone 'TONE.EXE' $OUT/TONE.EXE $CWS
 bundle tone-compat 'TONE.EXE' --set sblaster.oplemu=compat $OUT/TONE.EXE $CWS
 bundle tone-default 'TONE.EXE' --set sblaster.oplemu=default $OUT/TONE.EXE $CWS
 bundle vbe-banked 'VBE.EXE banked' $OUT/VBE.EXE $CWS
-# The same probes with the settings of a native run (tools/dosrun.sh): the interpreter and a 486 that faults on newer instructions.
+# The same probes with the settings of a native run (dos/tools/dosrun.sh): the interpreter and a 486 that faults on newer instructions.
 bundle hello-486 'HELLO.EXE' --set cpu.core=normal --set cpu.cputype=486 dist/d0/HELLO.EXE $CWS
 bundle vbe-nolfb 'VBE.EXE' --set dosbox.machine=vesa_nolfb $OUT/VBE.EXE $CWS
 bundle vbe-oldvbe 'VBE.EXE' --set dosbox.machine=vesa_oldvbe $OUT/VBE.EXE $CWS

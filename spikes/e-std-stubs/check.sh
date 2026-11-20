@@ -20,7 +20,7 @@ run() {
   local dir=dist/e/$1
   shift
   status=0
-  out="$(tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
+  out="$(dos/tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
 }
 
 # expect <label> <status> [text...]: $status must match, and every text must appear in $out

@@ -1,6 +1,6 @@
 # D0: Rust-only DOS programs
 
-Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no DJGPP C library — linked and packed by tooling we control, and run headless under CWSDPMI? This is the proving step for "Rust for DOS" as shared machinery (the Desk, and later DOS games such as Lieutenant Fizz Episode 2). The code is in [`../spikes/d0-rust-dos/`](../spikes/d0-rust-dos/) and the packer in [`../tools/elf2go32.py`](../tools/elf2go32.py). Everything below was run under headless DOSBox Staging 0.83.0 with CWSDPMI r7 through [`../tools/dosrun.sh`](../tools/dosrun.sh), on this machine and again from a clean clone in the `ci-dos` image.
+Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no DJGPP C library — linked and packed by tooling we control, and run headless under CWSDPMI? This is the proving step for "Rust for DOS" as shared machinery (the Desk, and later DOS games such as Lieutenant Fizz Episode 2). The code is in [`../spikes/d0-rust-dos/`](../spikes/d0-rust-dos/) and the packer in [`../dos/tools/elf2go32.py`](../dos/tools/elf2go32.py). Everything below was run under headless DOSBox Staging 0.83.0 with CWSDPMI r7 through [`../dos/tools/dosrun.sh`](../dos/tools/dosrun.sh), on this machine and again from a clean clone in the `ci-dos` image.
 
 ## Contents
 
@@ -24,7 +24,7 @@ Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no
 
 - **Target:** a freestanding ELF target ([`dos-elf.json`](../dos/dos-elf.json), `i486-unknown-none-elf`, x87 hard float, SIMD off) linked by `rust-lld` with [`link.ld`](../dos/link.ld). It is simpler than the skeleton's MinGW-flavoured COFF target in every way that mattered: no section folding, no REL32 patching, no weak-external objects to drop, no `_alloca`, and `compiler_builtins` links as is.
 - **Runtime:** [`rt`](../dos/rt/) is now the foundation's own directory, `dos/` ([`LAYERS.md`](LAYERS.md)), which every DOS program and the Desk depend on. Keep one module per concern; add an exception handler (DPMI 0203h) that prints a register dump to standard output, so a crash is visible to the harness instead of a bare exit status 1.
-- **Packer:** keep `tools/elf2go32.py` (it is small and has no dependencies beyond Python, which the repository already needs); port it to a Rust host tool only if Python leaves the build.
+- **Packer:** keep `dos/tools/elf2go32.py` (it is small and has no dependencies beyond Python, which the repository already needs); port it to a Rust host tool only if Python leaves the build.
 - **What stays on DJGPP:** the 2 KiB stub (written out by `stubify -g`, or vendored; or `CWSDSTUB.EXE` for single-file programs) and CWSDPMI. What leaves: `gcc`, `ld`, `as`, `libc`, `libgcc`, `crt0`, the `c/` layer and `coff2go32.py`, once nothing needs C. DJGPP's C library remains an option, via the skeleton's path, for linking third-party C code.
 - **Next spikes:** (1) a Rust driver crate set — keyboard (IRQ 1), mouse (INT 33h with a real-mode callback), VGA/VBE linear frame buffer (DPMI 0800h), PIT, OPL and Sound Blaster DMA; (2) an own-stub and own-extender research spike (the only remaining dependencies that are not ours); (3) loadable modules, now that we own the linker (this reframes `s1-dxe3`); (4) a run on real hardware and under EMM386, QEMM and a Windows 9x DOS box.
 
@@ -34,9 +34,9 @@ The retirement of the C layer and `coff2go32.py` is a later decision; this branc
 
 ```bash
 tools/setup.sh                       # once
-spikes/d0-rust-dos/build.sh          # stage 2: rust-lld + tools/elf2go32.py -> dist/d0/*.EXE
+spikes/d0-rust-dos/build.sh          # stage 2: rust-lld + dos/tools/elf2go32.py -> dist/d0/*.EXE
 spikes/d0-rust-dos/build-stage1.sh   # stage 1: DJGPP ld -nostdlib         -> dist/d0/HELLO1.EXE
-tools/dosrun.sh dist/d0 HELLO.EXE    # run it headless
+dos/tools/dosrun.sh dist/d0 HELLO.EXE    # run it headless
 spikes/d0-rust-dos/check.sh          # everything, with transcripts (also the last step of tools/check.sh)
 ```
 
@@ -46,7 +46,7 @@ Stage 2 is, step by step (the script is the reference):
 # in spikes/d0-rust-dos: -Zbuild-std for dos-elf.json, rust-lld links with link.ld (config in .cargo/config.toml)
 RUSTC_BOOTSTRAP=1 cargo build --release --locked
 vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify -g dist/d0/obj/stub.exe     # writes the 2 KiB stub, nothing else
-tools/elf2go32.py dist/d0/obj/stub.exe spikes/d0-rust-dos/target/dos-elf/release/hello dist/d0/HELLO.EXE
+dos/tools/elf2go32.py dist/d0/obj/stub.exe spikes/d0-rust-dos/target/dos-elf/release/hello dist/d0/HELLO.EXE
 ```
 
 Stage 1 builds the same `hello` as a static library for [`../core/dos.json`](../core/dos.json) (the skeleton's target, unchanged), converts it and links:
@@ -102,7 +102,7 @@ In the order met, with the cause of each.
 
 **Stage 1 works too, with more.** DJGPP's `ld` with `-nostdlib -static` and its default linker script writes a complete `.EXE` (its `coff-go32-exe` output already contains the stub, so `stubify` is not needed either). Needed besides `ld`: `tools/coff2go32.py` (necessary, shown above), the `memcpy` family from `rt/src/mem.rs` (`compiler_builtins` is dropped by the converter), and `libgcc.a` for the single helper `__udivdi3`. `gcc` is not run and no C library is linked.
 
-What the stub needs of the image, found by disassembling it (it is in `stubify` and can be written out with `-g`) and confirmed by running: the 168 bytes after the COFF start hold exactly a file header, a 28-byte a.out header and three section headers (`.text`, `.data`, `.bss`); only the magic `0x014C` is checked; the entry point is a plain offset; each section is copied from `scnptr` (keep it a multiple of 512) to `vaddr` in 512-byte reads; `.bss` is zeroed by the stub from its `vaddr`; the block is the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the images [`elf2go32.py`](../tools/elf2go32.py) writes.
+What the stub needs of the image, found by disassembling it (it is in `stubify` and can be written out with `-g`) and confirmed by running: the 168 bytes after the COFF start hold exactly a file header, a 28-byte a.out header and three section headers (`.text`, `.data`, `.bss`); only the magic `0x014C` is checked; the entry point is a plain offset; each section is copied from `scnptr` (keep it a multiple of 512) to `vaddr` in 512-byte reads; `.bss` is zeroed by the stub from its `vaddr`; the block is the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the images [`elf2go32.py`](../dos/tools/elf2go32.py) writes.
 
 ## 2. The runtime contract
 

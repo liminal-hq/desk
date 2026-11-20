@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds VGAVBE.EXE into dist/a/ the way d0-rust-dos builds its programs: Rust, rust-lld, then tools/elf2go32.py behind DJGPP's stub.
+# Builds VGAVBE.EXE into dist/a/ the way d0-rust-dos builds its programs: Rust, rust-lld, then dos/tools/elf2go32.py behind DJGPP's stub.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -18,6 +18,6 @@ STUBIFY="$PWD/vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify"
 rm -f "$OUT/obj/stub.exe"
 "$STUBIFY" -g "$OUT/obj/stub.exe" > /dev/null
 
-tools/elf2go32.py "$OUT/obj/stub.exe" spikes/a-vga-vbe/target/dos-elf/release/vgavbe "$OUT/VGAVBE.EXE"
+dos/tools/elf2go32.py "$OUT/obj/stub.exe" spikes/a-vga-vbe/target/dos-elf/release/vgavbe "$OUT/VGAVBE.EXE"
 cp vendor/cwsdpmi/bin/CWSDPMI.EXE "$OUT/CWSDPMI.EXE"
 echo "build: $OUT/VGAVBE.EXE ($(wc -c < "$OUT/VGAVBE.EXE") bytes)"

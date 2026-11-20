@@ -104,8 +104,8 @@ RULES=(
   'tools/build.sh;report,dos;tools/build.sh'
   'tools/coff2go32.py;report,dos;tools/coff2go32.py'
   'tools/raw2png.py;report,dos;tools/raw2png.py'
-  'tools/dosrun.sh;report,dos,stdstubs,shelldos,compare;tools/dosrun.sh'
-  'tools/elf2go32.py;report,dos,stdstubs,shelldos,compare;tools/elf2go32.py'
+  'dos/tools/dosrun.sh;report,dos,stdstubs,shelldos,compare;dos/tools/dosrun.sh'
+  'dos/tools/elf2go32.py;report,dos,stdstubs,shelldos,compare;dos/tools/elf2go32.py'
   # The Rust-on-DOS foundation. The runtime and its target are shared by the shell on DOS, the spikes and the cross checks.
   'dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;dos/rt/src/lib.rs'
   'dos/dos-elf.json;report,rust,dos,stdstubs,shelldos,compare;dos/dos-elf.json'

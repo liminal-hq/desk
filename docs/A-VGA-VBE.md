@@ -158,15 +158,15 @@ What changed, and what is recommended:
 ```bash
 tools/setup.sh                          # once
 spikes/a-vga-vbe/build.sh               # dist/a/VGAVBE.EXE and CWSDPMI.EXE
-tools/dosrun.sh dist/a VGAVBE.EXE       # every stage; add `dump` to write the .RAW and .PAL files
-tools/dosrun.sh dist/a VGAVBE.EXE vbe   # one stage: ports, 13, bios13, 12, bios12, vbe
-DOS_MACHINE=vgaonly tools/dosrun.sh dist/a VGAVBE.EXE vbe    # a machine with no VBE: status 2
+dos/tools/dosrun.sh dist/a VGAVBE.EXE       # every stage; add `dump` to write the .RAW and .PAL files
+dos/tools/dosrun.sh dist/a VGAVBE.EXE vbe   # one stage: ports, 13, bios13, 12, bios12, vbe
+DOS_MACHINE=vgaonly dos/tools/dosrun.sh dist/a VGAVBE.EXE vbe    # a machine with no VBE: status 2
 python3 -I tools/raw2png.py dist/a/VBE.RAW dist/a/VBE.PAL 640 480 vbe.png
 spikes/a-vga-vbe/check.sh               # the whole check (also part of tools/check.sh)
 (cd hal && cargo test)                  # the driver's host tests
 ```
 
-`tools/dosrun.sh` takes `DOS_MACHINE` (default `svga_s3`) so one program can ask for another card without changing the shared default.
+`dos/tools/dosrun.sh` takes `DOS_MACHINE` (default `svga_s3`) so one program can ask for another card without changing the shared default.
 
 ## What was and was not verified
 

@@ -119,15 +119,15 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual(lines("core", "src", "lib.rs"), 125)
         self.assertEqual(lines("c", "main.c") + lines("c", "out.c") + lines("c", "panic.c"), 88)
         self.assertEqual(lines("tools", "coff2go32.py"), 112)
-        self.assertEqual(lines("tools", "elf2go32.py"), 139)
+        self.assertEqual(lines("dos", "tools", "elf2go32.py"), 139)
         total = sum(len(t.splitlines()) for t in self.src.values())
         self.assertEqual((total, len(self.src)), (2304, 16))
 
     def test_the_build_script_steps(self):
         sh = rd("shell", "dos", "build.sh")
-        for needle in ('"$STUBIFY" -g', "tools/elf2go32.py", "CWSDPMI.EXE", "RUSTC_BOOTSTRAP=1 cargo build --release --locked", "UI.DFN"):
+        for needle in ('"$STUBIFY" -g', "dos/tools/elf2go32.py", "CWSDPMI.EXE", "RUSTC_BOOTSTRAP=1 cargo build --release --locked", "UI.DFN"):
             self.assertIn(needle, sh)
-        py = rd("tools", "elf2go32.py")
+        py = rd("dos", "tools", "elf2go32.py")
         self.assertIn("assert len(out) == 168", py)
         self.assertEqual(20 + 28 + 3 * 40, 168)
         self.assertIn("stub[0x244:0x254]", py)

@@ -22,7 +22,7 @@ run() {
   local dir=$1 raw
   shift
   status=0
-  raw="$(tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
+  raw="$(dos/tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
   out="$(printf '%s\n' "$raw" | normalise || true)"
 }
 
@@ -38,7 +38,7 @@ step "Rust format and lints (spike workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
-step "Build VGAVBE.EXE: rust-lld, then tools/elf2go32.py"
+step "Build VGAVBE.EXE: rust-lld, then dos/tools/elf2go32.py"
 $DIR/build.sh
 
 step "Every stage: DAC through the ports, mode 13h and 12h by registers and by INT 10h, VBE 640x480x8 linear frame buffer"
@@ -67,7 +67,7 @@ echo "status $status, mismatch reported, text mode back"
 
 step "No VBE: the run reports it, restores text mode and exits 2"
 status=0
-raw="$(DOS_MACHINE=vgaonly tools/dosrun.sh dist/a VGAVBE.EXE vbe 2> /dev/null)" || status=$?
+raw="$(DOS_MACHINE=vgaonly dos/tools/dosrun.sh dist/a VGAVBE.EXE vbe 2> /dev/null)" || status=$?
 [ "$status" = 2 ] || fail "VGAVBE.EXE vbe on a VGA-only machine exited with status $status, not 2"
 case "$raw" in *'display offers 2 modes, VBE absent'*'not available'*'the video mode is 0x03'*) ;; *) fail "unexpected output: $raw" ;; esac
 echo "status $status"

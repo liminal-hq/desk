@@ -4,7 +4,7 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>
+# usage: dos/tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>
 #
 # The linker (rust-lld) has already resolved every symbol and relocation; this tool only rearranges bytes. It reads the ELF program
 # headers, not the sections: the first PT_LOAD becomes `.text` (code and read-only data), and the second, if there is one, becomes
@@ -68,7 +68,7 @@ def main():
         else:
             fail("unknown option " + opt)
     if len(args) != 3:
-        sys.exit(__doc__ and "usage: tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>")
+        sys.exit(__doc__ and "usage: dos/tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>")
     stub_path, elf_path, out_path = args
 
     stub_all = open(stub_path, "rb").read()

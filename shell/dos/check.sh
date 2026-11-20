@@ -22,7 +22,7 @@ frames() { python3 -I tools/frames.py "$@"; }
 # run <args...>: SHELL.EXE in DOSBox; sets $out (its standard output, with DOS line ends removed) and $status
 run() {
   status=0
-  out="$(tools/dosrun.sh $OUT SHELL.EXE "$@" 2> /dev/null)" || status=$?
+  out="$(dos/tools/dosrun.sh $OUT SHELL.EXE "$@" 2> /dev/null)" || status=$?
 }
 
 # keep <name>: moves the run's dumps to $OUT/<name>/ (emptied first)
@@ -53,7 +53,7 @@ step "Rust format and lints (shell/dos workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
-step "Build SHELL.EXE: rust-lld, then tools/elf2go32.py"
+step "Build SHELL.EXE: rust-lld, then dos/tools/elf2go32.py"
 $DIR/build.sh
 rm -f "$OUT"/*.RAW "$OUT"/*.PAL
 
@@ -80,7 +80,7 @@ frames same "$OUT/dumps-8" "$OUT/dumps-font"
 
 step "No VBE: depth8 reports the fallback and matches the depth 4 sums"
 status=0
-out="$(DOS_MACHINE=vgaonly tools/dosrun.sh $OUT SHELL.EXE depth8 scenario dump 2> /dev/null)" || status=$?
+out="$(DOS_MACHINE=vgaonly dos/tools/dosrun.sh $OUT SHELL.EXE depth8 scenario dump 2> /dev/null)" || status=$?
 [ "$status" = 0 ] || fail "SHELL.EXE on a VGA-only machine exited with status $status; output: $out"
 case "$out" in *'VBE absent'*'falling back to depth 4'*) ;; *) fail "no fallback reported: $out" ;; esac
 readbacks_equal
@@ -104,7 +104,7 @@ live() {
   shift 3
   rm -f "$OUT"/*.RAW "$OUT"/*.PAL
   status=0
-  out="$(env DOS_AUTOTYPE="$keys" "$@" tools/dosrun.sh $OUT SHELL.EXE depth$depth marks timeout=60 2> /dev/null)" || status=$?
+  out="$(env DOS_AUTOTYPE="$keys" "$@" dos/tools/dosrun.sh $OUT SHELL.EXE depth$depth marks timeout=60 2> /dev/null)" || status=$?
   printf '%s\n' "$out" > "$OUT/$name.txt"
   # A run that died before its first mark leaves no dumps: keep an empty directory so the caller reports the status and output, not mv's error.
   if compgen -G "$OUT/*.RAW" > /dev/null; then keep "$name"; else rm -rf "${OUT:?}/$name"; mkdir -p "$OUT/$name"; fi
@@ -138,14 +138,14 @@ frames marks $live_sums $live_scn 8 "$OUT/live-nomouse.txt" --dumps "$OUT/live-n
 frames check $live_sums 8 "$OUT/live-nomouse"
 frames same "$OUT/live-8" "$OUT/live-nomouse"
 
-# The same live run with its standard output left on the DOS console, as a person runs it (tools/dosrun.sh DOS_CONSOLE). The other runs redirect
+# The same live run with its standard output left on the DOS console, as a person runs it (dos/tools/dosrun.sh DOS_CONSOLE). The other runs redirect
 # the output to a file, so none of them saw the transcript lines drawn onto the graphics screen by the DOS console. Nothing is captured here:
 # the run must exit 0 (every mark read back equal to the shell's frame), and the dumps it wrote must be the goldens' digests, mark by mark,
 # with no text over the window.
 step "Live with the transcript on the console: no pixel of the screen differs from the goldens"
 rm -f "$OUT"/*.RAW "$OUT"/*.PAL
 status=0
-DOS_CONSOLE=1 DOS_AUTOTYPE="$live_keys" tools/dosrun.sh $OUT SHELL.EXE depth8 marks timeout=60 > /dev/null 2>&1 || status=$?
+DOS_CONSOLE=1 DOS_AUTOTYPE="$live_keys" dos/tools/dosrun.sh $OUT SHELL.EXE depth8 marks timeout=60 > /dev/null 2>&1 || status=$?
 [ "$status" = 0 ] || fail "live SHELL.EXE with the transcript on the console exited with status $status; a mark read back differently from the shell's frame, or the run failed"
 k=0
 while read -r name depth _ index colour; do
@@ -162,7 +162,7 @@ echo "status $status, $k marks equal the goldens"
 step "Live without marks: F12 prints the mark line only, and the last screen is written with dump"
 rm -f "$OUT"/*.RAW "$OUT"/*.PAL
 status=0
-out="$(DOS_AUTOTYPE="$live_keys" tools/dosrun.sh $OUT SHELL.EXE depth8 dump timeout=60 2> /dev/null)" || status=$?
+out="$(DOS_AUTOTYPE="$live_keys" dos/tools/dosrun.sh $OUT SHELL.EXE depth8 dump timeout=60 2> /dev/null)" || status=$?
 [ "$status" = 0 ] || fail "live SHELL.EXE without marks exited with status $status; output: $out"
 printf '%s\n' "$out" > "$OUT/live-plain.txt"
 frames marks $live_sums $live_scn 8 "$OUT/live-plain.txt"

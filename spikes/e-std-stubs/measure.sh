@@ -6,7 +6,7 @@
 #
 # usage: spikes/e-std-stubs/measure.sh        (after tools/setup.sh and build.sh)
 #
-# Sizes are the .EXE files (the 2 KiB DJGPP stub, the .text/.rodata image and the .data image, as tools/elf2go32.py lays them out).
+# Sizes are the .EXE files (the 2 KiB DJGPP stub, the .text/.rodata image and the .data image, as dos/tools/elf2go32.py lays them out).
 # The flag sets are rustc's size levers on top of opt-level "s", LTO and panic=abort, which every build already has:
 #
 #   default   nothing more
@@ -29,7 +29,7 @@ trap 'rm -rf "$tmp"' EXIT
 "$STUBIFY" -g "$tmp/stub.exe" > /dev/null
 
 # exe <elf> -> the packed size
-exe() { tools/elf2go32.py "$tmp/stub.exe" "$1" "$tmp/x.exe" && wc -c < "$tmp/x.exe"; }
+exe() { dos/tools/elf2go32.py "$tmp/stub.exe" "$1" "$tmp/x.exe" && wc -c < "$tmp/x.exe"; }
 
 printf '%-10s %10s %10s %10s %10s %10s\n' "flags" "no_std" "std stub" "std trusty" "std desk" "desk+map"
 for set in default imm "imm+loc"; do

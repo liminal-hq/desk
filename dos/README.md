@@ -8,7 +8,9 @@ The Rust-on-DOS foundation: what a Rust program needs to run as a 32-bit DOS pro
 | `dos-elf.json` | The target specification: a freestanding i486 ELF target, x87 hard float, SIMD off |
 | `link.ld` | The linker script `rust-lld` uses with it |
 | `.cargo/config.toml` | The unstable options Rust needs to build `core` and `alloc` for this target (`-Zbuild-std`), and the linker flags. Programs that use the runtime carry the same file next to them |
+| `tools/elf2go32.py` | The packer that turns the linked ELF into a go32 executable behind DJGPP's or CWSDPMI's stub |
+| `tools/dosrun.sh` | The headless DOSBox harness: runs a DOS program under DOSBox and returns its status and output |
 
-The packer that turns the linked ELF into a go32 executable (`tools/elf2go32.py`) and the headless DOSBox harness (`tools/dosrun.sh`) are still in `tools/`; the programs that use the runtime, with their expected transcripts, are the `d0-rust-dos` spike (`spikes/d0-rust-dos/`). The design and what was learned are in [`docs/D0-RUST-DOS.md`](../docs/D0-RUST-DOS.md) and [`docs/RUST-TARGETS.md`](../docs/RUST-TARGETS.md).
+The programs that use the runtime, with their expected transcripts, are the `d0-rust-dos` spike (`spikes/d0-rust-dos/`). The design and what was learned are in [`docs/D0-RUST-DOS.md`](../docs/D0-RUST-DOS.md) and [`docs/RUST-TARGETS.md`](../docs/RUST-TARGETS.md).
 
 The workspace has its own lockfile and is not built for the host. `tools/check.sh` checks its format and lints in the `rust:hal` part; the programs that link it are built and run in the `dos:d0` part and the other DOS groups.

@@ -1,4 +1,4 @@
-/* Linker script for 32-bit DOS programs behind DJGPP's stub: two loadable segments (text, data) and .bss, packed by tools/elf2go32.py.
+/* Linker script for 32-bit DOS programs behind DJGPP's stub: two loadable segments (text, data) and .bss, packed by dos/tools/elf2go32.py.
  *
  * (c) Copyright 2026 Liminal HQ, Scott Morris
  * SPDX-License-Identifier: Apache-2.0 OR MIT
