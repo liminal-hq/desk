@@ -1,6 +1,6 @@
 [workspace]
-members = ["rt", "progs", "stage1"]
-default-members = ["rt", "progs"]
+members = ["progs", "stage1"]
+default-members = ["progs"]
 resolver = "2"
 
 [profile.release]

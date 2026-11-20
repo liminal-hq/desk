@@ -6,7 +6,7 @@ title: Drivers III: VGA and VBE
 summary: The desk-vga driver: mode 13h and 12h by register programming, planes, the DAC and fades, text mode and the way back, the VBE layer over the Bios trait, the linear frame buffer on each track, the software cursor and what QEMU hides.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [hal/drivers/vga/, hal/hal/src/video.rs, kernel/src/video.rs, kernel/src/gfx.rs, kernel/src/vga.rs, spikes/d0-rust-dos/rt/src/vga.rs, tests/native/]
+watches: [hal/drivers/vga/, hal/hal/src/video.rs, kernel/src/video.rs, kernel/src/gfx.rs, kernel/src/vga.rs, dos/rt/src/vga.rs, tests/native/]
 log: [pixels, browser, bios]
 anatomy: [desk:drivers, dos:drivers, dos:vga, dos:lfb]
 ---
@@ -91,7 +91,7 @@ A linear frame buffer is a card's video memory presented as one block of address
 
 The kernel's `video::init` reads that block, which is `repr(C)` and mirrors the loader's layout, only when the boot information version says it exists, and prints a line for what it found. On QEMU's standard card the line is `video: the loader set VBE 3.0 mode 0x0101: 640x480x8, pitch 640, memory model 4, 16384 KiB on the card`. Before the kernel draws it checks that the frame buffer overlaps nothing: not the first megabyte, not the kernel image, not any usable E820 region, which also covers the heap and the frame allocator. A buffer that fails the check is refused, and the kernel falls back to the register modes. One that passes is reserved, and the line says so: `video: mode 0x0101 frame buffer 0xfd000000-0xfd04b000 overlaps no RAM, heap or kernel; reserved`. The kernel then maps nothing: segments are flat, there is no paging, and `lfb_region` builds an `MmioRegion` at the physical address as a pointer. The size is `pitch × height`, here 640 × 480 = 307,200 = `0x4B000`, which is the difference of the two addresses in the line.
 
-**Hosted.** Under DOS the picture is drawn in the same way but the buffer has to be mapped. `DosDisplay` (`spikes/d0-rust-dos/rt/src/hal.rs`) sets a VGA mode with INT 10h or a VBE mode with 4F02h and the linear bit, then maps the physical address from 4F01h with DPMI function 0800h (`dpmi::map_physical`), which returns a linear address reachable through the program's 4 GiB data segment, and releases it with 0801h on the way out. Mode 13h needs none of that: the buffer is in the first megabyte, which CWSDPMI maps at linear 0, so `rt/src/vga.rs` turns `0xA0000` into a pointer with the "near pointer" arithmetic. Under DOSBox Staging's S3 model the physical base of mode `0x101` is `0xC0000000`.
+**Hosted.** Under DOS the picture is drawn in the same way but the buffer has to be mapped. `DosDisplay` (`dos/rt/src/hal.rs`) sets a VGA mode with INT 10h or a VBE mode with 4F02h and the linear bit, then maps the physical address from 4F01h with DPMI function 0800h (`dpmi::map_physical`), which returns a linear address reachable through the program's 4 GiB data segment, and releases it with 0801h on the way out. Mode 13h needs none of that: the buffer is in the first megabyte, which CWSDPMI maps at linear 0, so `rt/src/vga.rs` turns `0xA0000` into a pointer with the "near pointer" arithmetic. Under DOSBox Staging's S3 model the physical base of mode `0x101` is `0xC0000000`.
 
 **The browser.** The same DOS program runs in js-dos, and `docs/S5-JSDOS.md` ("VBE and the linear frame buffer") is the record that the linear buffer works there too: `0x101` reports attributes `0x009b` and base `0xC0000000`, DPMI 0800h maps it, and what the program writes is what the canvas shows, zero of 307,200 pixels different from a computed pattern. The document's rules for the code follow from the differences it measured. Read the base from 4F01h and never hard-code it (js-dos reports `0xC0000000`, its DOSBox-X backend `0xE0000000`). Do not rely on more than 2 MiB of video memory. Find a mode by its size and depth, not its number. And keep a banked path, which works there too.
 
@@ -151,8 +151,8 @@ Each of these is recorded in a document; the manual cites the section and does n
 | [`kernel/src/video.rs`](repo:kernel/src/video.rs) | [`init`](sym:kernel/src/video.rs::init): the video block from the loader and the checks on the frame buffer; [`Lfb`](sym:kernel/src/video.rs::Lfb) |
 | [`kernel/src/gfx.rs`](repo:kernel/src/gfx.rs) | The tour: [`tour`](sym:kernel/src/gfx.rs::tour), [`leave_vbe`](sym:kernel/src/gfx.rs::leave_vbe), [`restore_text`](sym:kernel/src/gfx.rs::restore_text), the paced fade and the kernel's own `Cursor` |
 | [`kernel/src/vga.rs`](repo:kernel/src/vga.rs) | The kernel's text console at `0xB8000`; it does not use `desk-vga` |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | [`DosDisplay`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay): the `Display` for DOS, with the mode set, the DPMI 0800h mapping and the clean-up |
-| [`spikes/d0-rust-dos/rt/src/vga.rs`](repo:spikes/d0-rust-dos/rt/src/vga.rs) | Mode 13h by INT 10h and the frame buffer at `0xA0000` through the near-pointer arithmetic |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay): the `Display` for DOS, with the mode set, the DPMI 0800h mapping and the clean-up |
+| [`dos/rt/src/vga.rs`](repo:dos/rt/src/vga.rs) | Mode 13h by INT 10h and the frame buffer at `0xA0000` through the near-pointer arithmetic |
 | [`hal/drivers/vga/tests/registers.rs`](repo:hal/drivers/vga/tests/registers.rs) | The 128-write test and the other register tests, against the model in [`hal/platform/mock/src/vga.rs`](repo:hal/platform/mock/src/vga.rs) |
 | [`tests/native/expected-gfx-vbe.txt`](repo:tests/native/expected-gfx-vbe.txt) | The expected transcript of the VBE tour; [`expected-gfx-vbefail.txt`](repo:tests/native/expected-gfx-vbefail.txt) and [`expected-gfx-fallback.txt`](repo:tests/native/expected-gfx-fallback.txt) are the failed-VBE and register-only ones |
 
@@ -250,7 +250,7 @@ note: The Cirrus path is QEMU's Cirrus model. A real S3, ET4000, Trident or Cirr
 id: gfx.lfb.dos
 label: The linear frame buffer under DOS, mapped with DPMI 0800h
 state: built-verified
-evidence: test:spikes/a-vga-vbe/expected/all.txt::vbe 640x480x8: checksums match: true, sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay, doc:docs/A-VGA-VBE.md#results
+evidence: test:spikes/a-vga-vbe/expected/all.txt::vbe 640x480x8: checksums match: true, sym:dos/rt/src/hal.rs::DosDisplay, doc:docs/A-VGA-VBE.md#results
 note: DOSBox Staging with CWSDPMI only, as the anatomy page tags it.
 
 id: gfx.lfb.browser

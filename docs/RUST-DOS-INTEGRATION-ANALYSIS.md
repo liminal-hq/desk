@@ -23,8 +23,8 @@ Optimisation should start with bounded resource use and device traffic. A smalle
 | Layer | Observed implementation | Evidence and remaining boundary |
 |---|---|---|
 | Original hosted executable | [Rust core](../core/src/lib.rs), [C entry](../c/main.c), [build script](../tools/build.sh), MinGW-flavoured COFF conversion and DJGPP linking | A walking skeleton with explicit normal and panic transcripts; it remains the `DESK.EXE` built by the main build script |
-| Rust-only DOS executable | [D0 runtime](../spikes/d0-rust-dos/rt/src/lib.rs), freestanding ELF, `rust-lld`, [ELF packer](../tools/elf2go32.py), DJGPP stub and CWSDPMI | A working route used by subsequent graphics, input and shell consumers; the runtime still lives under `spikes/` |
-| Machine services | [DPMI wrappers](../spikes/d0-rust-dos/rt/src/dpmi.rs), [DOS file calls](../spikes/d0-rust-dos/rt/src/dos.rs), [DOS HAL](../spikes/d0-rust-dos/rt/src/hal.rs), [IRQ adapter](../spikes/d0-rust-dos/rt/src/irq.rs) | Real implementations exist; compatibility evidence is concentrated on CWSDPMI and DOSBox |
+| Rust-only DOS executable | [D0 runtime](../dos/rt/src/lib.rs), freestanding ELF, `rust-lld`, [ELF packer](../tools/elf2go32.py), DJGPP stub and CWSDPMI | A working route used by subsequent graphics, input and shell consumers; the runtime still lives under `spikes/` |
+| Machine services | [DPMI wrappers](../dos/rt/src/dpmi.rs), [DOS file calls](../dos/rt/src/dos.rs), [DOS HAL](../dos/rt/src/hal.rs), [IRQ adapter](../dos/rt/src/irq.rs) | Real implementations exist; compatibility evidence is concentrated on CWSDPMI and DOSBox |
 | Shared shell | [Shell workspace](../shell/Cargo.toml), [DOS wiring](../shell/dos/src/main.rs), [kernel wiring](../kernel/src/shell.rs) | Shared deterministic behaviour, damage accounting and platform frame comparison; no complete app-host integration |
 | Loadable apps | [DXE3 host](../spikes/s1-dxe3/host/mod.c) and [module runtime](../spikes/s1-dxe3/modules/rt/src/lib.rs) | Load, call, unload, panic and leak scenarios exist in a separate DJGPP/C host; no equivalent loader in the Rust-only executable |
 | `std` services | [Patched platform ABI](../spikes/e-std-stubs/patch/overlay/library/std/src/sys/pal/desk/abi.rs) and [DOS shim](../spikes/e-std-stubs/shim/src/desk.rs) | Useful subset recorded under DOS; ordinary Rust start-up, files and native implementation remain incomplete |
@@ -50,7 +50,7 @@ Keep these contracts explicit when extracting the runtime. Removing the C compil
 
 ### 2. Clean-up registration is fallible but often treated as guaranteed
 
-**Observed:** [the clean-up list](../spikes/d0-rust-dos/rt/src/cleanup.rs) has eight slots and returns `false` when full. The display adapter, timer hook, basic VGA helper and several shell registrations ignore that result. The general IRQ adapter already checks it before installing its vector.
+**Observed:** [the clean-up list](../dos/rt/src/cleanup.rs) has eight slots and returns `false` when full. The display adapter, timer hook, basic VGA helper and several shell registrations ignore that result. The general IRQ adapter already checks it before installing its vector.
 
 **Consequence:** under saturation, an acquisition can succeed without an exit action. This is a source-level failure path; the existing ordinary exit and panic checks do not establish behaviour with a full list. `timer::unhook` also discards a vector-restoration error and clears its installed state; the general IRQ adapter preserves its state when restoration fails.
 
@@ -60,7 +60,7 @@ Keep these contracts explicit when extracting the runtime. Removing the C compil
 
 ### 3. Framebuffer validity outlives the API's ownership model
 
-**Observed:** [the `Display` trait](../hal/hal/src/video.rs) returns an owned `FrameBuffer` without a borrow tying it to the display. [The DOS implementation](../spikes/d0-rust-dos/rt/src/hal.rs) stores one live VBE mapping globally and unmaps it on restoration or a subsequent VBE mode change. A caller can retain the previous region and continue to call its safe methods.
+**Observed:** [the `Display` trait](../hal/hal/src/video.rs) returns an owned `FrameBuffer` without a borrow tying it to the display. [The DOS implementation](../dos/rt/src/hal.rs) stores one live VBE mapping globally and unmaps it on restoration or a subsequent VBE mode change. A caller can retain the previous region and continue to call its safe methods.
 
 **Consequence, inferred:** the public safe interface does not enforce the mapping lifetime promised by [the unsafe `MmioRegion` constructor](../hal/hal/src/mmio.rs). The current single-screen consumer follows a narrower discipline, but future mode switching or multiple display objects could invalidate a retained region.
 

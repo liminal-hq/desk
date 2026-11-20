@@ -6,7 +6,7 @@ title: The toolchain and the custom targets
 summary: The pinned Rust, the three target specification files compared field by field, build-std, rust-lld and the linker scripts, the two packers that replace objcopy and a linker, NASM, the Docker images and the setup scripts, and the std question.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [rust-toolchain.toml, kernel/.cargo/config.toml, kernel/i486-desk-none.json, kernel/link.ld, spikes/d0-rust-dos/dos-elf.json, spikes/d0-rust-dos/link.ld, spikes/d0-rust-dos/.cargo/config.toml, shell/dos/.cargo/config.toml, core/dos.json, core/.cargo/config.toml, tools/elf2bin.py, tools/native-build.sh, tools/setup.sh, tools/fetch-tools.sh, tools/docker/]
+watches: [rust-toolchain.toml, kernel/.cargo/config.toml, kernel/i486-desk-none.json, kernel/link.ld, dos/dos-elf.json, dos/link.ld, spikes/d0-rust-dos/.cargo/config.toml, shell/dos/.cargo/config.toml, core/dos.json, core/.cargo/config.toml, tools/elf2bin.py, tools/native-build.sh, tools/setup.sh, tools/fetch-tools.sh, tools/docker/]
 log: [scaffold, wheels, std]
 anatomy: [dos:target, dos:lld]
 ---
@@ -14,7 +14,7 @@ anatomy: [dos:target, dos:lld]
 
 Rust has no target for a 486 PC that runs no operating system, nor for a program that runs under DOS, so the Desk writes its own. This chapter is about the tools and files that make that possible: the compiler version the repository pins, the three JSON files that describe a machine to the compiler, the options that build the standard pieces of Rust for them, the linker that joins the objects, the two small Python programs that turn a linked file into something a machine can load, and the scripts and container images that supply whatever the host does not have. It is the chapter to read before changing a target, before bumping the compiler, or before asking why the build needs a variable named `RUSTC_BOOTSTRAP`.
 
-On the map of the system ([M1](chapter:m-map)) it sits under both tracks. The [hosted track](term:hosted-track) uses two of the files: `core/dos.json`, the first target, now only the legacy skeleton's, and `spikes/d0-rust-dos/dos-elf.json`, which builds `SHELL.EXE` ([M17](chapter:m-rt)). The [native track](term:native-track) uses `kernel/i486-desk-none.json` ([M4](chapter:m-loader) and [M5](chapter:m-boot) follow what it produces). On the anatomy page of the hosted program the boxes `dos-elf.json` and `rust-lld` are this chapter's. After it you should be able to read any of the three files and say what each field does, say which differences between them are deliberate and which are accidents of history, build either track from a clean machine, and find the Docker image that supplies a tool you have not installed.
+On the map of the system ([M1](chapter:m-map)) it sits under both tracks. The [hosted track](term:hosted-track) uses two of the files: `core/dos.json`, the first target, now only the legacy skeleton's, and `dos/dos-elf.json`, which builds `SHELL.EXE` ([M17](chapter:m-rt)). The [native track](term:native-track) uses `kernel/i486-desk-none.json` ([M4](chapter:m-loader) and [M5](chapter:m-boot) follow what it produces). On the anatomy page of the hosted program the boxes `dos-elf.json` and `rust-lld` are this chapter's. After it you should be able to read any of the three files and say what each field does, say which differences between them are deliberate and which are accidents of history, build either track from a clean machine, and find the Docker image that supplies a tool you have not installed.
 
 ## How it works
 
@@ -41,7 +41,7 @@ A [target specification](term:target-specification) is a JSON file that tells ru
 
 The table lists every field that appears in at least one of the three files, 26 in all, read from the files on this branch. A dash means the file does not set the field. Where a document records the reason for a field, the reason column says which; where none does, it says so. The explainer that will draw this comparison is still to be written, so for now the table is the figure.
 
-| Field | `kernel/i486-desk-none.json` | `spikes/d0-rust-dos/dos-elf.json` | `core/dos.json` | Differs, and why |
+| Field | `kernel/i486-desk-none.json` | `dos/dos-elf.json` | `core/dos.json` | Differs, and why |
 |---|---|---|---|---|
 | `arch` | `x86` | `x86` | `x86` | Same. The 32-bit x86 backend |
 | `cpu` | `i486` | `i486` | `i486` | Same. The lowest processor the code may assume: no `cmov`, no `cmpxchg8b`, no `rdtsc` (`docs/TOOLCHAIN.md`; `docs/NATIVE-BOOT.md`) |
@@ -80,9 +80,9 @@ All three builds ask cargo for `build-std = ["core", "alloc", "compiler_builtins
 
 ### Linking: `rust-lld` and the linker scripts
 
-`rust-lld` is LLVM's linker, which rustup installs inside the toolchain (on this host under `lib/rustlib/x86_64-unknown-linux-gnu/bin/`); naming it as `linker` in the specification is what lets the build need no `gcc`, no `ld` and no binutils. The linker joins the objects into one executable and needs to be told where the pieces go. That is the job of a [linker script](term:linker-script): a file that names the output sections, the address each starts at, the order of the input sections inside them, and symbols such as `__image_start` that the program can read. Both ELF targets pass one through `rustflags` as `-C link-arg=-Tlink.ld` together with `-nostdlib`, and the path is relative, which is why `kernel/` and `spikes/d0-rust-dos/` must be the current directory when cargo runs (`shell/dos` spells the path as `../../spikes/d0-rust-dos/link.ld`).
+`rust-lld` is LLVM's linker, which rustup installs inside the toolchain (on this host under `lib/rustlib/x86_64-unknown-linux-gnu/bin/`); naming it as `linker` in the specification is what lets the build need no `gcc`, no `ld` and no binutils. The linker joins the objects into one executable and needs to be told where the pieces go. That is the job of a [linker script](term:linker-script): a file that names the output sections, the address each starts at, the order of the input sections inside them, and symbols such as `__image_start` that the program can read. Both ELF targets pass one through `rustflags` as `-C link-arg=-Tlink.ld` together with `-nostdlib`, and the path is relative, which is why `kernel/` and `spikes/d0-rust-dos/` must be the current directory when cargo runs (`shell/dos` spells the path as `../../dos/link.ld`).
 
-The two scripts answer different questions. `kernel/link.ld` places `.text`, `.rodata` and `.data` from `0x100000`, 1 MiB, where the loader copies the flat image, and marks `.bss` `NOLOAD`. `spikes/d0-rust-dos/link.ld` starts at `0x1000`, leaves the first page empty "which gives a null pointer a little room before real code", aligns each section on 512 bytes "because the stub reads the file in sectors", and uses two program headers only, one for text and read-only data, one for data and `.bss`. Those limits are not arbitrary: they are what `tools/elf2go32.py` accepts. The linker's work is finished by then; the rest of the toolchain only rearranges bytes.
+The two scripts answer different questions. `kernel/link.ld` places `.text`, `.rodata` and `.data` from `0x100000`, 1 MiB, where the loader copies the flat image, and marks `.bss` `NOLOAD`. `dos/link.ld` starts at `0x1000`, leaves the first page empty "which gives a null pointer a little room before real code", aligns each section on 512 bytes "because the stub reads the file in sectors", and uses two program headers only, one for text and read-only data, one for data and `.bss`. Those limits are not arbitrary: they are what `tools/elf2go32.py` accepts. The linker's work is finished by then; the rest of the toolchain only rearranges bytes.
 
 ### Packing: two small programs instead of `objcopy`
 
@@ -139,9 +139,9 @@ The document's recommendation, which `docs/RUST-TARGETS.md` repeats, is a split:
 | [`kernel/i486-desk-none.json`](repo:kernel/i486-desk-none.json) | The native kernel's target specification |
 | [`kernel/.cargo/config.toml`](repo:kernel/.cargo/config.toml) | The kernel's default target, link arguments and `build-std` options |
 | [`kernel/link.ld`](repo:kernel/link.ld) | The kernel's linker script: load address `0x100000` |
-| [`spikes/d0-rust-dos/dos-elf.json`](repo:spikes/d0-rust-dos/dos-elf.json) | The freestanding DOS target used by `rt`, the spike's programs and `SHELL.EXE` |
+| [`dos/dos-elf.json`](repo:dos/dos-elf.json) | The freestanding DOS target used by `rt`, the spike's programs and `SHELL.EXE` |
 | [`spikes/d0-rust-dos/.cargo/config.toml`](repo:spikes/d0-rust-dos/.cargo/config.toml) | `build-std`, `compiler-builtins-mem` and the link arguments of the DOS programs |
-| [`spikes/d0-rust-dos/link.ld`](repo:spikes/d0-rust-dos/link.ld) | The DOS linker script: two loadable segments from `0x1000` |
+| [`dos/link.ld`](repo:dos/link.ld) | The DOS linker script: two loadable segments from `0x1000` |
 | [`shell/dos/.cargo/config.toml`](repo:shell/dos/.cargo/config.toml) | The same target and script, reached by relative paths |
 | [`core/dos.json`](repo:core/dos.json) | The first, legacy, target: borrowed MinGW triple, COFF, library only |
 | [`tools/elf2bin.py`](repo:tools/elf2bin.py) | [`main`](sym:tools/elf2bin.py::main) flattens the kernel ELF into a raw binary |
@@ -155,7 +155,7 @@ For depth: [`docs/RUST-TARGETS.md`](doc:docs/RUST-TARGETS.md#the-concept) (the c
 
 ## Worked example
 
-**One field followed to a file name: `executables`.** `core/dos.json` says `"executables": false`. Its build can therefore only produce a library, and the one it makes is a static archive that DJGPP's `gcc` links with the C layer; its output directory is named after the file, `dos`, as `spikes/d0-rust-dos/build-stage1.sh` and `docs/D0-RUST-DOS.md` use it (`target/dos/release/libstage1.a`). The two ELF files say `"executables": true` and name `rust-lld`, so rustc itself runs the linker with the arguments from `rustflags`. The consequence is traceable on the files of `SHELL.EXE`. `shell/dos/.cargo/config.toml` sets the target to `../../spikes/d0-rust-dos/dos-elf.json`; the stem is `dos-elf`; and `shell/dos/build.sh` reads the result from `shell/dos/target/dos-elf/release/shell`. That file, built in the CI image on 2026-10-23 for this chapter, is a 127,232-byte ELF executable with two loadable segments, which is what `link.ld` asks for:
+**One field followed to a file name: `executables`.** `core/dos.json` says `"executables": false`. Its build can therefore only produce a library, and the one it makes is a static archive that DJGPP's `gcc` links with the C layer; its output directory is named after the file, `dos`, as `spikes/d0-rust-dos/build-stage1.sh` and `docs/D0-RUST-DOS.md` use it (`target/dos/release/libstage1.a`). The two ELF files say `"executables": true` and name `rust-lld`, so rustc itself runs the linker with the arguments from `rustflags`. The consequence is traceable on the files of `SHELL.EXE`. `shell/dos/.cargo/config.toml` sets the target to `../../dos/dos-elf.json`; the stem is `dos-elf`; and `shell/dos/build.sh` reads the result from `shell/dos/target/dos-elf/release/shell`. That file, built in the CI image on 2026-10-23 for this chapter, is a 127,232-byte ELF executable with two loadable segments, which is what `link.ld` asks for:
 
 ```text
   Type  Offset    VirtAddr   FileSiz  MemSiz   Flg Align
@@ -185,7 +185,7 @@ note: Without it cargo 1.98.0 stops with the json-target-spec error quoted above
 id: toolchain.target-dos-elf
 label: dos-elf.json links with rust-lld and link.ld into a program the stub loads
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/dos-elf.json::i486-unknown-none-elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::PANICKY.EXE
+evidence: sym:dos/dos-elf.json::i486-unknown-none-elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::PANICKY.EXE
 note: In headless DOSBox in the CI image. shell/dos/check.sh was run and passed; the whole d0 check was not rerun.
 
 id: toolchain.target-kernel
@@ -253,7 +253,7 @@ needs: host: bash, nasm, cargo (Rust 1.98.0 with rust-src), python3
 ran: 2026-10-23 on the host, NASM 3.02, rustc 1.98.0, and in ghcr.io/liminal-hq/ci-dos by its digest in .github/workflows/ci.yml (Docker, no host packages installed)
 $ tools/native-build.sh 2>&1 | tail -1
 dist/native/kernel.bin: 173968 bytes, load address 0x100000
-$ python3 -I -c "import json;f=['kernel/i486-desk-none.json','spikes/d0-rust-dos/dos-elf.json','core/dos.json'];d=[json.load(open(x)) for x in f];k=sorted(set().union(*d));s=[x for x in k if len({json.dumps(y.get(x)) for y in d})==1];print(len(k),'fields;',len(s),'the same in all three:',', '.join(s))"
+$ python3 -I -c "import json;f=['kernel/i486-desk-none.json','dos/dos-elf.json','core/dos.json'];d=[json.load(open(x)) for x in f];k=sorted(set().union(*d));s=[x for x in k if len({json.dumps(y.get(x)) for y in d})==1];print(len(k),'fields;',len(s),'the same in all three:',', '.join(s))"
 26 fields; 8 the same in all three: arch, cpu, disable-redzone, dynamic-linking, max-atomic-width, panic-strategy, relocation-model, target-pointer-width
 $ cd shell/dos && cargo build --release --locked 2>&1 | head -1
 error: `.json` target specs require -Zjson-target-spec to be added to the cargo invocation

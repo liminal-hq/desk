@@ -1,6 +1,6 @@
 # B: the keyboard and the mouse on the DOS runtime
 
-Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mode IRQ 1 handler under DPMI and the mouse through the DOS mouse driver's INT 33h, from Rust on the pure-Rust DOS runtime (`spikes/d0-rust-dos/rt`), built from the shared HAL drivers so that the hosted platform hands the Desk core the same `KeyEvent` and `MouseEvent` types, from the same decoder, as the native kernel does (spike C, [`C-INPUT.md`](C-INPUT.md)).
+Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mode IRQ 1 handler under DPMI and the mouse through the DOS mouse driver's INT 33h, from Rust on the pure-Rust DOS runtime (`dos/rt`), built from the shared HAL drivers so that the hosted platform hands the Desk core the same `KeyEvent` and `MouseEvent` types, from the same decoder, as the native kernel does (spike C, [`C-INPUT.md`](C-INPUT.md)).
 
 > **Status.** *Built and verified:* the INT 33h driver crate `desk-int33` and its model, 27 host tests (the counters of 0005h and 0006h among them, added later) including the whole DOS input path (mock 8042, IRQ 1 service, ring, shared decoder) against the transcript the DOS run is also checked against; `INPUT.EXE` in DOSBox Staging 0.83 with keys typed in by `AUTOTYPE` (VBE 640×480×8, mode 13h, text mode, chained and replaced BIOS handler, ring overflow, no mouse driver, a panic, a missing key, no Escape); the mouse moved, clicked and scrolled by `xdotool` over DOSBox's SDL window under Xvfb in Docker (opt-in). *Not verified:* real hardware, any mouse driver but DOSBox's built-in one, a real BIOS keyboard handler, 86Box, QEMU or Bochs, DPMI hosts other than CWSDPMI, Windows DOS boxes, the real-mode callback (function 000Ch).
 
@@ -29,8 +29,8 @@ Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mo
 | `SoftCursor` | `hal/drivers/vga/src/cursor.rs` | The arrow sprite with save-under over any `Canvas`, clipped at every edge |
 | `Decoder::with_locks` | `hal/drivers/kbd` | A decoder that starts with the lock keys in the state the firmware shows |
 | `InputSource::has_mouse` | `hal/hal/src/input.rs` | The core's way to ask whether to run keyboard-only |
-| `rt::irq` | `spikes/d0-rust-dos/rt/src/irq.rs` | `DosIrq: IrqRegistry` for IRQ 0 to 15: a stub per line, a locked interrupt stack, the end-of-interrupt through `desk-pic`, chaining, restore on exit and on panic; `Slot` for interrupt-side state in the locked image |
-| `rt::bios_kbd` | `spikes/d0-rust-dos/rt/src/bios_kbd.rs` | The BIOS keyboard state in the data area: lock flags, the type-ahead buffer |
+| `rt::irq` | `dos/rt/src/irq.rs` | `DosIrq: IrqRegistry` for IRQ 0 to 15: a stub per line, a locked interrupt stack, the end-of-interrupt through `desk-pic`, chaining, restore on exit and on panic; `Slot` for interrupt-side state in the locked image |
+| `rt::bios_kbd` | `dos/rt/src/bios_kbd.rs` | The BIOS keyboard state in the data area: lock flags, the type-ahead buffer |
 | Program | `spikes/b-dos-input` | `INPUT.EXE`, its build, `check.sh` (headless, always on) and `check-xvfb.sh` (the mouse, opt-in) |
 | Tools | `tools/dosrun.sh`, `tools/docker/Dockerfile.dos-xvfb` | `DOS_AUTOTYPE`, `DOS_CONF` and `DOS_X11` for the runner; the image with Xvfb and `xdotool` |
 

@@ -41,7 +41,7 @@ base       licence headers, markdown style and links, the CI scope table
 report     the progress report generator's tests and dry run, the frame tools' tests, the goldens and the live scenarios' translations
 fonts      the font build check (bun; fails instead of skipping when CI is set)
 rust       core       core/ format and lints
-           hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
+           hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets, and dos/ format and lints
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
            tools      tools/steps-junit/ (the step report converter the CI posts) and tools/layers/ (the layering check) format, lints and host tests
@@ -170,12 +170,15 @@ fi
 # The shared HAL and drivers: host tests against the mock port bus, then the no_std crates built for the kernel's target and for the
 # pure-Rust DOS target (cargo check; clippy for the kernel target, where the x86 port instructions are compiled).
 if run rust hal; then
-step "HAL: host tests and no_std builds"
+step "HAL and DOS runtime: host tests, no_std builds, and the runtime's format and lints"
 (cd hal && cargo fmt --check)
 (cd hal && cargo clippy --locked --all-targets -- -D warnings)
 (cd hal && host_tests)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+# The DOS runtime (dos/rt, on the DOS target by its own .cargo/config.toml) is the layer above the HAL, so it is checked with it.
+(cd dos && cargo fmt --check)
+(cd dos && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 fi
 
 # The shell's crates (desk-gfx and those that follow): host tests and the same two cross builds as the HAL's. See docs/FIRST-WINDOW.md.
@@ -185,7 +188,7 @@ step "Shell: host tests and no_std builds"
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
 (cd shell && host_tests)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
 
 # The module loader's crates: host tests for both, and the format crate's no_std builds (the packer uses std, so the cross builds name
@@ -196,7 +199,7 @@ step "Module loader: host tests and no_std builds"
 (cd module && cargo clippy --locked --all-targets -- -D warnings)
 (cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 
 # The test modules built for the module target, packed and compared with their expected description, relocation proved by a second and
 # a third link base, a reproducible build, the instruction scan and the negative runs. Needs the network (or a warm cargo home) for

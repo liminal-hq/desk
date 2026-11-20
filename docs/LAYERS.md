@@ -21,8 +21,6 @@ A layer may name itself and the layers listed after its arrow, and nothing else.
 
 `dos` and `system-native` never name each other: the foundation knows nothing of the native track, and the kernel does not use DOS.
 
-**Where `dos/` is today.** Until step 5 of R148 lands, the runtime, target specification and linker script are in `spikes/d0-rust-dos/` (`rt/`, `dos-elf.json`, `link.ld`), and `layers.txt` records the shell on DOS naming them there as an exception. After step 5 the exception is deleted and the files are in `dos/`.
-
 ## What counts as an edge
 
 The same things `tools/ci-scope.sh` follows when it works out what a change affects (its `closure()`), and the check keeps the two in step:
@@ -38,8 +36,8 @@ It does not see a path in a shell script, a string such as the one in `module/pa
 
 An `allow` line in `layers.txt` records one exception and says why. A line that no edge needs is itself an error, so an exception is deleted in the change that removes its edge.
 
-- Until step 5 of R148, the shell on DOS names the DOS runtime, target specification and linker script in a spike. The scene drawing (now `kernel/src/scene.rs`) and the key fixture (now in `hal/drivers/int33/testdata/`) were the other two; each moved down to the layer that owns it, and its exception was deleted.
-- `module/mods` is built for the kernel's target specification, `kernel/i486-desk-none.json`, because the loader's test modules run in the kernel. `module/pack/tests/real.rs` names the same file in a string the check cannot see. This one stays until the module target stops being the kernel's.
+- One stays. `module/mods` is built for the kernel's target specification, `kernel/i486-desk-none.json`, because the loader's test modules run in the kernel. `module/pack/tests/real.rs` names the same file in a string the check cannot see. It stays until the module target stops being the kernel's.
+- Three others were recorded when the check was added and are gone. The scene drawing (now `kernel/src/scene.rs`), the key fixture (now `hal/drivers/int33/testdata/keys.txt`) and the DOS runtime, target specification and linker script (now `dos/`) were each in a spike and named from below it; each moved down to the layer that owns it, and its exception was deleted in the same change.
 
 ## Seams that are known and left alone
 

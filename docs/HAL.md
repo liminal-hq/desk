@@ -71,7 +71,7 @@ hal/                          one Cargo workspace; no default target, so `cargo 
 │   └── ata/, fdc/            desk-ata, desk-fdc  IDE and floppy block devices              storage milestone
 └── platform/
     └── mock/                 desk-hal-mock       MockPortBus, device models, MockIrq      built
-rt/  (from spikes/d0-rust-dos/rt)   rt::hal         the hosted DOS platform                migration step 2
+dos/rt  (R148)      rt::hal         the hosted DOS platform                migration step 2
 kernel/src/hal.rs                   kernel::hal     the native platform                    migration step 1
 ```
 
@@ -377,7 +377,7 @@ The core's entry is `fn run<P: Platform>(p: &mut P) -> !`. Associated types keep
 |---|---|---|---|
 | Host (`x86_64-unknown-linux-gnu` in CI) | built in | `cargo test` | `tools/check.sh`, every run |
 | Native kernel | [`kernel/i486-desk-none.json`](../kernel/i486-desk-none.json) | `cargo clippy --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec` with `RUSTC_BOOTSTRAP=1` | `tools/check.sh`, about 8 s cold |
-| Pure-Rust DOS | [`spikes/d0-rust-dos/dos-elf.json`](../spikes/d0-rust-dos/dos-elf.json) | `cargo check`, same flags | `tools/check.sh`, about 8 s cold |
+| Pure-Rust DOS | [`dos/dos-elf.json`](../dos/dos-elf.json) | `cargo check`, same flags | `tools/check.sh`, about 8 s cold |
 | Hosted skeleton's COFF target | [`core/dos.json`](../core/dos.json) | not built | Retired with the C layer, per `D0-RUST-DOS.md`; the hosted Desk adopts the HAL on the ELF target |
 
 - Both real targets are `i486`, 32-bit, `max-atomic-width: 32`, x87, no SIMD. `desk-hal::x86` is compiled only where `target_arch = "x86"`, so the host build has no port instructions and the host tests cannot touch hardware by accident.
@@ -425,7 +425,7 @@ From what exists (the kernel's `port.rs`, `serial.rs`, `pic.rs`, `pit.rs`, `vga.
 - Acceptance: `tests/native/expected.txt` unchanged, every negative mode unchanged (`notick` now masks through `Pic8259`).
 - Risks: code size (the generics inline; measure `kernel.bin` before and after; LTO and `opt-level = "s"` should keep it flat); the `asm!` blocks without `nomem` stop a few optimisations around port I/O, which is the point but should be measured; the panic path uses the serial driver, which must not take a lock (it takes none).
 
-**Step 2. The DOS runtime becomes the hosted platform.** Promote `spikes/d0-rust-dos/rt` to a top-level `rt/` (the d0 recommendation) and add `rt::hal`:
+**Step 2. The DOS runtime becomes the hosted platform.** The runtime now sits at `dos/rt` (R148, [`LAYERS.md`](LAYERS.md); this step first said a top-level `rt/`). Add `rt::hal`:
 
 - `RawPorts` for port I/O, verified first by spike A (DAC writes from ring 3 under CWSDPMI).
 - `rt::timer` generalised into the per-line stub and `IrqRegistry` described [above](#the-platforms), with the stack switch; IRQ 0 keeps `Chain::Previous`, so the `hw` transcript (18 to 20 ticks a second, the BIOS counter in step) is unchanged, and the tick count moves to a `PitClock` at 18,207 mHz.
@@ -494,7 +494,7 @@ Out of scope for C: key repeat and layouts beyond US, the mouse cursor, DOS.
 Verified on the development machine (Arch Linux, Rust 1.98.0 as pinned):
 
 - `cargo test` in `hal/`: 35 tests. They cover: the 16550's `init` writing exactly the kernel's seven values in order, the divisor table and refused rates, text reaching a UART model, the bounded wait on a stuck transmitter (100,000 status reads, then the byte is written anyway, as in the kernel), the loopback probe on a UART and on an empty slot, with stale received bytes drained and an echo that arrives late, non-blocking reads; the PIT divisor rounding (11,932 for 100 Hz, as in the kernel) and range (19 Hz to 795,454 Hz), the actual rate in millihertz, the kernel's three writes for 100 Hz, a chip model seeing mode 2, the BIOS's mode 3 and rate (written as 0) restored, refused clock divisors, nothing written for a refused rate, the counter latch (and an 8254 model whose read sequence only a control word resets, as on the chip), the clock's rate recorded with the programming, and ticks delivered through a handler registered from a plain `static` with the platform sending the end-of-interrupt; the 8259's native `init` reproducing the kernel's sequence with its eight I/O delays, read-modify-write masking that unmasks the cascade for a slave line, the end-of-interrupt order, spurious IRQ 7 and 15, and the master-only acknowledgement of a spurious IRQ 15; the ring's order, drops, wrap and a producer thread against a consumer thread; `MmioRegion` bounds and alignment; the mock bus's precedence, scripts and their failures.
-- `cargo fmt --check` and `cargo clippy --all-targets -D warnings` on the host; `cargo clippy -D warnings` for `kernel/i486-desk-none.json` and `cargo check` for `spikes/d0-rust-dos/dos-elf.json`, both with `-Zbuild-std=core,alloc`.
+- `cargo fmt --check` and `cargo clippy --all-targets -D warnings` on the host; `cargo clippy -D warnings` for `kernel/i486-desk-none.json` and `cargo check` for `dos/dos-elf.json`, both with `-Zbuild-std=core,alloc`.
 - The `clippy.toml` ban fires on `compare_exchange` and `fetch_or` (checked with a temporary function, then removed). A throwaway crate instantiating the ring, `PitClock` with its shared handler, and the three drivers over `RawPorts` (the probe and the spurious acknowledgement included) for the kernel target emitted no `cmpxchg`, its port instructions inline, and `xchg` for `split`; rerun after the review fixes.
 - `tools/check.sh` passes in full from a clean clone inside `ghcr.io/liminal-hq/ci-dos` (the digest in `.github/workflows/ci.yml`; the image carries QEMU and NASM); the HAL step alone takes about 18 s there from cold, cargo downloads included.
 

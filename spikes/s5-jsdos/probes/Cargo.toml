@@ -9,7 +9,7 @@ license = "Apache-2.0 OR MIT"
 [workspace]
 
 [dependencies]
-rt = { path = "../../d0-rust-dos/rt" }
+rt = { path = "../../../dos/rt" }
 
 [profile.release]
 opt-level = "s"

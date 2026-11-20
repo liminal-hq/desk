@@ -66,7 +66,7 @@ Shared files between tasks of one wave: M1 and M2 both create `module/Cargo.toml
 
 - `module/Cargo.toml` (workspace, `members = ["format"]`, `exclude = ["mods", "dos"]`, `[workspace.package]` as `shell/`'s), `module/Cargo.lock`, `module/clippy.toml` (a copy of `shell/clippy.toml`), `module/rustfmt.toml` (as `shell/`'s).
 - `module/format/Cargo.toml`, `module/format/src/lib.rs`, `header.rs` (constants, `Header`, `parse_header`), `module.rs` (`Module`, the table checks, `Import`), `load.rs` (`load_into`, `Placed`), `write.rs` (`Builder`), `crc.rs`, `error.rs` (`FormatError`, `LoadError`, both `Display`), `module/format/tests/reject.rs`, `module/format/tests/load.rs`.
-- `tools/check.sh`: a "Module loader: host tests and no_std builds" step after the shell's, with the five commands the shell's step has (`fmt --check`, `clippy --all-targets`, `test`, and the cross `clippy` for `kernel/i486-desk-none.json` and `check` for `spikes/d0-rust-dos/dos-elf.json`).
+- `tools/check.sh`: a "Module loader: host tests and no_std builds" step after the shell's, with the five commands the shell's step has (`fmt --check`, `clippy --all-targets`, `test`, and the cross `clippy` for `kernel/i486-desk-none.json` and `check` for `dos/dos-elf.json`).
 - `AGENTS.md` and `CLAUDE.md`: `module/` in the repository layout and its rules. `docs/RUST-TARGETS.md`: a row for the module crates.
 
 **API.**

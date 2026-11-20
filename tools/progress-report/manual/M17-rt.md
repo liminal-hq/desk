@@ -6,17 +6,17 @@ title: The hosted runtime and the build to SHELL.EXE
 summary: What a DOS extender and a DPMI host are, the runtime that lets a Rust program start under one, its heap, DOS calls, panic, clean-up, interrupt stubs and hardware layer, then the build that turns Rust into SHELL.EXE; with the first hosted skeleton and the DXE3 result as a marked legacy section.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [spikes/d0-rust-dos/rt/, spikes/d0-rust-dos/dos-elf.json, spikes/d0-rust-dos/link.ld, spikes/d0-rust-dos/build.sh, spikes/d0-rust-dos/check.sh, tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
+watches: [dos/rt/, dos/dos-elf.json, dos/link.ld, spikes/d0-rust-dos/build.sh, spikes/d0-rust-dos/check.sh, tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
 log: [wheels, module, purerust, firstwindow]
 anatomy: [dos:stubr, dos:start, dos:heap, dos:dosw, dos:dpmi, dos:irq, dos:rthal, dos:exit, dos:target, dos:lld, dos:pack, dos:stubf, dos:exe, dos:cws]
 ---
 ## What it is
 
-A DOS program that does anything useful has to solve a problem the native kernel never meets: it starts in someone else's machine. DOS owns the first 640 KB and the files; a second program, the [DPMI](term:dpmi) host, owns protected mode and all the memory above 1 MiB; and a small loader called a [stub](term:stub) is what DOS actually runs when you type the name. A Rust program that wants a heap, a screen and a keyboard under those three has to learn what each one hands over and what it will not do. The crate that learns this is `rt`, in `spikes/d0-rust-dos/rt/`, a "Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87" (its `Cargo.toml`). This chapter is about `rt` and about the build that surrounds it, from `dos-elf.json` to the file `SHELL.EXE`.
+A DOS program that does anything useful has to solve a problem the native kernel never meets: it starts in someone else's machine. DOS owns the first 640 KB and the files; a second program, the [DPMI](term:dpmi) host, owns protected mode and all the memory above 1 MiB; and a small loader called a [stub](term:stub) is what DOS actually runs when you type the name. A Rust program that wants a heap, a screen and a keyboard under those three has to learn what each one hands over and what it will not do. The crate that learns this is `rt`, in `dos/rt/`, a "Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87" (its `Cargo.toml`). This chapter is about `rt` and about the build that surrounds it, from `dos-elf.json` to the file `SHELL.EXE`.
 
 On the map ([M1](chapter:m-map)) this is the [hosted track](term:hosted-track)'s platform: the DOS-side counterpart of the native kernel's start-up code, interrupt tables and memory manager ([M5](chapter:m-boot) to [M8](chapter:m-bioscalls)). The [hardware abstraction layer](term:hal) ([M9](chapter:m-hal)) is the contract; `rt` is one [platform](term:platform) that implements it, and its two implementing types, `DosBios` and `DosDisplay`, are the last part of the runtime below. The anatomy page of the hosted program draws fourteen boxes for this chapter, from the stub that starts first to CWSDPMI underneath; the front matter lists them. After it you should be able to say what happens between typing `SHELL` and the first line of Rust, explain why every DOS file call goes through a buffer, follow one memory request to the DPMI host and back, build `SHELL.EXE` and say which byte of it came from where, and tell the live pipeline from the legacy one that the last section describes.
 
-A caution about names. The runtime lives under `spikes/` because it began as spike d0 (`purerust`, PR #7), and `docs/D0-RUST-DOS.md` recommends promoting it to a top-level `rt/` crate. That has not happened: `shell/dos/Cargo.toml` still depends on `../../spikes/d0-rust-dos/rt`, and `docs/FIRST-WINDOW.md` records the promotion as a separate, open decision. This chapter calls it `rt` as the code does.
+A caution about names. The runtime lives under `spikes/` because it began as spike d0 (`purerust`, PR #7), and `docs/D0-RUST-DOS.md` recommends promoting it to a top-level `rt/` crate. That has not happened: `shell/dos/Cargo.toml` still depends on `../../dos/rt`, and `docs/FIRST-WINDOW.md` records the promotion as a separate, open decision. This chapter calls it `rt` as the code does.
 
 ## How it works
 
@@ -115,7 +115,7 @@ The pipeline below is the build of the d0 programs and of `SHELL.EXE`, which dif
 
 <!-- explainer pipeline -->
 
-1. **The target.** `spikes/d0-rust-dos/dos-elf.json` is a freestanding ELF target: `i486-unknown-none-elf`, x87 hard float, SIMD off, `panic-strategy: abort`, `rust-lld` as the linker. [M19](chapter:m-toolchain) compares it field by field with the other two. `.cargo/config.toml` makes it the default, asks for [build-std](term:build-std) with `compiler-builtins-mem` (which supplies `memcpy`, `memmove`, `memset` and `memcmp`), and passes `-Tlink.ld -nostdlib -static` to the linker. `RUSTC_BOOTSTRAP=1` is set by the build script.
+1. **The target.** `dos/dos-elf.json` is a freestanding ELF target: `i486-unknown-none-elf`, x87 hard float, SIMD off, `panic-strategy: abort`, `rust-lld` as the linker. [M19](chapter:m-toolchain) compares it field by field with the other two. `.cargo/config.toml` makes it the default, asks for [build-std](term:build-std) with `compiler-builtins-mem` (which supplies `memcpy`, `memmove`, `memset` and `memcmp`), and passes `-Tlink.ld -nostdlib -static` to the linker. `RUSTC_BOOTSTRAP=1` is set by the build script.
 2. **The link.** `rust-lld` links the objects with `link.ld`, a [linker script](term:linker-script): `_start` as the entry, two loadable segments (`text`, flags `R E`, and `data`, flags `RW`), the image from `0x1000`, every section on a 512-byte boundary, `.bss` in the data segment, and `__image_start` and `__image_end` as symbols. Its own comment gives the reasons: the stub copies `.text` and `.data` from the file to the image's block and clears `.bss`, it places the image at offset 0 of the block (so the addresses are offsets, not linear addresses), and it reads the file in sectors.
 3. **The stub.** `stubify -g`, from DJGPP, writes DJGPP's `STUB.EXE`, 2 KiB, "and does nothing else". It is data now, and neither `gcc`, `ld`, `as`, DJGPP's C library nor `crt0` is run. The stub's location in `vendor/` comes from `tools/setup.sh` ([M19](chapter:m-toolchain)).
 4. **The pack.** `tools/elf2go32.py` reads the ELF's program headers, not its sections: the first `PT_LOAD` becomes `.text` (code and read-only data) and the second becomes `.data` and `.bss`. It writes a go32 COFF image: a 20-byte file header, a 28-byte a.out header and exactly three 40-byte section headers (`.text`, `.data`, `.bss`), 168 bytes in all, padded to 512; then the sections, each padded to 512, behind the stub. The stub, as found by reading its code, checks only the magic `0x014C`; takes the entry point as a plain offset; copies each section from `scnptr` to `vaddr`; zeroes `.bss`; and sizes the block as the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the image. The tool refuses what it cannot pack: a file that is not a 32-bit little-endian ELF, an executable that is not `ET_EXEC`, a text segment with a `.bss` tail, an entry outside the text. With `--dpmi NAME` it patches the host's name into the stub (the last field of the information block, at offset `0x244`).
@@ -156,16 +156,16 @@ None of this carries over to the live pipeline as it stands. A module format for
 
 | Where | What it holds |
 |---|---|
-| [`spikes/d0-rust-dos/rt/src/start.rs`](repo:spikes/d0-rust-dos/rt/src/start.rs) | `_start` ([`RT_STACK`](sym:spikes/d0-rust-dos/rt/src/start.rs::RT_STACK), [`EntryRegs`](sym:spikes/d0-rust-dos/rt/src/start.rs::EntryRegs), [`StubInfo`](sym:spikes/d0-rust-dos/rt/src/start.rs::StubInfo)) and [`rt_entry`](sym:spikes/d0-rust-dos/rt/src/start.rs::rt_entry) |
-| [`spikes/d0-rust-dos/rt/src/dpmi.rs`](repo:spikes/d0-rust-dos/rt/src/dpmi.rs) | [`int31`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::int31), [`init`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::init), [`alloc_block`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::alloc_block), [`simulate_int`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::simulate_int), [`lock`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::lock), the vector and descriptor calls |
-| [`spikes/d0-rust-dos/rt/src/heap.rs`](repo:spikes/d0-rust-dos/rt/src/heap.rs) | The [`Heap`](sym:spikes/d0-rust-dos/rt/src/heap.rs::Heap) allocator, [`CHUNK`](sym:spikes/d0-rust-dos/rt/src/heap.rs::CHUNK), `take`, `insert` and `grow` |
-| [`spikes/d0-rust-dos/rt/src/dos.rs`](repo:spikes/d0-rust-dos/rt/src/dos.rs) | INT 21h through the transfer buffer ([`TB_SIZE`](sym:spikes/d0-rust-dos/rt/src/dos.rs::TB_SIZE), [`write`](sym:spikes/d0-rust-dos/rt/src/dos.rs::write), [`read`](sym:spikes/d0-rust-dos/rt/src/dos.rs::read), [`File`](sym:spikes/d0-rust-dos/rt/src/dos.rs::File)), [`exit`](sym:spikes/d0-rust-dos/rt/src/dos.rs::exit), [`exit_now`](sym:spikes/d0-rust-dos/rt/src/dos.rs::exit_now), [`die`](sym:spikes/d0-rust-dos/rt/src/dos.rs::die) |
-| [`spikes/d0-rust-dos/rt/src/panic.rs`](repo:spikes/d0-rust-dos/rt/src/panic.rs) | The panic handler: clean-up, `RT PANIC:`, status 3 |
-| [`spikes/d0-rust-dos/rt/src/cleanup.rs`](repo:spikes/d0-rust-dos/rt/src/cleanup.rs) | [`register`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::register), [`forget`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::forget), [`run_all`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::run_all) |
-| [`spikes/d0-rust-dos/rt/src/irq.rs`](repo:spikes/d0-rust-dos/rt/src/irq.rs) | The sixteen stubs, [`rt_irq_dispatch`](sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch), [`DosIrq`](sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq) (the HAL's `IrqRegistry`) and [`Slot`](sym:spikes/d0-rust-dos/rt/src/irq.rs::Slot) |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | [`DosBios`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay) |
-| [`spikes/d0-rust-dos/rt/src/timer.rs`](repo:spikes/d0-rust-dos/rt/src/timer.rs), [`fpu.rs`](repo:spikes/d0-rust-dos/rt/src/fpu.rs), [`env.rs`](repo:spikes/d0-rust-dos/rt/src/env.rs), [`bios_kbd.rs`](repo:spikes/d0-rust-dos/rt/src/bios_kbd.rs) | The IRQ 0 proof, the x87 maths `core` lacks, the command tail and environment, and the BIOS keyboard state |
-| [`spikes/d0-rust-dos/dos-elf.json`](repo:spikes/d0-rust-dos/dos-elf.json), [`link.ld`](repo:spikes/d0-rust-dos/link.ld) | The target and the linker script |
+| [`dos/rt/src/start.rs`](repo:dos/rt/src/start.rs) | `_start` ([`RT_STACK`](sym:dos/rt/src/start.rs::RT_STACK), [`EntryRegs`](sym:dos/rt/src/start.rs::EntryRegs), [`StubInfo`](sym:dos/rt/src/start.rs::StubInfo)) and [`rt_entry`](sym:dos/rt/src/start.rs::rt_entry) |
+| [`dos/rt/src/dpmi.rs`](repo:dos/rt/src/dpmi.rs) | [`int31`](sym:dos/rt/src/dpmi.rs::int31), [`init`](sym:dos/rt/src/dpmi.rs::init), [`alloc_block`](sym:dos/rt/src/dpmi.rs::alloc_block), [`simulate_int`](sym:dos/rt/src/dpmi.rs::simulate_int), [`lock`](sym:dos/rt/src/dpmi.rs::lock), the vector and descriptor calls |
+| [`dos/rt/src/heap.rs`](repo:dos/rt/src/heap.rs) | The [`Heap`](sym:dos/rt/src/heap.rs::Heap) allocator, [`CHUNK`](sym:dos/rt/src/heap.rs::CHUNK), `take`, `insert` and `grow` |
+| [`dos/rt/src/dos.rs`](repo:dos/rt/src/dos.rs) | INT 21h through the transfer buffer ([`TB_SIZE`](sym:dos/rt/src/dos.rs::TB_SIZE), [`write`](sym:dos/rt/src/dos.rs::write), [`read`](sym:dos/rt/src/dos.rs::read), [`File`](sym:dos/rt/src/dos.rs::File)), [`exit`](sym:dos/rt/src/dos.rs::exit), [`exit_now`](sym:dos/rt/src/dos.rs::exit_now), [`die`](sym:dos/rt/src/dos.rs::die) |
+| [`dos/rt/src/panic.rs`](repo:dos/rt/src/panic.rs) | The panic handler: clean-up, `RT PANIC:`, status 3 |
+| [`dos/rt/src/cleanup.rs`](repo:dos/rt/src/cleanup.rs) | [`register`](sym:dos/rt/src/cleanup.rs::register), [`forget`](sym:dos/rt/src/cleanup.rs::forget), [`run_all`](sym:dos/rt/src/cleanup.rs::run_all) |
+| [`dos/rt/src/irq.rs`](repo:dos/rt/src/irq.rs) | The sixteen stubs, [`rt_irq_dispatch`](sym:dos/rt/src/irq.rs::rt_irq_dispatch), [`DosIrq`](sym:dos/rt/src/irq.rs::DosIrq) (the HAL's `IrqRegistry`) and [`Slot`](sym:dos/rt/src/irq.rs::Slot) |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | [`DosBios`](sym:dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay) |
+| [`dos/rt/src/timer.rs`](repo:dos/rt/src/timer.rs), [`fpu.rs`](repo:dos/rt/src/fpu.rs), [`env.rs`](repo:dos/rt/src/env.rs), [`bios_kbd.rs`](repo:dos/rt/src/bios_kbd.rs) | The IRQ 0 proof, the x87 maths `core` lacks, the command tail and environment, and the BIOS keyboard state |
+| [`dos/dos-elf.json`](repo:dos/dos-elf.json), [`link.ld`](repo:dos/link.ld) | The target and the linker script |
 | [`tools/elf2go32.py`](repo:tools/elf2go32.py) | [`parse_elf`](sym:tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
 | [`shell/dos/build.sh`](repo:shell/dos/build.sh), [`shell/dos/check.sh`](repo:shell/dos/check.sh) | The build of `SHELL.EXE` and the checks that run it in DOSBox |
 | [`spikes/d0-rust-dos/build.sh`](repo:spikes/d0-rust-dos/build.sh), [`check.sh`](repo:spikes/d0-rust-dos/check.sh) | The same pipeline for the spike's programs, and their checks |
@@ -199,42 +199,42 @@ The pieces add up. 2,048 bytes of stub; 512 of COFF headers (168 used); 98,816 o
 id: rt.entry
 label: _start, the stub's hand-over and rt_entry: registers recorded, stack switched, x87 reset
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/start.rs::_start, test:spikes/d0-rust-dos/expected/ctx.txt::stubinfo: basename, test:spikes/d0-rust-dos/check.sh::CTX.EXE
+evidence: sym:dos/rt/src/start.rs::_start, test:spikes/d0-rust-dos/expected/ctx.txt::stubinfo: basename, test:spikes/d0-rust-dos/check.sh::CTX.EXE
 note: In headless DOSBox with CWSDPMI r7. The d0 build and the OOM and panic runs were redone for this chapter in the CI image; the ctx transcript is the committed one.
 
 id: rt.dpmi
 label: The DPMI client: flat 4 GiB data segment, memory blocks, locking, vectors, real-mode calls
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/dpmi.rs::int31, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: 1 MiB block write/read/free ok, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: lock/unlock true
+evidence: sym:dos/rt/src/dpmi.rs::int31, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: 1 MiB block write/read/free ok, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: lock/unlock true
 note: The d0 build ran, and shell/dos/check.sh exercises this client; the hello transcript is the committed one and spikes/d0-rust-dos/check.sh was not rerun.
 
 id: rt.heap
 label: The global allocator over DPMI 0501h, first fit, 256 KiB chunks
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/heap.rs::Heap, test:spikes/d0-rust-dos/expected/hello.txt::alloc: churn kept 142500 bytes, test:spikes/d0-rust-dos/check.sh::Allocation failure is a panic
+evidence: sym:dos/rt/src/heap.rs::Heap, test:spikes/d0-rust-dos/expected/hello.txt::alloc: churn kept 142500 bytes, test:spikes/d0-rust-dos/check.sh::Allocation failure is a panic
 
 id: rt.dos
 label: INT 21h through the 32 KiB transfer buffer: console and files
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/dos.rs::TB_SIZE, test:spikes/d0-rust-dos/expected/hello.txt::file: one read call: 300000 bytes, test:spikes/d0-rust-dos/expected/hello.txt::file: missing file gives Some(DosError(2))
+evidence: sym:dos/rt/src/dos.rs::TB_SIZE, test:spikes/d0-rust-dos/expected/hello.txt::file: one read call: 300000 bytes, test:spikes/d0-rust-dos/expected/hello.txt::file: missing file gives Some(DosError(2))
 note: The file transcript is the committed one; spikes/d0-rust-dos/check.sh was not rerun.
 
 id: rt.panic
 label: The panic handler, exit status 3 and the clean-up list
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/cleanup.rs::run_all, test:spikes/d0-rust-dos/expected/panicky.txt::IRQ 0 vector restored by the clean-up list: true, test:spikes/d0-rust-dos/check.sh::A panic restores the hooked vector and exits with status 3
+evidence: sym:dos/rt/src/cleanup.rs::run_all, test:spikes/d0-rust-dos/expected/panicky.txt::IRQ 0 vector restored by the clean-up list: true, test:spikes/d0-rust-dos/check.sh::A panic restores the hooked vector and exits with status 3
 note: The out-of-memory run in the worked example ended in the panic handler with status 3; the panicky transcript is the committed one and was not rerun.
 
 id: rt.irq
 label: The sixteen IRQ stubs, the locked image and the interrupt stack
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Live: $live_scn typed through IRQ 1 at depth $depth
+evidence: sym:dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Live: $live_scn typed through IRQ 1 at depth $depth
 note: Keys typed by DOSBox's AUTOTYPE reach the shell through IRQ 1, and each mark of the live scenario is read back and held to the goldens at both depths. The default check types keys only; the mouse is driven by xdotool under Xvfb in an opt-in step (INPUT_EXTRA=1).
 
 id: rt.hal
 label: DosBios and DosDisplay: mode 13h, mode 12h and VBE with a linear frame buffer
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay, test:tests/shell/expected-dos-8.txt::shell: frame open 8 640x480 920263aa c310363f, test:shell/dos/check.sh::No VBE: depth8 reports the fallback
+evidence: sym:dos/rt/src/hal.rs::DosDisplay, test:tests/shell/expected-dos-8.txt::shell: frame open 8 640x480 920263aa c310363f, test:shell/dos/check.sh::No VBE: depth8 reports the fallback
 note: The frame buffer and the DAC are read back and compared with the goldens. That records what the emulated card holds, not what DOSBox draws.
 
 id: rt.build

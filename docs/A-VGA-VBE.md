@@ -26,7 +26,7 @@ Spike A (`s2-vbe` in the older numbering): one driver, `desk-vga` in `hal/driver
 | `Bios` trait | `hal/hal/src/bios.rs` | One real-mode software interrupt with an optional buffer in low memory, and `read_low` for the far pointers a VBE block holds |
 | `desk-vga` | `hal/drivers/vga` | `regs` (mode 13h and 12h tables and the programming sequence), `dac` (palette, bounded retrace wait, fades), `canvas` / `linear` / `planar` (drawing, read-back, Adler-32), `vbe` (information and mode blocks, calls 4F00h to 4F03h and 4F05h) |
 | Mock models | `hal/platform/mock` | `VgaModel`, the register file at `0x3C0..=0x3DF`; `MockBios`, scripted replies |
-| DOS platform | `spikes/d0-rust-dos/rt/src/hal.rs` | `DosBios` (DPMI 0300h, a 512-byte conventional-memory buffer), `DosDisplay: Display` (mode list, mode set, linear frame buffer mapped with DPMI 0800h, clean-up list) |
+| DOS platform | `dos/rt/src/hal.rs` | `DosBios` (DPMI 0300h, a 512-byte conventional-memory buffer), `DosDisplay: Display` (mode list, mode set, linear frame buffer mapped with DPMI 0800h, clean-up list) |
 | Program | `spikes/a-vga-vbe` | `VGAVBE.EXE`, its build and its check |
 | Converter | `tools/raw2png.py` | A frame buffer dump and a DAC dump to an indexed PNG |
 

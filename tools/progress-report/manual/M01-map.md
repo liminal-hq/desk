@@ -6,7 +6,7 @@ title: The map
 summary: The two tracks, the four kinds of code, which directory is which layer, what is built and what is not, and how to read the state tags.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [docs/DIRECTION.md, docs/HAL.md, docs/FIRST-WINDOW.md, tools/progress-report/anatomy-desk.json, tools/progress-report/anatomy-dos.json, hal/, shell/, kernel/, spikes/d0-rust-dos/rt/]
+watches: [docs/DIRECTION.md, docs/HAL.md, docs/FIRST-WINDOW.md, tools/progress-report/anatomy-desk.json, tools/progress-report/anatomy-dos.json, hal/, shell/, kernel/, dos/rt/]
 log: [pivot, hal, firstwindow]
 anatomy: [desk:appmodel, desk:sdk, desk:winown, desk:syscalls, desk:loader, desk:process, desk:wm, desk:shell, desk:ui, desk:gfx, desk:seam, desk:present, desk:hal, desk:drivers, desk:live, desk:native, desk:dos, desk:boot, desk:kernel, desk:freedos, desk:emu, desk:real]
 ---
@@ -45,7 +45,7 @@ Underneath both is one fact about every PC of this kind: the processor starts in
 |---|---|---|---|---|
 | HAL | The traits and small shared types: the contract | `core` | Anything platform-specific | `hal/hal/` (`desk-hal`) |
 | Driver | Device logic written once: register sequences, timing, decoding | `desk-hal`, `core` | DOS, BIOS, DPMI, kernel internals | `hal/drivers/*` |
-| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/` (native), `spikes/d0-rust-dos/rt` (DOS), `hal/platform/mock/` (host tests) |
+| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/` (native), `dos/rt` (DOS), `hal/platform/mock/` (host tests) |
 | Desk core | The OS-independent shell: windows, text, frames | The HAL's upper edge, `alloc` | Ports, DOS, kernel internals, drivers' register-level API | `shell/` |
 
 One part of this table differs from `docs/HAL.md`, which names `core/` as the home of the Desk core. The code puts it in `shell/`; `core/` is the first hosted skeleton's one Rust function, kept until the owner decides to retire the C layer ([`docs/FIRST-WINDOW.md`](doc:docs/FIRST-WINDOW.md#where-it-sits)). The manual follows the code.
@@ -121,9 +121,9 @@ The manual's rule is stricter than the anatomy diagram's. A box on the anatomy p
 | [`shell/Cargo.toml`](repo:shell/Cargo.toml) | The shared core's workspace: six crates; `dos/` is excluded and has its own |
 | [`kernel/Cargo.toml`](repo:kernel/Cargo.toml) | The kernel, which depends on the HAL, the drivers and the core by path |
 | [`shell/dos/Cargo.toml`](repo:shell/dos/Cargo.toml) | `SHELL.EXE`, which depends on `rt`, the HAL, the drivers and the core |
-| [`spikes/d0-rust-dos/rt/Cargo.toml`](repo:spikes/d0-rust-dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic` and `desk-vga` |
+| [`dos/rt/Cargo.toml`](repo:dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic` and `desk-vga` |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The native platform: the port bus, the driver statics and the IRQ registry |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | The DOS platform's implementations of the HAL's traits |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | The DOS platform's implementations of the HAL's traits |
 | [`hal/platform/mock/src/lib.rs`](repo:hal/platform/mock/src/lib.rs) | The host platform for driver tests |
 
 For depth: `docs/DIRECTION.md` ([two tracks](doc:docs/DIRECTION.md#two-tracks-in-parallel) and [milestones](doc:docs/DIRECTION.md#milestones)), `docs/HAL.md` ([decisions](doc:docs/HAL.md#decisions) and [the four kinds of code](doc:docs/HAL.md#the-four-kinds-of-code)) and `docs/FIRST-WINDOW.md` ([where it sits](doc:docs/FIRST-WINDOW.md#where-it-sits) and [crate layout](doc:docs/FIRST-WINDOW.md#crate-layout)).

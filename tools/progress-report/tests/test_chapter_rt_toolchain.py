@@ -31,7 +31,7 @@ class RuntimeChapterTests(unittest.TestCase):
         cls.chapters = {c["id"]: c for c in manual.load_chapters(manual.load_plan())}
         cls.rt = cls.chapters["m-rt"]["raw"]
         cls.d0 = rd("docs", "D0-RUST-DOS.md")
-        cls.src = {f: rd("spikes", "d0-rust-dos", "rt", "src", f) for f in os.listdir(os.path.join(gather.ROOT, "spikes", "d0-rust-dos", "rt", "src"))}
+        cls.src = {f: rd("dos", "rt", "src", f) for f in os.listdir(os.path.join(gather.ROOT, "dos", "rt", "src"))}
 
     def test_sizes_quoted_from_a_document_are_in_that_document(self):
         for size in (49664, 70144, 21325, 236072, 115712):
@@ -142,7 +142,7 @@ class ToolchainChapterTests(unittest.TestCase):
         cls.raw = cls.ch["raw"]
         files = {
             "kernel": ("kernel", "i486-desk-none.json"),
-            "dos-elf": ("spikes", "d0-rust-dos", "dos-elf.json"),
+            "dos-elf": ("dos", "dos-elf.json"),
             "dos": ("core", "dos.json"),
         }
         cls.spec = {k: json.loads(rd(*v)) for k, v in files.items()}
@@ -214,7 +214,7 @@ class ToolchainChapterTests(unittest.TestCase):
         self.assertNotIn("compiler-builtins-mem", legacy)
         self.assertIn("-zmax-page-size=0x1000", rd("kernel", ".cargo", "config.toml"))
         self.assertIn(". = 0x100000;", rd("kernel", "link.ld"))
-        self.assertIn(". = 0x1000;", rd("spikes", "d0-rust-dos", "link.ld"))
+        self.assertIn(". = 0x1000;", rd("dos", "link.ld"))
 
     def test_the_numbers_in_the_worked_example(self):
         # the kernel packer's arithmetic: the third segment's file part ends the flat image

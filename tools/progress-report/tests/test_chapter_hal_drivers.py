@@ -66,7 +66,7 @@ class HalChaptersTests(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(gather.ROOT, "kernel", "src", "port.rs")))
         self.assertFalse(os.path.exists(os.path.join(gather.ROOT, "hal", "drivers", "vgatext")))
         self.assertFalse(os.path.exists(os.path.join(gather.ROOT, "rt")))
-        rt = rd("spikes", "d0-rust-dos", "rt", "Cargo.toml")
+        rt = rd("dos", "rt", "Cargo.toml")
         self.assertIn("desk-pic", rt)
         self.assertNotIn("desk-pit", rt)
         self.assertNotIn("desk-serial", rt)
@@ -138,12 +138,12 @@ class HalChaptersTests(unittest.TestCase):
         bios = rd("kernel", "src", "bios.rs")
         for call in ("PIC.pending_mask()", "PIC.in_service_mask()", "PIC.init(BIOS_BASES"):
             self.assertIn(call, bios)
-        dos_irq = rd("spikes", "d0-rust-dos", "rt", "src", "irq.rs")
+        dos_irq = rd("dos", "rt", "src", "irq.rs")
         for call in ("pic.is_spurious(irq)", "pic.eoi_spurious(irq)", "pic.eoi(irq)", "pic.unmask(irq)"):
             self.assertIn(call, dos_irq)
         self.assertNotIn("Pic8259::new(unsafe { RawPorts::new() }).init", dos_irq)
-        for f in sorted(os.listdir(os.path.join(gather.ROOT, "spikes", "d0-rust-dos", "rt", "src"))):
-            self.assertNotIn("restore_bios_rate", rd("spikes", "d0-rust-dos", "rt", "src", f))
+        for f in sorted(os.listdir(os.path.join(gather.ROOT, "dos", "rt", "src"))):
+            self.assertNotIn("restore_bios_rate", rd("dos", "rt", "src", f))
         for f in ("serial.rs", "pic.rs", "pit.rs", "hal.rs", "main.rs", "bios.rs"):
             for fn in ("restore_bios_rate", "read_counter", ".probe()", "read_byte"):
                 self.assertNotIn(fn, rd("kernel", "src", f), f + " " + fn)

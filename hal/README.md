@@ -16,7 +16,7 @@ The shared hardware abstraction layer and the drivers written once against it: o
 ```bash
 cargo test                       # host tests against the mock
 RUSTC_BOOTSTRAP=1 cargo check --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec
-RUSTC_BOOTSTRAP=1 cargo check --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec
+RUSTC_BOOTSTRAP=1 cargo check --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec
 ```
 
 `tools/check.sh` runs all three, with `cargo fmt --check` and `clippy -D warnings`. `clippy.toml` bans compare-and-swap and the atomic operations that compile to a `CMPXCHG` loop.

@@ -106,10 +106,13 @@ RULES=(
   'tools/raw2png.py;report,dos;tools/raw2png.py'
   'tools/dosrun.sh;report,dos,stdstubs,shelldos,compare;tools/dosrun.sh'
   'tools/elf2go32.py;report,dos,stdstubs,shelldos,compare;tools/elf2go32.py'
-  # The spikes. The pure Rust DOS runtime and its target are shared by the shell on DOS, the other spikes and the cross checks.
-  'spikes/d0-rust-dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;spikes/d0-rust-dos/rt/src/lib.rs'
-  'spikes/d0-rust-dos/dos-elf.json;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/dos-elf.json'
-  'spikes/d0-rust-dos/link.ld;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/link.ld'
+  # The Rust-on-DOS foundation. The runtime and its target are shared by the shell on DOS, the spikes and the cross checks.
+  'dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;dos/rt/src/lib.rs'
+  'dos/dos-elf.json;report,rust,dos,stdstubs,shelldos,compare;dos/dos-elf.json'
+  'dos/link.ld;report,rust,dos,stdstubs,shelldos,compare;dos/link.ld'
+  # The rest of dos/ (the workspace manifest, lockfile, cargo config and rustfmt settings) governs the runtime, so it selects what the runtime does.
+  'dos/*;report,rust,dos,stdstubs,shelldos,compare;dos/Cargo.toml'
+  # The spikes.
   'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/progs/src/hello.rs'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'

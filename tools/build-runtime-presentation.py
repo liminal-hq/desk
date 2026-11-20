@@ -184,8 +184,8 @@ def build_slides():
 
     p = slide('The DOS runtime', 'A foundation for standalone Rust programs.',
               'Startup, memory, DOS services and hardware access behind a small Rust interface.',
-              ['spikes/d0-rust-dos/rt/src/lib.rs', 'docs/D0-RUST-DOS.md'],
-              'The runtime is no_std with alloc. It replaces the C runtime for these executables, but still uses the loader stub and CWSDPMI. It currently lives under spikes/d0-rust-dos/rt.')
+              ['dos/rt/src/lib.rs', 'docs/D0-RUST-DOS.md'],
+              'The runtime is no_std with alloc. It replaces the C runtime for these executables, but still uses the loader stub and CWSDPMI. It currently lives under dos/rt.')
     card(p, 1.5, 5.5, 9.7, 9.5, '01 / Bring up', 'Make Rust runnable', 'Own stack and entry\nx87 initialisation\nHeap for Vec and String', AMBER)
     card(p, 12.15, 5.5, 9.7, 9.5, '02 / Serve', 'Reach DOS and devices', 'Files and console\nArguments and environment\nIRQ and display adapters', AMBER)
     card(p, 22.8, 5.5, 9.7, 9.5, '03 / Restore', 'Leave a usable machine', 'Run clean-up actions\nRestore vectors and video\nReturn an exit status', AMBER)
@@ -193,7 +193,7 @@ def build_slides():
 
     p = slide('Executable lifecycle', 'What happens before main()?',
               'The DOS path arrives in protected mode with help from a stub and DPMI host.',
-              ['spikes/d0-rust-dos/rt/src/start.rs', 'spikes/d0-rust-dos/build.sh', 'tools/elf2go32.py'],
+              ['dos/rt/src/start.rs', 'spikes/d0-rust-dos/build.sh', 'tools/elf2go32.py'],
               'The source entry macro accepts fn main() -> i32; the program uses no_main rather than ordinary std lang_start. The DOS entry has a 256 KiB BSS stack. ELF linking and go32 packaging are distinct steps.')
     stages = [('01', 'Build', 'Rust + rust-lld\nresolve the ELF image'), ('02', 'Package', 'Packer adds the\nDOS loader stub'), ('03', 'Enter', 'Stub finds CWSDPMI\nand loads the image'), ('04', 'Run', 'Runtime sets up\nand calls Rust')]
     for i, (n, title, body) in enumerate(stages):
@@ -203,7 +203,7 @@ def build_slides():
 
     p = slide('The address boundary', 'A Rust pointer is not a DOS address.',
               'Pointer-taking DOS calls cross through conventional memory.',
-              ['spikes/d0-rust-dos/rt/src/dos.rs', 'spikes/d0-rust-dos/rt/src/dpmi.rs', 'docs/D0-RUST-DOS.md'],
+              ['dos/rt/src/dos.rs', 'dos/rt/src/dpmi.rs', 'docs/D0-RUST-DOS.md'],
               'D0 records a negative test: direct protected-mode INT 21h with a Rust buffer pointer reports a write count but does not write that buffer. Pointer-taking calls therefore use DPMI real-mode simulation. The DOS transfer buffer is 32 KiB; larger operations loop.')
     band(p, 2, 5.7, 9, 'Rust buffer', PURPLE, 1.8)
     band(p, 12.5, 5.7, 9, '32 KiB transfer buffer', AMBER, 1.8)
@@ -227,7 +227,7 @@ def build_slides():
 
     p = slide('Responsibilities compared', 'Similar services. Different obligations.',
               'The native foundation takes ownership of services DOS already supplies.',
-              ['spikes/d0-rust-dos/rt/src/lib.rs', 'kernel/src/main.rs', 'docs/DIRECTION.md'],
+              ['dos/rt/src/lib.rs', 'kernel/src/main.rs', 'docs/DIRECTION.md'],
               'The table mixes implemented services and explicit future work, as labelled. Native BIOS calls and disk probes do not amount to a complete filesystem. Shutdown behaviour is a product decision, beyond emulator exit helpers.')
     cols = [(1.5, 7.0), (8.65, 11.5), (20.3, 12.2)]
     for (x, w), label, c in zip(cols, ['SERVICE', 'DOS RUNTIME', 'NATIVE FOUNDATION'], [MUTED, AMBER, CYAN]):
@@ -251,7 +251,7 @@ def build_slides():
 
     p = slide('Two meanings of runtime', 'A Desk app needs a thinner runtime.',
               'A standalone executable and a module inside Desk have different owners.',
-              ['spikes/d0-rust-dos/rt/src/lib.rs', 'spikes/s1-dxe3/modules/rt/src/lib.rs', 'docs/SDK.md', 'docs/S1-DXE3.md'],
+              ['dos/rt/src/lib.rs', 'spikes/s1-dxe3/modules/rt/src/lib.rs', 'docs/SDK.md', 'docs/S1-DXE3.md'],
               'The app runtime is not the D0 platform runtime. A module forwards allocation and services to the host, exposes entry points and reports panics. The experimental std ABI and app SDK currently overlap in names but differ in signatures; they must be reconciled before composition.')
     card(p, 1.5, 5.6, 15, 9.2, 'Standalone program', 'Platform runtime', 'Own executable startup\nOwn heap and DOS service access\nOwn hardware restoration\nExit back to DOS', AMBER)
     card(p, 17.5, 5.6, 15, 9.2, 'Loadable Desk app', 'App runtime + SDK', 'Host calls app entry points\nHost tracks app allocations\nApp uses host services\nHost manages stop and unload', PURPLE)

@@ -3,7 +3,7 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# The table is the files: `kernel/i486-desk-none.json`, `spikes/d0-rust-dos/dos-elf.json` and `core/dos.json`, read as they are. Where a document
+# The table is the files: `kernel/i486-desk-none.json`, `dos/dos-elf.json` and `core/dos.json`, read as they are. Where a document
 # records why a field has its value (`docs/NATIVE-BOOT.md`, `docs/RUST-TARGETS.md`, `docs/D0-RUST-DOS.md`) the reason is shown with its source;
 # otherwise the table says no reason is recorded. The only things it refuses are a file that does not parse and one that stops being a
 # 32-bit i486 target without a pointer width and CPU of that kind, because every sentence of the chapter about the three starts there.
@@ -15,7 +15,7 @@ from explainers import stepper
 from mdlite import Raw, esc
 
 ID = "m-targets"
-FILES = [("kernel/i486-desk-none.json", "kernel"), ("spikes/d0-rust-dos/dos-elf.json", "dos-elf"), ("core/dos.json", "dos.json")]
+FILES = [("kernel/i486-desk-none.json", "kernel"), ("dos/dos-elf.json", "dos-elf"), ("core/dos.json", "dos.json")]
 # (group title, [fields], what the group says)
 GROUPS = [
     ("What machine and what system", ["llvm-target", "arch", "os", "vendor", "env", "binary-format", "is-like-windows", "cpu", "target-pointer-width"]),
@@ -109,6 +109,6 @@ def render(D, ctx):
     table = ('<div class="tbl"><table class="tg"><caption class="sr">The fields of the three target files, with the reason where a document records one</caption><thead><tr><th scope="col">Field</th>%s<th scope="col">Why</th></tr></thead><tbody>%s</tbody></table></div>'
              '<p class="how">Rows with a coloured edge differ between the files. The labels are the files: %s.</p>') % (
         "".join('<th scope="col"><code>%s</code></th>' % esc(label) for _, label, _ in files), "".join(rows), ", ".join("<code>%s</code> is <code>%s</code>" % (esc(l), esc(p)) for p, l, _ in files))
-    cap = ('The fields are those of <code>kernel/i486-desk-none.json</code>, <code>spikes/d0-rust-dos/dos-elf.json</code> and <code>core/dos.json</code>, as they are; the reasons are quoted from <code>docs/NATIVE-BOOT.md</code>, <code>docs/RUST-TARGETS.md</code> and <code>docs/D0-RUST-DOS.md</code>, and a field with no recorded reason says so. '
+    cap = ('The fields are those of <code>kernel/i486-desk-none.json</code>, <code>dos/dos-elf.json</code> and <code>core/dos.json</code>, as they are; the reasons are quoted from <code>docs/NATIVE-BOOT.md</code>, <code>docs/RUST-TARGETS.md</code> and <code>docs/D0-RUST-DOS.md</code>, and a field with no recorded reason says so. '
            'The build refuses a file that does not parse or that stops being a 32-bit i486 target.')
     return stepper(ID, "Three target files, field by field", table, steps, cap, ctx, "x-wide")

@@ -45,7 +45,7 @@ step "Module loader: host tests and no_std builds"
 (cd module && DMD_REQUIRE_REAL_MODULE=1 cargo test --locked --quiet)
 # dmdpack is a host tool; the crates that run in the core and in a module are the ones built for the two 486 targets.
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module -p desk-guest --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module -p desk-guest --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module -p desk-guest --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 
 step "Test modules: format, lints, build and pack"
 (cd module/mods && cargo fmt --check)

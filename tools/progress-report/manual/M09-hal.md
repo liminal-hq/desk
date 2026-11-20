@@ -6,7 +6,7 @@ title: The HAL
 summary: The contract crate desk-hal read from the code: port I/O and where the unsafe sits, memory-mapped regions, interrupts and the ring, time, video and input types, errors, no_std and features, the alternatives rejected, the mock platform, and the migration steps done and not done.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [hal/hal/, hal/platform/mock/, hal/README.md, hal/clippy.toml, docs/HAL.md, kernel/src/hal.rs, spikes/d0-rust-dos/rt/src/hal.rs, spikes/d0-rust-dos/rt/src/irq.rs]
+watches: [hal/hal/, hal/platform/mock/, hal/README.md, hal/clippy.toml, docs/HAL.md, kernel/src/hal.rs, dos/rt/src/hal.rs, dos/rt/src/irq.rs]
 log: [hal]
 anatomy: [desk:hal, dos:rthal]
 ---
@@ -28,7 +28,7 @@ After it you should be able to read any file in `hal/hal/src/` and say what it p
 |---|---|---|---|---|
 | HAL | The traits and small shared types | `core` | Anything platform-specific | `hal/hal/` (`desk-hal`) |
 | Driver | Device logic written once: register sequences, timing rules, decoding, interrupt-side work | `desk-hal`, `core` | DOS, BIOS, DPMI, kernel internals, `alloc` in interrupt code | `hal/drivers/*` |
-| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/src/hal.rs`, `spikes/d0-rust-dos/rt/src/hal.rs` and `irq.rs`, `hal/platform/mock/` |
+| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/src/hal.rs`, `dos/rt/src/hal.rs` and `irq.rs`, `hal/platform/mock/` |
 | Desk core | The OS-independent shell | The HAL's display and input surfaces, `alloc` | Ports, DOS, DJGPP, kernel internals, a driver's registers | `shell/` |
 
 <!-- figure hal-layers -->
@@ -111,7 +111,7 @@ The models are the author's reading of the data sheets. None has been compared w
 |---|---|---|
 | 0 | The workspace, traits, ring, region, three drivers, mock, tests and cross builds | Done. `hal/` is a workspace of nine members; `tools/check.sh` runs `fmt`, `clippy -D warnings` and `cargo test` there, and the two cross builds |
 | 1 | The native kernel uses the shared drivers | Done. `kernel/Cargo.toml` depends on `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic` and the rest; `kernel/src/port.rs` no longer exists; `PORTS`, `PIC`, `SERIAL`, `CLOCK` and `IRQS` are in `kernel/src/hal.rs`. Not done within it: `vga.rs` has not moved to a `desk-vgatext` over an `MmioRegion` (that crate does not exist; the plan called it optional) |
-| 2 | The DOS runtime becomes the hosted platform | Partly. `rt::hal` has `DosBios` and `DosDisplay`, and `rt::irq` has `DosIrq` (a stub per line, `Chain::Previous`, the clean-up list, the stack switch). Not done: `rt` is still `spikes/d0-rust-dos/rt`, not a top-level `rt/`; `rt::timer` is still its own hook and nothing under DOS uses `desk-pit` or `PitClock`; `desk-serial` is not used by `rt`; no `PhysMem`, `WallClock` or `DebugOut` over standard output |
+| 2 | The DOS runtime becomes the hosted platform | Partly. `rt::hal` has `DosBios` and `DosDisplay`, and `rt::irq` has `DosIrq` (a stub per line, `Chain::Previous`, the clean-up list, the stack switch). Not done: `rt` is still `dos/rt`, not a top-level `rt/`; `rt::timer` is still its own hook and nothing under DOS uses `desk-pit` or `PitClock`; `desk-serial` is not used by `rt`; no `PhysMem`, `WallClock` or `DebugOut` over standard output |
 | 3 | The hosted skeleton moves to the HAL | Not done. `core/` is unchanged, and the shell lives in `shell/` |
 | 4 | New drivers in `hal/drivers/` | Partly. `desk-vga`, `desk-kbd`, `desk-i8042` and `desk-int33` exist; `desk-dma8237`, `desk-opl`, `desk-sb`, `desk-ata`, `desk-fdc` and `desk-rtc` do not |
 | 5 | The core runs on both platforms through `Platform` | Not done. There is no `Platform` trait in the code, and no `PhysMem` or `BlockDevice` |
@@ -139,8 +139,8 @@ The pieces the document marks as sketch and the code lacks are the physical-memo
 | [`hal/platform/mock/src/irq.rs`](repo:hal/platform/mock/src/irq.rs) | [`MockIrq`](sym:hal/platform/mock/src/irq.rs::MockIrq) |
 | [`hal/platform/mock/src/time.rs`](repo:hal/platform/mock/src/time.rs) | [`MockClock`](sym:hal/platform/mock/src/time.rs::MockClock) and [`MockDelay`](sym:hal/platform/mock/src/time.rs::MockDelay) |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The native platform: [`PORTS`](sym:kernel/src/hal.rs::PORTS), [`IrqTable`](sym:kernel/src/hal.rs::IrqTable) as the `IrqRegistry`, [`irq_dispatch`](sym:kernel/src/hal.rs::irq_dispatch) |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | The DOS platform's [`DosBios`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay) |
-| [`spikes/d0-rust-dos/rt/src/irq.rs`](repo:spikes/d0-rust-dos/rt/src/irq.rs) | The DOS platform's [`DosIrq`](sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq): a stub per line and the registry |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | The DOS platform's [`DosBios`](sym:dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay) |
+| [`dos/rt/src/irq.rs`](repo:dos/rt/src/irq.rs) | The DOS platform's [`DosIrq`](sym:dos/rt/src/irq.rs::DosIrq): a stub per line and the registry |
 
 For depth: `docs/HAL.md` ([decisions](doc:docs/HAL.md#decisions), [the four kinds of code](doc:docs/HAL.md#the-four-kinds-of-code), [interrupts](doc:docs/HAL.md#interrupts-built), [concurrency](doc:docs/HAL.md#concurrency), [the unsafe policy](doc:docs/HAL.md#the-unsafe-policy), [migration plan](doc:docs/HAL.md#migration-plan)) and `hal/README.md`.
 
@@ -203,7 +203,7 @@ note: `cargo clippy --locked --all-targets -- -D warnings` passes in hal/ (run f
 id: hal.dos
 label: DosBios, DosDisplay and DosIrq under DOS
 state: built-unverified
-evidence: sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay, sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq, test:spikes/a-vga-vbe/expected/all.txt::avga: read back equals written: true
+evidence: sym:dos/rt/src/hal.rs::DosDisplay, sym:dos/rt/src/irq.rs::DosIrq, test:spikes/a-vga-vbe/expected/all.txt::avga: read back equals written: true
 note: Written and covered by committed headless-DOSBox transcripts, but DOSBox was not run for this chapter, and the offline data has no CI result for the pull requests that proved them.
 
 id: hal.native-bios
@@ -221,7 +221,7 @@ note: The optional move of vga.rs to a desk-vgatext crate was not done.
 id: hal.step2
 label: Migration step 2: the DOS runtime as the hosted platform
 state: built-unverified
-evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq, doc:docs/HAL.md#migration-plan
+evidence: sym:dos/rt/src/irq.rs::DosIrq, doc:docs/HAL.md#migration-plan
 note: Partly done: rt::hal and rt::irq exist; rt is not promoted, rt::timer is separate, and desk-pit and desk-serial are not used under DOS.
 
 id: hal.surfaces
@@ -332,4 +332,4 @@ at: explainer m-crates
 
 ## Revisions
 
-- 2026-10-23: first written, against `44f0265`. Every surface was read in `hal/hal/src/`, the mock in `hal/platform/mock/src/`, the two platforms' use of the contract in `kernel/src/hal.rs` and `spikes/d0-rust-dos/rt/src/`, and `docs/HAL.md` in full; `cargo test` in `hal/` was run on the host (179 tests, all passing). Where `docs/HAL.md` and the code disagree, the code is followed. Found while writing: (1) the document's opening status and its "What was and was not verified" say no binary uses the crates and that the kernel and `rt` are unchanged, but the kernel depends on the crates (migration step 1 is done, as the document's own crate-layout paragraph says); (2) it counts 35 host tests, and the workspace now has 179; (3) its platforms table marks `kernel::hal` and `rt::hal` as planned, and both exist; (4) its `Display` sketch has infallible `set_palette` and `palette`, and the code returns `Result` (the document notes this in its video section); (5) it says the panic handlers of both platforms use `DebugOut`, but nothing outside `desk-serial` and `desk-hal` names the trait, and the kernel's panic handler prints with `println!`; (6) it says `Serial16550` is a `DebugOut` for both platforms, but the DOS runtime does not use `desk-serial` or `desk-pit`; (7) its "Today `hal/` holds" list omits `desk-vga` and `desk-int33`, which the workspace has. The `Display`, `Bios` and input surfaces are lightly covered here and taught in M11 and M12.
+- 2026-10-23: first written, against `44f0265`. Every surface was read in `hal/hal/src/`, the mock in `hal/platform/mock/src/`, the two platforms' use of the contract in `kernel/src/hal.rs` and `dos/rt/src/`, and `docs/HAL.md` in full; `cargo test` in `hal/` was run on the host (179 tests, all passing). Where `docs/HAL.md` and the code disagree, the code is followed. Found while writing: (1) the document's opening status and its "What was and was not verified" say no binary uses the crates and that the kernel and `rt` are unchanged, but the kernel depends on the crates (migration step 1 is done, as the document's own crate-layout paragraph says); (2) it counts 35 host tests, and the workspace now has 179; (3) its platforms table marks `kernel::hal` and `rt::hal` as planned, and both exist; (4) its `Display` sketch has infallible `set_palette` and `palette`, and the code returns `Result` (the document notes this in its video section); (5) it says the panic handlers of both platforms use `DebugOut`, but nothing outside `desk-serial` and `desk-hal` names the trait, and the kernel's panic handler prints with `println!`; (6) it says `Serial16550` is a `DebugOut` for both platforms, but the DOS runtime does not use `desk-serial` or `desk-pit`; (7) its "Today `hal/` holds" list omits `desk-vga` and `desk-int33`, which the workspace has. The `Display`, `Bios` and input surfaces are lightly covered here and taught in M11 and M12.

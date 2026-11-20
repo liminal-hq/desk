@@ -43,7 +43,7 @@ Out of scope: the launcher bar, menus, Alt+Tab, resizing, minimise and maximise 
 
 ## Decisions
 
-1. **One core, two thin wirings.** Everything that decides a pixel is in `shell/`, a Cargo workspace of `no_std` + `alloc` crates that build for the host, `kernel/i486-desk-none.json` and `spikes/d0-rust-dos/dos-elf.json`. The DOS program and the kernel's test mode only set a mode, load the palette, make a presenter over the frame buffer, feed events in and capture frames.
+1. **One core, two thin wirings.** Everything that decides a pixel is in `shell/`, a Cargo workspace of `no_std` + `alloc` crates that build for the host, `kernel/i486-desk-none.json` and `dos/dos-elf.json`. The DOS program and the kernel's test mode only set a mode, load the palette, make a presenter over the frame buffer, feed events in and capture frames.
 2. **An 8-bit back buffer in RAM, always.** The core draws palette indices into a `Vec<u8>` of `width × height`, whatever the display's depth. Reading video memory is the slow direction on real hardware ([`D-NATIVE-VGA.md`](D-NATIVE-VGA.md#speed)), so nothing ever reads the frame buffer back except the test captures.
 3. **Dirty rectangles in two layers.** *Scene damage* is what must be repainted into the back buffer and presented; *overlay damage* (the cursor) is only presented. A cursor move repaints nothing.
 4. **The cursor is composited at present time**, row by row, over the back buffer, so there is no save-under and no read of video memory, and the back buffer never contains the cursor.
@@ -616,7 +616,7 @@ All in `cargo test` in `shell/`, so `tools/check.sh` runs them:
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
 (cd shell && cargo test --locked --quiet)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/golden/first-window
 ```
 
@@ -624,7 +624,7 @@ python3 -I tools/frames.py goldens tests/shell/first-window.sums tests/shell/gol
 
 ### Hosted: SHELL.EXE in DOSBox
 
-`shell/dos/` is its own Cargo workspace (excluded from `shell/`'s, because its default target is `dos-elf.json`), built like spikes A and B: `rt` by path from `spikes/d0-rust-dos/rt`, `rust-lld`, `tools/elf2go32.py` behind DJGPP's stub, `CWSDPMI.EXE` beside it, into `dist/shell/`.
+`shell/dos/` is its own Cargo workspace (excluded from `shell/`'s, because its default target is `dos-elf.json`), built like spikes A and B: `rt` by path from `dos/rt`, `rust-lld`, `tools/elf2go32.py` behind DJGPP's stub, `CWSDPMI.EXE` beside it, into `dist/shell/`.
 
 ```
 SHELL.EXE [depth8 | depth4] [scenario] [dump] [marks] [fontfile] [corrupt] [timeout=N]
@@ -692,7 +692,7 @@ Each has a default the plan follows unless the owner says otherwise.
 - **CI time.** Two more DOSBox runs and two more QEMU runs, each well under a minute in the spikes' experience; the check job's limit is 25 minutes.
 - **Damage merging overdraws.** Bounding-box merges write more than strictly changed; the accounting tests bound it for the cases that matter.
 - **The 8.3 limit** on capture names is enforced by the scenario parser, not discovered in DOSBox.
-- **Depending on a spike's runtime.** `shell/dos` uses `spikes/d0-rust-dos/rt` by path, as spikes A and B do; when `rt` moves, the path changes in one place.
+- **Depending on a spike's runtime.** `shell/dos` uses `dos/rt` by path, as spikes A and B do; when `rt` moves, the path changes in one place.
 - **Test-mode numbers.** The kernel's test modes are a small integer space shared by branches; 13, 14 and 15 must not collide with another open branch.
 - **The cursor's shape is duplicated**: `desk_vga::cursor` keeps its arrow for the spikes, and `desk-gfx` has `ARROW` for the shell. A host test in `desk-gfx` compares the two through a public accessor added to `desk-vga`.
 - **Nothing here runs on real hardware.** QEMU and DOSBox model the VGA well enough for these pictures; real cards, monitors and timing are untested, as in spikes A and D.

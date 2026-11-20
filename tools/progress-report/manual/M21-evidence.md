@@ -73,7 +73,7 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 4 | Progress report generator: unit tests and a dry run of the data gather |
 | 5 | Fonts |
 | 6 | Rust format and lints |
-| 7 | HAL: host tests and no_std builds |
+| 7 | HAL and DOS runtime: host tests, no_std builds, and the runtime's format and lints |
 | 8 | Shell: host tests and no_std builds |
 | 9 | Module loader: host tests and no_std builds |
 | 10 | Module loader: test modules built, packed, relocated and compared, and the negative runs |
