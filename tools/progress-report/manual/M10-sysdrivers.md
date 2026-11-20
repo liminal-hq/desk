@@ -6,7 +6,7 @@ title: Drivers I: serial, interrupt controllers and the timer
 summary: The 16550 driver, the two-8259 driver and the 8254 driver with PitClock: their register sequences word by word, their tests against the mock bus, and how the kernel and the DOS runtime each use them.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [hal/drivers/serial/, hal/drivers/pic/, hal/drivers/pit/, kernel/src/serial.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/hal.rs, spikes/d0-rust-dos/rt/src/irq.rs, docs/HAL.md]
+watches: [hal/drivers/serial/, hal/drivers/pic/, hal/drivers/pit/, kernel/src/serial.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/hal.rs, dos/rt/src/irq.rs, docs/HAL.md]
 log: [hal]
 anatomy: [desk:drivers]
 ---
@@ -88,7 +88,7 @@ The rest implements the HAL's `InterruptController` trait:
 
 ### How each platform uses them
 
-| Driver | Native kernel (`kernel/src/`) | DOS runtime (`spikes/d0-rust-dos/rt/src/`) |
+| Driver | Native kernel (`kernel/src/`) | DOS runtime (`dos/rt/src/`) |
 |---|---|---|
 | `desk-serial` | `static SERIAL: Serial16550<RawPorts>` in `hal.rs`; `serial::init` calls `SERIAL.init(115_200)`; the `Serial` type in `serial.rs` is a `fmt::Write` that calls `write_byte`, and `console.rs` writes every line to it and to the screen | Not used. The hosted program's output is standard output |
 | `desk-pic` | `static PIC` in `hal.rs`; `pic::init` calls `PIC.init(REMAPPED_BASES, 0xFFFE)`; `IrqTable::register` calls `unmask`; `irq_dispatch` calls `is_spurious`, `eoi_spurious` and `eoi`; `bios.rs` calls `init(BIOS_BASES, …)` and back, `mask_bits`, `pending_mask` and `in_service_mask` | `rt_irq_dispatch` makes a `Pic8259` over `RawPorts` and calls `is_spurious`, `eoi_spurious` and `eoi` for a line Desk owns; `DosIrq::register` calls `is_masked` and `unmask`. It never calls `init`: the BIOS owns the controllers at `0x08` and `0x70` |
@@ -116,7 +116,7 @@ So the three drivers are fully shared only on the native track. On the hosted tr
 | [`hal/platform/mock/src/devices.rs`](repo:hal/platform/mock/src/devices.rs) | The [`Uart16550`](sym:hal/platform/mock/src/devices.rs::Uart16550) and [`Pit8254`](sym:hal/platform/mock/src/devices.rs::Pit8254) models the tests attach |
 | [`kernel/src/serial.rs`](repo:kernel/src/serial.rs), [`pic.rs`](repo:kernel/src/pic.rs), [`pit.rs`](repo:kernel/src/pit.rs) | The kernel's thin wrappers: [`serial::init`](sym:kernel/src/serial.rs::init), [`pic::init`](sym:kernel/src/pic.rs::init), [`pit::init`](sym:kernel/src/pit.rs::init) |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The statics [`PIC`](sym:kernel/src/hal.rs::PIC), [`SERIAL`](sym:kernel/src/hal.rs::SERIAL) and [`CLOCK`](sym:kernel/src/hal.rs::CLOCK) |
-| [`spikes/d0-rust-dos/rt/src/irq.rs`](repo:spikes/d0-rust-dos/rt/src/irq.rs) | The DOS runtime's use of `Pic8259`, in [`rt_irq_dispatch`](sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch) |
+| [`dos/rt/src/irq.rs`](repo:dos/rt/src/irq.rs) | The DOS runtime's use of `Pic8259`, in [`rt_irq_dispatch`](sym:dos/rt/src/irq.rs::rt_irq_dispatch) |
 | [`tools/progress-report/tests/test_chapter_hal_drivers.py`](repo:tools/progress-report/tests/test_chapter_hal_drivers.py) | The checks of this chapter and of M9 against the sources |
 
 For depth: `docs/HAL.md` ([interrupts](doc:docs/HAL.md#interrupts-built), [time](doc:docs/HAL.md#time-built-the-wall-clock-is-a-sketch), [errors](doc:docs/HAL.md#errors)) and `docs/N3-BIOS-PATH.md` for the two register reads.
@@ -195,7 +195,7 @@ note: Host tests against the mock only; nothing calls either function on a platf
 id: drv.dos-pic
 label: The DOS runtime sending EOIs and unmasking lines through Pic8259
 state: built-unverified
-evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch, repo:docs/B-DOS-INPUT.md
+evidence: sym:dos/rt/src/irq.rs::rt_irq_dispatch, repo:docs/B-DOS-INPUT.md
 note: Written and recorded in the spike's document as run in headless DOSBox; not run for this chapter.
 
 id: drv.dos-pit

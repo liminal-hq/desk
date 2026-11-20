@@ -1,6 +1,6 @@
 | Program | Check | js-dos 8.5.3 (DOSBox backend) | Native Staging |
 |---|---|---|---|
-| `HELLO.EXE` (text, d0) | Standard output equals `spikes/d0-rust-dos/expected/hello.txt` | identical, 22 lines, exit status 0 | identical |
+| `HELLO.EXE` (text, d0) | Standard output equals `dos/expected/hello.txt` | identical, 22 lines, exit status 0 | identical |
 | `HELLO.EXE` as `solo/HELLO.EXE` (`CWSDSTUB.EXE`, no `CWSDPMI.EXE`) | same | identical | identical |
 | `HELLO.EXE` with `core = normal`, `cputype = 486` | same | identical | identical |
 | `HELLO.EXE exit 7` | Exit status read back from the emulated disk | 7 | 7 |

@@ -6,7 +6,7 @@ title: The map
 summary: The two tracks, the four kinds of code, which directory is which layer, what is built and what is not, and how to read the state tags.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [docs/DIRECTION.md, docs/HAL.md, docs/FIRST-WINDOW.md, tools/progress-report/anatomy-desk.json, tools/progress-report/anatomy-dos.json, hal/, shell/, kernel/, spikes/d0-rust-dos/rt/]
+watches: [docs/DIRECTION.md, docs/HAL.md, docs/FIRST-WINDOW.md, docs/LAYERS.md, tools/layers/layers.txt, tools/progress-report/anatomy-desk.json, tools/progress-report/anatomy-dos.json, hal/, shell/, kernel/, dos/rt/]
 log: [pivot, hal, firstwindow]
 anatomy: [desk:appmodel, desk:sdk, desk:winown, desk:syscalls, desk:loader, desk:process, desk:wm, desk:shell, desk:ui, desk:gfx, desk:seam, desk:present, desk:hal, desk:drivers, desk:live, desk:native, desk:dos, desk:boot, desk:kernel, desk:freedos, desk:emu, desk:real]
 ---
@@ -45,7 +45,7 @@ Underneath both is one fact about every PC of this kind: the processor starts in
 |---|---|---|---|---|
 | HAL | The traits and small shared types: the contract | `core` | Anything platform-specific | `hal/hal/` (`desk-hal`) |
 | Driver | Device logic written once: register sequences, timing, decoding | `desk-hal`, `core` | DOS, BIOS, DPMI, kernel internals | `hal/drivers/*` |
-| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/` (native), `spikes/d0-rust-dos/rt` (DOS), `hal/platform/mock/` (host tests) |
+| Platform | The HAL implemented for one environment | Its environment, drivers, `desk-hal` | The Desk core | `kernel/` (native), `dos/rt` (DOS), `hal/platform/mock/` (host tests) |
 | Desk core | The OS-independent shell: windows, text, frames | The HAL's upper edge, `alloc` | Ports, DOS, kernel internals, drivers' register-level API | `shell/` |
 
 One part of this table differs from `docs/HAL.md`, which names `core/` as the home of the Desk core. The code puts it in `shell/`; `core/` is the first hosted skeleton's one Rust function, kept until the owner decides to retire the C layer ([`docs/FIRST-WINDOW.md`](doc:docs/FIRST-WINDOW.md#where-it-sits)). The manual follows the code.
@@ -61,9 +61,10 @@ One part of this table differs from `docs/HAL.md`, which names `core/` as the ho
 | `hal/platform/mock/` | Platform (host) | A mock port bus and device models, so drivers are tested without a machine | [M9](chapter:m-hal) |
 | `shell/` | Desk core | `desk-gfx`, `desk-font`, `desk-ui`, `desk-wm`, `desk-shell`, and `desk-present`, which the platforms use | [M13](chapter:m-pixels) to [M15](chapter:m-shell) |
 | `shell/dos/` | Platform (DOS), program | `SHELL.EXE`, the hosted wiring of the first window | [M16](chapter:m-platforms) |
-| `spikes/d0-rust-dos/` | Platform (DOS) | `rt`, the pure-Rust DOS runtime, the target and linker script, and the programs that proved them | [M17](chapter:m-rt) |
+| `dos/` | Platform (DOS), the foundation | `rt`, the pure-Rust DOS runtime, the `dos-elf.json` target and `link.ld` linker script, the packer and the DOSBox harness (`dos/tools/`), and the example programs and transcripts that proved them | [M17](chapter:m-rt) |
+| `spikes/d0-rust-dos/` | Spike | What is left of the d0 spike: stage 1, which links one example through DJGPP's `ld` | [M17](chapter:m-rt) |
 | `core/`, `c/`, `launcher/` | Legacy hosted skeleton | The first DOS program: Rust, C for DJGPP, and the real-mode launcher | [M17](chapter:m-rt) |
-| `tools/`, `tests/` | Build and evidence | Build scripts, the packer, the emulator runners, expected transcripts and goldens | [M19](chapter:m-toolchain) to [M21](chapter:m-evidence) |
+| `tools/`, `tests/` | Build and evidence | Build scripts, the emulator runners, the layering check (`tools/layers/`), expected transcripts and goldens | [M19](chapter:m-toolchain) to [M21](chapter:m-evidence) |
 | `fonts/` | Assets | The bitmap and outline faces, the emoji, and the build that writes the formats | [M18](chapter:m-fonts) |
 | `docs/` | Design | The working design; targets until a result says otherwise | |
 | `design/`, `sdk/` | Reference and plan | Boards from the design brainstorm (reference only), and the sketch of the app interface | [M22](chapter:m-frontier) |
@@ -71,6 +72,19 @@ One part of this table differs from `docs/HAL.md`, which names `core/` as the ho
 The dependency rules are not only prose. Every crate is a Cargo path dependency, so the direction of each edge can be read from the manifests; the "Try it yourself" section shows one check. For instance, `desk-present` is not a dependency of any core crate except as a test-only one: `desk-shell` lists it under `[dev-dependencies]`, and the kernel and `SHELL.EXE` list it as a real one.
 
 <!-- explainer m-crates -->
+
+### The layers of the repository
+
+The table above is a picture of the tree. Since R148 the tree has a rule as well, and a check that holds it to the rule. `docs/LAYERS.md` divides the repository into eight layers (`hal`, `dos`, `shared`, `adapter-dos`, `system-native`, `hosted-skeleton`, `spikes` and `outside`), and `tools/layers/layers.txt` says which paths belong to each and what each may name besides itself. The rule is that dependencies point down: the HAL names nothing, the DOS foundation names only the HAL, the shared core only the HAL, the DOS adapter the core, the foundation and the HAL, and the native track the core and the HAL. `dos` and `system-native` never name each other, so the foundation knows nothing of the native track and the kernel does not use DOS.
+
+What counts as naming is narrow and mechanical: a Cargo path dependency, the target specification or linker script that a `.cargo/config.toml` names, a file compiled in with `include_bytes!`, `include_str!` or `include!`, and a module named by `#[path]`. `tools/layers` reads every tracked manifest and source for those, and `tools/check.sh` runs it in the `rust:tools` part. It does not see a path in a shell script or in a string, which are for review. One exception is recorded in the rules and explained there: `module/mods` is built for the kernel's target specification.
+
+<!-- explainer m-layers -->
+
+> **From the stacks — Levels, tested from the bottom.** In the report on the THE multiprogramming system, published in the *Communications of the ACM* in May 1968, Edsger Dijkstra wrote that the total system admits a strict hierarchical structure, numbered from level 0, where the processor is allocated to processes, up to level 4 for the user programs and level 5 for the operator. He also describes testing it from level 0 upward, adding each level only after the one below had been tested thoroughly. The Desk's layers are not THE's, and its check enforces only the direction of the arrows; but the habit it protects is the same one, that a lower part can be tested without the parts above it, which is why `hal/` is tested on the host against a mock port bus before any kernel uses it.
+> Source: [E. W. Dijkstra, EWD 196: The structure of the THE-multiprogramming system (the Dijkstra Archive)](https://www.cs.utexas.edu/~EWD/transcriptions/EWD01xx/EWD196.html)
+
+This is the move that R148 made, and it is in review: the stack of open pull requests (#90 to #98) adds the check, promotes the DOS runtime from `spikes/d0-rust-dos/` to `dos/`, moves the packer and the DOSBox harness into `dos/tools/`, and moves the key transcript and the VGA scene down to the layers that own them. Three exceptions were recorded when the check was added and are gone, each deleted in the change that moved its file down. None of it is merged, so this page describes the layout of that branch and not of `main`.
 
 ### What is built
 
@@ -121,9 +135,9 @@ The manual's rule is stricter than the anatomy diagram's. A box on the anatomy p
 | [`shell/Cargo.toml`](repo:shell/Cargo.toml) | The shared core's workspace: six crates; `dos/` is excluded and has its own |
 | [`kernel/Cargo.toml`](repo:kernel/Cargo.toml) | The kernel, which depends on the HAL, the drivers and the core by path |
 | [`shell/dos/Cargo.toml`](repo:shell/dos/Cargo.toml) | `SHELL.EXE`, which depends on `rt`, the HAL, the drivers and the core |
-| [`spikes/d0-rust-dos/rt/Cargo.toml`](repo:spikes/d0-rust-dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic` and `desk-vga` |
+| [`dos/rt/Cargo.toml`](repo:dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic` and `desk-vga` |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The native platform: the port bus, the driver statics and the IRQ registry |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | The DOS platform's implementations of the HAL's traits |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | The DOS platform's implementations of the HAL's traits |
 | [`hal/platform/mock/src/lib.rs`](repo:hal/platform/mock/src/lib.rs) | The host platform for driver tests |
 
 For depth: `docs/DIRECTION.md` ([two tracks](doc:docs/DIRECTION.md#two-tracks-in-parallel) and [milestones](doc:docs/DIRECTION.md#milestones)), `docs/HAL.md` ([decisions](doc:docs/HAL.md#decisions) and [the four kinds of code](doc:docs/HAL.md#the-four-kinds-of-code)) and `docs/FIRST-WINDOW.md` ([where it sits](doc:docs/FIRST-WINDOW.md#where-it-sits) and [crate layout](doc:docs/FIRST-WINDOW.md#crate-layout)).
@@ -255,7 +269,7 @@ evidence: doc:docs/DIRECTION.md#dos-programs-bundle-freedos
 id: map.emu
 label: QEMU (-cpu 486) and DOSBox Staging, headless
 state: built-unverified
-evidence: repo:docs/FIRST-WINDOW.md, repo:tools/native-run.sh, repo:tools/dosrun.sh
+evidence: repo:docs/FIRST-WINDOW.md, repo:tools/native-run.sh, repo:dos/tools/dosrun.sh
 note: The anatomy diagram draws this box as verified on the strength of a document. It is the machine the other records ran on, but no test of its own cites it, so the manual's stricter rule shows it as built, not verified. The emulators chapter has the table of what each one showed.
 
 id: map.real
@@ -349,8 +363,18 @@ alt: A step-through of the crates of the HAL, the drivers, the shared core, the 
 caption: Every crate of hal/ and shell/ and the three programs that use them, by kind, from their Cargo.toml files.
 at: explainer m-crates
 thumb: svg
+
+id: m1-layers
+kind: explainer
+track: shared
+title: The layers of the repository, and what each may name
+alt: A step-through of the repository's eight layers as a stack, from the HAL at the bottom to the tools and documents at the top, with an arrow from each layer to the layers it may name, read from the layering check's rules file.
+caption: The layers and what each may name, from tools/layers/layers.txt, which the layering check reads on every run.
+at: explainer m-layers
+thumb: svg
 ```
 
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The status block has one record for each of the 22 boxes of `anatomy-desk.json`; `map.emu` is lowered from the box's verified to built-unverified, and `map.live` follows the box. Disagreements found: `docs/HAL.md` and `AGENTS.md` name `core/` as the home of the Desk core where the code uses `shell/`; the Status paragraph at the top of `docs/HAL.md` and the comment in `hal/Cargo.toml` say nothing yet uses the HAL, while the kernel, `rt` and `SHELL.EXE` all depend on it (and the same document's "Crate layout" says so); `docs/HAL.md`'s "Today `hal/` holds" list omits `desk-vga` and `desk-int33`, which are workspace members; and `AGENTS.md` describes `shell/` as holding `desk-gfx` "so far", where it holds six crates.
+- 2026-11-20: reviewed against the layered layout of R148 (in review). The table has a `dos/` row and the remains of the d0 spike apart, and no longer lists the packer under `tools/`; a new subsection and the `m-layers` explainer draw the eight layers from `tools/layers/layers.txt`, with a sidebar on Dijkstra's levels (read from EWD 196 on 2026-11-20). The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.

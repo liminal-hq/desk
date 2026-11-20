@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const SITE = join(ROOT, 'dist/s5/site');
 const OUT = join(ROOT, 'dist/s5/out');
-const EXPECTED = join(ROOT, 'spikes/d0-rust-dos/expected');
+const EXPECTED = join(ROOT, 'dos/expected');
 mkdirSync(OUT, { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.jsdos': 'application/zip', '.txt': 'text/plain', '.json': 'application/json' };

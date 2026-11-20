@@ -65,6 +65,9 @@ RULES=(
   'tools/setup.sh;all;tools/setup.sh'
   # The step report converter: every job builds and runs it after its checks, so a change to it can break any job.
   'tools/steps-junit/*;all;tools/steps-junit/src/lib.rs'
+  # The layering check reads every tracked manifest and Rust file, but it runs in the rust:tools part, and any file that can hold an
+  # edge already selects rust. Its edge extraction mirrors closure() below; change one and read the other.
+  'tools/layers/*;report,rust;tools/layers/src/lib.rs'
   # cargo-nextest's settings: the host tests of the Rust workspaces read them.
   '.config/*;rust;.config/nextest.toml'
   'tools/fetch-tools.sh;all;tools/fetch-tools.sh'
@@ -101,22 +104,30 @@ RULES=(
   'tools/build.sh;report,dos;tools/build.sh'
   'tools/coff2go32.py;report,dos;tools/coff2go32.py'
   'tools/raw2png.py;report,dos;tools/raw2png.py'
-  'tools/dosrun.sh;report,dos,stdstubs,shelldos,compare;tools/dosrun.sh'
-  'tools/elf2go32.py;report,dos,stdstubs,shelldos,compare;tools/elf2go32.py'
-  # The spikes. The pure Rust DOS runtime and its target are shared by the shell on DOS, the other spikes and the cross checks.
-  'spikes/d0-rust-dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;spikes/d0-rust-dos/rt/src/lib.rs'
-  'spikes/d0-rust-dos/dos-elf.json;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/dos-elf.json'
-  'spikes/d0-rust-dos/link.ld;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/link.ld'
-  'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/progs/src/hello.rs'
-  # The kernel compiles spike A's scene drawing in (a #[path] module), so the native test redraws it.
-  'spikes/a-vga-vbe/prog/src/scene.rs;report,rust,dos,native,compare;spikes/a-vga-vbe/prog/src/scene.rs'
+  'dos/tools/dosrun.sh;report,dos,stdstubs,shelldos,compare;dos/tools/dosrun.sh'
+  'dos/tools/elf2go32.py;report,dos,stdstubs,shelldos,compare;dos/tools/elf2go32.py'
+  # The Rust-on-DOS foundation. The runtime and its target are shared by the shell on DOS, the spikes and the cross checks.
+  'dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;dos/rt/src/lib.rs'
+  'dos/dos-elf.json;report,rust,dos,stdstubs,shelldos,compare;dos/dos-elf.json'
+  'dos/link.ld;report,rust,dos,stdstubs,shelldos,compare;dos/link.ld'
+  # The runtime's example programs, their transcripts and its own check run in the dos group; the spike's stage 1 builds on the examples.
+  'dos/examples/*;report,rust,dos;dos/examples/src/hello.rs'
+  'dos/expected/*;report,dos;dos/expected/hello.txt'
+  'dos/build.sh;report,dos;dos/build.sh'
+  'dos/check.sh;report,dos;dos/check.sh'
+  'dos/tools/transcript.sh;report,dos;dos/tools/transcript.sh'
+  # The rest of dos/ (the workspace manifest, lockfile, cargo config and rustfmt settings) governs the runtime, so it selects what the runtime does.
+  'dos/*;report,rust,dos,stdstubs,shelldos,compare;dos/Cargo.toml'
+  # The spikes.
+  'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/check.sh'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
-  'spikes/b-dos-input/expected/*;report,rust,dos;spikes/b-dos-input/expected/keys.txt'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'
   'spikes/e-std-stubs/*;report,stdstubs;spikes/e-std-stubs/check.sh'
   'spikes/s1-dxe3/*;report,rust,dos;spikes/s1-dxe3/run.sh'
   'spikes/s5-jsdos/*;report,rust;spikes/s5-jsdos/probes/Cargo.toml'
   # The native track.
+  # Spike A compiles the kernel's scene drawing in (a #[path] module), so the VGA and VBE checks run it and the native test redraws it.
+  'kernel/src/scene.rs;report,rust,dos,native,compare;kernel/src/scene.rs'
   'kernel/i486-desk-none.json;report,rust,native,compare;kernel/i486-desk-none.json'
   'kernel/*;report,rust,native,compare;kernel/src/main.rs'
   'boot/*;report,native,compare;boot/stage2.asm'
@@ -231,6 +242,7 @@ self_test() {
   expect all tools/check.sh
   expect all tools/steps-junit/src/main.rs tools/steps-junit/tests/convert.rs
   expect base,rust .config/nextest.toml
+  expect base,report,rust tools/layers/src/lib.rs tools/layers/layers.txt
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs

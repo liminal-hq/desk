@@ -44,7 +44,7 @@ leak-control|leak-control 200|1
 while IFS='|' read -r name args want; do
   [ -n "$name" ] || continue
   status=0
-  raw="$(tools/dosrun.sh "$OUT" HOST.EXE $args 2> /dev/null)" || status=$?
+  raw="$(dos/tools/dosrun.sh "$OUT" HOST.EXE $args 2> /dev/null)" || status=$?
   actual="$(grep -v '^mem: ' <<< "$raw" || true)"
   if [ "$update" = 1 ]; then
     printf '%s\n' "$actual" > "$EXPECTED/$name.txt"

@@ -1,0 +1,13 @@
+# The Rust-on-DOS foundation: the runtime for 32-bit DOS programs under a DPMI host, with the target specification (dos-elf.json) and the
+# linker script (link.ld) that go with it. It names only hal/ (docs/LAYERS.md). A workspace of its own, built for the host's tests
+# nowhere and for the DOS target by the programs that depend on it; its format and lints are checked by tools/check.sh (rust:hal).
+[workspace]
+members = ["rt", "examples"]
+resolver = "2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 0

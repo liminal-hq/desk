@@ -26,7 +26,7 @@ Spike A (`s2-vbe` in the older numbering): one driver, `desk-vga` in `hal/driver
 | `Bios` trait | `hal/hal/src/bios.rs` | One real-mode software interrupt with an optional buffer in low memory, and `read_low` for the far pointers a VBE block holds |
 | `desk-vga` | `hal/drivers/vga` | `regs` (mode 13h and 12h tables and the programming sequence), `dac` (palette, bounded retrace wait, fades), `canvas` / `linear` / `planar` (drawing, read-back, Adler-32), `vbe` (information and mode blocks, calls 4F00h to 4F03h and 4F05h) |
 | Mock models | `hal/platform/mock` | `VgaModel`, the register file at `0x3C0..=0x3DF`; `MockBios`, scripted replies |
-| DOS platform | `spikes/d0-rust-dos/rt/src/hal.rs` | `DosBios` (DPMI 0300h, a 512-byte conventional-memory buffer), `DosDisplay: Display` (mode list, mode set, linear frame buffer mapped with DPMI 0800h, clean-up list) |
+| DOS platform | `dos/rt/src/hal.rs` | `DosBios` (DPMI 0300h, a 512-byte conventional-memory buffer), `DosDisplay: Display` (mode list, mode set, linear frame buffer mapped with DPMI 0800h, clean-up list) |
 | Program | `spikes/a-vga-vbe` | `VGAVBE.EXE`, its build and its check |
 | Converter | `tools/raw2png.py` | A frame buffer dump and a DAC dump to an indexed PNG |
 
@@ -34,7 +34,7 @@ Spike A (`s2-vbe` in the older numbering): one driver, `desk-vga` in `hal/driver
 
 ## Method
 
-The picture is drawn by one function written against the `Canvas` trait (`spikes/a-vga-vbe/prog/src/scene.rs`): the Afterglow horizon as stepped bands (seven in 256 colours, slots 10, 9 and 8 in 16, as [`PALETTE.md`](PALETTE.md) says), a ramp that shows every palette slot, and a box of 1-pixel lines with a grid, diagonals and six accent swatches. The same function draws into a `Vec` in memory, and the Adler-32 of that reference is what the frame buffer's read-back must equal. In mode 12h the read-back goes through the read map select, one plane at a time, so the checksum is of what the planes hold, not of what was written. A stage passes when its checksum matches; a deliberately corrupted pixel must make it fail (`corrupt`).
+The picture is drawn by one function written against the `Canvas` trait (`kernel/src/scene.rs`): the Afterglow horizon as stepped bands (seven in 256 colours, slots 10, 9 and 8 in 16, as [`PALETTE.md`](PALETTE.md) says), a ramp that shows every palette slot, and a box of 1-pixel lines with a grid, diagonals and six accent swatches. The same function draws into a `Vec` in memory, and the Adler-32 of that reference is what the frame buffer's read-back must equal. In mode 12h the read-back goes through the read map select, one plane at a time, so the checksum is of what the planes hold, not of what was written. A stage passes when its checksum matches; a deliberately corrupted pixel must make it fail (`corrupt`).
 
 Each mode is set two ways where both exist: by registers from text mode (`desk_vga::regs::set_mode_13h` and `set_mode_12h`, no BIOS), and by INT 10h through `DosDisplay`. After each, the registers are read back through the ports and compared with the table, which shows what the BIOS programs differently.
 
@@ -158,18 +158,18 @@ What changed, and what is recommended:
 ```bash
 tools/setup.sh                          # once
 spikes/a-vga-vbe/build.sh               # dist/a/VGAVBE.EXE and CWSDPMI.EXE
-tools/dosrun.sh dist/a VGAVBE.EXE       # every stage; add `dump` to write the .RAW and .PAL files
-tools/dosrun.sh dist/a VGAVBE.EXE vbe   # one stage: ports, 13, bios13, 12, bios12, vbe
-DOS_MACHINE=vgaonly tools/dosrun.sh dist/a VGAVBE.EXE vbe    # a machine with no VBE: status 2
+dos/tools/dosrun.sh dist/a VGAVBE.EXE       # every stage; add `dump` to write the .RAW and .PAL files
+dos/tools/dosrun.sh dist/a VGAVBE.EXE vbe   # one stage: ports, 13, bios13, 12, bios12, vbe
+DOS_MACHINE=vgaonly dos/tools/dosrun.sh dist/a VGAVBE.EXE vbe    # a machine with no VBE: status 2
 python3 -I tools/raw2png.py dist/a/VBE.RAW dist/a/VBE.PAL 640 480 vbe.png
 spikes/a-vga-vbe/check.sh               # the whole check (also part of tools/check.sh)
 (cd hal && cargo test)                  # the driver's host tests
 ```
 
-`tools/dosrun.sh` takes `DOS_MACHINE` (default `svga_s3`) so one program can ask for another card without changing the shared default.
+`dos/tools/dosrun.sh` takes `DOS_MACHINE` (default `svga_s3`) so one program can ask for another card without changing the shared default.
 
 ## What was and was not verified
 
-- **Run:** `cargo test` and `cargo clippy` in `hal/` (82 tests in all, 47 of them new for `desk-vga`, the video types and the models: the write sequences, palette, fades, planar sequences, mode and information block parsing from byte blobs); `cargo clippy` for the kernel target and `cargo check` for the DOS target in `hal/`; `spikes/a-vga-vbe/check.sh` and `spikes/d0-rust-dos/check.sh` in the CI image; the PNGs above by eye.
+- **Run:** `cargo test` and `cargo clippy` in `hal/` (82 tests in all, 47 of them new for `desk-vga`, the video types and the models: the write sequences, palette, fades, planar sequences, mode and information block parsing from byte blobs); `cargo clippy` for the kernel target and `cargo check` for the DOS target in `hal/`; `spikes/a-vga-vbe/check.sh` and `dos/check.sh` in the CI image; the PNGs above by eye.
 - **Not run:** anything on real hardware, 86Box, QEMU or Bochs; VBE on a BIOS other than DOSBox's; banked VBE modes; the 8-bit DAC (4F08h); DPMI hosts other than CWSDPMI; the native kernel; the full `tools/check.sh` was not run locally (its QEMU step needs tools outside the CI image's DOS toolchain), so its result is CI's.
 - **Known gaps:** drawing is one bounds-checked `MmioRegion` write per pixel (a mode 13h clear is 64,000 calls), which a 486 will feel; a `fill` on `MmioRegion` that checks once, and `rep stosd` in the platform, are the obvious next step; the planar write path is checked by DOSBox and by sequence tests, not by a model of the planes in the mock, because the mock's `MmioRegion` is plain memory; the register tables are the standard ones, confirmed against DOSBox's BIOS and not against a monitor.

@@ -1,6 +1,6 @@
 # Spike s5-jsdos: DOS programs in the browser through js-dos 8
 
-Do Desk's DOS programs run in a browser through js-dos 8, and does the VESA linear frame buffer (LFB) work there? This is the hosted track's browser story. The code is in [`../spikes/s5-jsdos/`](../spikes/s5-jsdos/) and the evidence (screenshots, probe transcripts) in [`../spikes/s5-jsdos/evidence/`](../spikes/s5-jsdos/evidence/). Everything below was run in headless Chromium 154.0.8037.97 on Linux with js-dos 8.5.3, against a local web server, and compared with DOSBox Staging 0.83.0 running the same programs through [`../tools/dosrun.sh`](../tools/dosrun.sh).
+Do Desk's DOS programs run in a browser through js-dos 8, and does the VESA linear frame buffer (LFB) work there? This is the hosted track's browser story. The code is in [`../spikes/s5-jsdos/`](../spikes/s5-jsdos/) and the evidence (screenshots, probe transcripts) in [`../spikes/s5-jsdos/evidence/`](../spikes/s5-jsdos/evidence/). Everything below was run in headless Chromium 154.0.8037.97 on Linux with js-dos 8.5.3, against a local web server, and compared with DOSBox Staging 0.83.0 running the same programs through [`../dos/tools/dosrun.sh`](../dos/tools/dosrun.sh).
 
 ## Contents
 
@@ -36,12 +36,12 @@ spikes/s5-jsdos/build.sh                    # every program and bundle, then the
 node spikes/s5-jsdos/drive.mjs              # headless Chromium runs every scenario; screenshots in dist/s5/out/
 tools/check-jsdos.sh                        # the three steps above, as one opt-in check (or JSDOS=1 tools/check.sh)
 S5_BACKEND=dosboxX node spikes/s5-jsdos/drive.mjs     # the same on js-dos's DOSBox-X backend
-tools/dosrun.sh dist/s5 VBE.EXE nowait      # the same probe in native DOSBox Staging, for comparison
+dos/tools/dosrun.sh dist/s5 VBE.EXE nowait      # the same probe in native DOSBox Staging, for comparison
 ```
 
 - **js-dos** is pinned to 8.5.3 (published 2026-10-07, so more than two weeks old when it was chosen; Fizz DOS ships the same version). `fetch-jsdos.sh` downloads the tarball from `registry.npmjs.org`, checks it against a SHA-256 written in the script (`711f7741…8756`, the same as the registry's) and unpacks only what the page needs into `vendor/js-dos/`, which is not committed, with `LICENSE-GPL-2.0.txt` and `PROVENANCE.txt` beside it.
-- **Bundles.** [`bundle.py`](../spikes/s5-jsdos/bundle.py) writes a `.jsdos` (a zip with `.jsdos/dosbox.conf`, `.jsdos/jsdos.json` and the files at the root of C:) with fixed timestamps. [`build.sh`](../spikes/s5-jsdos/build.sh) makes one bundle per scenario; each autoexec runs `S5RUN.BAT`, which echoes `S5-BEGIN`, runs the program, echoes `S5-END`, records the exit status with the same `IF ERRORLEVEL` ladder `tools/dosrun.sh` uses and writes `DONE.TXT`.
-- **Probes.** [`probes/`](../spikes/s5-jsdos/probes/) is a Cargo workspace for the d0 target (it reads `dos-elf.json`, `link.ld` and the `rt` crate from `spikes/d0-rust-dos`), packed by `tools/elf2go32.py`. `VGA13.EXE` holds mode 13h with a known palette; `VBE.EXE` runs the VBE calls through DPMI 0300h and draws 640×480×8 through the LFB (mapped with DPMI 0800h) or, with `banked`, through the bank window; `TONE.EXE` plays three tones.
+- **Bundles.** [`bundle.py`](../spikes/s5-jsdos/bundle.py) writes a `.jsdos` (a zip with `.jsdos/dosbox.conf`, `.jsdos/jsdos.json` and the files at the root of C:) with fixed timestamps. [`build.sh`](../spikes/s5-jsdos/build.sh) makes one bundle per scenario; each autoexec runs `S5RUN.BAT`, which echoes `S5-BEGIN`, runs the program, echoes `S5-END`, records the exit status with the same `IF ERRORLEVEL` ladder `dos/tools/dosrun.sh` uses and writes `DONE.TXT`.
+- **Probes.** [`probes/`](../spikes/s5-jsdos/probes/) is a Cargo workspace for the d0 target (it reads `dos-elf.json`, `link.ld` and the `rt` crate from `spikes/d0-rust-dos`), packed by `dos/tools/elf2go32.py`. `VGA13.EXE` holds mode 13h with a known palette; `VBE.EXE` runs the VBE calls through DPMI 0300h and draws 640×480×8 through the LFB (mapped with DPMI 0800h) or, with `banked`, through the bank window; `TONE.EXE` plays three tones.
 - **The page** ([`page/index.html`](../spikes/s5-jsdos/page/index.html), [`harness.js`](../spikes/s5-jsdos/page/harness.js)) starts a bundle with `Dos(element, { url, pathPrefix, backend, kiosk: true, noCloud: true, autoStart: true, onEvent })`, takes the command interface from the `ci-ready` event and offers `start`, `read`, `waitFile`, `key`, `shot`, `compare`, `output`, `analyseAudio` and `stop`. `?bundle=hello` runs one bundle by hand.
 - **The driver** ([`drive.mjs`](../spikes/s5-jsdos/drive.mjs)) has no dependencies: a Node 22 script that serves `dist/s5/site`, starts Chromium (`/usr/bin/chromium`, or `CHROMIUM=`) with the DevTools protocol on a local port, and evaluates calls in the page. It exits non-zero if any scenario fails.
 - **Comparing a screenshot.** The probes set their own 256-colour palette (`R = i/4`, `G = 7i mod 64`, `B = 63 − i/4`, in 6-bit components), so the reference image is computed in the page from the pattern formula and that palette, with no reliance on the emulator's default DAC. A pixel counts as different if any channel is off by more than 4; the worst difference seen was 0.
@@ -49,11 +49,11 @@ tools/dosrun.sh dist/s5 VBE.EXE nowait      # the same probe in native DOSBox St
 
 ## Results
 
-Each row passed in all three of three full runs (18 scenarios, about 44 s for the suite, cold browser profile each time). Native means DOSBox Staging 0.83.0 with `tools/dosrun.sh`.
+Each row passed in all three of three full runs (18 scenarios, about 44 s for the suite, cold browser profile each time). Native means DOSBox Staging 0.83.0 with `dos/tools/dosrun.sh`.
 
 | Program | Check | js-dos 8.5.3 (DOSBox backend) | Native Staging |
 |---|---|---|---|
-| `HELLO.EXE` (text, d0) | Standard output equals `spikes/d0-rust-dos/expected/hello.txt` | identical, 22 lines, exit status 0 | identical |
+| `HELLO.EXE` (text, d0) | Standard output equals `dos/expected/hello.txt` | identical, 22 lines, exit status 0 | identical |
 | `HELLO.EXE` as `solo/HELLO.EXE` (`CWSDSTUB.EXE`, no `CWSDPMI.EXE`) | same | identical | identical |
 | `HELLO.EXE` with `core = normal`, `cputype = 486` | same | identical | identical |
 | `HELLO.EXE exit 7` | Exit status read back from the emulated disk | 7 | 7 |
@@ -126,9 +126,9 @@ Headless Chromium 154 with software rendering, a local server, a fresh profile f
 |---|---|
 | `Dos(...)` called to `ci-ready` (the emulator is up, the bundle is mounted) | 134 to 192 ms |
 | Page navigation to `DONE.TXT` seen, `HELLO.EXE` (includes a fixed 300 ms wait in the driver and 100 to 250 ms of polling) | 1.04 to 1.20 s |
-| The same for `DESK.EXE` | 0.73 s (native `tools/dosrun.sh`: 0.57 s) |
+| The same for `DESK.EXE` | 0.73 s (native `dos/tools/dosrun.sh`: 0.57 s) |
 | The same for `HW.EXE` (it spends one second counting ticks) | 1.81 to 1.83 s (native: 1.67 s) |
-| `HELLO.EXE` natively, from `tools/dosrun.sh` start to finish | 0.97 to 1.01 s |
+| `HELLO.EXE` natively, from `dos/tools/dosrun.sh` start to finish | 0.97 to 1.01 s |
 | VGA mode 13h scenario, to the end including the screenshot and a 700 ms settle | 1.68 to 1.70 s |
 | VBE 640×480×8 scenario, same | 1.93 to 2.05 s (banked: 2.10 to 2.34 s) |
 | The whole suite of 18 scenarios | about 44 s |

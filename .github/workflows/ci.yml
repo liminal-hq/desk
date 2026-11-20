@@ -127,7 +127,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -174,7 +174,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -226,7 +226,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -286,7 +286,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -343,7 +343,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -393,7 +393,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -455,7 +455,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -515,7 +515,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml
@@ -575,7 +575,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dist/ci/results
-          for ws in hal shell module tools/steps-junit; do
+          for ws in hal shell module tools/steps-junit tools/layers; do
             if [ -f "$ws/target/nextest/ci/junit.xml" ]; then cp "$ws/target/nextest/ci/junit.xml" "dist/ci/results/nextest-${ws//\//-}.xml"; fi
           done
           cargo build --release --locked --quiet --manifest-path tools/steps-junit/Cargo.toml

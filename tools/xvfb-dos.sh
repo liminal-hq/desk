@@ -6,7 +6,7 @@
 #
 # usage: tools/xvfb-dos.sh [--mouse on|off] [--escape SECONDS] [--start-wait SECONDS] [--step-wait SECONDS] DIR SCRIPT PROGRAM [ARGS...]
 #
-#   DIR        the program's directory (mounted as C: by tools/dosrun.sh, so the files the program writes land there)
+#   DIR        the program's directory (mounted as C: by dos/tools/dosrun.sh, so the files the program writes land there)
 #   SCRIPT     a file of xdotool commands, one line each, run after the window is up (blank lines and lines starting with # are skipped);
 #              `tools/frames.py live SCENARIO --xdotool` writes one. The last line should press Escape if the program ends on it
 #   PROGRAM    run in DIR with ARGS; its standard output is this script's, its exit status becomes this script's
@@ -69,7 +69,7 @@ export DISPLAY=:99
 export DOS_X11=1 DOS_TIMEOUT=${DOS_TIMEOUT:-60}
 export DOS_CONF=$'[mouse]\nmouse_capture = onstart\nbuiltin_dos_mouse_driver_model = wheel\nbuiltin_dos_mouse_driver = '"${MOUSE_DRIVER:-on}"
 [ -z "${AUTOTYPE_ESCAPE:-}" ] || export DOS_AUTOTYPE="-w $AUTOTYPE_ESCAPE esc"
-tools/dosrun.sh "$dir" "$@" > /tmp/program.out 2> /tmp/program.err &
+dos/tools/dosrun.sh "$dir" "$@" > /tmp/program.out 2> /tmp/program.err &
 dos=$!
 
 # Wait for DOSBox's window, then for the program to have started (it prints nothing until it ends, so wait a fixed time).

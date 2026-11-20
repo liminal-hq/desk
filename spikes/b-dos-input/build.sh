@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds INPUT.EXE into dist/b/ the way spike A builds VGAVBE.EXE: Rust, rust-lld, then tools/elf2go32.py behind DJGPP's stub.
+# Builds INPUT.EXE into dist/b/ the way spike A builds VGAVBE.EXE: Rust, rust-lld, then dos/tools/elf2go32.py behind DJGPP's stub.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -18,6 +18,6 @@ STUBIFY="$PWD/vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify"
 rm -f "$OUT/obj/stub.exe"
 "$STUBIFY" -g "$OUT/obj/stub.exe" > /dev/null
 
-tools/elf2go32.py "$OUT/obj/stub.exe" spikes/b-dos-input/target/dos-elf/release/dosinput "$OUT/INPUT.EXE"
+dos/tools/elf2go32.py "$OUT/obj/stub.exe" spikes/b-dos-input/target/dos-elf/release/dosinput "$OUT/INPUT.EXE"
 cp vendor/cwsdpmi/bin/CWSDPMI.EXE "$OUT/CWSDPMI.EXE"
 echo "build: $OUT/INPUT.EXE ($(wc -c < "$OUT/INPUT.EXE") bytes)"

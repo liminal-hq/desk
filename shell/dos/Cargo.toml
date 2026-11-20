@@ -12,7 +12,7 @@ description = "The first window on DOS: the shell on the pure-Rust DOS runtime, 
 license = "Apache-2.0 OR MIT"
 
 [dependencies]
-rt = { path = "../../spikes/d0-rust-dos/rt" }
+rt = { path = "../../dos/rt" }
 desk-hal = { path = "../../hal/hal" }
 desk-vga = { path = "../../hal/drivers/vga" }
 desk-i8042 = { path = "../../hal/drivers/i8042" }

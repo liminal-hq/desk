@@ -1,0 +1,96 @@
+#!/bin/bash
+# The DOS runtime's checks: format and lints, the build, then every example program run in headless DOSBox against its transcript.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# usage: dos/check.sh        (after tools/setup.sh)
+#
+# Transcripts live in dos/expected/; dos/tools/transcript.sh says what is normalised before comparing. The d0-rust-dos spike's own check
+# (spikes/d0-rust-dos/check.sh, stage 1 linked by DJGPP's ld) builds on this one.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+DIR=dos
+EXP=$DIR/expected
+# shellcheck source=dos/tools/transcript.sh
+. dos/tools/transcript.sh
+
+step "Rust format and lints (dos workspace)"
+(cd $DIR && cargo fmt --check)
+(cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
+
+step "Build: rust-lld, then dos/tools/elf2go32.py (no gcc, no ld, no C library)"
+$DIR/build.sh
+
+step "HELLO.EXE: output, arguments, heap, x87, DPMI, files"
+run dist/d0 HELLO.EXE
+[ "$status" = 0 ] || fail "HELLO.EXE exited with status $status"
+same HELLO.EXE $EXP/hello.txt
+echo "$out" | head -3
+
+step "Exit status and arguments"
+run dist/d0 HELLO.EXE exit 7
+[ "$status" = 7 ] || fail "HELLO.EXE exit 7 exited with status $status"
+case "$out" in *'args: 2 ["exit", "7"]'*) ;; *) fail "arguments were not passed: $out" ;; esac
+echo "status $status"
+
+step "CTX.EXE: what the stub hands over at entry"
+run dist/d0 CTX.EXE one two
+[ "$status" = 0 ] || fail "CTX.EXE exited with status $status"
+same CTX.EXE $EXP/ctx.txt
+
+step "HW.EXE: IRQ 0 hook and VGA mode 13h"
+run dist/d0 HW.EXE
+[ "$status" = 0 ] || fail "HW.EXE exited with status $status"
+same HW.EXE $EXP/hw.txt
+echo "$out" | sed -n 2,9p
+
+step "A panic restores the hooked vector and exits with status 3"
+run dist/d0 PANICKY.EXE
+[ "$status" = 3 ] || fail "PANICKY.EXE exited with status $status, not 3"
+same PANICKY.EXE $EXP/panicky.txt
+echo "$out | status $status" | tail -2
+
+step "Exit with the timer hooked and mode 13h set: the clean-up list runs on exit"
+run dist/d0 HW.EXE leave-hooked
+[ "$status" = 0 ] || fail "HW.EXE leave-hooked exited with status $status"
+case "$out" in *'exiting with the timer hooked and mode 13h set'*) ;; *) fail "unexpected output: $out" ;; esac
+case "$out" in *'the timer vector and text mode are back: true') ;; *) fail "exit did not put the machine back: $out" ;; esac
+echo "$out" | tail -2
+
+step "Allocation failure is a panic"
+run dist/d0 HELLO.EXE oom
+[ "$status" = 3 ] || fail "HELLO.EXE oom exited with status $status, not 3"
+case "$out" in *'memory allocation of 943718400 bytes failed') ;; *) fail "unexpected output: $out" ;; esac
+echo "status $status"
+
+step "Self-contained executable (CWSDSTUB.EXE, host included) runs with no CWSDPMI.EXE beside it"
+[ ! -e dist/d0/solo/CWSDPMI.EXE ] || fail "dist/d0/solo must not hold CWSDPMI.EXE"
+run dist/d0/solo HELLO.EXE
+[ "$status" = 0 ] || fail "solo HELLO.EXE exited with status $status"
+same "solo HELLO.EXE" $EXP/hello.txt
+echo "identical to HELLO.EXE"
+
+step "Without CWSDPMI.EXE the stub says so and fails"
+mkdir -p dist/d0/nohost
+cp dist/d0/HELLO.EXE dist/d0/nohost/HELLO.EXE
+rm -f dist/d0/nohost/CWSDPMI.EXE
+run dist/d0/nohost HELLO.EXE
+[ "$status" != 0 ] || fail "HELLO.EXE ran without a DPMI host"
+case "$out" in *'no DPMI'*) ;; *) fail "the stub gave no message about the DPMI host: $out" ;; esac
+echo "$out (status $status)"
+
+step "A program that returns from _start does not exit cleanly"
+run dist/d0 RETSTART.EXE
+[ "$status" != 0 ] || fail "RETSTART.EXE exited with status 0"
+echo "status $status"
+
+step "A wrong expected transcript fails the check"
+wrong="$(mktemp "${TMPDIR:-/tmp}/d0-wrong.XXXXXX")"
+trap 'rm -f "$wrong"' EXIT
+sed 's/squares=10/squares=11/' $EXP/hello.txt > "$wrong"
+run dist/d0 HELLO.EXE
+if (same HELLO.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong transcript was accepted"; fi
+echo "rejected, as it should be"
+
+printf '\nAll dos checks passed.\n'

@@ -12,6 +12,6 @@ default = ["panic-handler"]
 panic-handler = []
 
 [dependencies]
-desk-hal = { path = "../../../hal/hal" }
-desk-pic = { path = "../../../hal/drivers/pic" }
-desk-vga = { path = "../../../hal/drivers/vga" }
+desk-hal = { path = "../../hal/hal" }
+desk-pic = { path = "../../hal/drivers/pic" }
+desk-vga = { path = "../../hal/drivers/vga" }

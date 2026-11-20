@@ -1,12 +1,14 @@
 # Repository breakup: three ways to separate Desk from its platform
 
+> **Decided 2026-11-19: one repository, with the layers made explicit inside it.** The owner chose not to split yet. [`LAYERS.md`](LAYERS.md) records the layers and the check that holds them, and R148 in [`ROADMAP.md`](ROADMAP.md) does the moves. This page stays as the analysis of the options.
+
 Proposal date: 2026-10-24. Status: suggested structures and migration slips, not an approved extraction or a change to [Direction](DIRECTION.md). Repository names below are working names under `liminal-hq`; their availability has not been checked. No repositories have been created or content moved.
 
 The aim is to make **Desk the shell** a clear product above reusable Rust/DOS machinery and a native operating-system foundation. The complete bootable product can still be called Desk; its release assembly need not live beside its desktop implementation. These are ownership and release boundaries, independent of future decisions about processes, protection or module formats.
 
 ## Current boundaries and constraints
 
-The checkout already has useful crate boundaries: [shared HAL and drivers](../hal/Cargo.toml), [shared shell](../shell/Cargo.toml), [DOS executable wiring](../shell/dos/Cargo.toml), [DOS runtime](../spikes/d0-rust-dos/rt/Cargo.toml) and [native kernel](../kernel/Cargo.toml). They use relative path dependencies. Moving directories alone would break those paths, shared target references, font inclusions, linker-script references and the scripts that compare both platforms.
+The checkout already has useful crate boundaries: [shared HAL and drivers](../hal/Cargo.toml), [shared shell](../shell/Cargo.toml), [DOS executable wiring](../shell/dos/Cargo.toml), [DOS runtime](../dos/rt/Cargo.toml) and [native kernel](../kernel/Cargo.toml). They use relative path dependencies. Moving directories alone would break those paths, shared target references, font inclusions, linker-script references and the scripts that compare both platforms.
 
 The [integration analysis](RUST-DOS-INTEGRATION-ANALYSIS.md) identifies contracts to settle before treating the components as independent products: resource restoration, framebuffer validity, module recovery and overlapping SDK and experimental `std` symbols. The DOS runtime already consumes shared drivers; the kernel directly consumes shell crates. An independent kernel needs a deliberate change to where its shell entry is composed.
 

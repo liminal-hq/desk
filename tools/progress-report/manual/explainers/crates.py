@@ -24,7 +24,7 @@ CHAPTER = {"desk-hal": "m-hal", "desk-serial": "m-sysdrivers", "desk-pic": "m-sy
 # What each directory holds, for the kind: a glob of manifests and the kind its crates have
 SOURCES = [("hal/hal/Cargo.toml", "hal"), ("hal/drivers/*/Cargo.toml", "driver"), ("hal/platform/*/Cargo.toml", "platform"), ("shell/gfx/Cargo.toml", "core"), ("shell/font/Cargo.toml", "core"),
            ("shell/ui/Cargo.toml", "core"), ("shell/wm/Cargo.toml", "core"), ("shell/shell/Cargo.toml", "core"), ("shell/present/Cargo.toml", "presenter"), ("shell/dos/Cargo.toml", "platform"),
-           ("kernel/Cargo.toml", "platform"), ("spikes/d0-rust-dos/rt/Cargo.toml", "platform")]
+           ("kernel/Cargo.toml", "platform"), ("dos/rt/Cargo.toml", "platform")]
 # Drivers a core crate may depend on: the decoder of key events has no registers in it.
 CORE_MAY_USE = {"desk-kbd"}
 
@@ -126,5 +126,5 @@ def render(D, ctx):
         ("The platforms", Raw(esc("%s. A platform depends on everything: the kernel and the DOS program each name the HAL, the drivers they use, the core and the presenter, and put them together (M16). desk-hal-mock is the test platform that the drivers' host tests run against." % names("platform")))),
         ("Edges that only tests use", Raw(esc("The dashed lines are dev-dependencies. desk-gfx lists desk-vga only for a test that compares its cursor sprite with the driver's arrow, and desk-shell lists desk-present only to run scenarios in its tests. They are not dependencies of the code that ships."))),
     ]
-    cap = ('Read from the <code>Cargo.toml</code> files of <code>hal/</code>, <code>shell/</code>, <code>kernel/</code> and <code>spikes/d0-rust-dos/rt</code>. The build refuses a cycle, a core crate that depends on a driver other than the event decoder or on the presenter, and a crate that no chapter accounts for. Each node links to the chapter that teaches it.')
+    cap = ('Read from the <code>Cargo.toml</code> files of <code>hal/</code>, <code>shell/</code>, <code>kernel/</code> and <code>dos/rt</code>. The build refuses a cycle, a core crate that depends on a driver other than the event decoder or on the presenter, and a crate that no chapter accounts for. Each node links to the chapter that teaches it.')
     return stepper(ID, "The crates and their dependencies, layer by layer", "".join(o) + key + table, steps, cap, ctx, "x-wide")

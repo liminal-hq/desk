@@ -124,11 +124,11 @@ def tables(root=None):
     rows = [[str(n), what.strip(), "tools/native-run.sh", ("tools/native-run.sh", "#   %s " % n)] for n, what in header]
     rows.append([str((ok << 1) | 1), "What QEMU exits with when the guest writes %s to the debug-exit port: success" % hx(ok), "kernel/src/exit.rs: SUCCESS", ("kernel/src/exit.rs", okl)])
     rows.append([str((bad << 1) | 1), "What QEMU exits with when the guest writes %s: failure" % hx(bad), "kernel/src/exit.rs: FAILURE", ("kernel/src/exit.rs", badl)])
-    dos = src(root, "tools/dosrun.sh")
+    dos = src(root, "dos/tools/dosrun.sh")
     for n in re.findall(r"(\d+) when", dos)[:2]:
         what = "the command outlived DOS_TIMEOUT" if n == "124" else "DOSBox itself failed"
-        rows.append([n, what, "tools/dosrun.sh", ("tools/dosrun.sh", "%s when" % n)])
-    out.append({"id": "exit", "title": "Exit statuses of the runners", "source": "tools/native-run.sh, kernel/src/exit.rs, tools/dosrun.sh", "head": ["Status", "Meaning", "Read from"], "rows": rows})
+        rows.append([n, what, "dos/tools/dosrun.sh", ("dos/tools/dosrun.sh", "%s when" % n)])
+    out.append({"id": "exit", "title": "Exit statuses of the runners", "source": "tools/native-run.sh, kernel/src/exit.rs, dos/tools/dosrun.sh", "head": ["Status", "Meaning", "Read from"], "rows": rows})
 
     # ---- test modes
     main, image = src(root, "kernel/src/main.rs"), src(root, "tools/native-image.sh")

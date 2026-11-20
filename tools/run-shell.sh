@@ -100,7 +100,7 @@ HOTKEYS
     # The keyboard-only live scenario typed in, without its closing Escape.
     keys="$(frames live tests/shell/live-keys.scn --autotype | sed 's/ esc$//')"
   fi
-  DOS_WINDOW=1 DOS_TIMEOUT=0 DOS_CONF="$conf" DOS_AUTOTYPE="$keys" tools/dosrun.sh dist/shell SHELL.EXE "depth$depth"
+  DOS_WINDOW=1 DOS_TIMEOUT=0 DOS_CONF="$conf" DOS_AUTOTYPE="$keys" dos/tools/dosrun.sh dist/shell SHELL.EXE "depth$depth"
 }
 
 if [ "$track" = native ]; then run_native; else run_dos; fi

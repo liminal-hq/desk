@@ -259,7 +259,7 @@ class EmulatorsChapterTests(unittest.TestCase):
         self.assertEqual(len(bytes.fromhex(rd("tools", "86box", "ami471.nvr.hex").strip())), 128)
 
     def test_dosrun_is_as_the_chapter_says(self):
-        dos = rd("tools", "dosrun.sh")
+        dos = rd("dos", "tools", "dosrun.sh")
         for piece in ("SDL_VIDEODRIVER=dummy", "SDL_AUDIODRIVER=dummy", "output = texture", "cputype = 486", "core = normal",
                       "machine = ${DOS_MACHINE:-svga_s3}", "seq 1 255", "if errorlevel $n set RC=$n", "DOS_AUTOTYPE", "DOS_X11",
                       "${DOS_TIMEOUT:-60}", "exit 125", "exit 124"):

@@ -1,6 +1,6 @@
 # B: the keyboard and the mouse on the DOS runtime
 
-Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mode IRQ 1 handler under DPMI and the mouse through the DOS mouse driver's INT 33h, from Rust on the pure-Rust DOS runtime (`spikes/d0-rust-dos/rt`), built from the shared HAL drivers so that the hosted platform hands the Desk core the same `KeyEvent` and `MouseEvent` types, from the same decoder, as the native kernel does (spike C, [`C-INPUT.md`](C-INPUT.md)).
+Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mode IRQ 1 handler under DPMI and the mouse through the DOS mouse driver's INT 33h, from Rust on the pure-Rust DOS runtime (`dos/rt`), built from the shared HAL drivers so that the hosted platform hands the Desk core the same `KeyEvent` and `MouseEvent` types, from the same decoder, as the native kernel does (spike C, [`C-INPUT.md`](C-INPUT.md)).
 
 > **Status.** *Built and verified:* the INT 33h driver crate `desk-int33` and its model, 27 host tests (the counters of 0005h and 0006h among them, added later) including the whole DOS input path (mock 8042, IRQ 1 service, ring, shared decoder) against the transcript the DOS run is also checked against; `INPUT.EXE` in DOSBox Staging 0.83 with keys typed in by `AUTOTYPE` (VBE 640×480×8, mode 13h, text mode, chained and replaced BIOS handler, ring overflow, no mouse driver, a panic, a missing key, no Escape); the mouse moved, clicked and scrolled by `xdotool` over DOSBox's SDL window under Xvfb in Docker (opt-in). *Not verified:* real hardware, any mouse driver but DOSBox's built-in one, a real BIOS keyboard handler, 86Box, QEMU or Bochs, DPMI hosts other than CWSDPMI, Windows DOS boxes, the real-mode callback (function 000Ch).
 
@@ -29,10 +29,10 @@ Spike B (`s3-mouse` in the older numbering): the keyboard through a protected-mo
 | `SoftCursor` | `hal/drivers/vga/src/cursor.rs` | The arrow sprite with save-under over any `Canvas`, clipped at every edge |
 | `Decoder::with_locks` | `hal/drivers/kbd` | A decoder that starts with the lock keys in the state the firmware shows |
 | `InputSource::has_mouse` | `hal/hal/src/input.rs` | The core's way to ask whether to run keyboard-only |
-| `rt::irq` | `spikes/d0-rust-dos/rt/src/irq.rs` | `DosIrq: IrqRegistry` for IRQ 0 to 15: a stub per line, a locked interrupt stack, the end-of-interrupt through `desk-pic`, chaining, restore on exit and on panic; `Slot` for interrupt-side state in the locked image |
-| `rt::bios_kbd` | `spikes/d0-rust-dos/rt/src/bios_kbd.rs` | The BIOS keyboard state in the data area: lock flags, the type-ahead buffer |
+| `rt::irq` | `dos/rt/src/irq.rs` | `DosIrq: IrqRegistry` for IRQ 0 to 15: a stub per line, a locked interrupt stack, the end-of-interrupt through `desk-pic`, chaining, restore on exit and on panic; `Slot` for interrupt-side state in the locked image |
+| `rt::bios_kbd` | `dos/rt/src/bios_kbd.rs` | The BIOS keyboard state in the data area: lock flags, the type-ahead buffer |
 | Program | `spikes/b-dos-input` | `INPUT.EXE`, its build, `check.sh` (headless, always on) and `check-xvfb.sh` (the mouse, opt-in) |
-| Tools | `tools/dosrun.sh`, `tools/docker/Dockerfile.dos-xvfb` | `DOS_AUTOTYPE`, `DOS_CONF` and `DOS_X11` for the runner; the image with Xvfb and `xdotool` |
+| Tools | `dos/tools/dosrun.sh`, `tools/docker/Dockerfile.dos-xvfb` | `DOS_AUTOTYPE`, `DOS_CONF` and `DOS_X11` for the runner; the image with Xvfb and `xdotool` |
 
 ## Method
 
@@ -151,11 +151,11 @@ This is not a DOSBox rendering: it is the frame buffer read back by the program 
 
 Three layers, cheapest first:
 
-**The host mock (always on, in `cargo test` in `hal/`).** `desk-int33` has 16 tests. The wrapper against `Int33Model` (an empty or `IRET` vector, a driver that answers 0, the reset leaving the cursor hidden, the two-button conventions, range and position clamping, motion that a read clears); `MouseInput` (motion, buttons held and released, the wheel, summed motion, a driver that stops answering); and the whole input path: an `I8042Model` with a keyboard, `KbdIrq` registered on a `MockIrq` with `Chain::None`, the 64-byte ring, `DosInput` and the shared decoder, fed the scancode bytes of the keys `AUTOTYPE` sends, compared with `spikes/b-dos-input/expected/keys.txt`, and checked to send exactly one end-of-interrupt per interrupt. The same file is compared with the DOS run's output, so the host mock and the real IRQ 1 path agree on one transcript.
+**The host mock (always on, in `cargo test` in `hal/`).** `desk-int33` has 16 tests. The wrapper against `Int33Model` (an empty or `IRET` vector, a driver that answers 0, the reset leaving the cursor hidden, the two-button conventions, range and position clamping, motion that a read clears); `MouseInput` (motion, buttons held and released, the wheel, summed motion, a driver that stops answering); and the whole input path: an `I8042Model` with a keyboard, `KbdIrq` registered on a `MockIrq` with `Chain::None`, the 64-byte ring, `DosInput` and the shared decoder, fed the scancode bytes of the keys `AUTOTYPE` sends, compared with `hal/drivers/int33/testdata/keys.txt`, and checked to send exactly one end-of-interrupt per interrupt. The same file is compared with the DOS run's output, so the host mock and the real IRQ 1 path agree on one transcript.
 
-**Headless DOSBox with `AUTOTYPE` (always on, `spikes/b-dos-input/check.sh`, about a minute).** `tools/dosrun.sh` gained `DOS_AUTOTYPE`, which puts DOSBox's `AUTOTYPE` command before the program: `autotype -w 3 -p 0.2 a b capslock c capslock up delete f1 lshift d esc`. Each key is pressed and released through the emulated keyboard controller, so the program reads set 1 bytes from port 0x60 in a real IRQ 1 as a keyboard would send them. It needs no X server, so it runs in CI. It checks: the transcript (VBE, mode 13h and text mode; chained and replaced), the BIOS type-ahead count in each, the overflow run, no mouse driver, and the negative runs listed under [Results](#results).
+**Headless DOSBox with `AUTOTYPE` (always on, `spikes/b-dos-input/check.sh`, about a minute).** `dos/tools/dosrun.sh` gained `DOS_AUTOTYPE`, which puts DOSBox's `AUTOTYPE` command before the program: `autotype -w 3 -p 0.2 a b capslock c capslock up delete f1 lshift d esc`. Each key is pressed and released through the emulated keyboard controller, so the program reads set 1 bytes from port 0x60 in a real IRQ 1 as a keyboard would send them. It needs no X server, so it runs in CI. It checks: the transcript (VBE, mode 13h and text mode; chained and replaced), the BIOS type-ahead count in each, the overflow run, no mouse driver, and the negative runs listed under [Results](#results).
 
-**Xvfb and `xdotool` (opt-in, `INPUT_EXTRA=1`, `spikes/b-dos-input/check-xvfb.sh`, about twenty seconds).** DOSBox has no scripted pointer: there is no command, key or configuration setting that moves its mouse. `tools/docker/Dockerfile.dos-xvfb` (Ubuntu 24.04, `xvfb`, `xdotool`, the X client libraries) builds `desk-dos-xvfb:1`, cached by tag; the container mounts the repository (DOSBox itself is in `vendor/`), starts Xvfb, runs `tools/dosrun.sh` with `DOS_X11=1` (the x11 video driver, `DISPLAY` kept) and `mouse_capture = onstart` (the pointer is captured when DOSBox starts, so SDL reports relative motion), waits for the window, and plays `mouse.xdotool`: an absolute move, relative moves, each button held for 0.3 s, the wheel, and `a` and Escape through the X keyboard. The program's lines are reduced to totals and compared with the script. This is the one test of the mouse path against a real driver implementation, and it does not run where there is no Docker: the CI image has neither Docker nor X.
+**Xvfb and `xdotool` (opt-in, `INPUT_EXTRA=1`, `spikes/b-dos-input/check-xvfb.sh`, about twenty seconds).** DOSBox has no scripted pointer: there is no command, key or configuration setting that moves its mouse. `tools/docker/Dockerfile.dos-xvfb` (Ubuntu 24.04, `xvfb`, `xdotool`, the X client libraries) builds `desk-dos-xvfb:1`, cached by tag; the container mounts the repository (DOSBox itself is in `vendor/`), starts Xvfb, runs `dos/tools/dosrun.sh` with `DOS_X11=1` (the x11 video driver, `DISPLAY` kept) and `mouse_capture = onstart` (the pointer is captured when DOSBox starts, so SDL reports relative motion), waits for the window, and plays `mouse.xdotool`: an absolute move, relative moves, each button held for 0.3 s, the wheel, and `a` and Escape through the X keyboard. The program's lines are reduced to totals and compared with the script. This is the one test of the mouse path against a real driver implementation, and it does not run where there is no Docker: the CI image has neither Docker nor X.
 
 The js-dos route was not needed (spike s5's harness was not read for this).
 
@@ -275,8 +275,8 @@ INPUT_EXTRA=1 tools/check.sh                      # also the Xvfb mouse run (nee
 spikes/b-dos-input/check-xvfb.sh                  # the Xvfb run alone; builds desk-dos-xvfb:1 the first time
 
 # By hand
-DOS_AUTOTYPE='-w 3 -p 0.2 a b esc' tools/dosrun.sh dist/b INPUT.EXE text
-DOS_CONF=$'[mouse]\nbuiltin_dos_mouse_driver = off' tools/dosrun.sh dist/b INPUT.EXE text
+DOS_AUTOTYPE='-w 3 -p 0.2 a b esc' dos/tools/dosrun.sh dist/b INPUT.EXE text
+DOS_CONF=$'[mouse]\nbuiltin_dos_mouse_driver = off' dos/tools/dosrun.sh dist/b INPUT.EXE text
 python3 -I tools/raw2png.py dist/b/SCREEN.RAW dist/b/SCREEN.PAL 640 480 screen.png
 ```
 

@@ -31,7 +31,7 @@ class RuntimeChapterTests(unittest.TestCase):
         cls.chapters = {c["id"]: c for c in manual.load_chapters(manual.load_plan())}
         cls.rt = cls.chapters["m-rt"]["raw"]
         cls.d0 = rd("docs", "D0-RUST-DOS.md")
-        cls.src = {f: rd("spikes", "d0-rust-dos", "rt", "src", f) for f in os.listdir(os.path.join(gather.ROOT, "spikes", "d0-rust-dos", "rt", "src"))}
+        cls.src = {f: rd("dos", "rt", "src", f) for f in os.listdir(os.path.join(gather.ROOT, "dos", "rt", "src"))}
 
     def test_sizes_quoted_from_a_document_are_in_that_document(self):
         for size in (49664, 70144, 21325, 236072, 115712):
@@ -73,8 +73,8 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual((want >> 16, want & 0xFFFF), (0x3840, 0x1000))
         self.assertEqual(size // 4096, 230400)
         self.assertEqual(256 * 1024, 0x40000)
-        self.assertIn("Vec::with_capacity(900 << 20)", rd("spikes", "d0-rust-dos", "progs", "src", "hello.rs"))
-        self.assertIn("memory allocation of 943718400 bytes failed", rd("spikes", "d0-rust-dos", "check.sh"))
+        self.assertIn("Vec::with_capacity(900 << 20)", rd("dos", "examples", "src", "hello.rs"))
+        self.assertIn("memory allocation of 943718400 bytes failed", rd("dos", "check.sh"))
         for needle in ("0x3840", "0x1000", "943,722,496", "943,718,432", "0x38401000"):
             self.assertIn(needle, self.rt)
 
@@ -92,7 +92,7 @@ class RuntimeChapterTests(unittest.TestCase):
             self.assertIn(needle, self.rt)
 
     def test_the_contract_values_are_the_transcripts(self):
-        ctx = rd("spikes", "d0-rust-dos", "expected", "ctx.txt")
+        ctx = rd("dos", "expected", "ctx.txt")
         for needle in ("cs=00a7", "ds=00af", "fs=008f", "gs=0000", "eflags=00003212", "limit 0x4ffff", "initial_size 0x50000", "go32stub, v 2.05"):
             self.assertIn(needle, ctx)
         self.assertEqual(0x50000 // 1024, 320)
@@ -119,15 +119,15 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual(lines("core", "src", "lib.rs"), 125)
         self.assertEqual(lines("c", "main.c") + lines("c", "out.c") + lines("c", "panic.c"), 88)
         self.assertEqual(lines("tools", "coff2go32.py"), 112)
-        self.assertEqual(lines("tools", "elf2go32.py"), 139)
+        self.assertEqual(lines("dos", "tools", "elf2go32.py"), 139)
         total = sum(len(t.splitlines()) for t in self.src.values())
         self.assertEqual((total, len(self.src)), (2304, 16))
 
     def test_the_build_script_steps(self):
         sh = rd("shell", "dos", "build.sh")
-        for needle in ('"$STUBIFY" -g', "tools/elf2go32.py", "CWSDPMI.EXE", "RUSTC_BOOTSTRAP=1 cargo build --release --locked", "UI.DFN"):
+        for needle in ('"$STUBIFY" -g', "dos/tools/elf2go32.py", "CWSDPMI.EXE", "RUSTC_BOOTSTRAP=1 cargo build --release --locked", "UI.DFN"):
             self.assertIn(needle, sh)
-        py = rd("tools", "elf2go32.py")
+        py = rd("dos", "tools", "elf2go32.py")
         self.assertIn("assert len(out) == 168", py)
         self.assertEqual(20 + 28 + 3 * 40, 168)
         self.assertIn("stub[0x244:0x254]", py)
@@ -142,7 +142,7 @@ class ToolchainChapterTests(unittest.TestCase):
         cls.raw = cls.ch["raw"]
         files = {
             "kernel": ("kernel", "i486-desk-none.json"),
-            "dos-elf": ("spikes", "d0-rust-dos", "dos-elf.json"),
+            "dos-elf": ("dos", "dos-elf.json"),
             "dos": ("core", "dos.json"),
         }
         cls.spec = {k: json.loads(rd(*v)) for k, v in files.items()}
@@ -214,7 +214,7 @@ class ToolchainChapterTests(unittest.TestCase):
         self.assertNotIn("compiler-builtins-mem", legacy)
         self.assertIn("-zmax-page-size=0x1000", rd("kernel", ".cargo", "config.toml"))
         self.assertIn(". = 0x100000;", rd("kernel", "link.ld"))
-        self.assertIn(". = 0x1000;", rd("spikes", "d0-rust-dos", "link.ld"))
+        self.assertIn(". = 0x1000;", rd("dos", "link.ld"))
 
     def test_the_numbers_in_the_worked_example(self):
         # the kernel packer's arithmetic: the third segment's file part ends the flat image

@@ -520,7 +520,7 @@ fn the_keys_the_dos_program_is_sent_decode_to_the_expected_transcript() {
     for key in AUTOTYPED {
         m.type_bytes(key);
     }
-    let expected = include_str!("../../../../spikes/b-dos-input/expected/keys.txt");
+    let expected = include_str!("../testdata/keys.txt");
     assert_eq!(m.key_lines().join("\n") + "\n", expected);
     // The platform sent one end-of-interrupt for each interrupt and the handler none of its own.
     assert_eq!(m.irq.eois(), vec![Irq::KEYBOARD; AUTOTYPED.len()]);

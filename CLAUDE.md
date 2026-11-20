@@ -14,6 +14,8 @@ Design and spikes, with two walking skeletons: the hosted DOS program built by `
 
 `shell/` is the shared core's first piece (`docs/FIRST-WINDOW.md`): a Cargo workspace of `no_std` + `alloc` crates, starting with `desk-gfx`. The rules there: `#![forbid(unsafe_code)]`, no floating-point maths, no compare-and-swap (`shell/clippy.toml`), no external crates, and no clocks or randomness, so a frame is a function of the steps that led to it. `tools/check.sh` runs its host tests and builds it for both 486 targets.
 
+The repository is one repository with explicit layers (`docs/LAYERS.md`): `hal/`, then `dos/` (the Rust-on-DOS runtime, target and linker script), then the shared core, the adapters and the two systems, with `spikes/` and `tools/` outside. Dependencies point down, and `tools/layers` (the `rust:tools` part of `tools/check.sh`) fails when a file names one in a layer it may not use. A change that needs a new edge changes `tools/layers/layers.txt` and says why.
+
 ## Commands
 
 ```bash

@@ -7,14 +7,14 @@
 #
 # usage: spikes/b-dos-input/check.sh        (after tools/setup.sh)
 #
-# The key transcript is spikes/b-dos-input/expected/keys.txt, which `cargo test` in hal/ checks the mock keyboard against as well. The
+# The key transcript is hal/drivers/int33/testdata/keys.txt, which `cargo test` in hal/ checks the mock keyboard against as well. The
 # mouse needs a pointer that DOSBox's dummy video driver cannot give, so the motion and the buttons are checked by
 # spikes/b-dos-input/check-xvfb.sh (opt-in, INPUT_EXTRA=1 in tools/check.sh); here the driver is found, its calls are exercised, and
 # a still mouse produces no events.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 DIR=spikes/b-dos-input
-EXP=$DIR/expected
+KEYFILE=hal/drivers/int33/testdata/keys.txt
 step() { printf '\n== %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
@@ -29,7 +29,7 @@ run() {
   local keys=$1 raw
   shift
   status=0
-  raw="$(DOS_AUTOTYPE="$TYPE $keys" DOS_CONF="${CONF:-}" DOS_TIMEOUT=60 tools/dosrun.sh dist/b "$@" 2> /dev/null)" || status=$?
+  raw="$(DOS_AUTOTYPE="$TYPE $keys" DOS_CONF="${CONF:-}" DOS_TIMEOUT=60 dos/tools/dosrun.sh dist/b "$@" 2> /dev/null)" || status=$?
   out="$(printf '%s\n' "$raw" | normalise || true)"
 }
 
@@ -45,7 +45,7 @@ hasnt() {
 }
 
 # The program ends on Escape being pressed; the release goes to whoever runs next, so it is not in the transcript.
-head -n -1 $EXP/keys.txt > "${TMPDIR:-/tmp}/binput-keys.$$"
+head -n -1 $KEYFILE > "${TMPDIR:-/tmp}/binput-keys.$$"
 trap 'rm -f "${TMPDIR:-/tmp}/binput-keys.$$" "${TMPDIR:-/tmp}/binput-wrong.$$"' EXIT
 EXPECTED_KEYS="${TMPDIR:-/tmp}/binput-keys.$$"
 
@@ -53,7 +53,7 @@ step "Rust format and lints (spike workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
-step "Build INPUT.EXE: rust-lld, then tools/elf2go32.py"
+step "Build INPUT.EXE: rust-lld, then dos/tools/elf2go32.py"
 $DIR/build.sh
 
 step "Host tests: the same keys through the mock 8042, the IRQ 1 service, the ring and the shared decoder; INT 33h against the model"
@@ -63,7 +63,7 @@ step "Keys through the real IRQ 1 path: VBE 640x480x8, the BIOS handler replaced
 run "$KEYS" INPUT.EXE
 [ "$status" = 0 ] || fail "INPUT.EXE exited with status $status: $out"
 if [ "$(events)" != "$(cat "$EXPECTED_KEYS")" ]; then
-  printf 'FAIL: the key transcript differs from %s (without the final Escape release)\n' "$EXP/keys.txt" >&2
+  printf 'FAIL: the key transcript differs from %s (without the final Escape release)\n' "$KEYFILE" >&2
   diff <(events) "$EXPECTED_KEYS" >&2 || true
   exit 1
 fi

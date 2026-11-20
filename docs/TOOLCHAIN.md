@@ -44,8 +44,8 @@ Individual steps:
 
 ```bash
 tools/build.sh                          # dist/DESK.EXE and dist/CWSDPMI.EXE
-tools/dosrun.sh dist DESK.EXE           # run it headless; prints its output, returns its exit status
-tools/dosrun.sh dist DESK.EXE panic     # the deliberate-panic path: exit status 3
+dos/tools/dosrun.sh dist DESK.EXE           # run it headless; prints its output, returns its exit status
+dos/tools/dosrun.sh dist DESK.EXE panic     # the deliberate-panic path: exit status 3
 ```
 
 `tools/setup.sh` installs nothing system-wide and never installs a host package; it names the package a missing tool needs. When `DOS_TOOLCHAIN` is set (the CI image sets it) it links `vendor/` to that directory instead of downloading. A clean build takes about 10 seconds including `-Zbuild-std`, and a rebuild plus the run about one second.
@@ -132,7 +132,7 @@ So the converter is still needed with the pinned toolchain. The script reads and
 
 ## Headless DOSBox
 
-`tools/dosrun.sh <dir> <command…>` generates a DOSBox configuration, mounts `<dir>` as `C:`, runs the command with its output redirected to a scratch file, and exits. Things it settles:
+`dos/tools/dosrun.sh <dir> <command…>` generates a DOSBox configuration, mounts `<dir>` as `C:`, runs the command with its output redirected to a scratch file, and exits. Things it settles:
 
 - **No display is needed.** `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` give SDL a driver that draws and plays nothing. DOSBox Staging 0.83.0 starts and runs normally in the CI container, which has no X server. The script also unsets `DISPLAY` and `WAYLAND_DISPLAY`.
 - **`output = texture`.** The old `surface` is deprecated, and the default tries OpenGL, which the dummy driver cannot provide (DOSBox falls back, with a logged error). `texture` goes straight to SDL's software renderer.

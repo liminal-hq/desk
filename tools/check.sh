@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the CI runs, in groups the CI runs as separate jobs: base (licence headers, markdown style and links, the CI scope table),
 # report (the progress report generator's tests, the frame tools' tests and the goldens' own checks), fonts (the font build check),
-# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/, and the spike workspaces
+# rust (format, lints, host tests and cross builds of core/, hal/, shell/, module/ and tools/steps-junit/ and tools/layers/, and the spike workspaces
 # checked on their own), dos (the DOS build and headless runs, the s1-dxe3 modules, the d0-rust-dos, a-vga-vbe and b-dos-input spikes),
 # stdstubs (the e-std-stubs spike), shelldos (the shell on DOS), native (the native boot test under QEMU) and compare (the two tracks'
 # frames compared, from what shelldos and native left in dist/).
@@ -41,10 +41,10 @@ base       licence headers, markdown style and links, the CI scope table
 report     the progress report generator's tests and dry run, the frame tools' tests, the goldens and the live scenarios' translations
 fonts      the font build check (bun; fails instead of skipping when CI is set)
 rust       core       core/ format and lints
-           hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets
+           hal        hal/ format, lints, host tests and the cross builds for the kernel and DOS targets, and dos/ format and lints
            shell      shell/ format, lints, host tests and the cross builds
            module     module/ (the loader's format reader and packer) format, lints, host tests, the real-linker test and the format crate's cross builds
-           tools      tools/steps-junit/ (the step report converter the CI posts) format, lints and host tests
+           tools      tools/steps-junit/ (the step report converter the CI posts) and tools/layers/ (the layering check) format, lints and host tests
            kernel     kernel/ (the native track's Rust kernel) format and lints, built for its own target
            spikes     format and lints of the s1-dxe3 modules and the s5-jsdos probes
 dos        skeleton   DESK.EXE built, run in headless DOSBox, and its panic path
@@ -170,12 +170,15 @@ fi
 # The shared HAL and drivers: host tests against the mock port bus, then the no_std crates built for the kernel's target and for the
 # pure-Rust DOS target (cargo check; clippy for the kernel target, where the x86 port instructions are compiled).
 if run rust hal; then
-step "HAL: host tests and no_std builds"
+step "HAL and DOS runtime: host tests, no_std builds, and the runtime's format and lints"
 (cd hal && cargo fmt --check)
 (cd hal && cargo clippy --locked --all-targets -- -D warnings)
 (cd hal && host_tests)
 (cd hal && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd hal && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+# The DOS runtime (dos/rt, on the DOS target by its own .cargo/config.toml) is the layer above the HAL, so it is checked with it.
+(cd dos && cargo fmt --check)
+(cd dos && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 fi
 
 # The shell's crates (desk-gfx and those that follow): host tests and the same two cross builds as the HAL's. See docs/FIRST-WINDOW.md.
@@ -185,7 +188,7 @@ step "Shell: host tests and no_std builds"
 (cd shell && cargo clippy --locked --all-targets -- -D warnings)
 (cd shell && host_tests)
 (cd shell && RUSTC_BOOTSTRAP=1 cargo clippy --locked --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd shell && RUSTC_BOOTSTRAP=1 cargo check --locked --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 fi
 
 # The module loader's crates: host tests for both, and the format crate's no_std builds (the packer uses std, so the cross builds name
@@ -196,7 +199,7 @@ step "Module loader: host tests and no_std builds"
 (cd module && cargo clippy --locked --all-targets -- -D warnings)
 (cd module && DMD_REQUIRE_REAL_MODULE=1 host_tests)
 (cd module && RUSTC_BOOTSTRAP=1 cargo clippy --locked -p desk-module --target ../kernel/i486-desk-none.json -Zbuild-std=core,alloc -Zjson-target-spec -- -D warnings)
-(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../spikes/d0-rust-dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
+(cd module && RUSTC_BOOTSTRAP=1 cargo check --locked -p desk-module --target ../dos/dos-elf.json -Zbuild-std=core,alloc -Zjson-target-spec)
 
 # The test modules built for the module target, packed and compared with their expected description, relocation proved by a second and
 # a third link base, a reproducible build, the instruction scan and the negative runs. Needs the network (or a warm cargo home) for
@@ -212,6 +215,17 @@ step "Step report converter: format, lints and host tests"
 (cd tools/steps-junit && cargo fmt --check)
 (cd tools/steps-junit && cargo clippy --locked --all-targets -- -D warnings)
 (cd tools/steps-junit && host_tests)
+fi
+
+# The layering check (tools/layers, docs/LAYERS.md): its own format, lints and tests, then the check itself over the tracked files, which
+# fails when a file names one in a layer it may not use. It runs here and not in base because it needs the toolchain, and every file
+# that can hold an edge already selects the rust group.
+if run rust tools; then
+step "Layering: format, lints, host tests and the repository's layers"
+(cd tools/layers && cargo fmt --check)
+(cd tools/layers && cargo clippy --locked --all-targets -- -D warnings)
+(cd tools/layers && host_tests)
+cargo run --release --locked --quiet --manifest-path tools/layers/Cargo.toml
 fi
 
 # The native track's kernel: format and lints (the build and the boot are the native group's). The kernel embeds the real-mode trampoline
@@ -254,7 +268,7 @@ EXPECTED='DESK-SKELETON ok: squares=10 sum=385 big=385001155 sqrt=19.621417'
 
 step "Run DESK.EXE in headless DOSBox"
 status=0
-actual="$(tools/dosrun.sh dist DESK.EXE)" || status=$?
+actual="$(dos/tools/dosrun.sh dist DESK.EXE)" || status=$?
 file="$(tr -d '\r' < dist/OUT.TXT 2> /dev/null || true)"
 [ "$status" = 0 ] || fail "DESK.EXE exited with status $status; output: $actual"
 [ "$actual" = "$EXPECTED" ] || fail "standard output is not the expected line
@@ -267,7 +281,7 @@ echo "$actual"
 
 step "A Rust panic reports through C and exits non-zero"
 status=0
-actual="$(tools/dosrun.sh dist DESK.EXE panic)" || status=$?
+actual="$(dos/tools/dosrun.sh dist DESK.EXE panic)" || status=$?
 [ "$status" = 3 ] || fail "DESK.EXE panic exited with status $status, not 3; output: $actual"
 case "$actual" in
   "DESK-SKELETON PANIC at line "*) ;;
@@ -293,6 +307,7 @@ fi
 
 if run dos d0; then
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
+dos/check.sh
 spikes/d0-rust-dos/check.sh
 fi
 

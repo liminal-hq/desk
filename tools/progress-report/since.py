@@ -248,10 +248,10 @@ def repo_images(D, names):
 # ---- the layout of a go32 executable ----------------------------------------------------------------------------------------------------
 
 def go32_layout(D):
-    """The file layout `tools/elf2go32.py` writes, from the facts in its own header comment and the comparison's measurements."""
-    packer = _read("tools/elf2go32.py")
+    """The file layout `dos/tools/elf2go32.py` writes, from the facts in its own header comment and the comparison's measurements."""
+    packer = _read("dos/tools/elf2go32.py")
     comp = _read("docs/FIZZ2-COMPARISON.md")
-    for needle, where, text in (("168 bytes in all", "tools/elf2go32.py", packer), ("exactly three section headers", "tools/elf2go32.py", packer), ("multiple of 512", "tools/elf2go32.py", packer),
+    for needle, where, text in (("168 bytes in all", "dos/tools/elf2go32.py", packer), ("exactly three section headers", "dos/tools/elf2go32.py", packer), ("multiple of 512", "dos/tools/elf2go32.py", packer),
                                 ("The first 2,048 bytes (the stub) are byte-identical", "docs/FIZZ2-COMPARISON.md", comp), ("271,360-byte `.bss`", "docs/FIZZ2-COMPARISON.md", comp)):
         if needle not in text:
             raise ValueError("%s no longer says %r; the go32 diagram needs updating" % (where, needle))
@@ -269,5 +269,5 @@ def go32_layout(D):
             o.append('<text x="%.1f" y="%d" text-anchor="middle" font-size="9.5" class="d-muted">%s</text>' % (x + (w - 8) / 2, 128 + j * 12, esc(line)))
         x += w
     o.append('<text x="10" y="24" font-size="12" class="d-text2">File layout of SHELL.EXE, left to right (not to scale). Grey is DJGPP\'s; solid is what the packer writes; dashed exists only in memory.</text></svg>')
-    cap = "What <code>tools/elf2go32.py</code> writes, from the requirements recorded in its header comment (found by reading the stub's code, which <code>stubify -g</code> writes out) and the sizes measured in <code>docs/FIZZ2-COMPARISON.md</code>. The build refuses to draw this if either document stops saying what it says here."
+    cap = "What <code>dos/tools/elf2go32.py</code> writes, from the requirements recorded in its header comment (found by reading the stub's code, which <code>stubify -g</code> writes out) and the sizes measured in <code>docs/FIZZ2-COMPARISON.md</code>. The build refuses to draw this if either document stops saying what it says here."
     return _fig("".join(o), cap)

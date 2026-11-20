@@ -6,17 +6,17 @@ title: The hosted runtime and the build to SHELL.EXE
 summary: What a DOS extender and a DPMI host are, the runtime that lets a Rust program start under one, its heap, DOS calls, panic, clean-up, interrupt stubs and hardware layer, then the build that turns Rust into SHELL.EXE; with the first hosted skeleton and the DXE3 result as a marked legacy section.
 date: 2026-10-23
 reviewed: 44f0265
-watches: [spikes/d0-rust-dos/rt/, spikes/d0-rust-dos/dos-elf.json, spikes/d0-rust-dos/link.ld, spikes/d0-rust-dos/build.sh, spikes/d0-rust-dos/check.sh, tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
+watches: [dos/rt/, dos/dos-elf.json, dos/link.ld, dos/build.sh, dos/check.sh, dos/tools/elf2go32.py, tools/coff2go32.py, shell/dos/build.sh, shell/dos/check.sh, core/, c/]
 log: [wheels, module, purerust, firstwindow]
 anatomy: [dos:stubr, dos:start, dos:heap, dos:dosw, dos:dpmi, dos:irq, dos:rthal, dos:exit, dos:target, dos:lld, dos:pack, dos:stubf, dos:exe, dos:cws]
 ---
 ## What it is
 
-A DOS program that does anything useful has to solve a problem the native kernel never meets: it starts in someone else's machine. DOS owns the first 640 KB and the files; a second program, the [DPMI](term:dpmi) host, owns protected mode and all the memory above 1 MiB; and a small loader called a [stub](term:stub) is what DOS actually runs when you type the name. A Rust program that wants a heap, a screen and a keyboard under those three has to learn what each one hands over and what it will not do. The crate that learns this is `rt`, in `spikes/d0-rust-dos/rt/`, a "Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87" (its `Cargo.toml`). This chapter is about `rt` and about the build that surrounds it, from `dos-elf.json` to the file `SHELL.EXE`.
+A DOS program that does anything useful has to solve a problem the native kernel never meets: it starts in someone else's machine. DOS owns the first 640 KB and the files; a second program, the [DPMI](term:dpmi) host, owns protected mode and all the memory above 1 MiB; and a small loader called a [stub](term:stub) is what DOS actually runs when you type the name. A Rust program that wants a heap, a screen and a keyboard under those three has to learn what each one hands over and what it will not do. The crate that learns this is `rt`, in `dos/rt/`, a "Rust runtime for 32-bit DOS programs under a DPMI host: entry, DPMI, INT 21h, heap, panic, x87" (its `Cargo.toml`). This chapter is about `rt` and about the build that surrounds it, from `dos-elf.json` to the file `SHELL.EXE`.
 
 On the map ([M1](chapter:m-map)) this is the [hosted track](term:hosted-track)'s platform: the DOS-side counterpart of the native kernel's start-up code, interrupt tables and memory manager ([M5](chapter:m-boot) to [M8](chapter:m-bioscalls)). The [hardware abstraction layer](term:hal) ([M9](chapter:m-hal)) is the contract; `rt` is one [platform](term:platform) that implements it, and its two implementing types, `DosBios` and `DosDisplay`, are the last part of the runtime below. The anatomy page of the hosted program draws fourteen boxes for this chapter, from the stub that starts first to CWSDPMI underneath; the front matter lists them. After it you should be able to say what happens between typing `SHELL` and the first line of Rust, explain why every DOS file call goes through a buffer, follow one memory request to the DPMI host and back, build `SHELL.EXE` and say which byte of it came from where, and tell the live pipeline from the legacy one that the last section describes.
 
-A caution about names. The runtime lives under `spikes/` because it began as spike d0 (`purerust`, PR #7), and `docs/D0-RUST-DOS.md` recommends promoting it to a top-level `rt/` crate. That has not happened: `shell/dos/Cargo.toml` still depends on `../../spikes/d0-rust-dos/rt`, and `docs/FIRST-WINDOW.md` records the promotion as a separate, open decision. This chapter calls it `rt` as the code does.
+A note about names. The runtime began as spike d0 (`purerust`, PR #7) and lived in `spikes/d0-rust-dos/rt` until R148, the layered layout of the repository. On the branch in review it is `dos/rt`, in a top-level directory of its own, `dos/`, with the target specification, the linker script, the packer, the DOSBox harness and the example programs beside it, one layer above the HAL and below everything that runs on DOS ([M1](chapter:m-map) draws the layers, from `docs/LAYERS.md`). The move is not merged: on `main` the runtime is still under `spikes/`. `docs/D0-RUST-DOS.md` had recommended a top-level `rt/` crate; what the layout did instead was to promote the whole foundation, so the crate is `dos/rt` and not `rt/`. `shell/dos/Cargo.toml` depends on `../../dos/rt`. This chapter calls the crate `rt` as the code does, and where it says "the spike" it means the d0 work as it was recorded, whose programs are now `dos/examples/`.
 
 ## How it works
 
@@ -31,7 +31,7 @@ The Desk uses the combination that DJGPP uses. CWSDPMI is the host, a separate p
 
 ### The contract: what the stub hands over
 
-The stub is not documented in a form the project could read, so the contract was found by disassembling it and by running a program, `ctx`, whose only job is to print what it received (`docs/D0-RUST-DOS.md`, section 2). The transcript of that program is `spikes/d0-rust-dos/expected/ctx.txt`; the values below are from it.
+The stub is not documented in a form the project could read, so the contract was found by disassembling it and by running a program, `ctx`, whose only job is to print what it received (`docs/D0-RUST-DOS.md`, section 2). The transcript of that program is `dos/expected/ctx.txt`; the values below are from it.
 
 | At the first instruction | Value in the transcript | What it means |
 |---|---|---|
@@ -42,7 +42,7 @@ The stub is not documented in a form the project could read, so the contract was
 | `GS` | `0000` | Nothing |
 | `EFLAGS` | `00003212` | Interrupts on, direction flag clear (do not rely on it) |
 | x87 control word | `0x037f` | Whatever DOS left. Not promised, so the runtime resets the unit |
-| The block | `initial_size 0x50000` | The stub rounds the end of `.bss` up to 64 KiB, and no lower than 128 KiB (`tools/elf2go32.py`) |
+| The block | `initial_size 0x50000` | The stub rounds the end of `.bss` up to 64 KiB, and no lower than 128 KiB (`dos/tools/elf2go32.py`) |
 
 Nothing is passed on the stack and there is no return address worth using. The stub's information block also carries the memory handle, the selector for the program segment prefix (`psp_selector`, base the PSP's linear address), the environment size, and the name of the host to load if none is present (`dpmi_server`, here `CWSDPMI.EXE`).
 
@@ -87,7 +87,7 @@ The panic handler, `rt/src/panic.rs`, sets a flag with a swap (a second panic in
 | `255` | `dos::die`, before the runtime is up, with no allocation and no formatting | `rt/src/dos.rs` |
 | `110` | No `CWSDPMI.EXE` beside the program: the stub's own message, `Load error: no DPMI - Get csdpmi*b.zip` | `docs/D0-RUST-DOS.md`, section 6 |
 | `1`, with no output | A CPU exception inside the program; the host reports it on the console, which the harness does not capture | `docs/D0-RUST-DOS.md`, "What failed" |
-| `125` | DOSBox itself failed (`tools/dosrun.sh`'s own status) | `tools/dosrun.sh` |
+| `125` | DOSBox itself failed (`dos/tools/dosrun.sh`'s own status) | `dos/tools/dosrun.sh` |
 
 The recommendation in the document, an exception handler (DPMI 0203h) that prints a register dump so that a crash is visible, is not built; `rt` has no such handler.
 
@@ -115,13 +115,13 @@ The pipeline below is the build of the d0 programs and of `SHELL.EXE`, which dif
 
 <!-- explainer pipeline -->
 
-1. **The target.** `spikes/d0-rust-dos/dos-elf.json` is a freestanding ELF target: `i486-unknown-none-elf`, x87 hard float, SIMD off, `panic-strategy: abort`, `rust-lld` as the linker. [M19](chapter:m-toolchain) compares it field by field with the other two. `.cargo/config.toml` makes it the default, asks for [build-std](term:build-std) with `compiler-builtins-mem` (which supplies `memcpy`, `memmove`, `memset` and `memcmp`), and passes `-Tlink.ld -nostdlib -static` to the linker. `RUSTC_BOOTSTRAP=1` is set by the build script.
+1. **The target.** `dos/dos-elf.json` is a freestanding ELF target: `i486-unknown-none-elf`, x87 hard float, SIMD off, `panic-strategy: abort`, `rust-lld` as the linker. [M19](chapter:m-toolchain) compares it field by field with the other two. `.cargo/config.toml` makes it the default, asks for [build-std](term:build-std) with `compiler-builtins-mem` (which supplies `memcpy`, `memmove`, `memset` and `memcmp`), and passes `-Tlink.ld -nostdlib -static` to the linker. `RUSTC_BOOTSTRAP=1` is set by the build script.
 2. **The link.** `rust-lld` links the objects with `link.ld`, a [linker script](term:linker-script): `_start` as the entry, two loadable segments (`text`, flags `R E`, and `data`, flags `RW`), the image from `0x1000`, every section on a 512-byte boundary, `.bss` in the data segment, and `__image_start` and `__image_end` as symbols. Its own comment gives the reasons: the stub copies `.text` and `.data` from the file to the image's block and clears `.bss`, it places the image at offset 0 of the block (so the addresses are offsets, not linear addresses), and it reads the file in sectors.
 3. **The stub.** `stubify -g`, from DJGPP, writes DJGPP's `STUB.EXE`, 2 KiB, "and does nothing else". It is data now, and neither `gcc`, `ld`, `as`, DJGPP's C library nor `crt0` is run. The stub's location in `vendor/` comes from `tools/setup.sh` ([M19](chapter:m-toolchain)).
-4. **The pack.** `tools/elf2go32.py` reads the ELF's program headers, not its sections: the first `PT_LOAD` becomes `.text` (code and read-only data) and the second becomes `.data` and `.bss`. It writes a go32 COFF image: a 20-byte file header, a 28-byte a.out header and exactly three 40-byte section headers (`.text`, `.data`, `.bss`), 168 bytes in all, padded to 512; then the sections, each padded to 512, behind the stub. The stub, as found by reading its code, checks only the magic `0x014C`; takes the entry point as a plain offset; copies each section from `scnptr` to `vaddr`; zeroes `.bss`; and sizes the block as the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the image. The tool refuses what it cannot pack: a file that is not a 32-bit little-endian ELF, an executable that is not `ET_EXEC`, a text segment with a `.bss` tail, an entry outside the text. With `--dpmi NAME` it patches the host's name into the stub (the last field of the information block, at offset `0x244`).
-5. **The host beside it.** `CWSDPMI.EXE` is copied next to the program. If it is missing, the stub says so and exits with status 110, which `spikes/d0-rust-dos/check.sh` tests (it requires the "no DPMI" message and a non-zero status). The d0 build also packs one program onto `CWSDSTUB.EXE`, the host's own stub with the host built in, giving a single file that runs in a directory with no `CWSDPMI.EXE`: 70,144 bytes in the document's build, against 49,664 for the plain `HELLO.EXE`.
+4. **The pack.** `dos/tools/elf2go32.py` reads the ELF's program headers, not its sections: the first `PT_LOAD` becomes `.text` (code and read-only data) and the second becomes `.data` and `.bss`. It writes a go32 COFF image: a 20-byte file header, a 28-byte a.out header and exactly three 40-byte section headers (`.text`, `.data`, `.bss`), 168 bytes in all, padded to 512; then the sections, each padded to 512, behind the stub. The stub, as found by reading its code, checks only the magic `0x014C`; takes the entry point as a plain offset; copies each section from `scnptr` to `vaddr`; zeroes `.bss`; and sizes the block as the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the image. The tool refuses what it cannot pack: a file that is not a 32-bit little-endian ELF, an executable that is not `ET_EXEC`, a text segment with a `.bss` tail, an entry outside the text. With `--dpmi NAME` it patches the host's name into the stub (the last field of the information block, at offset `0x244`).
+5. **The host beside it.** `CWSDPMI.EXE` is copied next to the program. If it is missing, the stub says so and exits with status 110, which `dos/check.sh` tests (it requires the "no DPMI" message and a non-zero status). The d0 build also packs one program onto `CWSDSTUB.EXE`, the host's own stub with the host built in, giving a single file that runs in a directory with no `CWSDPMI.EXE`: 70,144 bytes in the document's build, against 49,664 for the plain `HELLO.EXE`.
 
-`shell/dos/build.sh` is the same pipeline for the shell: `cargo build --release --locked` in `shell/dos`, `stubify -g`, `tools/elf2go32.py` on the `shell` ELF, and the copying of `CWSDPMI.EXE`, `UI.DFN`, `TITLE.DFN` and `OFL.txt` beside it. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes; a build for this chapter is in the worked example.
+`shell/dos/build.sh` is the same pipeline for the shell: `cargo build --release --locked` in `shell/dos`, `stubify -g`, `dos/tools/elf2go32.py` on the `shell` ELF, and the copying of `CWSDPMI.EXE`, `UI.DFN`, `TITLE.DFN` and `OFL.txt` beside it. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes; a build for this chapter is in the worked example.
 
 > **From the stacks — Where CWSDPMI came from.** The documentation shipped with release 7 of CWSDPMI is copyrighted 1995 to 2010 by Charles W Sandmann. It says the server was written to provide DPMI services for version 2 of DJGPP, and thanks DJ Delorie, who wrote the original GO32 code on which it is based, and Morten Welinder, who improved much of it. It says CWSDSTUB.EXE is a stub that includes the server, so that a program can be distributed as a single executable. It says the server does not support 16-bit DPMI applications.
 > Source: [CWSDPMI r7 (csdpmi7b.zip), cwsdpmi.doc](https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip)
@@ -156,19 +156,19 @@ None of this carries over to the live pipeline as it stands. A module format for
 
 | Where | What it holds |
 |---|---|
-| [`spikes/d0-rust-dos/rt/src/start.rs`](repo:spikes/d0-rust-dos/rt/src/start.rs) | `_start` ([`RT_STACK`](sym:spikes/d0-rust-dos/rt/src/start.rs::RT_STACK), [`EntryRegs`](sym:spikes/d0-rust-dos/rt/src/start.rs::EntryRegs), [`StubInfo`](sym:spikes/d0-rust-dos/rt/src/start.rs::StubInfo)) and [`rt_entry`](sym:spikes/d0-rust-dos/rt/src/start.rs::rt_entry) |
-| [`spikes/d0-rust-dos/rt/src/dpmi.rs`](repo:spikes/d0-rust-dos/rt/src/dpmi.rs) | [`int31`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::int31), [`init`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::init), [`alloc_block`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::alloc_block), [`simulate_int`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::simulate_int), [`lock`](sym:spikes/d0-rust-dos/rt/src/dpmi.rs::lock), the vector and descriptor calls |
-| [`spikes/d0-rust-dos/rt/src/heap.rs`](repo:spikes/d0-rust-dos/rt/src/heap.rs) | The [`Heap`](sym:spikes/d0-rust-dos/rt/src/heap.rs::Heap) allocator, [`CHUNK`](sym:spikes/d0-rust-dos/rt/src/heap.rs::CHUNK), `take`, `insert` and `grow` |
-| [`spikes/d0-rust-dos/rt/src/dos.rs`](repo:spikes/d0-rust-dos/rt/src/dos.rs) | INT 21h through the transfer buffer ([`TB_SIZE`](sym:spikes/d0-rust-dos/rt/src/dos.rs::TB_SIZE), [`write`](sym:spikes/d0-rust-dos/rt/src/dos.rs::write), [`read`](sym:spikes/d0-rust-dos/rt/src/dos.rs::read), [`File`](sym:spikes/d0-rust-dos/rt/src/dos.rs::File)), [`exit`](sym:spikes/d0-rust-dos/rt/src/dos.rs::exit), [`exit_now`](sym:spikes/d0-rust-dos/rt/src/dos.rs::exit_now), [`die`](sym:spikes/d0-rust-dos/rt/src/dos.rs::die) |
-| [`spikes/d0-rust-dos/rt/src/panic.rs`](repo:spikes/d0-rust-dos/rt/src/panic.rs) | The panic handler: clean-up, `RT PANIC:`, status 3 |
-| [`spikes/d0-rust-dos/rt/src/cleanup.rs`](repo:spikes/d0-rust-dos/rt/src/cleanup.rs) | [`register`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::register), [`forget`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::forget), [`run_all`](sym:spikes/d0-rust-dos/rt/src/cleanup.rs::run_all) |
-| [`spikes/d0-rust-dos/rt/src/irq.rs`](repo:spikes/d0-rust-dos/rt/src/irq.rs) | The sixteen stubs, [`rt_irq_dispatch`](sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch), [`DosIrq`](sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq) (the HAL's `IrqRegistry`) and [`Slot`](sym:spikes/d0-rust-dos/rt/src/irq.rs::Slot) |
-| [`spikes/d0-rust-dos/rt/src/hal.rs`](repo:spikes/d0-rust-dos/rt/src/hal.rs) | [`DosBios`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay) |
-| [`spikes/d0-rust-dos/rt/src/timer.rs`](repo:spikes/d0-rust-dos/rt/src/timer.rs), [`fpu.rs`](repo:spikes/d0-rust-dos/rt/src/fpu.rs), [`env.rs`](repo:spikes/d0-rust-dos/rt/src/env.rs), [`bios_kbd.rs`](repo:spikes/d0-rust-dos/rt/src/bios_kbd.rs) | The IRQ 0 proof, the x87 maths `core` lacks, the command tail and environment, and the BIOS keyboard state |
-| [`spikes/d0-rust-dos/dos-elf.json`](repo:spikes/d0-rust-dos/dos-elf.json), [`link.ld`](repo:spikes/d0-rust-dos/link.ld) | The target and the linker script |
-| [`tools/elf2go32.py`](repo:tools/elf2go32.py) | [`parse_elf`](sym:tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
+| [`dos/rt/src/start.rs`](repo:dos/rt/src/start.rs) | `_start` ([`RT_STACK`](sym:dos/rt/src/start.rs::RT_STACK), [`EntryRegs`](sym:dos/rt/src/start.rs::EntryRegs), [`StubInfo`](sym:dos/rt/src/start.rs::StubInfo)) and [`rt_entry`](sym:dos/rt/src/start.rs::rt_entry) |
+| [`dos/rt/src/dpmi.rs`](repo:dos/rt/src/dpmi.rs) | [`int31`](sym:dos/rt/src/dpmi.rs::int31), [`init`](sym:dos/rt/src/dpmi.rs::init), [`alloc_block`](sym:dos/rt/src/dpmi.rs::alloc_block), [`simulate_int`](sym:dos/rt/src/dpmi.rs::simulate_int), [`lock`](sym:dos/rt/src/dpmi.rs::lock), the vector and descriptor calls |
+| [`dos/rt/src/heap.rs`](repo:dos/rt/src/heap.rs) | The [`Heap`](sym:dos/rt/src/heap.rs::Heap) allocator, [`CHUNK`](sym:dos/rt/src/heap.rs::CHUNK), `take`, `insert` and `grow` |
+| [`dos/rt/src/dos.rs`](repo:dos/rt/src/dos.rs) | INT 21h through the transfer buffer ([`TB_SIZE`](sym:dos/rt/src/dos.rs::TB_SIZE), [`write`](sym:dos/rt/src/dos.rs::write), [`read`](sym:dos/rt/src/dos.rs::read), [`File`](sym:dos/rt/src/dos.rs::File)), [`exit`](sym:dos/rt/src/dos.rs::exit), [`exit_now`](sym:dos/rt/src/dos.rs::exit_now), [`die`](sym:dos/rt/src/dos.rs::die) |
+| [`dos/rt/src/panic.rs`](repo:dos/rt/src/panic.rs) | The panic handler: clean-up, `RT PANIC:`, status 3 |
+| [`dos/rt/src/cleanup.rs`](repo:dos/rt/src/cleanup.rs) | [`register`](sym:dos/rt/src/cleanup.rs::register), [`forget`](sym:dos/rt/src/cleanup.rs::forget), [`run_all`](sym:dos/rt/src/cleanup.rs::run_all) |
+| [`dos/rt/src/irq.rs`](repo:dos/rt/src/irq.rs) | The sixteen stubs, [`rt_irq_dispatch`](sym:dos/rt/src/irq.rs::rt_irq_dispatch), [`DosIrq`](sym:dos/rt/src/irq.rs::DosIrq) (the HAL's `IrqRegistry`) and [`Slot`](sym:dos/rt/src/irq.rs::Slot) |
+| [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | [`DosBios`](sym:dos/rt/src/hal.rs::DosBios) and [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay) |
+| [`dos/rt/src/timer.rs`](repo:dos/rt/src/timer.rs), [`fpu.rs`](repo:dos/rt/src/fpu.rs), [`env.rs`](repo:dos/rt/src/env.rs), [`bios_kbd.rs`](repo:dos/rt/src/bios_kbd.rs) | The IRQ 0 proof, the x87 maths `core` lacks, the command tail and environment, and the BIOS keyboard state |
+| [`dos/dos-elf.json`](repo:dos/dos-elf.json), [`link.ld`](repo:dos/link.ld) | The target and the linker script |
+| [`dos/tools/elf2go32.py`](repo:dos/tools/elf2go32.py) | [`parse_elf`](sym:dos/tools/elf2go32.py::parse_elf) and the writer of the go32 image behind a stub |
 | [`shell/dos/build.sh`](repo:shell/dos/build.sh), [`shell/dos/check.sh`](repo:shell/dos/check.sh) | The build of `SHELL.EXE` and the checks that run it in DOSBox |
-| [`spikes/d0-rust-dos/build.sh`](repo:spikes/d0-rust-dos/build.sh), [`check.sh`](repo:spikes/d0-rust-dos/check.sh) | The same pipeline for the spike's programs, and their checks |
+| [`dos/build.sh`](repo:dos/build.sh), [`check.sh`](repo:dos/check.sh) | The same pipeline for the example programs (`dos/examples/`), and their checks against `dos/expected/` |
 | [`core/`](repo:core/), [`c/`](repo:c/), [`tools/coff2go32.py`](repo:tools/coff2go32.py) | Legacy: the first Rust core, the C layer and the converter |
 
 For depth: [`docs/D0-RUST-DOS.md`](doc:docs/D0-RUST-DOS.md#2-the-runtime-contract), [`docs/TOOLCHAIN.md`](doc:docs/TOOLCHAIN.md#the-pipeline) (the legacy pipeline), [`docs/S1-DXE3.md`](doc:docs/S1-DXE3.md#answers) and [`docs/FIRST-WINDOW.md`](repo:docs/FIRST-WINDOW.md).
@@ -183,9 +183,9 @@ For depth: [`docs/D0-RUST-DOS.md`](doc:docs/D0-RUST-DOS.md#2-the-runtime-contrac
 4. The host cannot give it. The carry flag comes back set and `AX` holds the error; `call` turns that into `Err`, `grow` returns `false`, `alloc` returns null. (When it succeeds, `BX:CX` is the new block's linear address and `SI:DI` its handle; `alloc_block` stores the first as `linear` and `linear_to_ptr` subtracts the image base to make a pointer.)
 5. A null from the global allocator becomes the standard library's allocation-error panic. Its message names the size that was asked for, not the rounded one: `memory allocation of 943718400 bytes failed`. The panic handler runs the clean-up list, prints `RT PANIC: ` and the location and message, and exits with status 3.
 
-This was run on 2026-10-23 in the CI image (`spikes/d0-rust-dos/build.sh`, then `tools/dosrun.sh dist/d0 HELLO.EXE oom`). The last two lines of its output, and the status, are in the "Try it yourself" block. The location in the first line is the standard library's own source path in the toolchain, which `check.sh` normalises to `alloc.rs:L:C:` before comparing, since line numbers move.
+This was run on 2026-10-23 in the CI image (`dos/build.sh`, then `dos/tools/dosrun.sh dist/d0 HELLO.EXE oom`). The last two lines of its output, and the status, are in the "Try it yourself" block. The location in the first line is the standard library's own source path in the toolchain, which `check.sh` normalises to `alloc.rs:L:C:` before comparing, since line numbers move.
 
-**The pieces of `SHELL.EXE`.** `shell/dos/build.sh` was run in the same image. Its ELF, `shell/dos/target/dos-elf/release/shell`, is 127,232 bytes with two loadable segments: `.text` at `0x1000`, 0x18200 (98,816) bytes, and `.data` at `0x19200`, 0x200 (512) bytes followed by a `.bss` of 0x42400 (271,360) bytes, of which the runtime's stack is 262,144. `tools/elf2go32.py --info` reports the result:
+**The pieces of `SHELL.EXE`.** `shell/dos/build.sh` was run in the same image. Its ELF, `shell/dos/target/dos-elf/release/shell`, is 127,232 bytes with two loadable segments: `.text` at `0x1000`, 0x18200 (98,816) bytes, and `.data` at `0x19200`, 0x200 (512) bytes followed by a `.bss` of 0x42400 (271,360) bytes, of which the runtime's stack is 262,144. `dos/tools/elf2go32.py --info` reports the result:
 
 ```text
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
@@ -199,48 +199,48 @@ The pieces add up. 2,048 bytes of stub; 512 of COFF headers (168 used); 98,816 o
 id: rt.entry
 label: _start, the stub's hand-over and rt_entry: registers recorded, stack switched, x87 reset
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/start.rs::_start, test:spikes/d0-rust-dos/expected/ctx.txt::stubinfo: basename, test:spikes/d0-rust-dos/check.sh::CTX.EXE
+evidence: sym:dos/rt/src/start.rs::_start, test:dos/expected/ctx.txt::stubinfo: basename, test:dos/check.sh::CTX.EXE
 note: In headless DOSBox with CWSDPMI r7. The d0 build and the OOM and panic runs were redone for this chapter in the CI image; the ctx transcript is the committed one.
 
 id: rt.dpmi
 label: The DPMI client: flat 4 GiB data segment, memory blocks, locking, vectors, real-mode calls
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/dpmi.rs::int31, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: 1 MiB block write/read/free ok, test:spikes/d0-rust-dos/expected/hello.txt::dpmi: lock/unlock true
-note: The d0 build ran, and shell/dos/check.sh exercises this client; the hello transcript is the committed one and spikes/d0-rust-dos/check.sh was not rerun.
+evidence: sym:dos/rt/src/dpmi.rs::int31, test:dos/expected/hello.txt::dpmi: 1 MiB block write/read/free ok, test:dos/expected/hello.txt::dpmi: lock/unlock true
+note: The d0 build ran, and shell/dos/check.sh exercises this client; the hello transcript is the committed one and dos/check.sh was not rerun.
 
 id: rt.heap
 label: The global allocator over DPMI 0501h, first fit, 256 KiB chunks
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/heap.rs::Heap, test:spikes/d0-rust-dos/expected/hello.txt::alloc: churn kept 142500 bytes, test:spikes/d0-rust-dos/check.sh::Allocation failure is a panic
+evidence: sym:dos/rt/src/heap.rs::Heap, test:dos/expected/hello.txt::alloc: churn kept 142500 bytes, test:dos/check.sh::Allocation failure is a panic
 
 id: rt.dos
 label: INT 21h through the 32 KiB transfer buffer: console and files
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/dos.rs::TB_SIZE, test:spikes/d0-rust-dos/expected/hello.txt::file: one read call: 300000 bytes, test:spikes/d0-rust-dos/expected/hello.txt::file: missing file gives Some(DosError(2))
-note: The file transcript is the committed one; spikes/d0-rust-dos/check.sh was not rerun.
+evidence: sym:dos/rt/src/dos.rs::TB_SIZE, test:dos/expected/hello.txt::file: one read call: 300000 bytes, test:dos/expected/hello.txt::file: missing file gives Some(DosError(2))
+note: The file transcript is the committed one; dos/check.sh was not rerun.
 
 id: rt.panic
 label: The panic handler, exit status 3 and the clean-up list
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/cleanup.rs::run_all, test:spikes/d0-rust-dos/expected/panicky.txt::IRQ 0 vector restored by the clean-up list: true, test:spikes/d0-rust-dos/check.sh::A panic restores the hooked vector and exits with status 3
+evidence: sym:dos/rt/src/cleanup.rs::run_all, test:dos/expected/panicky.txt::IRQ 0 vector restored by the clean-up list: true, test:dos/check.sh::A panic restores the hooked vector and exits with status 3
 note: The out-of-memory run in the worked example ended in the panic handler with status 3; the panicky transcript is the committed one and was not rerun.
 
 id: rt.irq
 label: The sixteen IRQ stubs, the locked image and the interrupt stack
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Live: $live_scn typed through IRQ 1 at depth $depth
+evidence: sym:dos/rt/src/irq.rs::rt_irq_dispatch, test:shell/dos/check.sh::Live: $live_scn typed through IRQ 1 at depth $depth
 note: Keys typed by DOSBox's AUTOTYPE reach the shell through IRQ 1, and each mark of the live scenario is read back and held to the goldens at both depths. The default check types keys only; the mouse is driven by xdotool under Xvfb in an opt-in step (INPUT_EXTRA=1).
 
 id: rt.hal
 label: DosBios and DosDisplay: mode 13h, mode 12h and VBE with a linear frame buffer
 state: built-verified
-evidence: sym:spikes/d0-rust-dos/rt/src/hal.rs::DosDisplay, test:tests/shell/expected-dos-8.txt::shell: frame open 8 640x480 920263aa c310363f, test:shell/dos/check.sh::No VBE: depth8 reports the fallback
+evidence: sym:dos/rt/src/hal.rs::DosDisplay, test:tests/shell/expected-dos-8.txt::shell: frame open 8 640x480 920263aa c310363f, test:shell/dos/check.sh::No VBE: depth8 reports the fallback
 note: The frame buffer and the DAC are read back and compared with the goldens. That records what the emulated card holds, not what DOSBox draws.
 
 id: rt.build
 label: dos-elf.json, rust-lld, link.ld, elf2go32.py, the stub and CWSDPMI.EXE make SHELL.EXE
 state: built-verified
-evidence: sym:tools/elf2go32.py::parse_elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::Self-contained executable
+evidence: sym:dos/tools/elf2go32.py::parse_elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:dos/check.sh::Self-contained executable
 note: shell/dos/check.sh was run in the CI image on 2026-10-23 and printed that line.
 
 id: rt.cws
@@ -266,9 +266,10 @@ state: planned
 evidence: doc:docs/D0-RUST-DOS.md#verdict-and-recommendation
 
 id: rt.promote
-label: rt promoted to a top-level crate
-state: planned
-evidence: doc:docs/D0-RUST-DOS.md#verdict-and-recommendation
+label: rt promoted out of the spike, to the top-level dos/ directory (R148, in review)
+state: built-unverified
+evidence: repo:dos/rt/Cargo.toml, doc:docs/LAYERS.md#the-layers
+note: The files are at dos/rt on the branch in review, and tools/layers reported its layers ok on it (1,119 files, 111 edges) when this was revised. The pull requests are open and not merged, and the opt-in js-dos and Bochs steps were not run, so nothing here is shown as verified.
 
 id: rt.hardware
 label: Any of this on a real machine, under another DPMI host or another memory manager
@@ -276,7 +277,7 @@ state: planned
 evidence: doc:docs/D0-RUST-DOS.md#what-was-and-was-not-verified
 ```
 
-The runtime is {{state.rt.entry}} for its entry and {{state.rt.dpmi}} for its DPMI client, and the build is {{state.rt.build}}, all in DOSBox. CWSDPMI is {{state.rt.cws}}. The legacy skeleton is {{state.rt.legacy}} by a committed check, and the exception handler, the promotion of `rt` and a run on real hardware are {{state.rt.hardware}}. Nothing here ran on a real machine.
+The runtime is {{state.rt.entry}} for its entry and {{state.rt.dpmi}} for its DPMI client, and the build is {{state.rt.build}}, all in DOSBox. CWSDPMI is {{state.rt.cws}}. The legacy skeleton is {{state.rt.legacy}} by a committed check, the promotion of `rt` to `dos/` is {{state.rt.promote}}, and the exception handler and a run on real hardware are {{state.rt.hardware}}. Nothing here ran on a real machine.
 
 ## Try it yourself
 
@@ -284,21 +285,21 @@ These need Docker for the DOS toolchain (DJGPP, DOSBox Staging, CWSDPMI), which 
 
 ```try
 needs: Docker with the image ghcr.io/liminal-hq/ci-dos (pinned by digest in .github/workflows/ci.yml), python3 and xxd on the host
-ran: 2026-10-23, Docker for the DOS steps, the host for the last three; DOSBox Staging 0.83.0 and CWSDPMI r7 inside the image
+ran: 2026-10-23, Docker for the DOS steps, the host for the last three; DOSBox Staging 0.83.0 and CWSDPMI r7 inside the image; the outputs are from that run, when the files were still at `spikes/d0-rust-dos/` and `tools/` (R148 has since moved them, and the paths in the commands follow the move, but the commands were not rerun at the new paths)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'tools/setup.sh > /dev/null && shell/dos/build.sh 2>&1 | tail -1'
 build: dist/shell/SHELL.EXE (101888 bytes)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'shell/dos/check.sh 2>&1 | tail -1'
 All shell on DOS checks passed.
-$ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'spikes/d0-rust-dos/build.sh 2>&1 | tail -1; tools/dosrun.sh dist/d0 HELLO.EXE oom | tail -2; echo "status ${PIPESTATUS[0]}"'
+$ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'dos/build.sh 2>&1 | tail -1; dos/tools/dosrun.sh dist/d0 HELLO.EXE oom | tail -2; echo "status ${PIPESTATUS[0]}"'
 build: dist/d0/HELLO.EXE (50688 bytes), dist/d0/solo/HELLO.EXE (71168 bytes, host included)
 RT PANIC: panicked at /usr/local/rustup/toolchains/1.98.0-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:573:9:
 memory allocation of 943718400 bytes failed
 status 3
-$ python3 tools/elf2go32.py --info dist/shell/obj/stub.exe shell/dos/target/dos-elf/release/shell dist/shell/x.exe
+$ python3 dos/tools/elf2go32.py --info dist/shell/obj/stub.exe shell/dos/target/dos-elf/release/shell dist/shell/x.exe
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
 $ xxd -s 0x200 -l 16 dist/shell/obj/stub.exe
 00000200: 676f 3332 7374 7562 2c20 7620 322e 3035  go32stub, v 2.05
-$ python3 tools/elf2go32.py dist/shell/obj/stub.exe dist/shell/obj/stub.exe dist/shell/y.exe; echo "exit $?"
+$ python3 dos/tools/elf2go32.py dist/shell/obj/stub.exe dist/shell/obj/stub.exe dist/shell/y.exe; echo "exit $?"
 elf2go32: not a 32-bit little-endian ELF file
 exit 1
 ```
@@ -342,3 +343,4 @@ at: explainer modules
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The runtime was read from the source and the contract from `expected/ctx.txt`; the SHELL.EXE and spike builds, `shell/dos/check.sh` and the out-of-memory run were done in the CI image, and the packer's output on the host. Found while writing: `docs/D0-RUST-DOS.md` is out of date about the size of `rt` (about 1,600 lines in 13 files against 2,304 in 16), the line counts of the skeleton's C and converter (about 75 and 91 against 88 and 112) and the programs' sizes; the exception handler it recommends does not exist; and `rt` has not been promoted out of `spikes/`.
+- 2026-11-20: reviewed against R148 (in review). The caution about names said the runtime lived under `spikes/` and that its promotion had not happened; it now says what the move did (the whole foundation is in `dos/`, so the crate is `dos/rt`), that it is not merged, and where the example programs went. The status record `rt.promote` is built, not verified, with the reason. The try block's outputs are from 2026-10-23 and its commands were not rerun at the new paths (Docker and the CI image were not available to this revision). The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.

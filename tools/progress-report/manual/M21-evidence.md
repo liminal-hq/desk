@@ -73,29 +73,30 @@ For graphics a transcript is not enough; the question is whether the pixels are 
 | 4 | Progress report generator: unit tests and a dry run of the data gather |
 | 5 | Fonts |
 | 6 | Rust format and lints |
-| 7 | HAL: host tests and no_std builds |
+| 7 | HAL and DOS runtime: host tests, no_std builds, and the runtime's format and lints |
 | 8 | Shell: host tests and no_std builds |
 | 9 | Module loader: host tests and no_std builds |
 | 10 | Module loader: test modules built, packed, relocated and compared, and the negative runs |
 | 11 | Step report converter: format, lints and host tests |
-| 12 | Kernel: format and lints |
-| 13 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
-| 14 | Build DESK.EXE |
-| 15 | Run DESK.EXE in headless DOSBox |
-| 16 | A Rust panic reports through C and exits non-zero |
-| 17 | Spike s1-dxe3: Rust format and lints for the modules |
-| 18 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
-| 19 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
-| 20 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
-| 21 | Spike s5-jsdos: Rust format and lints for the probes |
-| 22 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
-| 23 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
-| 24 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
-| 25 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
-| 26 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
-| 27 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
+| 12 | Layering: format, lints, host tests and the repository's layers |
+| 13 | Kernel: format and lints |
+| 14 | Frame tools: PNG, PPM and digest reading, checks and the monitor script |
+| 15 | Build DESK.EXE |
+| 16 | Run DESK.EXE in headless DOSBox |
+| 17 | A Rust panic reports through C and exits non-zero |
+| 18 | Spike s1-dxe3: Rust format and lints for the modules |
+| 19 | Spike s1-dxe3: build the Rust modules (DXE3) and the host |
+| 20 | Spike s1-dxe3: load, call, crash and unload modules in headless DOSBox |
+| 21 | Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer |
+| 22 | Spike s5-jsdos: Rust format and lints for the probes |
+| 23 | Spike e-std-stubs: std on an invented OS, stubs and a patched platform layer |
+| 24 | Spike a-vga-vbe: VGA modes 13h and 12h and VBE 2.0 through desk-vga, on the pure Rust DOS runtime |
+| 25 | Spike b-dos-input: the keyboard on IRQ 1 and the mouse on INT 33h on the pure Rust DOS runtime, keys typed in by AUTOTYPE |
+| 26 | Shell on DOS: the first window's scenario in DOSBox at both depths, read back and compared with the goldens |
+| 27 | Native boot: NASM loader, Rust kernel, QEMU as a 486 |
+| 28 | Both tracks: the DOS read-back and the QEMU screendumps are the same pictures |
 
-Four more steps run only when asked, because the CI image lacks what they need (the Bochs and js-dos steps come after the comparison and run only when their whole group is selected, so the Bochs run never rewrites the native screendumps before they are compared): the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
+One step, "Layering: format, lints, host tests and the repository's layers" (row 12 of the table), runs `tools/layers` over every tracked manifest and source and fails when a file names a layer it may not use ([M1](chapter:m-map) draws the layers; `tools/layers/layers.txt` is the rule file). Four more steps run only when asked, because the CI image lacks what they need (the Bochs and js-dos steps come after the comparison and run only when their whole group is selected, so the Bochs run never rewrites the native screendumps before they are compared): the mouse driven by `xdotool` under Xvfb (`INPUT_EXTRA=1`, two steps: the input spike's, and the first window's live scenario through DOSBox's window), the native boot test in Bochs (`NATIVE_EXTRA=1`) and the DOS programs in js-dos in headless Chromium (`JSDOS=1`). A record that rests only on one of these is tagged as such ([M20](chapter:m-emulators)).
 
 ### The three shelves and the four tags
 
@@ -123,6 +124,7 @@ In every place this project says *verified*, it means *in an emulator or on the 
 | [`.github/workflows/ci.yml`](repo:.github/workflows/ci.yml) | The CI: the scope job, one job per group (or part), the pinned image, the artefacts between the tracks and each job's JUnit results |
 | [`.github/workflows/publish-test-results.yml`](repo:.github/workflows/publish-test-results.yml) | Posts the results of a finished CI run on its pull request with pr-results; runs from the default branch with four permissions and never checks out the pull request |
 | [`tools/steps-junit/`](repo:tools/steps-junit/) | The converter from a run's step times and log to JUnit, with its tests and the shape pr-results reads |
+| [`tools/layers/`](repo:tools/layers/) | The layering check: which layer may name which, from the tracked manifests and sources, with the recorded exceptions in `layers.txt` |
 | [`.config/nextest.toml`](repo:.config/nextest.toml) | cargo-nextest's profiles: the `ci` profile writes the JUnit of the host tests |
 | [`hal/platform/mock/`](repo:hal/platform/mock/) | The mock platform: [`MockPortBus`](sym:hal/platform/mock/src/bus.rs::MockPortBus) and its devices |
 | [`tools/native-check.py`](repo:tools/native-check.py) | The transcript checker ([M5](chapter:m-boot)) |
@@ -192,6 +194,12 @@ label: The CI job: a pinned image and tools/check.sh
 state: built-verified
 evidence: test:.github/workflows/ci.yml::tools/check.sh, doc:docs/NATIVE-BOOT.md#what-was-and-was-not-verified
 
+id: evidence.layers
+label: The layering check: dependencies between layers point down, read from layers.txt
+state: built-verified
+evidence: test:tools/layers/tests/layers.rs::a_lower_layer_may_not_name_a_higher_one, test:tools/layers/tests/layers.rs::an_allow_excuses_its_edges_and_an_unused_allow_is_an_error, repo:tools/layers/layers.txt, doc:docs/LAYERS.md#what-counts-as-an-edge
+note: In review (R148), not merged. Its twelve host tests and a run over the tree of the branch (layers: ok, 1,119 files and 111 edges) were run on the host for this revision. The CI's run of it in the rust:tools part was not seen by this revision, and the check reads manifests and sources only: it does not see a path in a shell script or in a string.
+
 id: evidence.report
 label: The CI's per-step and per-test report on the pull request: JUnit from every job, posted by pr-results
 state: built-unverified
@@ -215,7 +223,7 @@ state: planned
 evidence: doc:docs/NATIVE-BOOT.md#what-was-and-was-not-verified, repo:docs/DIRECTION.md
 ```
 
-The negative checks are {{state.evidence.negative}} and the host tests {{state.evidence.hosttests}}; the claim that any of it describes a real machine is {{state.evidence.hardware}}.
+The layering check that R148 adds (in review) is {{state.evidence.layers}}; it is a check on the repository's shape, not on a program's behaviour. The negative checks are {{state.evidence.negative}} and the host tests {{state.evidence.hosttests}}; the claim that any of it describes a real machine is {{state.evidence.hardware}}.
 
 ## Try it yourself
 
@@ -289,3 +297,4 @@ at: explainer m-negatives
 - 2026-11-12: the report step of each CI job is non-fatal, a test allows `continue-on-error` on that step only, and the converter drops C1 controls and the Unicode line and paragraph separators from the text it writes.
 - 2026-11-17: the publisher is pinned to pr-results v0.4.1 (commit `a70c20d`, from v0.1.0); `.github/pr-results.toml` is valid for it, and the first comment it posted for Desk (on #85) was seen on GitHub.
 - 2026-11-17: the kernel's format and lints are the part `rust:kernel` of `tools/check.sh`, after the step report converter's, so the step table has a row for it and the rows after it moved down by one.
+- 2026-11-20: reviewed against R148 (in review). The step table has a row for the layering step (the rows after it moved down by one, and a test checks the table against `tools/check.sh`), the HAL step's title now names the DOS runtime, and a status record, `evidence.layers`, tags the layering check built, verified, with the reason and what was not seen. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.

@@ -3,7 +3,7 @@
 #
 # The library crates that run in the core (`desk-module` and the loaders) are `no_std` + `alloc` and build for three places: the host,
 # where `cargo test` runs the host tests; the native kernel's target (`kernel/i486-desk-none.json`); and the pure-Rust DOS target
-# (`spikes/d0-rust-dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line, so the default target
+# (`dos/dos-elf.json`). The cross builds take `--target` and `-Zbuild-std` on the command line, so the default target
 # stays the host's. `dmdpack` is `std`, runs on the host only and is not built for those targets. `mods/` and `dos/` have their own
 # workspaces, because their default target is not the host's.
 [workspace]

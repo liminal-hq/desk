@@ -24,7 +24,7 @@ Can Rust code be built as a DJGPP DXE3 module, loaded into the core's address sp
 
 - `spikes/s1-dxe3/modules/` is a Cargo workspace for the DOS target (the skeleton's `core/dos.json`, reused by path) with `rt`, a shared runtime, and three `staticlib` modules: `hello` (a `Vec<String>` history, a stub window), `counter` (its own state, x87 floating point) and `crash` (a panic, a null write, a stack overflow, a divide error, a panic holding heap blocks). `rt` is the global allocator (forwarding to the core), the panic handler, the callbacks and the `desk_app!` macro that defines `app_start`, `app_event` and `app_stop`. The `route-b` feature changes how the callbacks reach the core and nothing else.
 - `spikes/s1-dxe3/host/` is a host in C that stands in for the core: `mod.c` loads modules and wraps every call into one in `setjmp`, `api.c` holds the callbacks, the tracked allocator, the export table (route a) and the function table (route b), and `main.c` has the scenarios. In the real Desk the core is Rust; see [what it changes](#what-it-changes) for what that implies.
-- `spikes/s1-dxe3/build.sh` builds everything, `run.sh` runs thirteen scenarios through `tools/dosrun.sh` and compares each transcript and exit status with `spikes/s1-dxe3/expected/`, and `qemu-faults.sh` runs the two faults DOSBox cannot.
+- `spikes/s1-dxe3/build.sh` builds everything, `run.sh` runs thirteen scenarios through `dos/tools/dosrun.sh` and compares each transcript and exit status with `spikes/s1-dxe3/expected/`, and `qemu-faults.sh` runs the two faults DOSBox cannot.
 - The DJGPP libc documentation is not in the toolchain (only the cross compiler is), so the sources of knowledge were `sys/dxe.h`, `dxe.ld`, the help text and strings of `dxe3gen`, and experiments. Nothing here quotes the libc manual.
 
 ## What works: the commands
@@ -124,7 +124,7 @@ host: panic ok, the core kept running
 
   The panic message formatted with `core::fmt` reaches the core, and the six blocks the module held (five buffers and the `Vec` of them, 1560 bytes) are reclaimed from the core's per-module ledger. That is the reason to prefer `desk_alloc` to a bare `malloc`: the core can free everything a crashed app owned. `panic-b` is identical on route b. `panic` is also what the second load of `CRASH` shows: its counter restarted ("number 1").
 - **A divide error is recovered.** `signal(SIGFPE, …)` with a handler that `longjmp`s to the same frame turns the CPU exception into the same path: `host: module CRASH crashed: fault: SIGFPE (289)`, then `hello` and a new `counter` carry on (`fault-div-catch`). Without the handler (`fault-div-raw`) DJGPP's default ends the whole program with exit status 255 after `crash: dividing by zero`. DJGPP's signal numbers are not Unix's (`SIGFPE` is 289, `SIGSEGV` 291).
-- **A null write is recovered on a machine with a real page-fault path, and cannot be tested under DOSBox.** A write to address 0 (or any unmapped address) makes DOSBox Staging 0.83 abort itself: `ABORT: Pagefault didn't correct page`, exit status 125 from `tools/dosrun.sh`. A plain C program does the same with no module involved (`*(int*)0 = 1` and a read of `0x7fff0000` both do; a read of `0x1000` is fine, so only the first page is guarded). The likely cause is that DOSBox runs a page fault's handler to completion and expects the page to be mapped afterwards, while CWSDPMI reflects the fault to the program, which never returns there; this was not confirmed in DOSBox's source. Under QEMU 9.0.2 with FreeDOS 1.4 and the same `HOST.EXE` and CWSDPMI r7 (`qemu-faults.sh`), the signal handler catches it and the core recovers, like the divide error:
+- **A null write is recovered on a machine with a real page-fault path, and cannot be tested under DOSBox.** A write to address 0 (or any unmapped address) makes DOSBox Staging 0.83 abort itself: `ABORT: Pagefault didn't correct page`, exit status 125 from `dos/tools/dosrun.sh`. A plain C program does the same with no module involved (`*(int*)0 = 1` and a read of `0x7fff0000` both do; a read of `0x1000` is fine, so only the first page is guarded). The likely cause is that DOSBox runs a page fault's handler to completion and expects the page to be mapped afterwards, while CWSDPMI reflects the fault to the program, which never returns there; this was not confirmed in DOSBox's source. Under QEMU 9.0.2 with FreeDOS 1.4 and the same `HOST.EXE` and CWSDPMI r7 (`qemu-faults.sh`), the signal handler catches it and the core recovers, like the divide error:
 
 ```
 === HOST.EXE fault null catch: exit status 0
@@ -257,7 +257,7 @@ Not verified:
 tools/setup.sh
 spikes/s1-dxe3/build.sh                 # dist/s1/HOST.EXE, the .DXE modules and CWSDPMI.EXE
 spikes/s1-dxe3/run.sh                   # thirteen scenarios against spikes/s1-dxe3/expected/; --update rewrites them
-tools/dosrun.sh dist/s1 HOST.EXE panic  # one scenario by hand; also life, two, fault div catch, leak 200 …
+dos/tools/dosrun.sh dist/s1 HOST.EXE panic  # one scenario by hand; also life, two, fault div catch, leak 200 …
 spikes/s1-dxe3/qemu-faults.sh           # the faults DOSBox cannot run; needs Docker and network access
 tools/check.sh                          # all of it, with the rest of the checks
 ```

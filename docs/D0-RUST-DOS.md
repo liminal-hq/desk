@@ -1,6 +1,6 @@
 # D0: Rust-only DOS programs
 
-Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no DJGPP C library — linked and packed by tooling we control, and run headless under CWSDPMI? This is the proving step for "Rust for DOS" as shared machinery (the Desk, and later DOS games such as Lieutenant Fizz Episode 2). The code is in [`../spikes/d0-rust-dos/`](../spikes/d0-rust-dos/) and the packer in [`../tools/elf2go32.py`](../tools/elf2go32.py). Everything below was run under headless DOSBox Staging 0.83.0 with CWSDPMI r7 through [`../tools/dosrun.sh`](../tools/dosrun.sh), on this machine and again from a clean clone in the `ci-dos` image.
+Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no DJGPP C library — linked and packed by tooling we control, and run headless under CWSDPMI? This is the proving step for "Rust for DOS" as shared machinery (the Desk, and later DOS games such as Lieutenant Fizz Episode 2). The code is in [`../spikes/d0-rust-dos/`](../spikes/d0-rust-dos/) and the packer in [`../dos/tools/elf2go32.py`](../dos/tools/elf2go32.py). Everything below was run under headless DOSBox Staging 0.83.0 with CWSDPMI r7 through [`../dos/tools/dosrun.sh`](../dos/tools/dosrun.sh), on this machine and again from a clean clone in the `ci-dos` image.
 
 ## Contents
 
@@ -22,9 +22,9 @@ Spike `d0-rust-dos`: can a DOS program be pure Rust — no `gcc`, no C layer, no
 
 **Recommendation.** Make this the shape of Rust for DOS and retire the C layer when the Desk's hardware code has moved over:
 
-- **Target:** a freestanding ELF target ([`dos-elf.json`](../spikes/d0-rust-dos/dos-elf.json), `i486-unknown-none-elf`, x87 hard float, SIMD off) linked by `rust-lld` with [`link.ld`](../spikes/d0-rust-dos/link.ld). It is simpler than the skeleton's MinGW-flavoured COFF target in every way that mattered: no section folding, no REL32 patching, no weak-external objects to drop, no `_alloca`, and `compiler_builtins` links as is.
-- **Runtime:** promote [`rt`](../spikes/d0-rust-dos/rt/) to a top-level crate (`rt/`) that every DOS program and the Desk depend on. Keep one module per concern; add an exception handler (DPMI 0203h) that prints a register dump to standard output, so a crash is visible to the harness instead of a bare exit status 1.
-- **Packer:** keep `tools/elf2go32.py` (it is small and has no dependencies beyond Python, which the repository already needs); port it to a Rust host tool only if Python leaves the build.
+- **Target:** a freestanding ELF target ([`dos-elf.json`](../dos/dos-elf.json), `i486-unknown-none-elf`, x87 hard float, SIMD off) linked by `rust-lld` with [`link.ld`](../dos/link.ld). It is simpler than the skeleton's MinGW-flavoured COFF target in every way that mattered: no section folding, no REL32 patching, no weak-external objects to drop, no `_alloca`, and `compiler_builtins` links as is.
+- **Runtime:** [`rt`](../dos/rt/) is now the foundation's own directory, `dos/` ([`LAYERS.md`](LAYERS.md)), which every DOS program and the Desk depend on. Keep one module per concern; add an exception handler (DPMI 0203h) that prints a register dump to standard output, so a crash is visible to the harness instead of a bare exit status 1.
+- **Packer:** keep `dos/tools/elf2go32.py` (it is small and has no dependencies beyond Python, which the repository already needs); port it to a Rust host tool only if Python leaves the build.
 - **What stays on DJGPP:** the 2 KiB stub (written out by `stubify -g`, or vendored; or `CWSDSTUB.EXE` for single-file programs) and CWSDPMI. What leaves: `gcc`, `ld`, `as`, `libc`, `libgcc`, `crt0`, the `c/` layer and `coff2go32.py`, once nothing needs C. DJGPP's C library remains an option, via the skeleton's path, for linking third-party C code.
 - **Next spikes:** (1) a Rust driver crate set — keyboard (IRQ 1), mouse (INT 33h with a real-mode callback), VGA/VBE linear frame buffer (DPMI 0800h), PIT, OPL and Sound Blaster DMA; (2) an own-stub and own-extender research spike (the only remaining dependencies that are not ours); (3) loadable modules, now that we own the linker (this reframes `s1-dxe3`); (4) a run on real hardware and under EMM386, QEMM and a Windows 9x DOS box.
 
@@ -34,10 +34,10 @@ The retirement of the C layer and `coff2go32.py` is a later decision; this branc
 
 ```bash
 tools/setup.sh                       # once
-spikes/d0-rust-dos/build.sh          # stage 2: rust-lld + tools/elf2go32.py -> dist/d0/*.EXE
+dos/build.sh          # stage 2: rust-lld + dos/tools/elf2go32.py -> dist/d0/*.EXE
 spikes/d0-rust-dos/build-stage1.sh   # stage 1: DJGPP ld -nostdlib         -> dist/d0/HELLO1.EXE
-tools/dosrun.sh dist/d0 HELLO.EXE    # run it headless
-spikes/d0-rust-dos/check.sh          # everything, with transcripts (also the last step of tools/check.sh)
+dos/tools/dosrun.sh dist/d0 HELLO.EXE    # run it headless
+dos/check.sh          # everything, with transcripts (also the last step of tools/check.sh)
 ```
 
 Stage 2 is, step by step (the script is the reference):
@@ -46,7 +46,7 @@ Stage 2 is, step by step (the script is the reference):
 # in spikes/d0-rust-dos: -Zbuild-std for dos-elf.json, rust-lld links with link.ld (config in .cargo/config.toml)
 RUSTC_BOOTSTRAP=1 cargo build --release --locked
 vendor/djgpp/djgpp/i586-pc-msdosdjgpp/bin/stubify -g dist/d0/obj/stub.exe     # writes the 2 KiB stub, nothing else
-tools/elf2go32.py dist/d0/obj/stub.exe spikes/d0-rust-dos/target/dos-elf/release/hello dist/d0/HELLO.EXE
+dos/tools/elf2go32.py dist/d0/obj/stub.exe spikes/d0-rust-dos/target/dos-elf/release/hello dist/d0/HELLO.EXE
 ```
 
 Stage 1 builds the same `hello` as a static library for [`../core/dos.json`](../core/dos.json) (the skeleton's target, unchanged), converts it and links:
@@ -102,11 +102,11 @@ In the order met, with the cause of each.
 
 **Stage 1 works too, with more.** DJGPP's `ld` with `-nostdlib -static` and its default linker script writes a complete `.EXE` (its `coff-go32-exe` output already contains the stub, so `stubify` is not needed either). Needed besides `ld`: `tools/coff2go32.py` (necessary, shown above), the `memcpy` family from `rt/src/mem.rs` (`compiler_builtins` is dropped by the converter), and `libgcc.a` for the single helper `__udivdi3`. `gcc` is not run and no C library is linked.
 
-What the stub needs of the image, found by disassembling it (it is in `stubify` and can be written out with `-g`) and confirmed by running: the 168 bytes after the COFF start hold exactly a file header, a 28-byte a.out header and three section headers (`.text`, `.data`, `.bss`); only the magic `0x014C` is checked; the entry point is a plain offset; each section is copied from `scnptr` (keep it a multiple of 512) to `vaddr` in 512-byte reads; `.bss` is zeroed by the stub from its `vaddr`; the block is the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the images [`elf2go32.py`](../tools/elf2go32.py) writes.
+What the stub needs of the image, found by disassembling it (it is in `stubify` and can be written out with `-g`) and confirmed by running: the 168 bytes after the COFF start hold exactly a file header, a 28-byte a.out header and three section headers (`.text`, `.data`, `.bss`); only the magic `0x014C` is checked; the entry point is a plain offset; each section is copied from `scnptr` (keep it a multiple of 512) to `vaddr` in 512-byte reads; `.bss` is zeroed by the stub from its `vaddr`; the block is the end of `.bss` rounded up to 64 KiB, at least 128 KiB. There are no symbols, relocations or line numbers in the images [`elf2go32.py`](../dos/tools/elf2go32.py) writes.
 
 ## 2. The runtime contract
 
-What the stub (`STUB.EXE`, then CWSDPMI) hands over at the first instruction, as measured by [`ctx`](../spikes/d0-rust-dos/progs/src/ctx.rs) (the transcript is `expected/ctx.txt`) and read in the stub's code:
+What the stub (`STUB.EXE`, then CWSDPMI) hands over at the first instruction, as measured by [`ctx`](../dos/examples/src/ctx.rs) (the transcript is `expected/ctx.txt`) and read in the stub's code:
 
 | Item | At entry |
 |---|---|
@@ -122,11 +122,11 @@ What the stub (`STUB.EXE`, then CWSDPMI) hands over at the first instruction, as
 | PSP | `StubInfo.psp_selector` is a selector with base = the PSP's linear address. `PSP:80h` holds the command tail (length byte, then up to 126 characters). `PSP:2Ch` is a selector (not a segment) for the environment: strings `NAME=value\0`, an empty string, a word `1`, then the full path of the program |
 | exit | `INT 21h AH=4Ch`, status in `AL`. From protected mode it ends the process and the host releases its memory and descriptors |
 
-What `_start` has to do, and does ([`rt/src/start.rs`](../spikes/d0-rust-dos/rt/src/start.rs)): snapshot the registers for inspection, clear the direction flag, copy the stub information, load `SS` from `DS` and set `ESP` to the top of a 256 KiB `.bss` stack, `FNINIT`, then call Rust. `rt_entry` brings up the DPMI client (it lifts the data segment limit to 4 GiB, see below) and calls the program's `main`, then `exit`. A stack larger than the default costs nothing in the file; there is no guard page below it, so an overflow corrupts `.bss`, not a clean fault.
+What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)): snapshot the registers for inspection, clear the direction flag, copy the stub information, load `SS` from `DS` and set `ESP` to the top of a 256 KiB `.bss` stack, `FNINIT`, then call Rust. `rt_entry` brings up the DPMI client (it lifts the data segment limit to 4 GiB, see below) and calls the program's `main`, then `exit`. A stack larger than the default costs nothing in the file; there is no guard page below it, so an overflow corrupts `.bss`, not a clean fault.
 
 ## 3. The runtime crate
 
-[`rt`](../spikes/d0-rust-dos/rt/) is about 1,600 lines in 13 files with the reasons commented in each. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
+[`rt`](../dos/rt/) is about 1,600 lines in 13 files with the reasons commented in each. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
 
 | Module | What it gives | Notes |
 |---|---|---|
@@ -148,7 +148,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../spikes/d0-rust-dos/rt/
 
 ## 4. Hardware proof
 
-[`hw`](../spikes/d0-rust-dos/progs/src/hw.rs), its transcript in `expected/hw.txt`:
+[`hw`](../dos/examples/src/hw.rs), its transcript in `expected/hw.txt`:
 
 ```
 hw: dpmi 0.90 pic bases 0x08 0x70
@@ -161,7 +161,7 @@ hw: mode before 0x03, in mode 0x13, after 0x03
 hw: frame buffer checksum 0x49fd8cc5, pattern in memory 0x49fd8cc5, match true
 ```
 
-- **IRQ 0.** The handler is eight instructions of assembly in [`timer.rs`](../spikes/d0-rust-dos/rt/src/timer.rs): save `EAX` and `DS`, load the flat data selector (read through `CS`, which has the same base as `DS`, because `DS` cannot be trusted in a handler), increment a counter, restore, and `JMP FWORD` to the previous handler so the BIOS still acknowledges the interrupt and keeps time. The whole image is locked (0600h) first, the handler and its statics included. In about one second of emulated time it counts 18 to 20 ticks, matching the BIOS counter at `0040:006C`; after `unhook` the count stops and the vector is the original. The hook registers `unhook` on the clean-up list, so `exit` and a panic both restore it (checked: `PANICKY.EXE` hooks, panics, and reports the vector restored before the panic report; `HW.EXE leave-hooked` exits with the timer hooked and mode 13h set, and a last clean-up function reports both back).
+- **IRQ 0.** The handler is eight instructions of assembly in [`timer.rs`](../dos/rt/src/timer.rs): save `EAX` and `DS`, load the flat data selector (read through `CS`, which has the same base as `DS`, because `DS` cannot be trusted in a handler), increment a counter, restore, and `JMP FWORD` to the previous handler so the BIOS still acknowledges the interrupt and keeps time. The whole image is locked (0600h) first, the handler and its statics included. In about one second of emulated time it counts 18 to 20 ticks, matching the BIOS counter at `0040:006C`; after `unhook` the count stops and the vector is the original. The hook registers `unhook` on the clean-up list, so `exit` and a panic both restore it (checked: `PANICKY.EXE` hooks, panics, and reports the vector restored before the panic report; `HW.EXE leave-hooked` exits with the timer hooked and mode 13h set, and a last clean-up function reports both back).
 - **VGA mode 13h.** `INT 10h AX=0013h` through the host, the frame buffer written at `A0000h` through the flat data segment (no selector, no 0800h mapping needed below 1 MiB), a pattern of bars and a diagonal drawn, read back and checksummed (Adler-32): equal to the checksum of the pattern computed in memory. Then mode 3 again.
 - **What cannot be checked headless:** that the picture looks right (no screenshot is taken: DOSBox's capture needs a hotkey), real-time accuracy of the tick rate against a real PIT, and anything audible. A matching read-back proves the writes reach VGA memory and that the mode switch happened; it does not prove the display.
 
@@ -185,7 +185,7 @@ hw: frame buffer checksum 0x49fd8cc5, pattern in memory 0x49fd8cc5, match true
 ## 6. Negative and failure cases
 
 - **A wrong expected transcript fails the check:** `check.sh` takes the `hello` transcript, changes `squares=10` to `squares=11`, and requires the comparison to reject it. A mutation test on the clean-up code (registering `unhook` removed) turns the `PANICKY.EXE` comparison red.
-- **A panic** prints `RT PANIC: panicked at progs/src/panicky.rs:L:C:` and the message, exits with status 3, and has already restored the IRQ 0 vector (the transcript line before the report). Allocation failure is a panic as well (`HELLO.EXE oom`: status 3).
+- **A panic** prints `RT PANIC: panicked at examples/src/panicky.rs:L:C:` and the message, exits with status 3, and has already restored the IRQ 0 vector (the transcript line before the report). Allocation failure is a panic as well (`HELLO.EXE oom`: status 3).
 - **No `CWSDPMI.EXE` beside the program:** the stub prints `Load error: no DPMI - Get csdpmi*b.zip` and exits with status 110 (`0x6e` in the stub's code). This is the stub's own message, no code of ours.
 - **Returning from `_start` without calling exit** (`RETSTART.EXE`, whose entry is a single `ret`): the `ret` pops whatever the stub left on its own stack and jumps there. In headless DOSBox it aborted the emulator with a page fault (`dosrun` status 125). On real hardware the result is a protection fault or worse; there is nothing sensible to return to, which is why `rt_entry` never returns and `_start` ends in `ud2`.
 - **A hooked vector with no clean-up** (`HW.EXE abandon`, which ends with `exit_now` while IRQ 0 is hooked): it ended with status 0 in two runs, but the test is weak, because with no other client the host unloads and the real-mode vectors go with it. Whether CWSDPMI restores protected-mode vectors when a client ends while the host stays resident is not shown. The clean-up list exists so nothing depends on it.

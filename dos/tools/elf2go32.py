@@ -4,12 +4,12 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>
+# usage: dos/tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>
 #
 # The linker (rust-lld) has already resolved every symbol and relocation; this tool only rearranges bytes. It reads the ELF program
 # headers, not the sections: the first PT_LOAD becomes `.text` (code and read-only data), and the second, if there is one, becomes
 # `.data` (its file-backed part) and `.bss` (the rest of its memory size). Addresses stay as the linker chose them: they are offsets
-# from the base of the block the stub allocates for the image, which is where the stub puts the image (see spikes/d0-rust-dos/rt).
+# from the base of the block the stub allocates for the image, which is where the stub puts the image (see dos/rt).
 #
 # What the stub requires of the COFF image, found by reading its code (the stub ships inside DJGPP's `stubify`; `stubify -g` writes
 # it out) and checked by running the results:
@@ -68,7 +68,7 @@ def main():
         else:
             fail("unknown option " + opt)
     if len(args) != 3:
-        sys.exit(__doc__ and "usage: tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>")
+        sys.exit(__doc__ and "usage: dos/tools/elf2go32.py [--dpmi NAME] [--info] <stub.exe> <in.elf> <out.exe>")
     stub_path, elf_path, out_path = args
 
     stub_all = open(stub_path, "rb").read()

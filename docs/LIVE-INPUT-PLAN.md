@@ -118,7 +118,7 @@ main
 
 - `hal/drivers/int33/src/lib.rs` (or the module that holds `Mouse` and `MouseInput`): `Mouse::presses(button) -> (count, x, y)` and `Mouse::releases(button)` (functions 0005h and 0006h through `Bios::int`); `MouseInput` reads both for the left button on every poll and synthesises the missing edge (at most one press and release pair per poll), so `poll_mouse` may return two events from one poll.
 - `hal/platform/mock/src/int33.rs`: the model counts presses and releases per button, clears them on read, and can be told "a click happened between polls".
-- Tests: a click inside one poll gives a press then a release; a release and press inside one poll while held gives a release then a press; a click with motion puts the motion on the first event; two clicks in a poll give one pair; a driver that answers the counters with zeros changes nothing; the existing 16 tests unchanged. The whole-path test's transcript (`spikes/b-dos-input/expected/keys.txt`) unchanged.
+- Tests: a click inside one poll gives a press then a release; a release and press inside one poll while held gives a release then a press; a click with motion puts the motion on the first event; two clicks in a poll give one pair; a driver that answers the counters with zeros changes nothing; the existing 16 tests unchanged. The whole-path test's transcript (`hal/drivers/int33/testdata/keys.txt`) unchanged.
 - [`B-DOS-INPUT.md`](B-DOS-INPUT.md): the counters move from the recommendations to what was built; [`HAL.md`](HAL.md): the driver list.
 
 **Acceptance.** `(cd hal && cargo test --locked)`, clippy, the cross builds; `spikes/b-dos-input/check.sh` unchanged in result; with Docker, `spikes/b-dos-input/check-xvfb.sh` still passes (its `xdotool click` row may now show a click, and the check's expectation is updated to say so, which is the failing-first evidence for this task).
@@ -170,7 +170,7 @@ main
 
 - `tools/run-shell.sh` (new), as [`LIVE-INPUT.md`](LIVE-INPUT.md#the-launchers) describes, with `--depth`, `--display`, `--nomouse` and `--demo`, printing the capture hotkeys before it starts and a one-line reason when something is missing (no desktop session, no host QEMU, no DOSBox in `vendor/`).
 - `tools/native-run.sh`: `--window DISPLAY` (and `--timeout 0` honoured), the serial transcript shown as it arrives, the GTK and SDL options of the design, status 2 after a closed window reported as a normal end. Without `--window`, the arguments it passes QEMU are byte for byte what they were.
-- `tools/dosrun.sh`: `DOS_WINDOW=1` as the design describes. Without it, the generated `dosbox.conf` and environment are what they were.
+- `dos/tools/dosrun.sh`: `DOS_WINDOW=1` as the design describes. Without it, the generated `dosbox.conf` and environment are what they were.
 - `tools/README.md` and `README.md`: how to try each track.
 - [`LIVE-INPUT.md`](LIVE-INPUT.md): every option and hotkey marked "to confirm" checked against QEMU 11.1 and the DOSBox Staging in `vendor/` and corrected; whether QEMU's GTK window scales relative motion when zoomed, measured.
 

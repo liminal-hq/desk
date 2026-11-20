@@ -5,7 +5,7 @@ build-std = ["std", "panic_abort"]
 build-std-features = ["compiler-builtins-mem"]
 json-target-spec = true
 
-# Run cargo from this directory: the linker script path is relative. rust-lld links the ELF; tools/elf2go32.py packs it.
+# Run cargo from this directory: the linker script path is relative. rust-lld links the ELF; dos/tools/elf2go32.py packs it.
 [target.dos-std]
 rustflags = ["-C", "link-arg=-Tlink.ld", "-C", "link-arg=-nostdlib", "-C", "link-arg=-static", "-C", "relocation-model=static"]
 [target.desk-app]
