@@ -5,7 +5,7 @@ part: III
 title: The kernel: calling the BIOS from protected mode
 summary: Why the kernel needs the BIOS, the switching sequence, the Bios trait, what was measured, and what V86 would add.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: fb6eba6
 watches: [kernel/bios16.asm, kernel/src/bios.rs, kernel/src/biostest.rs, hal/hal/src/bios.rs, tests/native/expected-bios.txt, docs/N3-BIOS-PATH.md]
 log: [bios, emulators]
 anatomy: [desk:kernel]
@@ -35,7 +35,7 @@ The document compares four ways to get the BIOS back, and chooses the first.
 | (c) An x86 emulator (as `vbetool` does) | Run the BIOS's code in an interpreter | Some 10,000 lines of C or a port; slow; port I/O and IRQ waits must be forwarded; good for video only |
 | (d) Everything in the loader | Ask before protected mode | Free and robust, but no resolution change, no way back to text on some cards, no disk after boot (this is what the project already had) |
 
-The recommendation is "(a) first, (b) later": the trampoline is the smallest thing that gives the kernel every BIOS service, and it can be tested under QEMU on day one. The numbers in the first row are the document's, and the files agree with them: `bios16.asm` is 220 lines and `bios.rs` is 461.
+The recommendation is "(a) first, (b) later": the trampoline is the smallest thing that gives the kernel every BIOS service, and it can be tested under QEMU on day one. The numbers in the first row are the document's, and the files agree with them: `bios16.asm` is 220 lines and `bios.rs` is 486 (it was 461 until `cargo fmt` spread its long lines on 2026-11-20, in `1e09a53`, which changed no meaning: a comparison of the two versions with comments, whitespace and trailing commas removed was identical).
 
 ### The low-memory map
 
@@ -370,3 +370,4 @@ at: figure bios-cost
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. Every claim was checked against `kernel/bios16.asm`, `kernel/src/bios.rs`, `kernel/src/biostest.rs` and `hal/hal/src/bios.rs`, and the commands above were run on the host on QEMU's std and Cirrus cards (the vmware card was run too and matches). Points where the document and the code differ, none of which changes a claim: the document's sequence lists "interrupts off" among the checks of step 1, while the code does not check it but makes it so (`call` runs inside `without_interrupts`); the document says "about 47 µs" for 24 ticks where the kernel's own formula prints 48; and the comment at the top of `hal/hal/src/bios.rs` still says the native kernel "can offer the same trait from a V86 monitor or a real-mode trampoline, or not offer it", which was true before `NativeBios` existed.
+- 2026-11-20: re-reviewed in full against `fb6eba6` (the pull request that merged the layered layout, #99). The only commit since `44f0265` that touched the watched files is `1e09a53`, `cargo fmt` over the kernel: `kernel/src/bios.rs` is identical to its earlier text apart from layout, and `kernel/src/biostest.rs` apart from layout and the order of two `use` lines (checked by comparing the files with comments, whitespace and trailing commas removed). `kernel/bios16.asm`, `hal/hal/src/bios.rs`, `tests/native/expected-bios.txt` and `docs/N3-BIOS-PATH.md` are unchanged. One figure was stale and is corrected: `bios.rs` is now 486 lines, not 461. The constants and symbols the chapter names (`BIOS_PIC_MASK`, `NMI_ENABLED_AFTER`, `BIOS_BUFFER_MAX`, the line `bios: real-mode trampoline at`) were found where it says. The try blocks were not rerun: their outputs are from `44f0265` and say so (the kernel size they print has since changed).

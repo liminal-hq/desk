@@ -5,7 +5,7 @@ part: I
 title: The processor: real mode, protected mode and the A20 gate
 summary: Segments and offsets, the 1 MiB limit and the A20 gate, descriptors and the GDT, the switch to protected mode, interrupts, and what a 486 lacks.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: fb6eba6
 watches: [boot/, kernel/src/gdt.rs, kernel/src/idt.rs, kernel/src/fpu.rs, kernel/i486-desk-none.json, kernel/bios16.asm, docs/NATIVE-BOOT.md, docs/N3-BIOS-PATH.md]
 log: [boot, bios]
 anatomy: [desk:boot, desk:kernel]
@@ -364,3 +364,4 @@ thumb: svg
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The A20 addresses and the descriptor decoding were checked by running them (see the commands above), and the loader's A20 paths were run in QEMU. Disagreements found: `docs/NATIVE-BOOT.md` says of the switch that "interrupts stay off throughout", but stage 1 turns them on (`sti`) and stage 2 turns them off only just before `lgdt`; a comment in `tools/native-run.sh` says `-cpu 486` leaves the guest no TSC or MMX, where `docs/NATIVE-BOOT.md` says QEMU's model does not reject `RDTSC`, `RDMSR` or MMX (not tested here); and `docs/HAL.md` says the port I/O from ring 3 under CWSDPMI is not yet verified, where `docs/A-VGA-VBE.md` records it working.
+- 2026-11-20: re-reviewed in full against `fb6eba6` (the pull request that merged the layered layout, #99). Since `44f0265` the watched files changed in two ways only: `cargo fmt` (`1e09a53`) reformatted `kernel/src/gdt.rs`, `kernel/src/idt.rs` and `kernel/src/fpu.rs` without changing what they do, and `docs/NATIVE-BOOT.md` gained a sentence on the `shell-live` test mode. `boot/`, `kernel/bios16.asm`, `kernel/i486-desk-none.json` and `docs/N3-BIOS-PATH.md` are unchanged. The chapter's checkable claims were found true: the error-code mask `0x60227D00`, the `0x8E` gate flags, the selectors `0x08` and `0x10`, and the search for `ltr`, `tss`, `sysenter`, `cpuid` and `cmov` in `kernel/src` still finds nothing. Nothing in the chapter needed a correction. The try blocks were not rerun: their outputs are from `44f0265` and say so (the kernel size they print has since changed).
