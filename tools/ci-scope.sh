@@ -114,7 +114,6 @@ RULES=(
   # The kernel compiles spike A's scene drawing in (a #[path] module), so the native test redraws it.
   'spikes/a-vga-vbe/prog/src/scene.rs;report,rust,dos,native,compare;spikes/a-vga-vbe/prog/src/scene.rs'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
-  'spikes/b-dos-input/expected/*;report,rust,dos;spikes/b-dos-input/expected/keys.txt'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'
   'spikes/e-std-stubs/*;report,stdstubs;spikes/e-std-stubs/check.sh'
   'spikes/s1-dxe3/*;report,rust,dos;spikes/s1-dxe3/run.sh'

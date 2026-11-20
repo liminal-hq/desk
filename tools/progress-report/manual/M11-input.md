@@ -237,7 +237,7 @@ note: QEMU folds a mouse press and release that arrive before the guest reads th
 id: input.dos.kbd
 label: The keyboard on DOS: a protected-mode IRQ 1 stub, the shared handler, ring and decoder
 state: built-verified
-evidence: test:hal/drivers/int33/src/tests.rs::the_keys_the_dos_program_is_sent_decode_to_the_expected_transcript, test:spikes/b-dos-input/expected/keys.txt::key A down mods=none, sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq
+evidence: test:hal/drivers/int33/src/tests.rs::the_keys_the_dos_program_is_sent_decode_to_the_expected_transcript, test:hal/drivers/int33/testdata/keys.txt::key A down mods=none, sym:spikes/d0-rust-dos/rt/src/irq.rs::DosIrq
 note: Verified in DOSBox Staging with typed keys, as the anatomy page tags it. The BIOS keyboard handler, CWSDPMI's stack behaviour and a real 8042 were not tried.
 
 id: input.dos.mouse
@@ -319,7 +319,7 @@ transcript matches tests/native/expected-input.txt (75 lines)
 
 The three `test result` lines are `desk-i8042` (47 tests), `desk-int33` (16) and `desk-kbd` (24); the documents say 46, 16 and 22 (see Revisions). The run is dated: live input has since added the INT 33h click counters, and `desk-int33` now has 27 tests. The `native-run` line is on the standard error stream of the script, shown here with the command. The 26 key events and 8 mouse events are the injected sequence of `tests/native/input.inject`.
 
-**Exercises.** (1) Without running anything, decode `1D 38 E0 53 E0 D3 B8 9D` into events and modifier states, then find your six lines in `tests/native/expected-input.txt`. (2) The packet `3A FF FE` has the right button and both sign bits set; compute dx, dy and buttons, then find the same numbers in the host test. (3) In a scratch branch, remove the `ctrl-alt-delete` line from `tests/native/input.inject`, predict whether the run exits 0, and whether `native-check.py` accepts its transcript; the `input-missing-event` run in `tools/native-test.sh` does exactly this. (4) Predict what the DOS program prints for the same shift-A, then compare with `spikes/b-dos-input/expected/keys.txt`, whose `mods=none` and `mods=SHIFT` spellings differ from the kernel's `mods=-` and `mods=shift`.
+**Exercises.** (1) Without running anything, decode `1D 38 E0 53 E0 D3 B8 9D` into events and modifier states, then find your six lines in `tests/native/expected-input.txt`. (2) The packet `3A FF FE` has the right button and both sign bits set; compute dx, dy and buttons, then find the same numbers in the host test. (3) In a scratch branch, remove the `ctrl-alt-delete` line from `tests/native/input.inject`, predict whether the run exits 0, and whether `native-check.py` accepts its transcript; the `input-missing-event` run in `tools/native-test.sh` does exactly this. (4) Predict what the DOS program prints for the same shift-A, then compare with `hal/drivers/int33/testdata/keys.txt`, whose `mods=none` and `mods=SHIFT` spellings differ from the kernel's `mods=-` and `mods=shift`.
 
 ```glossary
 term: Make code and break code

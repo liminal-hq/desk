@@ -32,7 +32,7 @@ Polling has a price, and the spike found it at once. Under a virtual X server in
 ## The shelves
 
 ### Catalogued
-- `INPUT.EXE` in headless DOSBox Staging 0.83 with keys typed by `AUTOTYPE` prints a key transcript that equals the one a host mock produces and that `spikes/b-dos-input/expected/keys.txt` records, in VBE 640 by 480, mode 13h and text mode, with the BIOS handler replaced and chained. The IRQ 1 vector is changed while the handler is installed and restored after exit, panic and `leave`. CI passed on the merge commit `{{pr15.head}}` of pull request #15, which is {{pr15.state}}.
+- `INPUT.EXE` in headless DOSBox Staging 0.83 with keys typed by `AUTOTYPE` prints a key transcript that equals the one a host mock produces and that `hal/drivers/int33/testdata/keys.txt` records, in VBE 640 by 480, mode 13h and text mode, with the BIOS handler replaced and chained. The IRQ 1 vector is changed while the handler is installed and restored after exit, panic and `leave`. CI passed on the merge commit `{{pr15.head}}` of pull request #15, which is {{pr15.state}}.
 - Negative runs behave: a missing key makes the comparison fail (19 events against 21), a wrong expected file is rejected, no Escape ends with status 4 and everything put back, a panic gives status 3 and reports the restored vector first.
 - Under Xvfb in Docker (opt-in), the mouse motion, three buttons and the wheel come out as scripted over five runs in a row.
 - The `desk-int33` crate passes 16 host tests, and {{pr15.hostTests}} tests pass in `hal/` at the merge commit of this pull request.
