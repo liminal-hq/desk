@@ -34,10 +34,10 @@ The retirement of the C layer and `coff2go32.py` is a later decision; this branc
 
 ```bash
 tools/setup.sh                       # once
-spikes/d0-rust-dos/build.sh          # stage 2: rust-lld + dos/tools/elf2go32.py -> dist/d0/*.EXE
+dos/build.sh          # stage 2: rust-lld + dos/tools/elf2go32.py -> dist/d0/*.EXE
 spikes/d0-rust-dos/build-stage1.sh   # stage 1: DJGPP ld -nostdlib         -> dist/d0/HELLO1.EXE
 dos/tools/dosrun.sh dist/d0 HELLO.EXE    # run it headless
-spikes/d0-rust-dos/check.sh          # everything, with transcripts (also the last step of tools/check.sh)
+dos/check.sh          # everything, with transcripts (also the last step of tools/check.sh)
 ```
 
 Stage 2 is, step by step (the script is the reference):
@@ -106,7 +106,7 @@ What the stub needs of the image, found by disassembling it (it is in `stubify` 
 
 ## 2. The runtime contract
 
-What the stub (`STUB.EXE`, then CWSDPMI) hands over at the first instruction, as measured by [`ctx`](../spikes/d0-rust-dos/progs/src/ctx.rs) (the transcript is `expected/ctx.txt`) and read in the stub's code:
+What the stub (`STUB.EXE`, then CWSDPMI) hands over at the first instruction, as measured by [`ctx`](../dos/examples/src/ctx.rs) (the transcript is `expected/ctx.txt`) and read in the stub's code:
 
 | Item | At entry |
 |---|---|
@@ -148,7 +148,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 
 ## 4. Hardware proof
 
-[`hw`](../spikes/d0-rust-dos/progs/src/hw.rs), its transcript in `expected/hw.txt`:
+[`hw`](../dos/examples/src/hw.rs), its transcript in `expected/hw.txt`:
 
 ```
 hw: dpmi 0.90 pic bases 0x08 0x70
@@ -185,7 +185,7 @@ hw: frame buffer checksum 0x49fd8cc5, pattern in memory 0x49fd8cc5, match true
 ## 6. Negative and failure cases
 
 - **A wrong expected transcript fails the check:** `check.sh` takes the `hello` transcript, changes `squares=10` to `squares=11`, and requires the comparison to reject it. A mutation test on the clean-up code (registering `unhook` removed) turns the `PANICKY.EXE` comparison red.
-- **A panic** prints `RT PANIC: panicked at progs/src/panicky.rs:L:C:` and the message, exits with status 3, and has already restored the IRQ 0 vector (the transcript line before the report). Allocation failure is a panic as well (`HELLO.EXE oom`: status 3).
+- **A panic** prints `RT PANIC: panicked at examples/src/panicky.rs:L:C:` and the message, exits with status 3, and has already restored the IRQ 0 vector (the transcript line before the report). Allocation failure is a panic as well (`HELLO.EXE oom`: status 3).
 - **No `CWSDPMI.EXE` beside the program:** the stub prints `Load error: no DPMI - Get csdpmi*b.zip` and exits with status 110 (`0x6e` in the stub's code). This is the stub's own message, no code of ours.
 - **Returning from `_start` without calling exit** (`RETSTART.EXE`, whose entry is a single `ret`): the `ret` pops whatever the stub left on its own stack and jumps there. In headless DOSBox it aborted the emulator with a page fault (`dosrun` status 125). On real hardware the result is a protection fault or worse; there is nothing sensible to return to, which is why `rt_entry` never returns and `_start` ends in `ud2`.
 - **A hooked vector with no clean-up** (`HW.EXE abandon`, which ends with `exit_now` while IRQ 0 is hooked): it ended with status 0 in two runs, but the test is weak, because with no other client the host unloads and the real-mode vectors go with it. Whether CWSDPMI restores protected-mode vectors when a client ends while the host stays resident is not shown. The clean-up list exists so nothing depends on it.

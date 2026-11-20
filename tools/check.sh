@@ -307,6 +307,7 @@ fi
 
 if run dos d0; then
 step "Spike d0-rust-dos: pure Rust DOS programs, packed with no C layer"
+dos/check.sh
 spikes/d0-rust-dos/check.sh
 fi
 

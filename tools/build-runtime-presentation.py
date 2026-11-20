@@ -193,7 +193,7 @@ def build_slides():
 
     p = slide('Executable lifecycle', 'What happens before main()?',
               'The DOS path arrives in protected mode with help from a stub and DPMI host.',
-              ['dos/rt/src/start.rs', 'spikes/d0-rust-dos/build.sh', 'dos/tools/elf2go32.py'],
+              ['dos/rt/src/start.rs', 'dos/build.sh', 'dos/tools/elf2go32.py'],
               'The source entry macro accepts fn main() -> i32; the program uses no_main rather than ordinary std lang_start. The DOS entry has a 256 KiB BSS stack. ELF linking and go32 packaging are distinct steps.')
     stages = [('01', 'Build', 'Rust + rust-lld\nresolve the ELF image'), ('02', 'Package', 'Packer adds the\nDOS loader stub'), ('03', 'Enter', 'Stub finds CWSDPMI\nand loads the image'), ('04', 'Run', 'Runtime sets up\nand calls Rust')]
     for i, (n, title, body) in enumerate(stages):

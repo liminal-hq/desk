@@ -20,7 +20,7 @@ On the map of the system ([M1](chapter:m-map)) it sits under both tracks. The [h
 
 ### The pin, and why a stable compiler needs a variable
 
-`rust-toolchain.toml` names one release, `1.98.0`, and three components: `rustfmt`, `clippy` and `rust-src`. The last is the important one. Rust ships a precompiled `core` for each target it supports, and for none of ours, so the compiler's own sources have to be present for cargo to compile them. That is [build-std](term:build-std). Cargo's reference describes the option as one that "enables Cargo to compile the standard library itself as part of a crate graph compilation", needing the `rust-src` component, and lists a nightly toolchain as a requirement. The repository does not use a nightly. It pins a stable release and sets `RUSTC_BOOTSTRAP=1` in the command that needs the unstable options, which makes the stable compiler behave as if it were a nightly for that command and nothing else (`docs/RUST-TARGETS.md`, "The concept"). The scripts set it per invocation: `tools/native-build.sh` for the kernel, `spikes/d0-rust-dos/build.sh` and `shell/dos/build.sh` for the DOS programs.
+`rust-toolchain.toml` names one release, `1.98.0`, and three components: `rustfmt`, `clippy` and `rust-src`. The last is the important one. Rust ships a precompiled `core` for each target it supports, and for none of ours, so the compiler's own sources have to be present for cargo to compile them. That is [build-std](term:build-std). Cargo's reference describes the option as one that "enables Cargo to compile the standard library itself as part of a crate graph compilation", needing the `rust-src` component, and lists a nightly toolchain as a requirement. The repository does not use a nightly. It pins a stable release and sets `RUSTC_BOOTSTRAP=1` in the command that needs the unstable options, which makes the stable compiler behave as if it were a nightly for that command and nothing else (`docs/RUST-TARGETS.md`, "The concept"). The scripts set it per invocation: `tools/native-build.sh` for the kernel, `dos/build.sh` and `shell/dos/build.sh` for the DOS programs.
 
 The reason to pin is that the unstable options are exactly the ones that change between releases. `docs/RUST-TARGETS.md` says "specification fields change between rustc versions, which is why the specs are kept minimal", and spike E measured the same fragility in `std`'s own sources (below). A new compiler is therefore a deliberate change made in the CI image first and arriving here as a pull request that changes the image's digest (`AGENTS.md` and the log chapter on the scaffold). `tools/setup.sh` reads the channel out of `rust-toolchain.toml` and refuses to continue if `rustc --version` reports anything else.
 
@@ -185,7 +185,7 @@ note: Without it cargo 1.98.0 stops with the json-target-spec error quoted above
 id: toolchain.target-dos-elf
 label: dos-elf.json links with rust-lld and link.ld into a program the stub loads
 state: built-verified
-evidence: sym:dos/dos-elf.json::i486-unknown-none-elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:spikes/d0-rust-dos/check.sh::PANICKY.EXE
+evidence: sym:dos/dos-elf.json::i486-unknown-none-elf, test:shell/dos/check.sh::All shell on DOS checks passed, test:dos/check.sh::PANICKY.EXE
 note: In headless DOSBox in the CI image. shell/dos/check.sh was run and passed; the whole d0 check was not rerun.
 
 id: toolchain.target-kernel

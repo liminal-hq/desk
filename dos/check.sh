@@ -1,61 +1,32 @@
 #!/bin/bash
-# The d0-rust-dos checks: format and lints, both builds, then every program run in headless DOSBox against its expected transcript.
+# The DOS runtime's checks: format and lints, the build, then every example program run in headless DOSBox against its transcript.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: spikes/d0-rust-dos/check.sh        (after tools/setup.sh)
+# usage: dos/check.sh        (after tools/setup.sh)
 #
-# Transcripts live in spikes/d0-rust-dos/expected/. Two things are normalised before comparing: source line and column numbers in
-# panic reports (they move when the source does), and the registers `ctx` marks as scratch (leftovers of the stub's own work).
+# Transcripts live in dos/expected/; dos/tools/transcript.sh says what is normalised before comparing. The d0-rust-dos spike's own check
+# (spikes/d0-rust-dos/check.sh, stage 1 linked by DJGPP's ld) builds on this one.
 set -euo pipefail
-cd "$(dirname "$0")/../.."
-DIR=spikes/d0-rust-dos
+cd "$(dirname "$0")/.."
+DIR=dos
 EXP=$DIR/expected
-step() { printf '\n== %s\n' "$1"; }
-fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+# shellcheck source=dos/tools/transcript.sh
+. dos/tools/transcript.sh
 
-normalise() { sed -E 's/\.rs:[0-9]+:[0-9]+:/.rs:L:C:/; s#panicked at .*/alloc\.rs:[0-9]+:[0-9]+:#panicked at alloc.rs:L:C:#' | grep -v '^scratch:'; }
-
-# run <dir> <program> [args...]: sets $out (normalised standard output) and $status (the program's)
-run() {
-  local dir=$1 raw
-  shift
-  status=0
-  raw="$(dos/tools/dosrun.sh "$dir" "$@" 2> /dev/null)" || status=$?
-  out="$(printf '%s\n' "$raw" | normalise || true)"
-}
-
-# same <name> <expected file>: $out must equal the transcript
-same() {
-  if [ "$out" != "$(cat "$2")" ]; then
-    printf 'FAIL: %s: output differs from %s\n' "$1" "$2" >&2
-    diff <(printf '%s\n' "$out") "$2" >&2 || true
-    exit 1
-  fi
-}
-
-step "Rust format and lints (spike workspace)"
+step "Rust format and lints (dos workspace)"
 (cd $DIR && cargo fmt --check)
 (cd $DIR && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 
 step "Build: rust-lld, then dos/tools/elf2go32.py (no gcc, no ld, no C library)"
 $DIR/build.sh
 
-step "Build, stage 1: DJGPP ld with -nostdlib (no gcc, no C library, no crt0)"
-$DIR/build-stage1.sh
-
 step "HELLO.EXE: output, arguments, heap, x87, DPMI, files"
 run dist/d0 HELLO.EXE
 [ "$status" = 0 ] || fail "HELLO.EXE exited with status $status"
 same HELLO.EXE $EXP/hello.txt
 echo "$out" | head -3
-
-step "HELLO1.EXE (stage 1, linked by DJGPP ld) prints the same transcript"
-run dist/d0 HELLO1.EXE
-[ "$status" = 0 ] || fail "HELLO1.EXE exited with status $status"
-same HELLO1.EXE $EXP/hello.txt
-echo "identical to HELLO.EXE"
 
 step "Exit status and arguments"
 run dist/d0 HELLO.EXE exit 7
@@ -122,4 +93,4 @@ run dist/d0 HELLO.EXE
 if (same HELLO.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong transcript was accepted"; fi
 echo "rejected, as it should be"
 
-printf '\nAll d0-rust-dos checks passed.\n'
+printf '\nAll dos checks passed.\n'

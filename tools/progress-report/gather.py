@@ -339,7 +339,7 @@ def tree_facts(repo):
         tests["bunDeclarations"] += len(re.findall(r"^\s*(?:test|it)\(", (blob or b"").decode("utf-8", errors="replace"), flags=re.M))
     tests["nativeTranscripts"] = len(repo.matching(r"^tests/native/.*\.txt$"))
     tests["s1Transcripts"] = len(repo.matching(r"^spikes/s1-dxe3/expected/.*\.txt$"))
-    tests["d0Transcripts"] = len(repo.matching(r"^spikes/d0-rust-dos/expected/.*\.txt$"))
+    tests["d0Transcripts"] = len(repo.matching(r"^(spikes/d0-rust-dos|dos)/expected/.*\.txt$"))
     run_sh = repo.show("spikes/s1-dxe3/run.sh") or ""
     block = re.search(r"SCENARIOS='\n(.*?)'", run_sh, re.S)
     tests["s1Scenarios"] = len([l for l in (block.group(1) if block else "").splitlines() if l.strip()])
@@ -374,12 +374,13 @@ def transcripts(repo):
         ("s1LeakCrash", "spikes/s1-dxe3/expected/leak-crash.txt"),
         ("s1LeakControl", "spikes/s1-dxe3/expected/leak-control.txt"),
         ("s1FaultDivCatch", "spikes/s1-dxe3/expected/fault-div-catch.txt"),
-        ("d0Hello", "spikes/d0-rust-dos/expected/hello.txt"),
-        ("d0Hw", "spikes/d0-rust-dos/expected/hw.txt"),
+        ("d0Hello", "dos/expected/hello.txt"),
+        ("d0Hw", "dos/expected/hw.txt"),
         ("skeleton", None),
     ]:
         if path:
-            out[key] = repo.show(path)
+            # Before R148 the d0 transcripts were in the spike; an older ref still has them there.
+            out[key] = repo.show(path) or repo.show(path.replace("dos/expected/", "spikes/d0-rust-dos/expected/"))
     return out
 
 
@@ -743,7 +744,7 @@ def gather(root=ROOT, ref="main", offline=False, dry_run=False):
         "emojiVector": metric(emoji["vector"], "vector emoji", "The count stated in docs/EMOJI.md, which a test in fonts/test checks against the font build; not recomputed here."),
         "fontFiles": metric(len([f for f in facts["fonts"] if f["file"].endswith((".otf", ".ttf"))]), "outline and pixel font files", "OpenType and TrueType files under fonts/generated/ in the tree."),
         "bunTests": metric(tests["bunDeclarations"], "font and emoji test declarations", "A count of test( and it( declarations in fonts/test/*.test.ts, not a test runner's total: loops inside a test can run a declaration many times."),
-        "transcripts": metric(tests["nativeTranscripts"] + tests["s1Transcripts"] + tests["d0Transcripts"], "expected transcripts", "Files under tests/native, spikes/s1-dxe3/expected and spikes/d0-rust-dos/expected: each is compared byte for byte with a run."),
+        "transcripts": metric(tests["nativeTranscripts"] + tests["s1Transcripts"] + tests["d0Transcripts"], "expected transcripts", "Files under tests/native, spikes/s1-dxe3/expected and dos/expected: each is compared byte for byte with a run."),
         "s1Scenarios": metric(tests["s1Scenarios"], "DOSBox module scenarios", "Lines in the SCENARIOS table of spikes/s1-dxe3/run.sh."),
         "kernelLines": metric(loc["kernelRs"], "lines of kernel Rust", "Newlines in kernel/src/*.rs in the tree."),
         "rtLines": metric(loc["d0RtRs"], "lines of rt (Rust runtime for DOS)", "Newlines in dos/rt/**/*.rs in the tree."),

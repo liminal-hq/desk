@@ -21,6 +21,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "progs"
+version = "0.0.0"
+dependencies = [
+ "rt",
+]
+
+[[package]]
 name = "rt"
 version = "0.0.0"
 dependencies = [

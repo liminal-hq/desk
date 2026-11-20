@@ -73,8 +73,8 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual((want >> 16, want & 0xFFFF), (0x3840, 0x1000))
         self.assertEqual(size // 4096, 230400)
         self.assertEqual(256 * 1024, 0x40000)
-        self.assertIn("Vec::with_capacity(900 << 20)", rd("spikes", "d0-rust-dos", "progs", "src", "hello.rs"))
-        self.assertIn("memory allocation of 943718400 bytes failed", rd("spikes", "d0-rust-dos", "check.sh"))
+        self.assertIn("Vec::with_capacity(900 << 20)", rd("dos", "examples", "src", "hello.rs"))
+        self.assertIn("memory allocation of 943718400 bytes failed", rd("dos", "check.sh"))
         for needle in ("0x3840", "0x1000", "943,722,496", "943,718,432", "0x38401000"):
             self.assertIn(needle, self.rt)
 
@@ -92,7 +92,7 @@ class RuntimeChapterTests(unittest.TestCase):
             self.assertIn(needle, self.rt)
 
     def test_the_contract_values_are_the_transcripts(self):
-        ctx = rd("spikes", "d0-rust-dos", "expected", "ctx.txt")
+        ctx = rd("dos", "expected", "ctx.txt")
         for needle in ("cs=00a7", "ds=00af", "fs=008f", "gs=0000", "eflags=00003212", "limit 0x4ffff", "initial_size 0x50000", "go32stub, v 2.05"):
             self.assertIn(needle, ctx)
         self.assertEqual(0x50000 // 1024, 320)

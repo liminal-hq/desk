@@ -7,7 +7,7 @@
 # usage: spikes/s5-jsdos/build.sh        (after tools/setup.sh and spikes/s5-jsdos/fetch-jsdos.sh)
 #
 #   tools/build.sh                           --> dist/DESK.EXE, dist/CWSDPMI.EXE        (C layer plus Rust core)
-#   spikes/d0-rust-dos/build.sh              --> dist/d0/HELLO.EXE, HW.EXE, solo/HELLO.EXE (pure Rust)
+#   dos/build.sh              --> dist/d0/HELLO.EXE, HW.EXE, solo/HELLO.EXE (pure Rust)
 #   spikes/s5-jsdos/probes (cargo, rust-lld) --> dist/s5/VGA13.EXE, VBE.EXE, TONE.EXE  (packed by dos/tools/elf2go32.py)
 #   spikes/s5-jsdos/bundle.py                --> dist/s5/site/bundles/*.jsdos
 #   page/ + vendor/js-dos                    --> dist/s5/site/                          (what a Pages site would serve)
@@ -23,7 +23,7 @@ SITE=$OUT/site
 [ -f vendor/js-dos/js-dos.js ] || { echo "build: no js-dos in vendor/; run $S5/fetch-jsdos.sh" >&2; exit 1; }
 
 tools/build.sh
-spikes/d0-rust-dos/build.sh
+dos/build.sh
 spikes/s1-dxe3/build.sh
 
 # The probes: the same target, linker script and packer as the d0 programs.

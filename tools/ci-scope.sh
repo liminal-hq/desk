@@ -110,10 +110,16 @@ RULES=(
   'dos/rt/*;report,rust,dos,stdstubs,shelldos,compare;dos/rt/src/lib.rs'
   'dos/dos-elf.json;report,rust,dos,stdstubs,shelldos,compare;dos/dos-elf.json'
   'dos/link.ld;report,rust,dos,stdstubs,shelldos,compare;dos/link.ld'
+  # The runtime's example programs, their transcripts and its own check run in the dos group; the spike's stage 1 builds on the examples.
+  'dos/examples/*;report,rust,dos;dos/examples/src/hello.rs'
+  'dos/expected/*;report,dos;dos/expected/hello.txt'
+  'dos/build.sh;report,dos;dos/build.sh'
+  'dos/check.sh;report,dos;dos/check.sh'
+  'dos/tools/transcript.sh;report,dos;dos/tools/transcript.sh'
   # The rest of dos/ (the workspace manifest, lockfile, cargo config and rustfmt settings) governs the runtime, so it selects what the runtime does.
   'dos/*;report,rust,dos,stdstubs,shelldos,compare;dos/Cargo.toml'
   # The spikes.
-  'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/progs/src/hello.rs'
+  'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/check.sh'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'
   'spikes/e-std-stubs/*;report,stdstubs;spikes/e-std-stubs/check.sh'

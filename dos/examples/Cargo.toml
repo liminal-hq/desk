@@ -3,8 +3,8 @@ name = "progs"
 version = "0.0.0"
 edition = "2021"
 publish = false
-description = "Test programs for the d0-rust-dos spike"
+description = "Example programs for the DOS runtime: the programs its transcripts are recorded from"
 license = "Apache-2.0 OR MIT"
 
 [dependencies]
-rt = { path = "../../../dos/rt" }
+rt = { path = "../rt" }
