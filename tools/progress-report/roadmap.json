@@ -848,14 +848,13 @@
    ],
    "what": "R148: Desk stays one repository and its layers are made explicit: the DOS runtime, target specification and linker script move from spikes/d0-rust-dos to a top-level dos/, the packer and DOSBox harness to dos/tools/, and a check (tools/layers, read from tools/layers/layers.txt) fails when a lower layer names a higher one. Moves and path fixes only.",
    "why": "Follows the owner's decision of 2026-11-19 to keep one repository, so that a later extraction is a matter of copying directories.",
-   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148 on the open branches. In review: nothing in the stack is merged. The pull requests' own checks, not this page, are the evidence that the moves broke nothing.",
+   "evidence": "docs/LAYERS.md and docs/ROADMAP.md R148 on the open branches. In review: nothing in the stack is merged. The pull requests' CI (the host gate and the DOS, std-stubs, shell-on-DOS, native and compare groups) passed on all eight, #90 to #94 and #96 to #98; those checks, not this page, are the evidence that the moves broke nothing. The opt-in js-dos and Bochs steps were not run.",
    "prs": [
     90,
     91,
     92,
     93,
     94,
-    95,
     96,
     97,
     98
