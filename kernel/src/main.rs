@@ -22,7 +22,6 @@ mod input;
 mod memory;
 mod pic;
 mod pit;
-#[path = "../../spikes/a-vga-vbe/prog/src/scene.rs"]
 mod scene;
 mod serial;
 mod shell;

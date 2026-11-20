@@ -38,7 +38,7 @@ It does not see a path in a shell script, a string such as the one in `module/pa
 
 An `allow` line in `layers.txt` records one exception and says why. A line that no edge needs is itself an error, so an exception is deleted in the change that removes its edge.
 
-- The kernel and the hosted shell each name a file in a spike (the scene drawing, the key fixture, and until step 5 the DOS runtime). R148 moves each file down to the layer that owns it.
+- Until step 5 of R148, the shell on DOS names the DOS runtime, target specification and linker script in a spike. The scene drawing (now `kernel/src/scene.rs`) and the key fixture (now in `hal/drivers/int33/testdata/`) were the other two; each moved down to the layer that owns it, and its exception was deleted.
 - `module/mods` is built for the kernel's target specification, `kernel/i486-desk-none.json`, because the loader's test modules run in the kernel. `module/pack/tests/real.rs` names the same file in a string the check cannot see. This one stays until the module target stops being the kernel's.
 
 ## Seams that are known and left alone

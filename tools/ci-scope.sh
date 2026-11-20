@@ -111,14 +111,14 @@ RULES=(
   'spikes/d0-rust-dos/dos-elf.json;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/dos-elf.json'
   'spikes/d0-rust-dos/link.ld;report,rust,dos,shelldos,compare;spikes/d0-rust-dos/link.ld'
   'spikes/d0-rust-dos/*;report,dos;spikes/d0-rust-dos/progs/src/hello.rs'
-  # The kernel compiles spike A's scene drawing in (a #[path] module), so the native test redraws it.
-  'spikes/a-vga-vbe/prog/src/scene.rs;report,rust,dos,native,compare;spikes/a-vga-vbe/prog/src/scene.rs'
   'spikes/a-vga-vbe/*;report,dos;spikes/a-vga-vbe/check.sh'
   'spikes/b-dos-input/*;report,dos;spikes/b-dos-input/check.sh'
   'spikes/e-std-stubs/*;report,stdstubs;spikes/e-std-stubs/check.sh'
   'spikes/s1-dxe3/*;report,rust,dos;spikes/s1-dxe3/run.sh'
   'spikes/s5-jsdos/*;report,rust;spikes/s5-jsdos/probes/Cargo.toml'
   # The native track.
+  # Spike A compiles the kernel's scene drawing in (a #[path] module), so the VGA and VBE checks run it and the native test redraws it.
+  'kernel/src/scene.rs;report,rust,dos,native,compare;kernel/src/scene.rs'
   'kernel/i486-desk-none.json;report,rust,native,compare;kernel/i486-desk-none.json'
   'kernel/*;report,rust,native,compare;kernel/src/main.rs'
   'boot/*;report,native,compare;boot/stage2.asm'

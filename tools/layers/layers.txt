@@ -39,8 +39,7 @@ may-use spikes *
 layer outside tools docs design assets .github .config vendor dist
 may-use outside *
 
-# Recorded exceptions. The first two go when the files they name move (R148, steps 4 and 5); the last stays until the module target
+# Recorded exceptions. The first goes when the files it names move (R148, step 5); the second stays until the module target
 # stops being the kernel's (the string at module/pack/tests/real.rs:76 names the same file and is not an edge the lint can see).
-allow kernel/src/main.rs spikes/a-vga-vbe the scene drawing is still a spike's file (R148 step 4)
 allow shell/dos spikes/d0-rust-dos the DOS runtime, target and linker script are still in the spike (R148 step 5)
 allow module/mods kernel/i486-desk-none.json the loader's test modules are built for the kernel's target

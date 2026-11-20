@@ -24,6 +24,7 @@
 
 extern crate alloc;
 
+#[path = "../../../../kernel/src/scene.rs"]
 mod scene;
 
 use alloc::string::String;
