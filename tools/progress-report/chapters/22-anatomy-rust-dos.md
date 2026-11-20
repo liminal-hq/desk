@@ -8,7 +8,7 @@ summary: One real program, SHELL.EXE, followed from its Rust source to the hardw
 prs: [7, 30]
 section: reference
 ---
-This page follows one real program, `SHELL.EXE`, the first window on DOS ([pull request #30](pr:30)), from its Rust source down to the hardware it touches and back to the DOS prompt. Every box below is tied to a file, a crate or a document in the repository, so you can open whatever the picture names. The program stands on the pure-Rust DOS runtime of spike d0 ([#7](pr:7), `docs/D0-RUST-DOS.md`). The page is finished for now. The runtime has moved in the pull requests of R148 that are open as this is written: `rt`, the target specification, the linker script, the packer and the DOSBox harness are in `dos/` (a layer above the HAL, drawn in [M1 of the manual](chapter:m-map)) and no longer under `spikes/d0-rust-dos/`, so the paths in the boxes below are those of that branch, and on `main`, until the stack merges, they are the old ones.
+This page follows one real program, `SHELL.EXE`, the first window on DOS ([pull request #30](pr:30)), from its Rust source down to the hardware it touches and back to the DOS prompt. Every box below is tied to a file, a crate or a document in the repository, so you can open whatever the picture names. The program stands on the pure-Rust DOS runtime of spike d0 ([#7](pr:7), `docs/D0-RUST-DOS.md`). The page is finished for now. The runtime has moved in the pull requests of R148, merged on 2026-11-20 in `fb6eba6` (#90 to #99): `rt`, the target specification, the linker script, the packer and the DOSBox harness are in `dos/` (a layer above the HAL, drawn in [M1 of the manual](chapter:m-map)) and no longer under `spikes/d0-rust-dos/`, so the paths in the boxes below are those of `main`.
 
 <!-- figure anatomy-dos -->
 
@@ -45,7 +45,7 @@ This page follows one real program, `SHELL.EXE`, the first window on DOS ([pull 
 - The size of `SHELL.EXE`: it is the number the first-window Result records; I did not rebuild the DOS program for this page, because the DJGPP tools were not in this checkout.
 
 ### Wish list
-- Promoting `rt` to a top-level crate and retiring the C layer (an owner decision, `docs/D0-RUST-DOS.md`).
+- Retiring the C layer (an owner decision, `docs/D0-RUST-DOS.md`). The promotion of `rt` is done in another form: the runtime is `dos/rt`, inside a promoted `dos/` and not a top-level `rt/` (R148).
 - An own stub and extender (`docs/D0-RUST-DOS.md` calls it research, not planned).
 - A run on a real DOS machine.
 

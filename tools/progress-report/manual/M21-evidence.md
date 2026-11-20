@@ -198,7 +198,7 @@ id: evidence.layers
 label: The layering check: dependencies between layers point down, read from layers.txt
 state: built-verified
 evidence: test:tools/layers/tests/layers.rs::a_lower_layer_may_not_name_a_higher_one, test:tools/layers/tests/layers.rs::an_allow_excuses_its_edges_and_an_unused_allow_is_an_error, repo:tools/layers/layers.txt, doc:docs/LAYERS.md#what-counts-as-an-edge
-note: In review (R148), not merged. Its twelve host tests and a run over the tree of the branch (layers: ok, 1,119 files and 111 edges) were run on the host for this revision. The CI's run of it in the rust:tools part was not seen by this revision, and the check reads manifests and sources only: it does not see a path in a shell script or in a string.
+note: Merged in #91 (R148; the report's pull request list holds only the merge commit #99, so the evidence is the tests and not a pull request). Its twelve host tests and a run over the tree of the branch (layers: ok, 1,119 files and 111 edges) were run on the host when it was added, and the CI passed on #91 and on every pull request after it, with the check in the rust:tools part. The check reads manifests and sources only: it does not see a path in a shell script or in a string.
 
 id: evidence.report
 label: The CI's per-step and per-test report on the pull request: JUnit from every job, posted by pr-results
@@ -223,7 +223,7 @@ state: planned
 evidence: doc:docs/NATIVE-BOOT.md#what-was-and-was-not-verified, repo:docs/DIRECTION.md
 ```
 
-The layering check that R148 adds (in review) is {{state.evidence.layers}}; it is a check on the repository's shape, not on a program's behaviour. The negative checks are {{state.evidence.negative}} and the host tests {{state.evidence.hosttests}}; the claim that any of it describes a real machine is {{state.evidence.hardware}}.
+The layering check that R148 added (merged in #91) is {{state.evidence.layers}}; it is a check on the repository's shape, not on a program's behaviour. The negative checks are {{state.evidence.negative}} and the host tests {{state.evidence.hosttests}}; the claim that any of it describes a real machine is {{state.evidence.hardware}}.
 
 ## Try it yourself
 
@@ -298,3 +298,4 @@ at: explainer m-negatives
 - 2026-11-17: the publisher is pinned to pr-results v0.4.1 (commit `a70c20d`, from v0.1.0); `.github/pr-results.toml` is valid for it, and the first comment it posted for Desk (on #85) was seen on GitHub.
 - 2026-11-17: the kernel's format and lints are the part `rust:kernel` of `tools/check.sh`, after the step report converter's, so the step table has a row for it and the rows after it moved down by one.
 - 2026-11-20: reviewed against R148 (in review). The step table has a row for the layering step (the rows after it moved down by one, and a test checks the table against `tools/check.sh`), the HAL step's title now names the DOS runtime, and a status record, `evidence.layers`, tags the layering check built, verified, with the reason and what was not seen. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
+- 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The note on `evidence.layers` says the check is merged and that the CI ran it. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.

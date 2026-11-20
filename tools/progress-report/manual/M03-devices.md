@@ -237,7 +237,7 @@ These commands run the host tests of the drivers this chapter describes and read
 
 ```try
 needs: host: cargo, grep
-ran: 2026-10-23 on the host at 44f0265
+ran: 2026-10-23 on the host at 44f0265, and rerun on 2026-11-20 at fb6eba6 (every test named below passed again and the count of passing test groups was 23 again; the raw filter also prints each group's `test result` line, which the listing leaves out, and desk-pic's tests came in a different order)
 $ cd hal && cargo test -p desk-pit programming_100_hz 2>&1 | grep -E "^test "
 test tests::programming_100_hz_writes_what_the_kernel_writes ... ok
 $ cd hal && cargo test -p desk-i8042 packets_decode 2>&1 | grep -E "^test "
@@ -329,3 +329,4 @@ thumb: specimen
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. Every port and IRQ number named was checked against the driver constant or the assembly that uses it, and the commands above were run on the host. One disagreement between a document and the code: `docs/HAL.md` ("Console and debug output") lists a VGA text console `desk-vgatext` as an implementer of `DebugOut`, but no such crate exists in `hal/` and the kernel's text console is `kernel/src/vga.rs` writing to `0xB8000` directly (`docs/C-INPUT.md` says plainly that `vga.rs` was left alone, and `docs/HAL.md` marks the move optional). Also noted: `docs/A-VGA-VBE.md`'s status block says QEMU and the native kernel are not verified, which the later `docs/D-NATIVE-VGA.md` and `docs/N3-BIOS-PATH.md` superseded.
+- 2026-11-20: the try block was rerun on the host at `fb6eba6` (see its provenance line); the commands were unchanged and the results matched. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.

@@ -16,7 +16,7 @@ A DOS program that does anything useful has to solve a problem the native kernel
 
 On the map ([M1](chapter:m-map)) this is the [hosted track](term:hosted-track)'s platform: the DOS-side counterpart of the native kernel's start-up code, interrupt tables and memory manager ([M5](chapter:m-boot) to [M8](chapter:m-bioscalls)). The [hardware abstraction layer](term:hal) ([M9](chapter:m-hal)) is the contract; `rt` is one [platform](term:platform) that implements it, and its two implementing types, `DosBios` and `DosDisplay`, are the last part of the runtime below. The anatomy page of the hosted program draws fourteen boxes for this chapter, from the stub that starts first to CWSDPMI underneath; the front matter lists them. After it you should be able to say what happens between typing `SHELL` and the first line of Rust, explain why every DOS file call goes through a buffer, follow one memory request to the DPMI host and back, build `SHELL.EXE` and say which byte of it came from where, and tell the live pipeline from the legacy one that the last section describes.
 
-A note about names. The runtime began as spike d0 (`purerust`, PR #7) and lived in `spikes/d0-rust-dos/rt` until R148, the layered layout of the repository. On the branch in review it is `dos/rt`, in a top-level directory of its own, `dos/`, with the target specification, the linker script, the packer, the DOSBox harness and the example programs beside it, one layer above the HAL and below everything that runs on DOS ([M1](chapter:m-map) draws the layers, from `docs/LAYERS.md`). The move is not merged: on `main` the runtime is still under `spikes/`. `docs/D0-RUST-DOS.md` had recommended a top-level `rt/` crate; what the layout did instead was to promote the whole foundation, so the crate is `dos/rt` and not `rt/`. `shell/dos/Cargo.toml` depends on `../../dos/rt`. This chapter calls the crate `rt` as the code does, and where it says "the spike" it means the d0 work as it was recorded, whose programs are now `dos/examples/`.
+A note about names. The runtime began as spike d0 (`purerust`, PR #7) and lived in `spikes/d0-rust-dos/rt` until R148, the layered layout of the repository. Since the merge it is `dos/rt`, in a top-level directory of its own, `dos/`, with the target specification, the linker script, the packer, the DOSBox harness and the example programs beside it, one layer above the HAL and below everything that runs on DOS ([M1](chapter:m-map) draws the layers, from `docs/LAYERS.md`). The move is merged (#94 for the runtime, #96 for the packer and harness, #97 for the examples), so on `main` the runtime is at `dos/rt`. `docs/D0-RUST-DOS.md` had recommended a top-level `rt/` crate; what the layout did instead was to promote the whole foundation, so the crate is `dos/rt` and not `rt/`. `shell/dos/Cargo.toml` depends on `../../dos/rt`. This chapter calls the crate `rt` as the code does, and where it says "the spike" it means the d0 work as it was recorded, whose programs are now `dos/examples/`.
 
 ## How it works
 
@@ -191,6 +191,8 @@ This was run on 2026-10-23 in the CI image (`dos/build.sh`, then `dos/tools/dosr
 elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
 ```
 
+The numbers above and in the next paragraph are those of 2026-10-23. The same commands run on 2026-11-20, after the live-input work, report 107,520 bytes (text 0x19800, bss 0x46400, block 448 KiB); the arithmetic below is unchanged in kind and was not redone for the new numbers.
+
 The pieces add up. 2,048 bytes of stub; 512 of COFF headers (168 used); 98,816 of text; 512 of data; 98,816 + 512 + 512 = 99,840 for the COFF image; 101,888 in all. `.bss` is not in the file, which is why a 256 KiB stack costs nothing in it. The block the stub allocates is the end of `.bss`, `0x19400 + 0x42400 = 0x5B800` (374,784), rounded up to a multiple of 64 KiB: 384 KiB. `CWSDPMI.EXE` beside it is 21,325 bytes, the figure the document records. `docs/FIRST-WINDOW.md` records `SHELL.EXE` at 102,400 bytes, a measurement of an earlier tree; this build is 512 bytes smaller, and the reason was not looked for. The entry point, `0x1550`, is `_start`; what the linker placed in the 0x550 bytes of text before it was not examined.
 
 ## State of this layer
@@ -266,10 +268,10 @@ state: planned
 evidence: doc:docs/D0-RUST-DOS.md#verdict-and-recommendation
 
 id: rt.promote
-label: rt promoted out of the spike, to the top-level dos/ directory (R148, in review)
-state: built-unverified
-evidence: repo:dos/rt/Cargo.toml, doc:docs/LAYERS.md#the-layers
-note: The files are at dos/rt on the branch in review, and tools/layers reported its layers ok on it (1,119 files, 111 edges) when this was revised. The pull requests are open and not merged, and the opt-in js-dos and Bochs steps were not run, so nothing here is shown as verified.
+label: rt promoted out of the spike, to the top-level dos/ directory (R148, merged)
+state: built-verified
+evidence: test:shell/dos/check.sh::All shell on DOS checks passed, test:dos/check.sh::Allocation failure is a panic, repo:dos/rt/Cargo.toml, doc:docs/LAYERS.md#the-layers
+note: Merged in #94 (with #96 and #97 for what sits beside it; the report's pull request list holds only the merge commit #99, so the evidence is the tests and not a pull request). On 2026-11-20 the shell-on-DOS check, `dos/build.sh` and the out-of-memory run were rerun in the local CI-style image at the new paths and gave the recorded output. The CI also passed on #94 with every group (read from `gh`, not by the generator): the DOS group that builds and runs the d0 programs in DOSBox, the shell-on-DOS group, the native and compare groups, and the layering check, so the moved runtime still builds and its programs still give their recorded output in the emulator. That is the whole claim: the opt-in js-dos and Bochs steps were not run and nothing ran on real hardware.
 
 id: rt.hardware
 label: Any of this on a real machine, under another DPMI host or another memory manager
@@ -285,9 +287,9 @@ These need Docker for the DOS toolchain (DJGPP, DOSBox Staging, CWSDPMI), which 
 
 ```try
 needs: Docker with the image ghcr.io/liminal-hq/ci-dos (pinned by digest in .github/workflows/ci.yml), python3 and xxd on the host
-ran: 2026-10-23, Docker for the DOS steps, the host for the last three; DOSBox Staging 0.83.0 and CWSDPMI r7 inside the image; the outputs are from that run, when the files were still at `spikes/d0-rust-dos/` and `tools/` (R148 has since moved them, and the paths in the commands follow the move, but the commands were not rerun at the new paths)
+ran: 2026-11-20, Docker for the DOS steps and the host for the last three, in the local image liminal-ci-dos-qemu-test:local (the DOS toolchain and QEMU, run as the current user with only the checkout mounted) at the new paths under dos/, on `fb6eba6`; the commands carry the image by the digest the CI uses, which was not pulled for this rerun, so the digest was not the one that ran. The outputs are from that run, and every line matched the 2026-10-23 outputs except the size of SHELL.EXE (107,520 bytes now, the live-input work having grown it) and the numbers of the elf2go32 line that follow from it; the prose of the chapter that quotes the earlier sizes (101,888 bytes and its parts) is a record of the 2026-10-23 build
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'tools/setup.sh > /dev/null && shell/dos/build.sh 2>&1 | tail -1'
-build: dist/shell/SHELL.EXE (101888 bytes)
+build: dist/shell/SHELL.EXE (107520 bytes)
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'shell/dos/check.sh 2>&1 | tail -1'
 All shell on DOS checks passed.
 $ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/dist/h -e CARGO_HOME=/work/dist/h/cargo -e DOS_TOOLCHAIN=/opt/dos-toolchain -v "$PWD:/work" -w /work ghcr.io/liminal-hq/ci-dos@sha256:93d129b5c910b2a2d5de38ae7235e9dc8b311d302c1c57992f060b036a74dc4e bash -c 'dos/build.sh 2>&1 | tail -1; dos/tools/dosrun.sh dist/d0 HELLO.EXE oom | tail -2; echo "status ${PIPESTATUS[0]}"'
@@ -296,7 +298,7 @@ RT PANIC: panicked at /usr/local/rustup/toolchains/1.98.0-x86_64-unknown-linux-g
 memory allocation of 943718400 bytes failed
 status 3
 $ python3 dos/tools/elf2go32.py --info dist/shell/obj/stub.exe shell/dos/target/dos-elf/release/shell dist/shell/x.exe
-elf2go32: dist/shell/x.exe: stub 2048 + coff 99840 = 101888 bytes; text 0x1000+0x18200, data 0x19200+0x200, bss 0x19400+0x42400, entry 0x1550, block 384 KiB
+elf2go32: dist/shell/x.exe: stub 2048 + coff 105472 = 107520 bytes; text 0x1000+0x19800, data 0x1a800+0x200, bss 0x1aa00+0x46400, entry 0x1550, block 448 KiB
 $ xxd -s 0x200 -l 16 dist/shell/obj/stub.exe
 00000200: 676f 3332 7374 7562 2c20 7620 322e 3035  go32stub, v 2.05
 $ python3 dos/tools/elf2go32.py dist/shell/obj/stub.exe dist/shell/obj/stub.exe dist/shell/y.exe; echo "exit $?"
@@ -344,3 +346,5 @@ at: explainer modules
 
 - 2026-10-23: first written, against `44f0265`. The runtime was read from the source and the contract from `expected/ctx.txt`; the SHELL.EXE and spike builds, `shell/dos/check.sh` and the out-of-memory run were done in the CI image, and the packer's output on the host. Found while writing: `docs/D0-RUST-DOS.md` is out of date about the size of `rt` (about 1,600 lines in 13 files against 2,304 in 16), the line counts of the skeleton's C and converter (about 75 and 91 against 88 and 112) and the programs' sizes; the exception handler it recommends does not exist; and `rt` has not been promoted out of `spikes/`.
 - 2026-11-20: reviewed against R148 (in review). The caution about names said the runtime lived under `spikes/` and that its promotion had not happened; it now says what the move did (the whole foundation is in `dos/`, so the crate is `dos/rt`), that it is not merged, and where the example programs went. The status record `rt.promote` is built, not verified, with the reason. The try block's outputs are from 2026-10-23 and its commands were not rerun at the new paths (Docker and the CI image were not available to this revision). The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
+- 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The note about names says the move is merged, and the record `rt.promote` is built, verified (by the CI of #94, in an emulator) where it was built, not verified. The try block's outputs were not rerun at the new paths (see its provenance). `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
+- 2026-11-20 (later): the try block was rerun at the new paths under `dos/` (see its provenance line): the second and third commands gave the recorded output, and the first and the `elf2go32` command gave the larger sizes of `SHELL.EXE` shown there. The prose that explains the earlier sizes was not rewritten. `reviewed` is unchanged.
