@@ -206,8 +206,8 @@ impl IrqHandler {
     ///
     /// Only the platform's dispatch calls this, and never twice at once for the same handler (interrupts are off while it runs).
     pub unsafe fn call(&self) -> Action {
-        // SAFETY: the pair was built by `from_static`, `from_shared`, `from_deciding` or `from_raw` under their contracts; the caller rules out
-        // re-entry.
+        // SAFETY: the pair was built by `from_static`, `from_shared`, `from_deciding` or `from_raw` under their contracts; the
+        // caller rules out re-entry.
         unsafe { (self.func)(self.ctx) }
     }
 }
