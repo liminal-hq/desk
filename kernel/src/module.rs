@@ -31,9 +31,10 @@ extern "C" fn svc_panic(text: *const u8, len: usize) {
     panic!("module panic: {}", core::str::from_utf8(bytes).unwrap_or("<not UTF-8>"));
 }
 
-/// The services by name, sorted. M4 binds `desk_log`, and `desk_panic` because the guest crate's panic handler links it into every
-/// module, so `hello` imports both (the plan's table listed `desk_log` alone); `desk_alloc` and `desk_free` arrive with M6. The table
-/// holds function pointers, because an address cannot be turned into an integer in a `static`; `resolve` does it at load.
+/// The services by name, sorted. M4 binds `desk_log`, and `desk_panic` because the guest crate's panic handler links it into
+/// every module, so `hello` imports both (the plan's table listed `desk_log` alone); `desk_alloc` and `desk_free` arrive with
+/// M6. The table holds function pointers, because an address cannot be turned into an integer in a `static`; `resolve` does
+/// it at load.
 static SERVICES: [(&str, extern "C" fn(*const u8, usize)); 2] = [("desk_log", svc_log), ("desk_panic", svc_panic)];
 
 fn resolve(name: &str) -> Option<u32> {

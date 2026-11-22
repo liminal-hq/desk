@@ -89,8 +89,9 @@ RULES=(
   'shell/*;report,rust,shelldos,native,compare;shell/gfx/src/lib.rs'
   # The module loader's host crates (the format reader and the packer, whose real-linker test builds a module for the kernel's target
   # specification, a path the kernel rules above already send to rust). The kernel embeds HELLO.DMD and APPMAIN.DKX, built from
-  # module/mods and packed by tools/build-modules.sh, and links desk-module, so the native track needs them too. module/mods and module/dos are excluded from the workspace and
-  # will be built for the DOS track: give module/dos a rule of its own when that directory exists.
+  # module/mods and packed by tools/build-modules.sh, and links desk-module, so the native track needs them too (the kernel's own
+  # rule selects compare, and a path dependency has to select at least what its dependant does). module/mods and module/dos are
+  # excluded from the workspace and will be built for the DOS track: give module/dos a rule of its own when that directory exists.
   'module/*;report,rust,native,compare;module/format/src/lib.rs'
   # The module loader's checks (tools/check.sh's rust:module part runs tools/check-modules.sh): the build script, the expected transcripts,
   # the file(1) magic for the container and the transcript checker, which the native test shares.
