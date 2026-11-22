@@ -18,8 +18,8 @@ Nothing here is built. The plan was drafted by reading Desk's code and Fizz 2's 
 |---|---|---|
 | D1 | May Fizz 2's code be copied into Desk? The `AGENTS.md` rule makes Fizz 1 a reference only, and Fizz 2's probe and OPL design derive from it | **Decided 2026-11-22: no. Rewrite everything from the design.** Builders work from this plan and Desk's own code and do not read or copy Fizz 2's source. Where a task below says "from Fizz 2", it means the behaviour described here, written fresh, with its own tests |
 | D2 | Can `MmioRegion::write_bytes` promise frame-buffer semantics, or should the fast copy be a new method? | **Decided 2026-11-22, the owner leaving the choice to the orchestrator: a new method, `copy_from`, for frame buffers only.** `write_bytes` stays byte-exact for register windows where the width of an access matters |
-| D3 | The shape of the per-interrupt chain API (T4) | Open. Proposed: an `Action` return carried through `IrqHandler` |
-| D4 | Hosted timer rates, and whether the shell switches to them (T6) | Open. Proposed: `rt` offers 60 and 560 Hz as an opt-in; the shell stays at 18.2 Hz |
+| D3 | The shape of the per-interrupt chain API (T4) | **Decided 2026-11-22: an `Action` return carried through `IrqHandler`.** Existing services keep `on_irq(&mut self)` and their trampolines return the `Chain` given at registration; a new `DecidingIrqService` returns an `Action` |
+| D4 | Hosted timer rates, and whether the shell switches to them (T6) | **Decided 2026-11-22: `rt` offers 60 and 560 Hz as an opt-in, and the shell stays at 18.2 Hz**, as HAL.md says |
 | D5 | The probe's x87 side effect (T8) | Open. Proposed: detect the x87 and restore the control word it found, which keeps the float policy (R138) open |
 | D6 | Where `InputLatch` lives and who uses it first (T10) | Open. Proposed: `desk-hal::input`, over a `u32` mask, with host tests only |
 | D7 | R136: which finished-frame present API | Open. The design note is `PRESENT-API.md` (its own pull request, in review) |
@@ -43,7 +43,7 @@ At most two code tasks run at once.
 | Wave | Tasks | Depends on |
 |---|---|---|
 | 0 | R54 merged (done, #102) | none |
-| 1 | T1 clean-up list ∥ T5 accumulator and `Pacer` (hal only) ∥ T12 design note | none |
+| 1 | T1 clean-up list (merged, #108) ∥ T5 accumulator and `Pacer` (merged, #107) ∥ T12 design note (merged, #105) | none |
 | 2 | T2 `memset` and `memcpy` ∥ T4 per-interrupt chain | T1; D3 |
 | 3 | T3 fast copy into device memory ∥ T6 fast timer | T2; T4, T5; D4 |
 | 4 | T7 safe writes and INT 24h ∥ T8 probes | T1; D5 |
