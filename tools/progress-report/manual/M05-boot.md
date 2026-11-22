@@ -123,6 +123,8 @@ The byte patched into the image at stage 2 offset 3 travels in the boot informat
 | 13 | `shell` | `Shell` | The first window's scenario, frame by frame | `expected-shell-8.txt`, `expected-shell-4.txt` and screendumps | `0` |
 | 14 | `shell-corrupt` | `ShellCorrupt` | `shell`, then one pixel of the screen changed | the screendump check must reject it | `0` |
 | 15 | `shell-live` | `ShellLive` | The first window on the PS/2 keyboard and mouse until Escape | `expected-shell-live-8.txt`, `expected-shell-live-4.txt`, `expected-shell-live-keys-8.txt` and screendumps | `0` |
+| 16 | `module` | `Module` | Loads HELLO.DMD from a buffer, runs it, unloads it and refuses an application | `expected-module.txt` | `0` |
+| 17 | `module-bad` | `ModuleBad` | Offers HELLO.DMD with one bit flipped, which must be refused | `expected-module-bad.txt` | `0` |
 
 The names, the numbers and the run lines are the ones in the code; the build checks the table against `kernel/src/main.rs`. Mode 12 is an honest gap: `docs/N3-BIOS-PATH.md` records that it was run on Bochs by hand, but nothing in `tools/` or the CI runs it.
 

@@ -37,7 +37,10 @@ extern "C" fn svc_panic(text: *const u8, len: usize) {
 static SERVICES: [(&str, extern "C" fn(*const u8, usize)); 2] = [("desk_log", svc_log), ("desk_panic", svc_panic)];
 
 fn resolve(name: &str) -> Option<u32> {
-    SERVICES.iter().find(|(n, _)| *n == name).map(|&(_, service)| service as usize as u32)
+    SERVICES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|&(_, service)| service as usize as u32)
 }
 
 /// Frames for an image, freed frame by frame when dropped.
@@ -79,7 +82,10 @@ fn parse<'a>(name: &str, bytes: &'a [u8]) -> Option<Module<'a>> {
     match Module::parse(bytes, CORE_SDK) {
         Ok(m) => Some(m),
         Err(FormatError::BadChecksum { stored, computed }) => {
-            println!("module: refused {}: bad checksum (stored {:#010x}, computed {:#010x})", name, stored, computed);
+            println!(
+                "module: refused {}: bad checksum (stored {:#010x}, computed {:#010x})",
+                name, stored, computed
+            );
             None
         }
         Err(e) => {
@@ -94,7 +100,11 @@ fn parse<'a>(name: &str, bytes: &'a [u8]) -> Option<Module<'a>> {
 pub fn run(bad: bool) {
     if bad {
         let mut copy: Vec<u8> = HELLO.to_vec();
-        let at = Module::parse(HELLO, CORE_SDK).expect("HELLO.DMD parses").header().image_offset as usize + 16;
+        let at = Module::parse(HELLO, CORE_SDK)
+            .expect("HELLO.DMD parses")
+            .header()
+            .image_offset as usize
+            + 16;
         copy[at] ^= 0x01;
         assert!(parse("HELLO.DMD", &copy).is_none(), "a damaged module was accepted");
         return;
@@ -121,7 +131,10 @@ pub fn run(bad: bool) {
             panic!("HELLO.DMD did not load");
         }
     };
-    println!("module: HELLO loaded away from its link base: {}", if placed.base != h.link_base { "yes" } else { "no" });
+    println!(
+        "module: HELLO loaded away from its link base: {}",
+        if placed.base != h.link_base { "yes" } else { "no" }
+    );
 
     const APP: u32 = 1;
     // SAFETY: `start` is the address of `app_start` inside the image that `load_into` just placed and relocated; the guest crate
@@ -137,7 +150,10 @@ pub fn run(bad: bool) {
 
     drop(frames);
     let same = memory::free_frames() == frames_before && heap::free_bytes() == heap_before;
-    println!("module: HELLO unloaded, memory as before: {}", if same { "yes" } else { "no" });
+    println!(
+        "module: HELLO unloaded, memory as before: {}",
+        if same { "yes" } else { "no" }
+    );
 
     // An application needs a task (R77), so the module loader refuses it.
     let app = parse("APPMAIN.DKX", APPMAIN).expect("APPMAIN.DKX parses");
