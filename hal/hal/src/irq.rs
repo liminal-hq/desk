@@ -287,7 +287,10 @@ mod tests {
     #[test]
     fn the_handlers_of_the_old_traits_return_eoi_and_a_deciding_one_returns_its_choice() {
         static SHARED: AtomicU32 = AtomicU32::new(0);
-        let svc: &'static mut Count = Box::leak(Box::new(Count { seen: 0, shared: &SHARED }));
+        let svc: &'static mut Count = Box::leak(Box::new(Count {
+            seen: 0,
+            shared: &SHARED,
+        }));
         // SAFETY: the test is the only caller.
         assert_eq!(unsafe { IrqHandler::from_static(svc).call() }, Action::Eoi);
         struct Flip(bool);

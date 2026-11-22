@@ -194,7 +194,10 @@ mod tests {
     #[test]
     fn with_no_previous_owner_chain_is_refused_at_registration_and_treated_as_eoi_from_a_handler() {
         let irq = MockIrq::native();
-        assert_eq!(irq.register(Irq::TIMER, alternating(), Chain::Previous), Err(HalError::Unsupported));
+        assert_eq!(
+            irq.register(Irq::TIMER, alternating(), Chain::Previous),
+            Err(HalError::Unsupported)
+        );
         irq.register(Irq::TIMER, alternating(), Chain::None).unwrap();
         for _ in 0..4 {
             irq.raise(Irq::TIMER);
