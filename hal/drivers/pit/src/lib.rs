@@ -118,6 +118,55 @@ impl<P: PortIo> Pit<P> {
     }
 }
 
+/// The accumulator that keeps the BIOS clock right when the PIT runs faster than the BIOS rate. The BIOS counts one tick per 65,536
+/// input clocks (18.2065 Hz), so a handler running at a faster divisor adds that divisor to the accumulator on each timer
+/// interrupt and chains to the BIOS handler exactly when the accumulator reaches 65,536, keeping the remainder. Over any run the
+/// chains then number `floor(ticks * divisor / 65,536)` give or take one, and the pattern is the same every time.
+///
+/// A small `Copy` value with `u32` arithmetic only (no allocation, no floating point, no 64-bit division), so it can run inside
+/// the interrupt handler. A divisor of 0 means 65,536, as the chip reads it, and chains on every tick; so does any divisor above
+/// 65,536, which is clamped to it. Needed by the hosted fast timer (roadmap R139), which has not been built on it yet.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BiosChain {
+    divisor: u32,
+    accumulator: u32,
+}
+
+impl BiosChain {
+    /// A chain for the divisor the PIT was programmed with, starting empty.
+    pub const fn new(divisor: u32) -> BiosChain {
+        let divisor = if divisor == 0 || divisor > MAX_DIVISOR {
+            MAX_DIVISOR
+        } else {
+            divisor
+        };
+        BiosChain { divisor, accumulator: 0 }
+    }
+
+    /// One timer interrupt. True means chain to the BIOS handler this time (it sends the end-of-interrupt); false means send the
+    /// end-of-interrupt yourself.
+    pub fn tick(&mut self) -> bool {
+        // At most 65,535 + 65,536, which fits in a `u32`.
+        self.accumulator += self.divisor;
+        if self.accumulator >= MAX_DIVISOR {
+            self.accumulator -= MAX_DIVISOR;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// The divisor in use, with 0 reported as 65,536.
+    pub const fn divisor(&self) -> u32 {
+        self.divisor
+    }
+
+    /// Empties the accumulator, as after reprogramming the PIT.
+    pub fn reset(&mut self) {
+        self.accumulator = 0;
+    }
+}
+
 /// The monotonic clock the PIT drives: the interrupt side ticks it, the core reads it. Lives in a `static`.
 #[derive(Debug, Default)]
 pub struct PitClock {
@@ -162,6 +211,57 @@ mod tests {
     use desk_hal::irq::{Chain, Irq, IrqHandler, IrqRegistry};
     use desk_hal_mock::devices::Pit8254;
     use desk_hal_mock::{Access, MockIrq, MockPortBus};
+
+    fn chains(divisor: u32, ticks: u32) -> u32 {
+        let mut chain = BiosChain::new(divisor);
+        (0..ticks).filter(|_| chain.tick()).count() as u32
+    }
+
+    #[test]
+    fn the_bios_clock_keeps_its_rate() {
+        for divisor in [19_886, 2_131, 0, 1, 32_768, 65_535, 65_536, 2] {
+            let d = u64::from(if divisor == 0 { 65_536 } else { divisor });
+            for ticks in [0, 1, 2, 3, 100, 65_535, 65_536, 123_457, 300_000] {
+                let expected = (u64::from(ticks) * d / 65_536) as i64;
+                let got = i64::from(chains(divisor, ticks));
+                assert!((got - expected).abs() <= 1, "divisor {divisor}, {ticks} ticks: {got} vs {expected}");
+            }
+        }
+        assert_eq!(chains(19_886, 65_536), 19_886, "a whole turn of the accumulator is exact");
+    }
+
+    #[test]
+    fn a_divisor_of_zero_chains_every_tick() {
+        for divisor in [0, MAX_DIVISOR, MAX_DIVISOR + 5] {
+            let mut chain = BiosChain::new(divisor);
+            assert_eq!(chain.divisor(), MAX_DIVISOR);
+            assert!((0..1_000).all(|_| chain.tick()));
+        }
+        assert_eq!(BiosChain::new(19_886).divisor(), 19_886);
+    }
+
+    #[test]
+    fn the_chain_pattern_is_the_same_every_run() {
+        let run = |divisor| {
+            let mut chain = BiosChain::new(divisor);
+            (0..5_000).map(|_| chain.tick()).collect::<Vec<_>>()
+        };
+        assert_eq!(run(19_886), run(19_886));
+        // 60 Hz: the first chain is the fourth tick (4 * 19,886 = 79,544 >= 65,536), then every third or fourth.
+        assert_eq!(run(19_886)[..8], [false, false, false, true, false, false, true, false]);
+        assert_eq!(run(32_768)[..4], [false, true, false, true]);
+    }
+
+    #[test]
+    fn reset_empties_the_accumulator() {
+        let mut chain = BiosChain::new(32_768);
+        assert!(!chain.tick());
+        chain.reset();
+        assert!(!chain.tick(), "the half-turn was forgotten");
+        assert!(chain.tick());
+        chain.reset();
+        assert_eq!(chain, BiosChain::new(32_768));
+    }
 
     #[test]
     fn the_divisor_is_rounded_to_the_nearest_as_in_the_kernel() {
