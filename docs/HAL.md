@@ -159,12 +159,17 @@ pub trait InterruptController {
 pub trait IrqService { fn on_irq(&mut self); }      // a driver's interrupt-side half, state only it touches
 pub trait SharedIrqService: Sync { fn on_irq(&self); }  // interrupt work over atomics shared with the core
 
-pub struct IrqHandler { func: unsafe extern "C" fn(*mut ()), ctx: *mut () }
+pub trait DecidingIrqService { fn on_irq(&mut self) -> Action; }  // as IrqService, but picks Eoi or Chain on each interrupt
+
+#[repr(u32)] pub enum Action { Eoi = 0, Chain = 1 }   // returned in EAX, so the DOS stub can test it
+
+pub struct IrqHandler { func: unsafe extern "C" fn(*mut ()) -> Action, ctx: *mut () }
 impl IrqHandler {
     pub fn from_static<T: IrqService + Send + 'static>(svc: &'static mut T) -> IrqHandler;
     pub fn from_shared<T: SharedIrqService + 'static>(svc: &'static T) -> IrqHandler;
-    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()), ctx: *mut ()) -> IrqHandler;
-    pub unsafe fn call(&self);                      // the platform's dispatch only
+    pub fn from_deciding<T: DecidingIrqService + Send + 'static>(svc: &'static mut T) -> IrqHandler;
+    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()) -> Action, ctx: *mut ()) -> IrqHandler;
+    pub unsafe fn call(&self) -> Action;            // the platform's dispatch only
 }
 
 pub enum Chain { None, Previous }
@@ -177,6 +182,7 @@ pub trait IrqRegistry {
 
 - **Registration is a function pointer plus a context pointer**, two words the platform's assembly stub can keep in a locked table. Two safe constructors cover driver code. `from_static` takes a `&'static mut T` (typically `Box::leak` at start-up) for state only the handler touches, such as a ring's producer and a packet being assembled: the `&'static mut` moves to the handler, so nothing else can touch it, and anything the core shares with it sits behind a separate `&'static` (an atomic counter, an `SpscRing`). `from_shared` takes a `&'static T` whose state is all atomics (`TickCounter`), which can be a plain `static` with no allocation. A platform with no allocator and mutable handler state uses `from_raw` over a static it owns, inside its own audited `unsafe`. The trampolines are monomorphised, so there is no `dyn` and no closure, and they are `extern "C"`, so an assembly stub may call the function directly with the context as its one cdecl argument.
 - **Who sends the end-of-interrupt.** The platform, after the handler returns, according to `Chain`: `Chain::None` means the platform sends it (natively always; under DOS for lines Desk owns outright, the keyboard and the PS/2 mouse); `Chain::Previous` means the previous owner runs next and sends it (under DOS, the BIOS timer handler, which also keeps the DOS clock; the d0 IRQ 0 hook already works this way). A driver never sends one: the kernel's `pit::tick` did, and under DOS chaining that would acknowledge a second, unrelated interrupt.
+- **A handler can decide per interrupt.** The function behind an `IrqHandler` returns an `Action`, `Eoi` or `Chain`, in `EAX`. The handlers built from `IrqService` and `SharedIrqService` always return `Eoi`, so their line's `Chain` is the registration's and no existing driver changes; one built with `from_deciding` from a `DecidingIrqService` picks on each interrupt (what a reprogrammed PIT needs, to reach the BIOS clock handler only as often as the BIOS expects). The platform passes the interrupt on when the line was registered with `Chain::Previous` or the handler returned `Chain`, and sends the end-of-interrupt otherwise (`desk_hal::irq::chains` is that rule). Under DOS the stub tests the dispatch's result in `EAX` and either returns with `iretd` or jumps to the previous handler. Natively there is no previous owner, so `register` refuses `Chain::Previous` and a returned `Chain` is treated as `Eoi`: the interrupt must still be acknowledged, or the line stays blocked. No driver implements `DecidingIrqService` yet.
 - **Spurious interrupts.** For IRQ 7 and 15 the platform asks `is_spurious` first; `desk-pic` reads the in-service register. If it is, the platform runs no handler and calls `eoi_spurious` instead of `eoi`: a spurious IRQ 7 gets no end-of-interrupt; a spurious IRQ 15 gets one on the master only, because the master did see IRQ 2 (otherwise IRQ 3 to 7 stay blocked).
 - **Masking is a read-modify-write** of a register every line shares, so the core calls `mask` and `unmask` inside the platform's "interrupts off" critical section; otherwise a handler (ours, the BIOS's, a TSR's) that changes the mask in between has its change lost. Drivers cannot turn interrupts off, so this is a rule for the platform and the core.
 - **The 8259 under DOS.** The BIOS programmed the controllers (vectors 08h and 70h) and owns them; the hosted platform never calls `Pic8259::init`, only `mask`, `unmask`, `eoi` and `is_spurious`, which DJGPP programs also do directly. The native kernel calls `init(REMAPPED_BASES, mask)`.
