@@ -18,7 +18,7 @@ fn main() -> i32 {
     let mut rep = Report::default();
     say!(rep, "S5-VGA13 start");
     let mode0 = vga::get_mode();
-    vga::enter_mode13();
+    vga::enter_mode13().expect("clean-up list full");
     let mode = vga::get_mode();
     load_palette();
     vga::draw_pattern();
