@@ -50,7 +50,7 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertIn("const CHUNK: usize = 256 * 1024;", self.src["heap.rs"])
         self.assertIn("const HEADER: usize = 8;", self.src["heap.rs"])
         self.assertIn("const MIN_NODE: usize = 16;", self.src["heap.rs"])
-        self.assertIn("const SLOTS: usize = 8;", self.src["cleanup.rs"])
+        self.assertIn("pub const SLOTS: usize = 16;", self.src["cleanup.rs"])
         self.assertIn("STACK_SIZE: usize = 256 * 1024;", self.src["start.rs"])
         self.assertIn("const STACK_SIZE: usize = 8192;", self.src["irq.rs"])
         self.assertIn("mov ecx, 21", self.src["start.rs"])
