@@ -45,6 +45,13 @@ pub fn main() -> i32 {
     println!("alloc: churn kept {} bytes", kept);
     drop(many);
     drop(v);
+    // A request no host can satisfy fails with a null pointer; it does not wrap in the size sums or take the program down.
+    // SAFETY: the layout is valid and non-zero, and a null result is not dereferenced.
+    let huge = unsafe {
+        let layout = core::alloc::Layout::from_size_align(0x7FFF_FFF8, 8).unwrap();
+        alloc::alloc::alloc(layout)
+    };
+    println!("alloc: an impossible request returns null: {}", huge.is_null());
 
     // The x87.
     let r = fpu::sqrt(385.0);
