@@ -224,7 +224,10 @@ mod tests {
             for ticks in [0, 1, 2, 3, 100, 65_535, 65_536, 123_457, 300_000] {
                 let expected = (u64::from(ticks) * d / 65_536) as i64;
                 let got = i64::from(chains(divisor, ticks));
-                assert!((got - expected).abs() <= 1, "divisor {divisor}, {ticks} ticks: {got} vs {expected}");
+                assert!(
+                    (got - expected).abs() <= 1,
+                    "divisor {divisor}, {ticks} ticks: {got} vs {expected}"
+                );
             }
         }
         assert_eq!(chains(19_886, 65_536), 19_886, "a whole turn of the accumulator is exact");
