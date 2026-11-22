@@ -98,6 +98,9 @@ sed 's/squares=10/squares=11/' $EXP/hello.txt > "$wrong"
 run dist/d0 HELLO.EXE
 if (same HELLO.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong transcript was accepted"; fi
 echo "rejected, as it should be"
+sed 's/6272 cases, 0 wrong/6272 cases, 1 wrong/' $EXP/hello.txt > "$wrong"
+if (same HELLO.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong memcpy and memset line was accepted"; fi
+echo "a wrong memcpy and memset line rejected, as it should be"
 
 step "A transcript with the clean-up order swapped fails the check"
 sed -e 's/run c$/run TMP/' -e 's/run b$/run c/' -e 's/run TMP$/run b/' $EXP/cleanup.txt > "$wrong"
