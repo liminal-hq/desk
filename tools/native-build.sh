@@ -38,6 +38,9 @@ run_nasm -f bin -Werror kernel/bios16.asm -o "$out/bios16.bin" -l "$out/bios16.l
 # shellcheck disable=SC2086
 run_nasm -f bin -Werror $nasm_flags boot/stage2.asm -o "$out/stage2.bin" -l "$out/stage2.lst"
 
+# The kernel embeds the test modules (kernel/src/module.rs), so they are built and packed first.
+tools/build-modules.sh
+
 (cd kernel && RUSTC_BOOTSTRAP=1 cargo build --release --quiet)
 cp kernel/target/i486-desk-none/release/desk-kernel "$out/kernel.elf"
 python3 -I tools/elf2bin.py "$out/kernel.elf" "$out/kernel.bin"

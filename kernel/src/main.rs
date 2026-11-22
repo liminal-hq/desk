@@ -20,6 +20,7 @@ mod heap;
 mod idt;
 mod input;
 mod memory;
+mod module;
 mod pic;
 mod pit;
 mod scene;
@@ -105,6 +106,8 @@ enum TestMode {
     Shell = 13,
     ShellCorrupt = 14,
     ShellLive = 15,
+    Module = 16,
+    ModuleBad = 17,
 }
 
 impl TestMode {
@@ -125,6 +128,8 @@ impl TestMode {
             13 => TestMode::Shell,
             14 => TestMode::ShellCorrupt,
             15 => TestMode::ShellLive,
+            16 => TestMode::Module,
+            17 => TestMode::ModuleBad,
             _ => TestMode::Normal,
         }
     }
@@ -200,6 +205,13 @@ pub unsafe extern "C" fn kmain(boot_info: *const BootInfo) -> ! {
 
     fpu::init();
     fpu::demo();
+
+    if mode == TestMode::Module || mode == TestMode::ModuleBad {
+        // The module loader's first run (`module.rs`, `docs/LOADER.md`): HELLO.DMD from a buffer, then the end of the boot.
+        module::run(mode == TestMode::ModuleBad);
+        println!("boot complete");
+        exit::success()
+    }
 
     run_test_mode(mode);
     input_section(mode, &video, info);
@@ -291,7 +303,9 @@ fn run_test_mode(mode: TestMode) {
         | TestMode::BiosSolo
         | TestMode::Shell
         | TestMode::ShellCorrupt
-        | TestMode::ShellLive => {}
+        | TestMode::ShellLive
+        | TestMode::Module
+        | TestMode::ModuleBad => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.
