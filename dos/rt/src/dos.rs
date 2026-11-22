@@ -12,7 +12,7 @@
 use crate::dpmi::{self, RealRegs};
 use alloc::vec::Vec;
 use core::arch::asm;
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// A DOS error code (the AX returned with the carry flag set).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,10 +73,9 @@ pub fn exit_now(code: i32) -> ! {
 /// If `die` is entered again (a failure while printing its own message reaches it a second time), the second entry skips the
 /// message and exits at once, so it cannot recurse without bound.
 pub fn die(msg: &[u8]) -> ! {
-    static mut DYING: bool = false;
-    // SAFETY: single-threaded, and `die` never returns, so the flag is only ever set once.
-    let again = unsafe { core::ptr::replace(core::ptr::addr_of_mut!(DYING), true) };
-    if !again {
+    static DYING: AtomicBool = AtomicBool::new(false);
+    // The swap is an XCHG, which every 486 has, as in `panic.rs`; `die` never returns, so the flag is only ever set once.
+    if !DYING.swap(true, Ordering::Relaxed) {
         let _ = write(1, msg);
     }
     exit_now(255)
