@@ -15,7 +15,7 @@
   {
    "id": "hosted",
    "label": "Hosted track (Desk on DOS)",
-   "next": "The launcher bar and menus on the first window; decide whether to retire the C layer and promote rt to a top-level crate.",
+   "next": "The launcher bar and menus on the first window; decide whether to retire the C layer. rt is promoted to dos/ (R148).",
    "blocker": "Owner decision on retiring the C layer; the mouse path of the shell is checked only against DOSBox's own driver."
   },
   {
@@ -229,12 +229,12 @@
    "id": "rt",
    "label": "ELF target and rt crate",
    "branch": "hosted",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "d0"
    ],
    "critical": true,
-   "what": "dos-elf.json as the DOS target; rt promoted to a top-level crate with an exception handler.",
+   "what": "dos-elf.json as the DOS target and rt in its own top-level dos/ (R53, R148, merged). Not done: the exception handler that prints a register dump.",
    "why": "The base every DOS program and the hosted Desk build on.",
    "evidence": "docs/D0-RUST-DOS.md, next spikes"
   },
@@ -1580,7 +1580,7 @@
     "ru-sound",
     "ru-transcript"
    ],
-   "what": "R139: The promotion of R53 (spikes/d0-rust-dos/rt to rt/), done so the promoted runtime is the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once. Note: since R148 that path is `dos/rt`, so the runtime already sits in `dos/`; this row is recorded as written.",
+   "what": "R139: The promotion itself is done (R53, R148: dos/rt); what is left is to make the promoted runtime the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once. Note: since R148 that path is `dos/rt`, so the runtime already sits in `dos/`; this row is recorded as written.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
    "evidence": "docs/ROADMAP.md R139; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
   },
