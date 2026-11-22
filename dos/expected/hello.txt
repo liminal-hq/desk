@@ -6,7 +6,6 @@ console: AH=09h ok
 alloc: squares=10 sum=385 big=385001155
 alloc: 1 MB vec of 1000000 bytes, byte 999999 = 63
 alloc: churn kept 142500 bytes
-alloc: an impossible request returns null: true
 float: sqrt(385)=19.621417 sin(1)=0.841471 cos(1)=0.540302 atan2(1,1)*4=3.141593
 float: 0.3333333333333333 6.02214076e23 0.3
 float: control word 0x037f
