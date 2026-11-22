@@ -12,7 +12,7 @@
 // - `env`      the command tail and the environment, read from the PSP
 // - `fpu`      the x87: initial state and the maths `core` does not have
 // - `io`       `print!`, `println!` and a `core::fmt` writer over standard output
-// - `mem`      memcpy and friends for the COFF (stage 1) build only; the ELF build gets them from compiler_builtins
+// - `mem`      memcpy and friends for the COFF (stage 1) build; in the ELF build only strong `memcpy` and `memset` (string instructions), the rest from compiler_builtins
 // - `panic`    the panic handler: report, run the clean-up list, exit with status 3 (the `panic-handler` feature, on by default)
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
 // - `irq`      the interrupt registry: a stub per IRQ line that calls a Rust `IrqHandler`, and the end-of-interrupt
@@ -36,7 +36,6 @@ pub mod hal;
 pub mod heap;
 pub mod io;
 pub mod irq;
-#[cfg(target_os = "windows")]
 mod mem;
 #[cfg(feature = "panic-handler")]
 mod panic;
