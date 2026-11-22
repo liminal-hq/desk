@@ -69,8 +69,16 @@ pub fn exit_now(code: i32) -> ! {
 }
 
 /// Reports a failure before the runtime is up, and exits with status 255. No allocation, no formatting.
+///
+/// If `die` is entered again (a failure while printing its own message reaches it a second time), the second entry skips the
+/// message and exits at once, so it cannot recurse without bound.
 pub fn die(msg: &[u8]) -> ! {
-    let _ = write(1, msg);
+    static mut DYING: bool = false;
+    // SAFETY: single-threaded, and `die` never returns, so the flag is only ever set once.
+    let again = unsafe { core::ptr::replace(core::ptr::addr_of_mut!(DYING), true) };
+    if !again {
+        let _ = write(1, msg);
+    }
     exit_now(255)
 }
 
