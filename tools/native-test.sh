@@ -20,7 +20,8 @@
 # equal the goldens' six-bit colours (tools/frames.py check); a screen with one wrong pixel, altered sums and the other depth's sums must be
 # rejected. Shell live: the same scenario's live form (tests/shell/live.scn and live-keys.scn) is played into the kernel's `shell-live` mode
 # through the QEMU monitor (mouse_move, mouse_button, sendkey), and the marks it prints and QEMU's screendumps at each mark must equal the
-# goldens; the same input with the mouse, a key or Alt+Tab left out, altered sums and the wrong depth must be rejected. Skips (exit 0, with a message) only
+# goldens; the same input with the mouse, a key or Alt+Tab left out, altered sums and the wrong depth must be rejected. Module loader: the
+# kernel loads HELLO.DMD from a buffer, runs it and unloads it, and a copy with one bit flipped is refused (`module`, `module-bad`). Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 #
 # DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
@@ -372,5 +373,20 @@ grep -q 'the key sent during the call was lost' "$work/bios-nokey.txt" || fail "
 echo "native: ok — a run in which no key arrives during the call fails and says the key was lost"
 for run in bios-std bios-cirrus bios-vmware bios-hd; do finish_gfx "$run"; done
 rm -f dist/native-bios.img
+
+echo "== Module loader (docs/LOADER.md)"
+# The kernel loads HELLO.DMD from a buffer embedded in its image (tools/native-build.sh builds and packs the modules first), runs
+# app_start and app_stop, frees the frames and refuses an application. module-bad offers a copy with one bit of the image flipped,
+# which must be refused with the checksum's two values. Negative: the transcript with its log line changed, and the module-bad
+# transcript against the module run's expectation, must be rejected.
+tools/native-image.sh --test-mode module --out dist/native-module.img > /dev/null
+run module dist/native-module.img 0 tests/native/expected-module.txt
+tools/native-image.sh --test-mode module-bad --out dist/native-module-bad.img > /dev/null
+run module-bad dist/native-module-bad.img 0 tests/native/expected-module-bad.txt
+sed 's/^  log> hello from a loaded program$/  log> goodbye from a loaded program/' tests/native/expected-module.txt > "$work/wrong-module.txt"
+cmp -s tests/native/expected-module.txt "$work/wrong-module.txt" && fail "the wrong module transcript was not changed"
+must_fail "a module transcript with a wrong log line" python3 -I tools/native-check.py "$work/wrong-module.txt" "$work/module.txt"
+must_fail "the module-bad transcript as the module run's" python3 -I tools/native-check.py tests/native/expected-module.txt "$work/module-bad.txt"
+rm -f dist/native-module.img dist/native-module-bad.img
 
 printf 'native: all checks passed\n'

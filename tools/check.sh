@@ -229,12 +229,14 @@ cargo run --release --locked --quiet --manifest-path tools/layers/Cargo.toml
 fi
 
 # The native track's kernel: format and lints (the build and the boot are the native group's). The kernel embeds the real-mode trampoline
-# (kernel/src/bios.rs includes dist/native/bios16.bin), so it is assembled first, as tools/native-build.sh does. See kernel/README.md.
+# (kernel/src/bios.rs includes dist/native/bios16.bin) and the packed test modules (kernel/src/module.rs includes dist/modules/*), so they
+# are made first, as tools/native-build.sh does. See kernel/README.md.
 if run rust kernel; then
 step "Kernel: format and lints"
 (cd kernel && cargo fmt --check)
 mkdir -p dist/native
 nasm -f bin -Werror kernel/bios16.asm -o dist/native/bios16.bin
+tools/build-modules.sh
 (cd kernel && RUSTC_BOOTSTRAP=1 cargo clippy --release --locked -- -D warnings)
 fi
 

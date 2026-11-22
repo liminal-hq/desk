@@ -88,13 +88,14 @@ RULES=(
   'shell/dos/*;report,shelldos,compare;shell/dos/src/main.rs'
   'shell/*;report,rust,shelldos,native,compare;shell/gfx/src/lib.rs'
   # The module loader's host crates (the format reader and the packer, whose real-linker test builds a module for the kernel's target
-  # specification, a path the kernel rules above already send to rust). module/mods and module/dos are excluded from the workspace and
-  # will be built for the native and DOS tracks: give them rules of their own when those directories exist.
-  'module/*;report,rust;module/format/src/lib.rs'
+  # specification, a path the kernel rules above already send to rust). The kernel embeds HELLO.DMD and APPMAIN.DKX, built from
+  # module/mods and packed by tools/build-modules.sh, and links desk-module, so the native track needs them too. module/mods and module/dos are excluded from the workspace and
+  # will be built for the DOS track: give module/dos a rule of its own when that directory exists.
+  'module/*;report,rust,native,compare;module/format/src/lib.rs'
   # The module loader's checks (tools/check.sh's rust:module part runs tools/check-modules.sh): the build script, the expected transcripts,
   # the file(1) magic for the container and the transcript checker, which the native test shares.
   'tools/check-modules.sh;report,rust;tools/check-modules.sh'
-  'tools/build-modules.sh;report,rust;tools/build-modules.sh'
+  'tools/build-modules.sh;report,rust,native,compare;tools/build-modules.sh'
   'tools/desk.magic;report,rust;tools/desk.magic'
   'tools/native-check.py;report,rust,native,compare;tools/native-check.py'
   'tests/module/*;report,rust;tests/module/hello-info.txt'
@@ -246,8 +247,9 @@ self_test() {
   expect all rust-toolchain.toml
   expect base,report,rust,dos,stdstubs,shelldos,native,compare hal/hal/src/lib.rs
   expect base,report,rust,shelldos,native,compare shell/gfx/src/lib.rs
-  expect base,report,rust module/pack/tests/real.rs module/Cargo.lock module/mods/module.ld module/guest/src/lib.rs
-  expect base,report,rust tools/check-modules.sh tools/build-modules.sh tests/module/file-magic.txt tools/desk.magic
+  expect base,report,rust,shelldos,native,compare module/pack/tests/real.rs module/Cargo.lock module/mods/module.ld module/guest/src/lib.rs
+  expect base,report,rust,shelldos,native,compare tools/build-modules.sh
+  expect base,report,rust tools/check-modules.sh tests/module/file-magic.txt tools/desk.magic
   expect base,report,shelldos,native,compare tools/shell-compare.sh
   expect base,report,rust,shelldos,native,compare kernel/src/main.rs boot/stage1.asm
   expect base,report,fonts fonts/src/emoji/README.txt
