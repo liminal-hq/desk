@@ -140,7 +140,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 | `panic` | the panic handler | Runs the clean-up list, prints `RT PANIC: <location and message>` to standard output (the harness captures only that), exits with status 3. A panic inside the handler exits at once |
 | `cleanup` | `register`, `try_register`, `forget`, `len`, `run_all` | Strictly last in, first out: 16 slots, a re-registration moves the entry to the top, `forget` closes the gap, and a full list refuses (`register` returns false). `exit` and the panic handler run it. Every acquisition in `rt` registers first or rolls back, so a refusal leaves nothing hooked |
 | `timer`, `vga` | the hardware proofs below | |
-| `mem` | `memcpy`, `memmove`, `memset`, `memcmp` | Only for the COFF target (stage 1); the ELF build takes them from `compiler_builtins` |
+| `mem` | `memcpy`, `memmove`, `memset`, `memcmp` | All four for the COFF target (stage 1); the ELF build defines only strong `memcpy` and `memset` (`rep movsd`, `rep stosd`) and takes `memmove` and `memcmp` from `compiler_builtins` |
 
 **Addressing.** The stub's data selector covers only the image's block. Memory from DPMI 0501h is somewhere else in the linear address space, so `dpmi::init` sets the limit of `DS` to 4 GiB (0008h) and reloads `DS`, `ES` and `SS`; a pointer to any linear address is then `linear − base`, wrapping, and the segment arithmetic (`base + offset` modulo 2^32) undoes it. The first megabyte (the PSP, the environment, the VGA frame buffer, the BIOS data area) is mapped at linear 0 by CWSDPMI, so it needs no selector either. This is the same near-pointer arrangement DJGPP programs use.
 

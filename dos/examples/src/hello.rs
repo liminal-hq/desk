@@ -75,6 +75,8 @@ pub fn main() -> i32 {
 
     dpmi_more();
     files();
+    let (cases, bad) = mem_check();
+    println!("mem: memcpy and memset against a byte loop: {} cases, {} wrong", cases, bad);
     if args.first().map(String::as_str) == Some("oom") {
         // More than the machine has: the allocator fails, and the failure is a panic.
         let v: Vec<u8> = Vec::with_capacity(900 << 20);
@@ -159,4 +161,66 @@ fn files() {
         "file: missing file gives {:?}",
         dos::File::open("NOSUCH.FIL", dos::Mode::Read).err()
     );
+}
+
+/// Compares the runtime's `memcpy` and `memset`, called through the C symbols, with a plain byte loop (volatile, so the compiler cannot
+/// turn the loop back into a call to them) over destination and source offsets 0 to 7 and lengths 0 to 40, and a few larger ones.
+fn mem_check() -> (usize, usize) {
+    use core::ffi::c_void;
+    extern "C" {
+        fn memcpy(dst: *mut c_void, src: *const c_void, n: usize) -> *mut c_void;
+        fn memset(dst: *mut c_void, c: i32, n: usize) -> *mut c_void;
+    }
+    const PAD: usize = 16;
+    let lengths: Vec<usize> = (0..=40).chain([63, 64, 65, 255, 256, 257, 1000, 4099]).collect();
+    let mut cases = 0;
+    let mut bad = 0;
+    for &n in &lengths {
+        for doff in 0..8usize {
+            for soff in 0..8usize {
+                let total = PAD + 8 + n + PAD;
+                let src: Vec<u8> = (0..total).map(|i| (i as u8).wrapping_mul(31).wrapping_add(7)).collect();
+                let mut got: Vec<u8> = (0..total).map(|i| (i as u8) ^ 0x5A).collect();
+                let mut want = got.clone();
+                // SAFETY: both ranges lie inside the vectors (offset + length + padding), and the vectors do not overlap.
+                unsafe {
+                    for i in 0..n {
+                        let b = core::ptr::read_volatile(src.as_ptr().add(PAD + soff + i));
+                        core::ptr::write_volatile(want.as_mut_ptr().add(PAD + doff + i), b);
+                    }
+                    let r = memcpy(
+                        got.as_mut_ptr().add(PAD + doff).cast(),
+                        src.as_ptr().add(PAD + soff).cast(),
+                        n,
+                    );
+                    if r != got.as_mut_ptr().add(PAD + doff).cast() {
+                        bad += 1;
+                    }
+                }
+                cases += 1;
+                if got != want {
+                    bad += 1;
+                }
+                // memset, with a fill byte whose sign bit is set so a wrong widening shows.
+                let fill = 0xA7u8;
+                let mut got: Vec<u8> = (0..total).map(|i| (i as u8) ^ 0x5A).collect();
+                let mut want = got.clone();
+                // SAFETY: the range lies inside the vector.
+                unsafe {
+                    for i in 0..n {
+                        core::ptr::write_volatile(want.as_mut_ptr().add(PAD + doff + i), fill);
+                    }
+                    let r = memset(got.as_mut_ptr().add(PAD + doff).cast(), i32::from(fill), n);
+                    if r != got.as_mut_ptr().add(PAD + doff).cast() {
+                        bad += 1;
+                    }
+                }
+                cases += 1;
+                if got != want {
+                    bad += 1;
+                }
+            }
+        }
+    }
+    (cases, bad)
 }

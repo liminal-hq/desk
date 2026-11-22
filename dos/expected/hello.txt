@@ -20,3 +20,4 @@ file: wrote 300000 bytes, length 300000
 file: one read call: 300000 bytes, match true
 file: 4 KiB reads: 300000 bytes, match true
 file: missing file gives Some(DosError(2))
+mem: memcpy and memset against a byte loop: 6272 cases, 0 wrong
