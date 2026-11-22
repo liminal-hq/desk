@@ -22,6 +22,7 @@ desk-present = { path = "../shell/present" }
 desk-ui = { path = "../shell/ui" }
 desk-wm = { path = "../shell/wm" }
 desk-shell = { path = "../shell/shell" }
+desk-module = { path = "../module/format" }
 
 [features]
 default = []

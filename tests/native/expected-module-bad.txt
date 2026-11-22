@@ -1,0 +1,4 @@
+...
+fpu: results check out
+module: refused HELLO.DMD: bad checksum (stored {HEX}, computed {HEX})
+boot complete

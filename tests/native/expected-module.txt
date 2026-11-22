@@ -1,0 +1,11 @@
+...
+fpu: results check out
+module: HELLO.DMD {N:3000..7000} bytes, image {N:3000..7000}, {N:1..2000} relocations, 2 imports
+module: HELLO loaded away from its link base: yes
+  log> hello from a loaded program
+  log> hello: app=1 count=7
+module: HELLO app_start returned 0
+  log> hello: stop app=1
+module: HELLO unloaded, memory as before: yes
+module: refused APPMAIN.DKX: an application (kind 2) is not loadable here
+boot complete
