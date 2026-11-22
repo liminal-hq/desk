@@ -62,6 +62,8 @@ pub fn hook() -> Result<(u16, u32), dpmi::Error> {
         let end = dpmi::ptr_to_linear(addr_of!(__image_end));
         dpmi::lock(start, end - start)?;
         let old = dpmi::get_pm_vector(vector)?;
+        // A second install starts from zero. The handler is not reachable yet, so a plain write is safe.
+        RT_IRQ0_TICKS = 0;
         RT_IRQ0_DSEL = dpmi::data_selector() as u32;
         RT_IRQ0_OLD = [old.1, old.0 as u32];
         let cs: u16;

@@ -41,8 +41,9 @@ pub static HEAP: Heap = Heap(UnsafeCell::new(State {
     total: 0,
 }));
 
-fn round_up(x: usize, a: usize) -> usize {
-    (x + a - 1) & !(a - 1)
+/// Rounds `x` up to a multiple of the power of two `a`, or `None` if that does not fit in a `usize`.
+fn round_up(x: usize, a: usize) -> Option<usize> {
+    Some(x.checked_add(a - 1)? & !(a - 1))
 }
 
 impl Heap {
@@ -90,14 +91,23 @@ impl Heap {
     unsafe fn take(&self, layout: Layout) -> *mut u8 {
         let st = &mut *self.0.get();
         let align = layout.align().max(8);
-        let size = round_up(layout.size().max(1), 8);
+        // A size or alignment that cannot be rounded up in 32 bits can never be satisfied: fail the allocation, do not wrap.
+        let Some(size) = round_up(layout.size().max(1), 8) else {
+            return null_mut();
+        };
         let mut prev: *mut Node = null_mut();
         let mut cur = st.free;
         while !cur.is_null() {
             let start = cur as usize;
             let node_size = (*cur).size;
-            let user = round_up(start + HEADER, align);
-            let end = user + size;
+            // The node lies inside the address space, so `start + node_size` and `start + HEADER` cannot overflow; the caller's
+            // size and alignment can push `user` and `end` past it, and then no block can hold the request.
+            let Some(user) = round_up(start + HEADER, align) else {
+                return null_mut();
+            };
+            let Some(end) = user.checked_add(size) else {
+                return null_mut();
+            };
             if end <= start + node_size {
                 let rest = start + node_size - end;
                 let next = (*cur).next;
@@ -131,8 +141,14 @@ impl Heap {
 
     /// Gets more memory from the host: enough for `layout` and at least `CHUNK`.
     unsafe fn grow(&self, layout: Layout) -> bool {
-        let need = layout.size().max(1) + layout.align().max(8) + HEADER + MIN_NODE;
-        let want = round_up(need.max(CHUNK), 4096);
+        let need = layout
+            .size()
+            .max(1)
+            .checked_add(layout.align().max(8))
+            .and_then(|n| n.checked_add(HEADER + MIN_NODE));
+        let Some(want) = need.and_then(|n| round_up(n.max(CHUNK), 4096)) else {
+            return false;
+        };
         match dpmi::alloc_block(want as u32) {
             Ok(b) => {
                 let p = dpmi::linear_to_ptr::<u8>(b.linear) as usize;

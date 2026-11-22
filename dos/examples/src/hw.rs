@@ -56,6 +56,13 @@ pub fn main() -> i32 {
         core::hint::spin_loop();
     }
     println!("hw: no ticks counted after unhook: {}", timer::ticks() == t);
+    // A second install starts from zero, not from where the first one stopped (t is about 19 here).
+    timer::hook().expect("hook again");
+    println!(
+        "hw: ticks restart from zero on a second install: {}",
+        t >= 18 && timer::ticks() <= 1
+    );
+    timer::unhook();
 
     // VGA.
     let mode0 = vga::get_mode();
