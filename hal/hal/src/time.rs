@@ -47,7 +47,8 @@ pub trait Clock {
 /// since the last call, and the leftover part of a step carries to the next call, so the long-run rate is exact. If more than
 /// `max_catch_up` steps are owed (a stall: a long disk read, a debugger), it returns `max_catch_up`, drops the rest and
 /// re-synchronises to `now`, so the stall is not followed by a burst. Readings are compared with wrapping subtraction, so the
-/// counter's wrap is harmless; a reading that goes backwards looks like a very long stall. Needed by the fast-timer work (roadmap
+/// counter's wrap is harmless; a reading that goes backwards looks like a very long stall and returns `max_catch_up`, so the source
+/// must be monotonic (a tick counter is; a clock refined by a latch reading can step back by a tick and is not). Needed by the fast-timer work (roadmap
 /// R139 and R134), which has not been built on it yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Pacer {

@@ -125,7 +125,8 @@ impl<P: PortIo> Pit<P> {
 ///
 /// A small `Copy` value with `u32` arithmetic only (no allocation, no floating point, no 64-bit division), so it can run inside
 /// the interrupt handler. A divisor of 0 means 65,536, as the chip reads it, and chains on every tick; so does any divisor above
-/// 65,536, which is clamped to it. Needed by the hosted fast timer (roadmap R139), which has not been built on it yet.
+/// 65,536, which is clamped to it. The caller passes the divisor it programmed, which `check_divisor` has accepted (it refuses 1
+/// and anything above 65,536), so the clamp only matters if the two are out of step. Needed by the hosted fast timer (roadmap R139), which has not been built on it yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BiosChain {
     divisor: u32,
@@ -224,10 +225,8 @@ mod tests {
             for ticks in [0, 1, 2, 3, 100, 65_535, 65_536, 123_457, 300_000] {
                 let expected = (u64::from(ticks) * d / 65_536) as i64;
                 let got = i64::from(chains(divisor, ticks));
-                assert!(
-                    (got - expected).abs() <= 1,
-                    "divisor {divisor}, {ticks} ticks: {got} vs {expected}"
-                );
+                // The accumulator is N times the divisor modulo 65,536, so the count is exact, not merely within one.
+                assert_eq!(got, expected, "divisor {divisor}, {ticks} ticks");
             }
         }
         assert_eq!(chains(19_886, 65_536), 19_886, "a whole turn of the accumulator is exact");
