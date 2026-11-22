@@ -153,9 +153,10 @@ class HalChaptersTests(unittest.TestCase):
             return len(re.findall(r"#\[test\]", rd(*parts)))
         self.assertEqual(count("hal", "drivers", "serial", "src", "lib.rs"), 8)
         self.assertEqual(count("hal", "drivers", "pic", "src", "lib.rs"), 6)
-        self.assertEqual(count("hal", "drivers", "pit", "src", "lib.rs"), 8)
+        self.assertEqual(count("hal", "drivers", "pit", "src", "lib.rs"), 12)
         self.assertIn("eight tests", self.drv)
         self.assertIn("six tests", self.drv)
+        self.assertIn("twelve tests", self.drv)
 
 
 if __name__ == "__main__":

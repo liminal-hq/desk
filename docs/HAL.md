@@ -202,6 +202,12 @@ pub trait Clock {
 }
 pub trait Delay { fn delay_us(&self, us: u32); }
 pub struct TickCounter { /* AtomicU32 */ }                // tick() is fetch_add (lock xadd)
+pub struct Pacer { /* ticks per step, catch-up cap, origin */ }
+impl Pacer {
+    pub const fn new(ticks_per_step: u32, max_catch_up: u32) -> Pacer;
+    pub fn due(&mut self, now: Ticks) -> u32;            // whole steps since the last call, capped
+    pub fn reset(&mut self, now: Ticks);
+}
 
 // sketch: arrives with its first implementation (CMOS natively, INT 21h under DOS)
 pub struct DateTime { pub year: u16, pub month: u8, pub day: u8, pub hour: u8, pub minute: u8, pub second: u8 }
@@ -209,9 +215,10 @@ pub trait WallClock { fn now(&self) -> Result<DateTime, HalError>; }
 ```
 
 - **Monotonic clock.** A 486 has no TSC (`rdtsc` faults under QEMU's `-cpu 486` and DOSBox's `cputype = 486`), so the clock is the PIT's channel 0 interrupt counted in a 32-bit word, the widest atomic the target has. It wraps after 497 days at 100 Hz, 49 days at 1 kHz; every comparison uses `Ticks::since` (wrapping subtraction). The rate is in millihertz because the hosted track keeps the BIOS rate of 18.2 Hz.
+- **Pacing.** `Pacer` turns a tick source into whole fixed-length steps with integer arithmetic. The first `due` fixes the origin and returns 0; after that it returns the whole steps elapsed, carrying the remainder. When more than `max_catch_up` are owed it returns the cap, drops the rest and re-synchronises to `now`, so a stall is not followed by a burst. It is tested across the counter's wrap. Nothing uses it yet; the fast hosted timer is the first user.
 - **Sub-tick time** comes from latching and reading channel 0's counter (`Pit::read_counter`, 838 ns resolution), with interrupts off.
 - **The calibrated delay** counts loop iterations across one tick at start-up (or, better, against the PIT counter, which needs no full tick), stores iterations per microsecond, and spins. For device timing only; the core waits for events.
-- **Hosted timer rate.** Desk may keep the BIOS's 18.2 Hz (chain every tick, as d0 does), or reprogram the PIT faster and chain to the BIOS handler only every Nth tick so DOS's clock stays right, restoring the BIOS rate on exit (`Pit::restore_bios_rate`, registered with `rt`'s clean-up list). The first is the default until the shell needs finer time.
+- **Hosted timer rate.** Desk may keep the BIOS's 18.2 Hz (chain every tick, as d0 does), or reprogram the PIT faster and chain to the BIOS handler only every Nth tick so DOS's clock stays right (`desk_pit::BiosChain` is the built accumulator for that: it adds the divisor on each interrupt and says to chain exactly when the sum reaches 65,536, keeping the remainder, in `u32` arithmetic alone; the DOS timer does not use it yet), restoring the BIOS rate on exit (`Pit::restore_bios_rate`, registered with `rt`'s clean-up list). The first is the default until the shell needs finer time.
 - **Wall clock.** Natively the CMOS real-time clock (ports `0x70`/`0x71`, a small `desk-rtc` driver); under DOS, INT 21h AH=2Ah and 2Ch through `rt`. Local time, no zone. Not monotonic: the user can set it.
 
 ### Console and debug output (built: `DebugOut` and the 16550)
