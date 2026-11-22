@@ -121,7 +121,7 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual(lines("tools", "coff2go32.py"), 112)
         self.assertEqual(lines("dos", "tools", "elf2go32.py"), 139)
         total = sum(len(t.splitlines()) for t in self.src.values())
-        self.assertEqual((total, len(self.src)), (2329, 16))
+        self.assertEqual((total, len(self.src)), (2381, 16))
 
     def test_the_build_script_steps(self):
         sh = rd("shell", "dos", "build.sh")

@@ -1,0 +1,7 @@
+cleanup: registered a, b, c; forgot a; registered a again (3 on the list)
+cleanup: the list holds 16 of 16
+cleanup: a 17th registration was refused: true
+cleanup: exiting
+cleanup: run a
+cleanup: run c
+cleanup: run b

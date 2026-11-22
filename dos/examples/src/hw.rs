@@ -66,7 +66,7 @@ pub fn main() -> i32 {
 
     // VGA.
     let mode0 = vga::get_mode();
-    vga::enter_mode13();
+    vga::enter_mode13().expect("clean-up list full");
     let m13 = vga::get_mode();
     vga::draw_pattern();
     let sum = vga::checksum();
@@ -85,9 +85,9 @@ pub fn main() -> i32 {
     if args.first().map(alloc::string::String::as_str) == Some("leave-hooked") {
         // SAFETY: single-threaded, before the hook.
         unsafe { BEFORE = before };
-        rt::cleanup::register(report);
+        assert!(rt::cleanup::register(report), "clean-up list full");
         timer::hook().expect("hook");
-        vga::enter_mode13();
+        vga::enter_mode13().expect("clean-up list full");
         println!("hw: exiting with the timer hooked and mode 13h set");
     }
     // Bypasses the clean-up list: what the host itself does about a hooked vector when the program ends.

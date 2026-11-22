@@ -71,13 +71,25 @@ pub fn hook() -> Result<(u16, u32), dpmi::Error> {
         dpmi::set_pm_vector(vector, cs, rt_irq0 as *const () as usize as u32)?;
         VECTOR = vector;
         HOOKED = true;
-        cleanup::register(unhook);
+        if !cleanup::register(unhook) {
+            // The list is full: put the vector back rather than leave a hook that nothing would remove.
+            unhook_now();
+            return Err(dpmi::Error(CLEANUP_FULL));
+        }
         Ok(old)
     }
 }
 
+/// The `dpmi::Error` code `hook` returns when the clean-up list is full (no DPMI function returns it).
+pub const CLEANUP_FULL: u16 = 0xFFFF;
+
 /// Puts the previous handler back. Safe to call twice, and from the clean-up list.
 pub fn unhook() {
+    unhook_now();
+    cleanup::forget(unhook);
+}
+
+fn unhook_now() {
     // SAFETY: restores the saved far pointer; after this the handler is unreachable.
     unsafe {
         if !HOOKED {
@@ -86,7 +98,6 @@ pub fn unhook() {
         let old = read_volatile(addr_of!(RT_IRQ0_OLD));
         let _ = dpmi::set_pm_vector(VECTOR, old[1] as u16, old[0]);
         HOOKED = false;
-        cleanup::forget(unhook);
     }
 }
 

@@ -58,6 +58,12 @@ case "$out" in *'exiting with the timer hooked and mode 13h set'*) ;; *) fail "u
 case "$out" in *'the timer vector and text mode are back: true') ;; *) fail "exit did not put the machine back: $out" ;; esac
 echo "$out" | tail -2
 
+step "CLEANUP.EXE: the list runs last in, first out, and refuses a 17th entry"
+run dist/d0 CLEANUP.EXE
+[ "$status" = 0 ] || fail "CLEANUP.EXE exited with status $status"
+same CLEANUP.EXE $EXP/cleanup.txt
+echo "$out" | tail -4
+
 step "Allocation failure is a panic"
 run dist/d0 HELLO.EXE oom
 [ "$status" = 3 ] || fail "HELLO.EXE oom exited with status $status, not 3"
@@ -91,6 +97,12 @@ trap 'rm -f "$wrong"' EXIT
 sed 's/squares=10/squares=11/' $EXP/hello.txt > "$wrong"
 run dist/d0 HELLO.EXE
 if (same HELLO.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong transcript was accepted"; fi
+echo "rejected, as it should be"
+
+step "A transcript with the clean-up order swapped fails the check"
+sed -e 's/run c$/run TMP/' -e 's/run b$/run c/' -e 's/run TMP$/run b/' $EXP/cleanup.txt > "$wrong"
+run dist/d0 CLEANUP.EXE
+if (same CLEANUP.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the order swapped was accepted"; fi
 echo "rejected, as it should be"
 
 printf '\nAll dos checks passed.\n'
