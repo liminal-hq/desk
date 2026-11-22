@@ -1,4 +1,4 @@
-// memcpy, memmove, memset and memcmp for the stage 1 build, where nothing else provides them; memcpy and memset again, faster, for the ELF build.
+// memcpy, memmove, memset and memcmp for the stage 1 build, where nothing else provides them; memcpy and memset again, with string instructions, for the ELF build.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT

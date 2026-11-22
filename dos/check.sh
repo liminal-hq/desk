@@ -22,6 +22,17 @@ step "Rust format and lints (dos workspace)"
 step "Build: rust-lld, then dos/tools/elf2go32.py (no gcc, no ld, no C library)"
 $DIR/build.sh
 
+step "The strong memcpy and memset linked (string instructions, not compiler_builtins' thunks)"
+OBJDUMP="$(command -v llvm-objdump || command -v objdump || true)"
+[ -n "$OBJDUMP" ] || fail "no objdump on this machine, so the symbols in the linked image cannot be checked"
+disasm="$("$OBJDUMP" -d --no-show-raw-insn dos/target/dos-elf/release/hello)"
+# The body of one symbol: from its label to the next blank line.
+body() { printf '%s\n' "$disasm" | awk -v sym="<$1>:" '$2 == sym {on = 1; next} on && NF == 0 {exit} on'; }
+# llvm-objdump spells the dword string moves movsd and stosd; GNU objdump (the CI image has only that one) spells them movsl and `stos %eax`; the register operand is what tells the dword store from a byte one.
+body memcpy | grep -Eq 'rep movs[dl]' || fail "memcpy in the linked hello has no rep movsd: the weak compiler_builtins one won"
+body memset | grep -Eq 'rep stos.*eax' || fail "memset in the linked hello has no rep stosd: the weak compiler_builtins one won"
+echo "memcpy contains rep movsd and memset contains rep stosd"
+
 step "HELLO.EXE: output, arguments, heap, x87, DPMI, files"
 run dist/d0 HELLO.EXE
 [ "$status" = 0 ] || fail "HELLO.EXE exited with status $status"
