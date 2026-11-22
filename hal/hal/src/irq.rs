@@ -96,12 +96,39 @@ pub trait SharedIrqService: Sync {
     fn on_irq(&self);
 }
 
+/// A handler that decides, on each interrupt, what happens after it returns: the end-of-interrupt, or the previous owner of the
+/// vector. A reprogrammed timer needs this: it runs faster than the BIOS expects and chains to the BIOS only on the ticks that keep
+/// the DOS clock right. Nothing in the HAL implements it yet.
+pub trait DecidingIrqService {
+    /// Runs in interrupt context; see the rules at the top of this module.
+    fn on_irq(&mut self) -> Action;
+}
+
+/// What a handler asks the platform to do once it has returned. The value is returned in `EAX`, so the DOS stub can test it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum Action {
+    /// The platform sends the end-of-interrupt.
+    Eoi = 0,
+    /// The previous owner of the vector runs next and acknowledges the interrupt. Where there is no previous owner (the native
+    /// kernel), the platform treats this as `Eoi`: the interrupt still has to be acknowledged, or the line stays blocked.
+    Chain = 1,
+}
+
+/// Whether the platform passes the interrupt to the previous owner: the line was registered with `Chain::Previous`, or the
+/// handler returned `Action::Chain`, and there is a previous owner to pass it to. Without one, the interrupt is acknowledged.
+pub const fn chains(registered: Chain, action: Action, has_previous: bool) -> bool {
+    has_previous && (matches!(registered, Chain::Previous) || matches!(action, Action::Chain))
+}
+
 /// A registered handler: what a platform's interrupt stub calls. Two words, so the stub can keep it in a locked table. The function
-/// uses the C calling convention (cdecl on x86: the argument on the stack, `EAX`, `ECX` and `EDX` clobbered), so an assembly stub
-/// may call it directly with `push ctx; call func; add esp, 4`, as well as a Rust dispatch through `call`.
+/// uses the C calling convention (cdecl on x86: the argument on the stack, `EAX`, `ECX` and `EDX` clobbered) and returns an `Action`
+/// in `EAX`, so an assembly stub may call it directly with `push ctx; call func; add esp, 4` and test the result, as well as a Rust
+/// dispatch through `call`. The handlers built from `IrqService` and `SharedIrqService` always return `Eoi`: their line's
+/// `Chain` is the registration's, and the platform combines the two with `chains`.
 #[derive(Clone, Copy, Debug)]
 pub struct IrqHandler {
-    func: unsafe extern "C" fn(*mut ()),
+    func: unsafe extern "C" fn(*mut ()) -> Action,
     ctx: *mut (),
 }
 
@@ -114,16 +141,24 @@ unsafe impl Send for IrqHandler {}
 // one-caller-at-a-time contract.
 unsafe impl Sync for IrqHandler {}
 
-unsafe extern "C" fn trampoline<T: IrqService>(ctx: *mut ()) {
+unsafe extern "C" fn trampoline<T: IrqService>(ctx: *mut ()) -> Action {
     // SAFETY: `ctx` came from the `&'static mut T` given to `from_static`, and `call`'s contract rules out a second caller.
     let svc = unsafe { &mut *(ctx as *mut T) };
     svc.on_irq();
+    Action::Eoi
 }
 
-unsafe extern "C" fn shared_trampoline<T: SharedIrqService>(ctx: *mut ()) {
+unsafe extern "C" fn shared_trampoline<T: SharedIrqService>(ctx: *mut ()) -> Action {
     // SAFETY: `ctx` came from the `&'static T` given to `from_shared` and is only used as a shared reference; `T: Sync`.
     let svc = unsafe { &*(ctx as *const T) };
     svc.on_irq();
+    Action::Eoi
+}
+
+unsafe extern "C" fn deciding_trampoline<T: DecidingIrqService>(ctx: *mut ()) -> Action {
+    // SAFETY: `ctx` came from the `&'static mut T` given to `from_deciding`, and `call`'s contract rules out a second caller.
+    let svc = unsafe { &mut *(ctx as *mut T) };
+    svc.on_irq()
 }
 
 impl IrqHandler {
@@ -146,24 +181,33 @@ impl IrqHandler {
         }
     }
 
+    /// The handler for a driver whose interrupt-side state decides on each interrupt whether to chain. Ownership of the state moves
+    /// to the handler, as in `from_static`.
+    pub fn from_deciding<T: DecidingIrqService + Send + 'static>(svc: &'static mut T) -> IrqHandler {
+        IrqHandler {
+            func: deciding_trampoline::<T>,
+            ctx: svc as *mut T as *mut (),
+        }
+    }
+
     /// A handler from raw parts, for a platform's own handlers.
     ///
     /// # Safety
     ///
     /// `func(ctx)` must be sound to call from interrupt context at any time until the handler is unregistered, `ctx` must stay
     /// valid (and locked under DPMI) for that long, and nothing else may use what `ctx` points to without synchronisation.
-    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()), ctx: *mut ()) -> IrqHandler {
+    pub const unsafe fn from_raw(func: unsafe extern "C" fn(*mut ()) -> Action, ctx: *mut ()) -> IrqHandler {
         IrqHandler { func, ctx }
     }
 
-    /// Runs the handler.
+    /// Runs the handler and returns what it asks the platform to do next (`chains` combines it with the line's registration).
     ///
     /// # Safety
     ///
     /// Only the platform's dispatch calls this, and never twice at once for the same handler (interrupts are off while it runs).
-    pub unsafe fn call(&self) {
-        // SAFETY: the pair was built by `from_static`, `from_shared` or `from_raw` under their contracts; the caller rules out
-        // re-entry.
+    pub unsafe fn call(&self) -> Action {
+        // SAFETY: the pair was built by `from_static`, `from_shared`, `from_deciding` or `from_raw` under their contracts; the
+        // caller rules out re-entry.
         unsafe { (self.func)(self.ctx) }
     }
 }
@@ -227,6 +271,46 @@ mod tests {
             h.call();
         }
         assert_eq!(SHARED.load(Ordering::Acquire), 2);
+    }
+
+    #[test]
+    fn chains_needs_a_previous_owner_and_a_reason() {
+        for registered in [Chain::None, Chain::Previous] {
+            for action in [Action::Eoi, Action::Chain] {
+                let want = registered == Chain::Previous || action == Action::Chain;
+                assert_eq!(chains(registered, action, true), want);
+                assert!(!chains(registered, action, false));
+            }
+        }
+    }
+
+    #[test]
+    fn the_handlers_of_the_old_traits_return_eoi_and_a_deciding_one_returns_its_choice() {
+        static SHARED: AtomicU32 = AtomicU32::new(0);
+        let svc: &'static mut Count = Box::leak(Box::new(Count {
+            seen: 0,
+            shared: &SHARED,
+        }));
+        // SAFETY: the test is the only caller.
+        assert_eq!(unsafe { IrqHandler::from_static(svc).call() }, Action::Eoi);
+        struct Flip(bool);
+        impl DecidingIrqService for Flip {
+            fn on_irq(&mut self) -> Action {
+                self.0 = !self.0;
+                if self.0 {
+                    Action::Chain
+                } else {
+                    Action::Eoi
+                }
+            }
+        }
+        let h = IrqHandler::from_deciding(Box::leak(Box::new(Flip(false))));
+        // SAFETY: the test is the only caller.
+        unsafe {
+            assert_eq!(h.call(), Action::Chain);
+            assert_eq!(h.call(), Action::Eoi);
+        }
+        assert_eq!(Action::Chain as u32, 1);
     }
 
     #[test]
