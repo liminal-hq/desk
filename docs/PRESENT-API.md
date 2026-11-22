@@ -88,6 +88,15 @@ Two questions only the owner can answer:
 1. Should mode restore be tied to dropping the session (**yes** or **no**), or stay the explicit `restore_text_mode` call?
 2. May `MmioRegion` leave the public `Display` surface entirely (**yes** or **no**), or must the shell keep reaching a region for read-back and the kernel's checks?
 
+## The owner's answers
+
+Recorded on 2026-11-22.
+
+1. **Mode restore is tied to dropping the session: yes.** Leaving the session puts the screen back, so a forgotten restore cannot leave a machine in graphics mode. On DOS the clean-up list stays as the backstop for exits and panics, which do not run destructors.
+2. **`MmioRegion` leaves the public `Display` surface: yes.** Only the session type exposes spans, and `MmioRegion` becomes an internal detail of the platform crates, so nothing outside the platform can hold a stale region. The shell's read-back and the kernel's checks have to be given a different route in the migration.
+
+These settle the two questions above and the direction (option B, reached in two steps). The option and the migration are not built, and nothing has been decided about when: the code is planned separately, after the runtime tasks that do not depend on it, and the app interface (R79) is written against it.
+
 ## What could not be verified
 
 - Nothing was compiled or run: no borrow-check result, no size, no timing. The three signatures are sketches, and the sizes and the C conflicts are **inferences** from reading.
