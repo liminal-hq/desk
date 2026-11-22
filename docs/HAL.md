@@ -252,6 +252,7 @@ pub trait Display {
 - **Mode setting is the platform's job** (INT 10h and VBE function 4F02h through DPMI 0300h under DOS; register programming, or a BIOS call made before entering protected mode, natively). **Everything after the mode set is the driver's**: the DAC (`0x3C7`/`0x3C8`/`0x3C9`), retrace (`0x3DA` bit 3), the sequencer map mask and graphics controller for planar mode 12h (`0x3C4`/`0x3C5`, `0x3CE`/`0x3CF`). That split is what lets spike D reuse spike A's driver.
 - Fades and dims go through the DAC, never the frame buffer (`AGENTS.md`), so `set_palette` is in the trait from the start.
 - The core sees `Display` and a `FrameBuffer`; it never sees INT 10h, a VBE info block or a DPMI selector.
+- The returned `FrameBuffer` is not tied to the display by a borrow, so a retained region can outlive the mode; [`PRESENT-API.md`](PRESENT-API.md) sets out the options for closing that (R136).
 
 ### Input (built by spike C for the kernel and spike B for DOS)
 
