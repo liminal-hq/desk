@@ -11,9 +11,10 @@
 //    because DS cannot be trusted yet), and **switches to a locked interrupt stack in the program's own data segment**, so Rust
 //    code can dereference a pointer to a local through DS.
 // 2. It calls `rt_irq_dispatch(line)`, which looks the line up in a table, runs the `IrqHandler` and, for a line Desk owns
-//    (`Chain::None`), sends the end-of-interrupt through the HAL's `desk-pic` driver. A spurious IRQ 7 or 15 runs no handler and gets
-//    the acknowledgement `eoi_spurious` says.
-// 3. It switches back and returns with `iretd`, or, for `Chain::Previous`, jumps to the previous handler, which acknowledges the
+//    (`Chain::None`) whose handler does not ask to chain, sends the end-of-interrupt through the HAL's `desk-pic` driver. A spurious
+//    IRQ 7 or 15 runs no handler and gets the acknowledgement `eoi_spurious` says. The dispatch returns in `EAX` whether the
+//    interrupt chains: the line was registered with `Chain::Previous`, or the handler returned `Action::Chain`.
+// 3. It switches back and returns with `iretd`, or, if `EAX` was nonzero, jumps to the previous handler, which acknowledges the
 //    interrupt itself (the BIOS keyboard handler and the DOS timer do).
 //
 // The handler runs with interrupts off (the host delivers a hardware interrupt through an interrupt gate and the stub never
@@ -28,7 +29,7 @@ use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ptr::{addr_of, addr_of_mut};
 use core::sync::atomic::{AtomicBool, Ordering};
-use desk_hal::irq::{Chain, InterruptController, Irq, IrqHandler, IrqRegistry};
+use desk_hal::irq::{chains, Action, Chain, InterruptController, Irq, IrqHandler, IrqRegistry};
 use desk_hal::x86::RawPorts;
 use desk_hal::HalError;
 use desk_pic::Pic8259;
@@ -47,8 +48,7 @@ static mut RT_IRQ_SAVED: [u32; 2] = [0; 2];
 /// The flat data selector, where the stub can read it through CS.
 #[no_mangle]
 static mut RT_IRQ_DSEL: u32 = 0;
-/// Nonzero for a line whose previous handler runs after ours.
-#[no_mangle]
+/// Nonzero for a line registered with `Chain::Previous`, whose previous handler always runs after ours.
 static mut RT_IRQ_CHAIN: [u32; 16] = [0; 16];
 /// The previous handler of each line as a far pointer: 32-bit offset, then the selector (the layout of `jmp fword ptr`).
 #[no_mangle]
@@ -79,14 +79,15 @@ global_asm!(
     "push \\n",
     "call {dispatch}",
     "add esp, 16",
+    // The flags from this test survive the `lss` and the pops, none of which touches them.
+    "test eax, eax",
     "lss esp, fword ptr [{saved}]",
     "pop es",
     "pop ds",
     "pop edx",
     "pop ecx",
     "pop eax",
-    "cmp dword ptr cs:[{chain} + 4 * \\n], 0",
-    "jne 2f",
+    "jnz 2f",
     "iretd",
     "2:",
     "jmp fword ptr cs:[{old} + 8 * \\n]",
@@ -106,7 +107,6 @@ global_asm!(
     stack = sym RT_IRQ_STACK,
     stack_size = const STACK_SIZE,
     dispatch = sym rt_irq_dispatch,
-    chain = sym RT_IRQ_CHAIN,
     old = sym RT_IRQ_OLD,
 );
 
@@ -116,9 +116,10 @@ extern "C" {
     static __image_end: u8;
 }
 
-/// Called by the stub, on the interrupt stack, with the flat data selector loaded.
+/// Called by the stub, on the interrupt stack, with the flat data selector loaded. Returns nonzero if the previous handler of the
+/// line runs next (and acknowledges the interrupt), zero if the dispatch has sent the end-of-interrupt.
 #[no_mangle]
-extern "C" fn rt_irq_dispatch(line: u32) {
+extern "C" fn rt_irq_dispatch(line: u32) -> u32 {
     let line = (line & 15) as usize;
     // SAFETY: the DPMI client may use the PIC ports (`RawPorts::new`'s contract; the first port access of the program is the VGA
     // palette in the checks and `desk-pic` is what DJGPP programs use as well).
@@ -129,14 +130,20 @@ extern "C" fn rt_irq_dispatch(line: u32) {
     let (handler, chained) = unsafe { ((*addr_of!(TABLE))[line], (*addr_of!(RT_IRQ_CHAIN))[line] != 0) };
     if !chained && (line == 7 || line == 15) && pic.is_spurious(irq) {
         pic.eoi_spurious(irq);
-        return;
+        return 0;
     }
+    let mut action = Action::Eoi;
     if let Some(h) = handler {
-        // SAFETY: built by `from_static`, `from_shared` or `from_raw` under their contracts, and a stub never re-enters.
-        unsafe { h.call() };
+        // SAFETY: built by `from_static`, `from_shared`, `from_deciding` or `from_raw` under their contracts, and a stub never
+        // re-enters.
+        action = unsafe { h.call() };
     }
-    if !chained {
+    // Every line has a previous owner (the vector the host had before `register`), so the handler's choice always counts.
+    if chains(if chained { Chain::Previous } else { Chain::None }, action, true) {
+        1
+    } else {
         pic.eoi(irq);
+        0
     }
 }
 

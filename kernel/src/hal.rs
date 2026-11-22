@@ -85,7 +85,7 @@ impl IrqTable {
         match handler {
             Some(h) => {
                 // SAFETY: as in `irq_dispatch`: registered under the `IrqHandler` contract, and nothing else runs it now.
-                unsafe { h.call() };
+                let _ = unsafe { h.call() };
                 true
             }
             None => false,
@@ -106,7 +106,9 @@ extern "C" fn irq_dispatch(line: u32) {
     let handler = unsafe { (*IRQS.handlers.get())[usize::from(irq.line())] };
     if let Some(h) = handler {
         // SAFETY: the handler is registered under the `IrqHandler` contract, and the interrupt gate keeps it from re-entry.
-        unsafe { h.call() };
+        // The kernel has no previous owner of any vector, so an `Action::Chain` is an `Eoi`: the interrupt still has to be
+        // acknowledged, or the line stays blocked.
+        let _ = unsafe { h.call() };
     }
     PIC.eoi(irq);
 }
