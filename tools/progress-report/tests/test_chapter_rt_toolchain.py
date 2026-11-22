@@ -50,7 +50,7 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertIn("const CHUNK: usize = 256 * 1024;", self.src["heap.rs"])
         self.assertIn("const HEADER: usize = 8;", self.src["heap.rs"])
         self.assertIn("const MIN_NODE: usize = 16;", self.src["heap.rs"])
-        self.assertIn("const SLOTS: usize = 8;", self.src["cleanup.rs"])
+        self.assertIn("pub const SLOTS: usize = 16;", self.src["cleanup.rs"])
         self.assertIn("STACK_SIZE: usize = 256 * 1024;", self.src["start.rs"])
         self.assertIn("const STACK_SIZE: usize = 8192;", self.src["irq.rs"])
         self.assertIn("mov ecx, 21", self.src["start.rs"])
@@ -121,7 +121,7 @@ class RuntimeChapterTests(unittest.TestCase):
         self.assertEqual(lines("tools", "coff2go32.py"), 112)
         self.assertEqual(lines("dos", "tools", "elf2go32.py"), 139)
         total = sum(len(t.splitlines()) for t in self.src.values())
-        self.assertEqual((total, len(self.src)), (2329, 16))
+        self.assertEqual((total, len(self.src)), (2381, 16))
 
     def test_the_build_script_steps(self):
         sh = rd("shell", "dos", "build.sh")

@@ -212,16 +212,22 @@ impl Display for DosDisplay {
 
     fn set_mode(&mut self, id: u16) -> Result<FrameBuffer, HalError> {
         let info = *self.modes.iter().find(|m| m.id == id).ok_or(HalError::InvalidArgument)?;
-        cleanup::forget(restore);
+        // Registered first, and moved to the top of the list, so that whatever follows cannot leave graphics on the screen and the
+        // restoration runs before anything registered earlier. A full list refuses the mode before the hardware is touched.
+        cleanup::try_register(restore).map_err(|_| HalError::Busy)?;
         match id {
             MODE_13H => {
-                int10(u32::from(MODE_13H))?;
-                cleanup::register(restore);
+                if let Err(e) = int10(u32::from(MODE_13H)) {
+                    restore();
+                    return Err(e);
+                }
                 Ok(self.vga_window(info, 320))
             }
             MODE_12H => {
-                int10(u32::from(MODE_12H))?;
-                cleanup::register(restore);
+                if let Err(e) = int10(u32::from(MODE_12H)) {
+                    restore();
+                    return Err(e);
+                }
                 // The BIOS leaves the EGA-compatible attribute palette; the Desk loads DAC entries 0 to 15 and wants them shown.
                 desk_vga::regs::attribute_palette_identity(&self.ports);
                 Ok(self.vga_window(info, 80))
@@ -236,9 +242,7 @@ impl Display for DosDisplay {
                 // A mapping from an earlier VBE mode would otherwise be forgotten by the store below and never released.
                 unmap();
                 let linear = dpmi::map_physical(mode.phys_base, len).map_err(|e| HalError::Platform(e.0))?;
-                // Registered before the mode is set so that a failure or a panic after it cannot leave graphics on the screen.
                 MAPPED.store(linear, Ordering::Relaxed);
-                cleanup::register(restore);
                 if let Err(e) = vbe.set_mode(id, true) {
                     restore();
                     return Err(e);

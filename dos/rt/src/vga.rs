@@ -31,10 +31,11 @@ pub fn set_mode(mode: u8) {
     int10(mode as u32);
 }
 
-/// Switches to mode 13h and registers the return to text mode with the clean-up list.
-pub fn enter_mode13() {
+/// Registers the return to text mode with the clean-up list, then switches to mode 13h. If the list is full the mode is not changed.
+pub fn enter_mode13() -> Result<(), cleanup::Full> {
+    cleanup::try_register(leave)?;
     set_mode(0x13);
-    cleanup::register(leave);
+    Ok(())
 }
 
 /// Returns to 80x25 text mode (mode 3). Safe to call twice.

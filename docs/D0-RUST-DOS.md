@@ -138,7 +138,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 | `fpu` | `sqrt`, `sin`, `cos`, `atan2`, `control_word`, `set_double_precision` | `core` has `f64` arithmetic and formatting but no `sqrt`; `{:.6}` and `{:e}` run through `core::fmt` and match the skeleton's output |
 | `io` | `print!`, `println!` | Standard output, handle 1 |
 | `panic` | the panic handler | Runs the clean-up list, prints `RT PANIC: <location and message>` to standard output (the harness captures only that), exits with status 3. A panic inside the handler exits at once |
-| `cleanup` | `register`, `forget`, `run_all` | LIFO, run by `exit` and by the panic handler |
+| `cleanup` | `register`, `try_register`, `forget`, `len`, `run_all` | Strictly last in, first out: 16 slots, a re-registration moves the entry to the top, `forget` closes the gap, and a full list refuses (`register` returns false). `exit` and the panic handler run it. Every acquisition in `rt` registers first or rolls back, so a refusal leaves nothing hooked |
 | `timer`, `vga` | the hardware proofs below | |
 | `mem` | `memcpy`, `memmove`, `memset`, `memcmp` | Only for the COFF target (stage 1); the ELF build takes them from `compiler_builtins` |
 

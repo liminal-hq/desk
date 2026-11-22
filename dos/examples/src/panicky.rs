@@ -19,7 +19,7 @@ pub fn main() -> i32 {
     let before = dpmi::get_pm_vector(vec).unwrap();
     // SAFETY: single-threaded, before the hook.
     unsafe { BEFORE = before };
-    rt::cleanup::register(report);
+    assert!(rt::cleanup::register(report), "clean-up list full");
     timer::hook().expect("hook");
     let hooked = dpmi::get_pm_vector(vec).unwrap();
     println!("panicky: vector changed by the hook: {}", before != hooked);
