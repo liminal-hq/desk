@@ -22,7 +22,7 @@
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof), and the opt-in fast timer: a reprogrammed PIT, a stopwatch and `delay_us`
 // - `vga`      mode 13h and the frame buffer (hardware proof)
 // - `text`     the 80 by 25 text screen: mode 3 or 7, cells at B8000h or B0000h, the cursor and INT 16h keys, put back by the clean-up list
-// - `probe`   what the machine is: video class, processor family, x87, free memory and the game port, each found without changing it
+// - `probe`    what the machine is: video class, processor family, x87, free memory and the game port, each found without changing it
 // - `hal`      the DOS platform's implementations of the HAL traits: `DosBios` (real-mode calls) and `DosDisplay` (VGA and VBE)
 //
 // Single-threaded, with one exception: interrupt handlers, which touch only `static`s and never allocate or call DOS.

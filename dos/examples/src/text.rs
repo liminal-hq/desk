@@ -7,7 +7,8 @@
 // Modes: none (the whole run; a second command, `check`, follows it), `leave-held` (exit with a `Text` still held, so only the
 // clean-up list can put the mode back) and `check` (run afterwards in the same DOSBox: compares the mode and the cursor shape with
 // the record in TEXT.REC). DOSBox's text buffer behaves like ordinary memory, so the read-back says the code reaches the buffer it
-// meant to and that the bounds checks hold; it does not say how a real adapter behaves.
+// meant to (a cell the BIOS draws is seen by `get`, and the other way round) and that the bounds checks hold; it does not say how a
+// real adapter behaves.
 use alloc::vec::Vec;
 use rt::dos::{self, File, Mode};
 use rt::text::{self, Text, TextError, BYTES, COLUMNS, ROWS};
@@ -117,6 +118,7 @@ fn leave_held() -> i32 {
     assert!(cleanup::register(report), "clean-up list full");
     // Start from mode 1 (40x25 text), not the 3 that `Text` sets, so that a restore that did nothing would show.
     rt::vga::set_mode(1);
+    text::set_cursor_shape(0x0A0B).expect("cursor");
     write_record();
     println!("text: leave-held: found mode {}", text::video_mode().expect("mode"));
     let mut t = Text::enter().expect("enter");
@@ -145,6 +147,8 @@ pub fn main() -> i32 {
         _ => {}
     }
     assert!(cleanup::register(report), "clean-up list full");
+    // Not the BIOS default shape: a restore that put back the default would then differ from what was found.
+    text::set_cursor_shape(0x0A0B).expect("cursor");
     write_record();
     let (m0, c0) = (text::video_mode().expect("mode"), text::cursor_shape().expect("cursor"));
     println!("text: found mode {}, cursor shape {:#06x}", m0, c0);
@@ -170,6 +174,19 @@ pub fn main() -> i32 {
     println!("text: digest {:#010x}", digest(&t));
     println!("text: mismatches against what was written: {}", mismatches(&t, &shadow));
 
+    // The BIOS and `get`/`put` agree on where the buffer is: a cell the BIOS draws is seen by `get`, and a cell `put` writes is read by
+    // the BIOS. Nothing here uses this module's own pointer on both sides.
+    text::bios_write_cell(10, 10, b'Z', 0x4E).expect("bios write");
+    println!(
+        "text: a cell the BIOS wrote is seen by get: {}",
+        t.get(10, 10) == Ok((b'Z', 0x4E))
+    );
+    t.put(11, 10, b'Y', 0x2F).expect("put");
+    println!(
+        "text: a cell put wrote is read by the BIOS: {}",
+        text::bios_read_cell(11, 10) == Ok((b'Y', 0x2F))
+    );
+
     let before = digest(&t);
     let refused = [
         t.put(COLUMNS, 0, b'X', 0x4F),
@@ -191,6 +208,12 @@ pub fn main() -> i32 {
     t.clear().expect("clear");
     println!("text: after clear the cell (0, 0) is {:?}", t.get(0, 0).expect("get"));
     println!("text: poll_key with no key pending: {:?}", t.poll_key());
+    println!(
+        "text: a key stuffed into the type-ahead buffer: {}",
+        text::stuff_key(b'k', 0x25)
+    );
+    println!("text: poll_key with a key pending: {:?}", t.poll_key());
+    println!("text: poll_key after taking it: {:?}", t.poll_key());
 
     drop(t);
     println!(

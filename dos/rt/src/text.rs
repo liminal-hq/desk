@@ -54,14 +54,20 @@ static ACTIVE: AtomicU32 = AtomicU32::new(0);
 static FOUND_MODE: AtomicU32 = AtomicU32::new(0);
 static FOUND_CURSOR: AtomicU32 = AtomicU32::new(0);
 
-fn int(vector: u8, eax: u32, ecx: u32) -> Result<BiosRegs, TextError> {
-    let mut regs = BiosRegs {
-        eax,
-        ecx,
-        ..BiosRegs::default()
-    };
+fn call(vector: u8, mut regs: BiosRegs) -> Result<BiosRegs, TextError> {
     DosBios.int(vector, &mut regs, None).map_err(|_| TextError::Bios)?;
     Ok(regs)
+}
+
+fn int(vector: u8, eax: u32, ecx: u32) -> Result<BiosRegs, TextError> {
+    call(
+        vector,
+        BiosRegs {
+            eax,
+            ecx,
+            ..BiosRegs::default()
+        },
+    )
 }
 
 /// The current video mode (INT 10h AH=0Fh), without the "do not clear" bit.
@@ -74,8 +80,66 @@ pub fn cursor_shape() -> Result<u16, TextError> {
     Ok(int(0x10, 0x0300, 0)?.ecx as u16)
 }
 
-fn set_cursor_shape(shape: u16) -> Result<(), TextError> {
+/// Sets the cursor shape of page 0 (INT 10h AH=01h), as `cursor_shape` reads it.
+pub fn set_cursor_shape(shape: u16) -> Result<(), TextError> {
     int(0x10, 0x0100, u32::from(shape)).map(|_| ())
+}
+
+/// Writes one cell through the BIOS (INT 10h AH=02h to place the cursor, AH=09h to write the character and attribute), page 0. It
+/// does not use this module's pointer to the buffer, so a test can see that the BIOS and `get` and `put` agree on where the buffer
+/// is. It moves the cursor.
+pub fn bios_write_cell(x: usize, y: usize, ch: u8, attr: u8) -> Result<(), TextError> {
+    if x >= COLUMNS || y >= ROWS {
+        return Err(TextError::OutOfRange);
+    }
+    let edx = ((y as u32) << 8) | x as u32;
+    call(
+        0x10,
+        BiosRegs {
+            eax: 0x0200,
+            edx,
+            ..BiosRegs::default()
+        },
+    )?;
+    call(
+        0x10,
+        BiosRegs {
+            eax: 0x0900 | u32::from(ch),
+            ebx: u32::from(attr),
+            ecx: 1,
+            ..BiosRegs::default()
+        },
+    )
+    .map(|_| ())
+}
+
+/// Reads one cell through the BIOS (INT 10h AH=02h, then AH=08h), page 0: the character and the attribute. Moves the cursor.
+pub fn bios_read_cell(x: usize, y: usize) -> Result<(u8, u8), TextError> {
+    if x >= COLUMNS || y >= ROWS {
+        return Err(TextError::OutOfRange);
+    }
+    let edx = ((y as u32) << 8) | x as u32;
+    call(
+        0x10,
+        BiosRegs {
+            eax: 0x0200,
+            edx,
+            ..BiosRegs::default()
+        },
+    )?;
+    let r = call(
+        0x10,
+        BiosRegs {
+            eax: 0x0800,
+            ..BiosRegs::default()
+        },
+    )?;
+    Ok((r.eax as u8, (r.eax >> 8) as u8))
+}
+
+/// Puts a key into the BIOS type-ahead buffer (INT 16h AH=05h). False if the buffer is full.
+pub fn stuff_key(ascii: u8, scan: u8) -> bool {
+    int(0x16, 0x0500, (u32::from(scan) << 8) | u32::from(ascii)).is_ok_and(|r| r.eax as u8 == 0)
 }
 
 fn set_mode(mode: u8) -> Result<(), TextError> {
@@ -83,6 +147,8 @@ fn set_mode(mode: u8) -> Result<(), TextError> {
 }
 
 /// Puts the mode and the cursor shape back to what `Text::enter` found. Safe to call twice, and when no `Text` was ever entered.
+/// A mode set clears the screen and homes the cursor, so what was on the screen before `enter` is gone, whatever mode was found (a
+/// graphics mode comes back empty too): only the mode and the cursor shape are restored, not the contents or the cursor position.
 fn restore() {
     if ACTIVE.swap(0, Ordering::SeqCst) != 0 {
         let _ = set_mode(FOUND_MODE.load(Ordering::SeqCst) as u8);
@@ -195,7 +261,10 @@ impl Text {
         self.fill(b' ', 0x07)
     }
 
-    /// Takes a key from the BIOS type-ahead buffer if there is one (INT 16h AH=01h to test, AH=00h to take). Never blocks.
+    /// Takes a key from the BIOS type-ahead buffer if there is one (INT 16h AH=01h to test, AH=00h to take). Never blocks on a
+    /// key that is there. It uses the legacy functions, which on some BIOSes with a 101-key keyboard skip keys that have no legacy
+    /// code (F11 and F12 are the usual ones) and could then wait for the next key: the extended functions (AH=11h and AH=10h)
+    /// would avoid that and are not used here, so a program that must see those keys should not rely on this.
     pub fn poll_key(&self) -> Option<Key> {
         let test = int(0x16, 0x0100, 0).ok()?;
         // ZF (bit 6 of the flags) is set when the buffer is empty.
