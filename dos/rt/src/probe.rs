@@ -55,7 +55,7 @@ pub enum VideoSource {
 pub struct Video {
     pub class: VideoClass,
     pub source: VideoSource,
-    /// The raw code the source gave: the display combination code, the EGA information's BL (0 colour, 1 monochrome), or the
+    /// The raw code the source gave: the display combination code, the EGA information's BH (0 colour, 1 monochrome), or the
     /// equipment word's bits 5 and 4.
     pub code: u8,
 }
@@ -118,12 +118,12 @@ pub fn video() -> Video {
         }
     }
     if let Some(r) = bios(0x10, 0x1200, 0x0010) {
-        // BL stays 10h if there is no EGA BIOS; otherwise it is 0 for a colour and 1 for a monochrome display.
+        // BL stays 10h if there is no EGA BIOS; otherwise BH is 0 for a colour and 1 for a monochrome display (BL is then the memory size).
         if r.ebx as u8 != 0x10 {
             return Video {
                 class: VideoClass::Ega,
                 source: VideoSource::EgaInformation,
-                code: r.ebx as u8,
+                code: (r.ebx >> 8) as u8,
             };
         }
     }
@@ -197,7 +197,10 @@ pub fn cpu() -> Cpu {
     }
 }
 
-/// What the x87 probe found.
+/// What the x87 probe found. The probe restores the unit's environment (control, status and tag words) as it found it. That values
+/// on the x87 stack survive it is a property of FNINIT (which only marks the registers empty) and FLDENV on real hardware and in
+/// DOSBox, not of the asm contract. And the "no unit" branch is unreachable while `_start` runs an unguarded FNINIT, which would
+/// fault first on a machine with no FPU and CR0.EM set (R138).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct X87 {
     /// A floating-point unit answered: after FNINIT, the status word's exception and busy bits are clear and the control word has

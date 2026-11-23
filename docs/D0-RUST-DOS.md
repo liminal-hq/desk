@@ -126,7 +126,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 
 ## 3. The runtime crate
 
-[`rt`](../dos/rt/) was about 1,600 lines in 13 files when the spike was written, with the reasons commented in each; as promoted it is `dos/rt`, 3,048 lines in 17 files (counted with `wc -l` on 2026-11-23), the difference being the modules below the table's first rows: `irq`, `hal`, `bios_kbd`, `probe`, and the growth of `timer`, `mem` and `cleanup`. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
+[`rt`](../dos/rt/) was about 1,600 lines in 13 files when the spike was written, with the reasons commented in each; as promoted it is `dos/rt`, 3,328 lines in 19 files (counted with `wc -l` on 2026-11-23), the difference being the modules below the table's first rows: `irq`, `hal`, `bios_kbd`, `probe`, and the growth of `timer`, `mem` and `cleanup`. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
 
 | Module | What it gives | Notes |
 |---|---|---|
