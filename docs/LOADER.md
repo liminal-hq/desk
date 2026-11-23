@@ -292,7 +292,7 @@ The platform chooses where an image goes; the format only says how to fix it up 
 
 ## Visible-module spike
 
-A module loaded through the real loader draws a window in the native shell, and QEMU shows it. The owner decided this on 2026-11-23 as a two-part spike under R48 (it is tracked as a follow-up to R48, not as part of M4 to M9): the first part is the shell's retained `Fill` and `Text` items ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#retained-fills-and-text)), the second is this one. The module is `module/mods/hellowin`, packed as `HELLOWIN.DMD` and embedded in the kernel like `HELLO.DMD`; it is not loaded from a disk, receives no input and no events, and nothing here is a promise about the ABI.
+A module loaded through the real loader draws a window in the native shell, and QEMU shows it. The owner decided this on 2026-11-22 as a two-part spike under R48 (it is tracked as a follow-up to R48, not as part of M4 to M9): the first part is the shell's retained `Fill` and `Text` items ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#retained-fills-and-text)), the second is this one. The module is `module/mods/hellowin`, packed as `HELLOWIN.DMD` and embedded in the kernel like `HELLO.DMD`; it is not loaded from a disk, receives no input and no events, and nothing here is a promise about the ABI.
 
 **The three services** follow the names and shapes of [`SDK.md`](SDK.md); handles are `u32` and 0 is never valid.
 
