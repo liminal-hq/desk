@@ -148,7 +148,7 @@ For depth: `docs/DIRECTION.md` ([two tracks](doc:docs/DIRECTION.md#two-tracks-in
 
 The two cases show how the tags are decided. Neither box is more or less true than the other; one cites something that can fail and one does not.
 
-**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds nine members: `desk-hal`, seven drivers and the mock. The host tests pass in both workspaces, 161 tests in `shell/` and 179 in `hal/` when this chapter was written (the commands are below). The log's anatomy chapter quotes the same 161 for the core.
+**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds eleven members: `desk-hal`, nine drivers and the mock. The host tests pass in both workspaces, 161 tests in `shell/` and 179 in `hal/` when this chapter was written (the commands are below). The log's anatomy chapter quotes the same 161 for the core.
 
 **The edge that goes one way.** `desk-gfx` lists `desk-vga` only under `[dev-dependencies]`, because one of its tests compares the software cursor sprite with the VGA driver's arrow. In production code the core never depends on a driver's register-level API, as the rules require; the tests are allowed to look across.
 

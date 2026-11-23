@@ -88,6 +88,10 @@ The rest implements the HAL's `InterruptController` trait:
 
 [`PitClock`](sym:hal/drivers/pit/src/lib.rs::PitClock) is the `Clock` the core reads. It contains a HAL `TickCounter` and an `AtomicU32` for the rate, and lives in a `static`. `counter()` returns the `TickCounter`, which is the IRQ 0 work: the platform registers `IrqHandler::from_shared(CLOCK.counter())` and every interrupt does one `fetch_add`. `now()` reads the counter and `millihertz()` the recorded rate (zero until `set_divisor` or `program_clock` records one). A clock whose rate is zero reports zero milliseconds, so a clock that was never programmed cannot be mistaken for one that is running.
 
+### Two sound drivers nobody uses yet: `desk-sb` and `desk-speaker`
+
+Two further drivers, `desk-sb` (the Sound Blaster's DSP: reset, version, the speaker switch and the `BLASTER` value) and `desk-speaker` (the PC speaker through PIT channel 2 and port 0x61), are written over `PortIo` and tested against the mock bus, and nothing in the repository calls them yet. Both treat an absent card honestly: a floating bus reads 0xFF, which is never taken for the DSP's 0xAA, and every wait is a bounded count of reads. The speaker driver keeps the unrelated bits of port 0x61 as it finds them. Nobody can listen to a headless run, so the tests check the port writes only. See `docs/HAL.md`.
+
 ### How each platform uses them
 
 | Driver | Native kernel (`kernel/src/`) | DOS runtime (`dos/rt/src/`) |

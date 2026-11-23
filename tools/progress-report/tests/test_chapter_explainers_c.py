@@ -40,7 +40,7 @@ class CrateGraphTests(unittest.TestCase):
         self.assertEqual(self.m.check(self.nodes), [])
         kinds = {k: sorted(n for n, v in self.nodes.items() if v["kind"] == k) for k, _ in self.m.KINDS}
         self.assertEqual(kinds["hal"], ["desk-hal"])
-        self.assertEqual(len(kinds["driver"]), 7)
+        self.assertEqual(len(kinds["driver"]), 9)
         self.assertEqual(kinds["core"], ["desk-font", "desk-gfx", "desk-shell", "desk-ui", "desk-wm"])
         self.assertEqual(kinds["presenter"], ["desk-present"])
         self.assertEqual(self.nodes["desk-gfx"]["deps"], ["desk-hal"])
