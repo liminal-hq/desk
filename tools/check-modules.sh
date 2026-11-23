@@ -55,6 +55,7 @@ tools/build-modules.sh
 dmdpack=${CARGO_TARGET_DIR:-module/target}/release/dmdpack
 modules=dist/modules
 python3 -I tools/native-check.py tests/module/hello-info.txt <("$dmdpack" info $modules/HELLO.DMD) || fail "dmdpack info HELLO.DMD differs from tests/module/hello-info.txt"
+python3 -I tools/native-check.py tests/module/hellowin-info.txt <("$dmdpack" info $modules/HELLOWIN.DMD) || fail "dmdpack info HELLOWIN.DMD differs from tests/module/hellowin-info.txt"
 "$dmdpack" info $modules/APPMAIN.DKX | grep -q '^kind          application (.DKX)$' || fail "APPMAIN.DKX is not an application"
 
 step "Reproducible: the same bytes from two builds, and no build-host path in an image"
@@ -74,10 +75,10 @@ for name in a b; do
   (cd "$repro/desk" && tools/build-modules.sh --out "$repro/out-$name")
 done
 # (The linked ELF files are debugging aids and are not compared: their symbol tables carry the hashes of the build's location.)
-for file in HELLO.DMD APPMAIN.DKX; do
+for file in HELLO.DMD APPMAIN.DKX HELLOWIN.DMD; do
   cmp "$repro/out-a/$file" "$repro/out-b/$file" || fail "$file differs between two builds of the same sources"
 done
-for file in HELLO.DMD APPMAIN.DKX hello.elf appmain.elf; do
+for file in HELLO.DMD APPMAIN.DKX HELLOWIN.DMD hello.elf appmain.elf hellowin.elf; do
   if names_a_build_host_path "$modules/$file" "$PWD" "$(rustc --print sysroot)" "${CARGO_HOME:-$HOME/.cargo}"; then
     fail "$file names a path of the machine that built it: $(strings -a "$modules/$file" | grep -E '/' | head -3)"
   fi
@@ -89,15 +90,15 @@ printf 'panicked at %s/module/guest/src/lib.rs:12\0' "$PWD" > "$repro/leaky-cwd.
 for leak in home w cwd; do
   names_a_build_host_path "$repro/leaky-$leak.bin" "$PWD" || fail "the path scan missed a leaked $leak path"
 done
-echo "identical from two builds; no build-host path in HELLO.DMD, APPMAIN.DKX or their ELF files; the scan catches planted paths"
+echo "identical from two builds; no build-host path in HELLO.DMD, APPMAIN.DKX, HELLOWIN.DMD or their ELF files; the scan catches planted paths"
 
 step "Disassembly: no cmpxchg, no cli or sti"
-for elf in hello appmain; do
+for elf in hello appmain hellowin; do
   if uses_forbidden_instruction "$modules/$elf.elf"; then
     fail "$elf.elf contains an instruction a module must not use"
   fi
 done
-echo "no cmpxchg, cli or sti in hello.elf or appmain.elf"
+echo "no cmpxchg, cli or sti in hello.elf, appmain.elf or hellowin.elf"
 # The scan must be able to fail: an object with each of them is refused, and a clean one is not.
 cat > "$repro/bad.c" <<'C'
 void bad(int *p) { __asm__ volatile("lock cmpxchgl %1, (%0)" : : "r"(p), "r"(1) : "eax", "memory"); __asm__ volatile("cli"); __asm__ volatile("sti"); }
@@ -115,6 +116,7 @@ tools/build-modules.sh --link-base 0x00800000 --out dist/modules-0080
 "$dmdpack" cross $modules/HELLO.DMD dist/modules-0080/HELLO.DMD
 "$dmdpack" cross dist/modules-0080/HELLO.DMD $modules/HELLO.DMD
 "$dmdpack" cross $modules/APPMAIN.DKX dist/modules-0080/APPMAIN.DKX
+"$dmdpack" cross $modules/HELLOWIN.DMD dist/modules-0080/HELLOWIN.DMD
 # A move by 0x3000 changes the second byte of every relocated word as well as the high ones (a move by 0x400000 leaves the low
 # 16 bits alone and changes byte 2 only; 0x40400000, a move of 0x40000000 more, changes byte 3). A link base is a multiple of 4096, so the low 12 bits cannot change; the packer's tests cover each byte.
 rm -rf dist/modules-3000
