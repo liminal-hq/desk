@@ -14,3 +14,4 @@ pub mod hello;
 pub mod hw;
 pub mod panicky;
 pub mod probe;
+pub mod text;

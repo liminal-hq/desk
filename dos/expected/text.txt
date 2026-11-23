@@ -1,0 +1,17 @@
+text: found mode 3, cursor shape 0x0607
+text: entered mode 3 at segment 0xb800 (colour class Vga)
+text: cursor shape now 0x2000
+text: a second enter while one is active: Some(Active)
+text: mode after the refused second enter 3
+text: test screen written, 4000 bytes of cells
+text: digest 0xed0f60d7
+text: mismatches against what was written: 0
+text: out-of-range calls refused: true
+text: digest unchanged by the refused writes: true
+text: after fill the cell (79, 24) is (46, 46)
+text: after clear the cell (0, 0) is (32, 7)
+text: poll_key with no key pending: None
+text: after leaving, mode 3 (found 3), cursor shape 0x0607 (found 0x0607)
+text: exiting
+text: after the clean-up list the mode and the cursor shape are back as found: true
+text: check: the mode and the cursor shape are as before the text screen: true
