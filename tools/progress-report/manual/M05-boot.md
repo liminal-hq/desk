@@ -5,7 +5,7 @@ part: II
 title: The boot, end to end
 summary: Power-on to boot complete, one transcript line at a time; every test mode of the kernel and the file that checks it; how a run ends and what its exit status means.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d5f3328
 watches: [kernel/src/main.rs, kernel/src/exit.rs, tests/native/, tools/native-run.sh, tools/native-check.py, tools/native-test.sh]
 log: [boot, emulators]
 anatomy: [desk:boot, desk:kernel, desk:emu]
@@ -69,6 +69,8 @@ Then memory ([M7](chapter:m-memory)). `memory::init` builds the frame bitmap fro
 
 These are the six lines the expected transcript replaces with a lone `...`, because they depend on the BIOS; the checks that follow them do not.
 
+The addresses and counts in the table below are those of the recorded run, made when the kernel image was 173,968 bytes. The kernel has grown since (the module loader, the shell and the three window services): rebuilt on 2026-11-23 it is 222,032 bytes in 434 sectors, and the same three lines print `0x100000-0x148000`, `3736 frames` and `heap: 4096 KiB at 0x148000`, which the expected file's patterns accept.
+
 | Transcript line | Written by | What it shows |
 |---|---|---|
 | `memory: usable RAM 15871 KiB` | `memory::report` | The sum of the usable entries as the BIOS gave them, 639 + 15,232 KiB (the worked example of [M4](chapter:m-loader)) |
@@ -128,7 +130,7 @@ The byte patched into the image at stage 2 offset 3 travels in the boot informat
 | 19 | `module-window` | `ModuleWindow` | Loads HELLOWIN.DMD with the window services bound; its draws are the scenario's, checked frame by frame at depths 8 and 4 | `expected-module-window-8.txt`, `expected-module-window-4.txt` | `0` |
 | 20 | `module-live` | `ModuleLive` | The same on live input until Escape, which stops and unloads the module and prints mark 01 | `expected-module-live-8.txt`, `expected-module-live-4.txt` | `0` |
 
-The names, the numbers and the run lines are the ones in the code; the build checks the table against `kernel/src/main.rs`. Mode 12 is an honest gap: `docs/N3-BIOS-PATH.md` records that it was run on Bochs by hand, but nothing in `tools/` or the CI runs it.
+The names, the numbers and the run lines are the ones in the code; the build checks the table against `kernel/src/main.rs`. Modes 19 and 20 are the visible-module spike ([`docs/LOADER.md`](doc:docs/LOADER.md#visible-module-spike)): the kernel loads `HELLOWIN.DMD` through the real loader, lends it the shell for the length of `app_start` and `app_stop`, and holds the window it draws to the digests of the host scenario `tests/shell/module-window.scn`. That is {{state.boot.modwin}}; it is a stopgap, not the app interface. Mode 12 is an honest gap: `docs/N3-BIOS-PATH.md` records that it was run on Bochs by hand, but nothing in `tools/` or the CI runs it.
 
 ### How a run ends
 
@@ -158,7 +160,7 @@ A test that can only pass proves little, so `tools/native-test.sh` also runs the
 ## Why it is this way
 
 - **A transcript, not a debugger.** The test is a comparison of the kernel's serial output with an expected file, because that is what a headless run can produce and what a person can read. The expected files carry patterns for the parts that vary: `{N:lo..hi}` for a number in a range, `{HEX}` for an address, `{BITS:mask=value}` for a register whose other bits depend on the BIOS, `{ANY}`, and `...` for any number of lines (`docs/NATIVE-BOOT.md`, "The checks"; `tools/native-check.py`). The matcher is a search over the lines, so a pattern may skip lines only where it says so.
-- **One kernel, many behaviours.** The test mode is a byte in the image, not a build flag, so a single kernel binary serves all sixteen modes and an image is made by patching one byte (`tools/native-image.sh`). A kernel that carries code to misbehave deliberately is a cost, accepted so that the negative checks run the real boot path.
+- **One kernel, many behaviours.** The test mode is a byte in the image, not a build flag, so a single kernel binary serves all twenty modes (0 to 17, 19 and 20; 18 is left free for the loader plan's `module-noguard`) and an image is made by patching one byte (`tools/native-image.sh`). A kernel that carries code to misbehave deliberately is a cost, accepted so that the negative checks run the real boot path.
 - **Prove that the check can fail.** The repository's rule is that a bug fix needs a check that fails before the fix (`AGENTS.md`, "Testing"). The same idea is applied to the checker itself: `tests/native/wrong-expected.txt` must be rejected by `tools/native-check.py`.
 - **Exit through a device.** Reporting success or failure by an exit status is what lets `tools/check.sh` and the CI treat a boot like any other test. A boot with no such device (real hardware, Bochs) ends by the kernel halting, and the harness decides by the transcript or the watchdog instead; the Bochs and 86Box runners return the same statuses ([M20](chapter:m-emulators)).
 - **Bounded waits.** Every place the boot could wait for hardware that might not answer has a limit: stage 1's retries, the loader's A20 and keyboard-controller waits, the first-tick spin. A boot that cannot continue prints why and stops, instead of hanging until the watchdog.
@@ -183,16 +185,16 @@ For depth: `docs/NATIVE-BOOT.md` ([boot flow](doc:docs/NATIVE-BOOT.md#boot-flow)
 
 ## Worked example
 
-**A divide error, from the instruction to the exit status.** In mode 1 the kernel prints `test: dividing by zero` and executes `div` with a zero divisor. The processor raises exception 0. The kernel's IDT sends it to a stub, which saves the registers and calls one Rust handler ([M6](chapter:m-interrupts)). The handler prints a dump and ends the run with the failure value. This is the transcript from a run on 2026-10-23, after the normal lines:
+**A divide error, from the instruction to the exit status.** In mode 1 the kernel prints `test: dividing by zero` and executes `div` with a zero divisor. The processor raises exception 0. The kernel's IDT sends it to a stub, which saves the registers and calls one Rust handler ([M6](chapter:m-interrupts)). The handler prints a dump and ends the run with the failure value. This is the transcript from a run on 2026-11-23, after the normal lines (the addresses moved when the kernel grew; the values that matter are the same):
 
 ```text
 test: dividing by zero
 
 EXCEPTION 0x00: divide error
 error code 0x00000000
-EIP 0x0010d125  CS 0x0008  EFLAGS 0x00010246
+EIP 0x001113ee  CS 0x0008  EFLAGS 0x00010246
 EAX 0x00000001  EBX 0x00000500  ECX 0x00000000  EDX 0x00000000
-ESI 0x00000001  EDI 0x0000000a  EBP 0x0013aff4  ESP 0x0013af04
+ESI 0x00000001  EDI 0x000186a0  EBP 0x00146ff4  ESP 0x00146dbc
 CR0 0x00000033  CR2 0x00000000  CR3 0x00000000
 halting with a failure status
 ```
@@ -205,7 +207,7 @@ The kernel then writes `0x11` to port `0xF4`. QEMU exits with 35, `native-run.sh
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386, sed
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-23 on the host, QEMU 11.1.3, NASM 3.02
 $ tools/native-build.sh > /dev/null && tools/native-image.sh > /dev/null && tools/native-run.sh --serial dist/serial.txt > /dev/null; echo "exit $?"
 native-run: guest reported success
 exit 0
@@ -265,6 +267,12 @@ label: A screen with one wrong pixel is rejected by the screendump check
 state: built-verified
 evidence: sym:kernel/src/main.rs::ShellCorrupt, test:tools/native-test.sh::shell-corrupt
 
+id: boot.modwin
+label: A loaded module draws a window in the native shell, held to the host's goldens at depths 8 and 4
+state: built-verified
+evidence: pr:117, test:tools/native-test.sh::module-window, test:tests/native/expected-module-window-8.txt::module: window
+note: Headless QEMU as a 486; the module's frames, the host scenario and QEMU's screendump give one digest at each depth. A stopgap with three services, nothing loaded from disk and no input to the module; a person did not watch it in a window during the build.
+
 id: boot.solo
 label: The bios-solo test mode
 state: built-unverified
@@ -297,15 +305,15 @@ The build, the run and the checker are in the example above. These commands run 
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-23 on the host, QEMU 11.1.3, NASM 3.02
 $ tools/native-image.sh --test-mode gp --out dist/n-gp.img > /dev/null; tools/native-run.sh dist/n-gp.img 2>&1 | tr -d '\r' | sed -n '/^test:/,$p'
 test: loading a segment selector beyond the GDT
 
 EXCEPTION 0x0d: general protection fault
 error code 0x00000028
-EIP 0x0010d0dc  CS 0x0008  EFLAGS 0x00010212
-EAX 0x00000028  EBX 0x00000500  ECX 0x0012066f  EDX 0x000b8000
-ESI 0x00000002  EDI 0x0000000a  EBP 0x0013aff4  ESP 0x0013af04
+EIP 0x001113bb  CS 0x0008  EFLAGS 0x00010216
+EAX 0x00000028  EBX 0x00000500  ECX 0x0012874b  EDX 0x000b8000
+ESI 0x00000002  EDI 0x000186a0  EBP 0x00146ff4  ESP 0x00146dbc
 CR0 0x00000033  CR2 0x00000000  CR3 0x00000000
 halting with a failure status
 native-run: guest reported failure
@@ -314,7 +322,7 @@ exit 124
 $ tools/native-image.sh --test-mode notick --out dist/n-nt.img > /dev/null; tools/native-run.sh dist/n-nt.img 2>&1 | tr -d '\r' | tail -5
 test: timer masked on purpose
 
-KERNEL PANIC: panicked at src/main.rs:209:13:
+KERNEL PANIC: panicked at src/main.rs:235:13:
 the timer did not tick
 native-run: guest reported failure
 ```
@@ -372,3 +380,4 @@ thumb: steps
 
 - 2026-10-23: first written, against `44f0265`. The transcript walk covers every line of `media/native-serial.txt`, the mode table covers every `TestMode`, and the commands above were run on the host. Found while writing: `tests/native/wrong-expected.txt` does not differ "in one number" as `docs/NATIVE-BOOT.md` says (see "Why it is this way"), and no script runs the `bios-solo` mode.
 - 2026-10-23: linked the processor terms that M2 now defines (A20, real and protected mode, selector, GDT, CR0) at their first natural use. No claim changed.
+- 2026-11-23: re-read in full against `kernel/src/main.rs`, `tests/native/expected.txt`, `tools/native-image.sh` and `tools/native-test.sh` at `d5f3328`. The mode table already listed modes 19 and 20 (the visible-module spike, #117) and matched the enum; corrected "sixteen modes" to twenty (18 is unused), noted that the transcript table's addresses are those of the recorded run (the kernel is now 222,032 bytes in 434 sectors) and reran the divide-error and general-protection dumps, the `hang` and `notick` runs and the boot check on the host (QEMU 11.1.3, NASM 3.02), so the try blocks and the worked example carry the new addresses and the panic's line number (235). Not rerun: the replayed recording (`media/native-serial.txt`), which is the older kernel's, and the Bochs and 86Box rows.
