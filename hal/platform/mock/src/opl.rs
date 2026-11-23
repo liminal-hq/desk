@@ -168,7 +168,7 @@ impl Device for OplModel {
         }
         let value = value as u8;
         let offset = port - self.base;
-        if offset % 2 == 0 {
+        if offset & 1 == 0 {
             self.phase = Phase::AfterIndex {
                 bank: (offset / 2) as u8,
                 reg: value,
