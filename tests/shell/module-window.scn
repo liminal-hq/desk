@@ -8,7 +8,8 @@ label notes 12 12 "A window behind the module's."
 pointer 600 440
 # The module's window: a 320 x 160 content area under the 22-pixel title bar and its 1-pixel rule, centred on the screen.
 open hellowin 160 148 320 183 "HELLOWIN.DMD"
-# The overhang at the top-left is drawn first, so the first line of text lies over it.
+# The overhang at the top-left is drawn first, so the text and swatches paint over anything it shares with them; it shows as a small
+# tab at the corner, clipped to the content area.
 fill hellowin -10 -10 30 20 Halo2
 text hellowin 8 8 Text "Drawn by HELLOWIN.DMD"
 text hellowin 8 28 TextSecondary "a loaded module, through three services"

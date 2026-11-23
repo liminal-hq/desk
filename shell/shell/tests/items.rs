@@ -53,6 +53,35 @@ fn a_huge_fill_changes_nothing_outside_the_content_area() {
 }
 
 #[test]
+fn text_and_fills_at_the_extremes_of_i32_do_not_panic_or_leave_the_content_area() {
+    for depth in DEPTHS {
+        let (mut s, mut p) = started(depth);
+        s.open("a", A, "a");
+        s.handle(to(20, 440));
+        s.frame(&mut p).unwrap();
+        let before = s.back().pixels().to_vec();
+        for (x, y) in [
+            (i32::MAX, 0),
+            (0, i32::MAX),
+            (i32::MIN, i32::MIN),
+            (i32::MAX, i32::MAX),
+            (i32::MIN, 0),
+        ] {
+            assert!(s.text("a", x, y, "x", Role::Text));
+        }
+        assert!(s.fill("a", Rect::new(i32::MAX, i32::MAX, u32::MAX, u32::MAX), Role::Accent));
+        assert!(s.fill("a", Rect::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX), Role::Accent));
+        assert!(s.fill("a", Rect::new(5, 5, 0, 0), Role::Accent));
+        s.frame(&mut p).unwrap();
+        let after = s.back().pixels().to_vec();
+        assert!(
+            outside_equal(&before, &after, content()),
+            "{depth:?}: a pixel outside the content area changed"
+        );
+    }
+}
+
+#[test]
 fn an_overhanging_fill_and_text_stay_inside_the_content_area() {
     for depth in DEPTHS {
         let (mut s, mut p) = started(depth);

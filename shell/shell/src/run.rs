@@ -45,7 +45,7 @@ impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RunError::UnknownWindow(n) => write!(f, "no window named {n}"),
-            RunError::TooManyItems(n) => write!(f, "window {n} holds no more items"),
+            RunError::TooManyItems(n) => write!(f, "window {n} is full (the item cap is reached)"),
             RunError::Untypable(c) => write!(f, "no key types {c:?}"),
             RunError::Present(e) => write!(f, "presenting failed: {e}"),
             RunError::DamageExceeded {

@@ -156,7 +156,15 @@ impl Widget {
     pub fn paint(&self, s: &mut Surface, t: &Theme, font: &Font, origin: (i32, i32), focused: bool) {
         match self {
             Widget::Label(l) => {
-                draw_text(s, font, l.at.0 + origin.0, l.at.1 + origin.1, &l.text, t.slot(l.role));
+                // Saturating, because an app-supplied position can be any i32; the clip keeps whatever lands outside the window out.
+                draw_text(
+                    s,
+                    font,
+                    l.at.0.saturating_add(origin.0),
+                    l.at.1.saturating_add(origin.1),
+                    &l.text,
+                    t.slot(l.role),
+                );
             }
             Widget::TextLine(f) => f.paint(s, t, font, origin, focused),
             Widget::Fill(f) => s.fill(f.rect.offset(origin.0, origin.1), t.slot(f.role)),
