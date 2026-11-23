@@ -23,6 +23,8 @@
 # `builtin_dos_mouse_driver = off`, which takes the mouse driver away). DOS_X11=1 keeps the environment's DISPLAY and uses SDL's x11
 # driver instead of the dummy one, for a run under a virtual X server (tools/docker/Dockerfile.dos-xvfb).
 #
+# DOS_THEN runs a second command in the same DOSBox after the first, with its output appended to the first's and its status ignored (the exit status stays the first's): a check of what the first left behind, such as the PIT's rate. It has no effect with DOS_CONSOLE.
+#
 # DOS_CONSOLE=1 leaves the program's standard output on the DOS console instead of redirecting it to a file, as it is when a person runs the
 # program: nothing is captured, so a check reads the exit status and whatever the program wrote to disk. A program that left a graphics
 # mode on while it printed shows its text on the screen, which a check can read back from the frame buffer.
@@ -57,6 +59,8 @@ trap 'rm -rf "$WORK"' EXIT
   if [ -n "${DOS_CONSOLE:-}" ]; then echo "$*"; else echo "$* > D:\\STDOUT.TXT"; fi
   echo 'set RC=0'
   for n in $(seq 1 255); do echo "if errorlevel $n set RC=$n"; done
+  # A second command, run in the same DOSBox (so on the same emulated PIT) once the first one's status is taken; its output follows the first's.
+  [ -z "${DOS_THEN:-}" ] || echo "$DOS_THEN >> D:\\STDOUT.TXT"
   echo 'echo %RC%> D:\EXITCODE.TXT'
 } | sed 's/$/\r/' > "$WORK/RUN.BAT"
 

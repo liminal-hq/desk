@@ -1,0 +1,19 @@
+hw: fast: delay_us refuses while the PIT is not reprogrammed: true
+hw: fast: a divisor the chip cannot count is refused and changes nothing: true
+hw: fast: vector 8 moved to our handler: true
+hw: fast: a second hook, fast or d0, is refused: true
+hw: 60 Hz: fast ticks in one second within 59 to 61: true (reached 60: true)
+hw: 60 Hz: the BIOS counter advanced 18 to 19 ticks while the PIT ran fast: true
+hw: fast: the stopwatch never ran backwards: true
+hw: fast: the stopwatch moved by less than one tick: true
+hw: fast: delay_us returned true while reprogrammed: true
+hw: fast: 100 delays of 10,000 microseconds took 17 to 20 BIOS ticks: true
+hw: fast: and 1,193,182 to 1,205,000 stopwatch clocks: true
+hw: fast: vector 8 restored: true
+hw: fast: no fast ticks counted after unhook: true
+hw: fast: delay_us refuses again after unhook: true
+hw: after unhook: the BIOS counter advanced 18 to 19 ticks in one second by the PIT: true
+hw: 560 Hz: fast ticks in one second within 559 to 561: true (reached 560: true)
+hw: 560 Hz: the BIOS counter advanced 18 to 19 ticks while the PIT ran fast: true
+hw: fast: vector 8 restored again: true
+hw: after the second unhook: the BIOS counter advanced 18 to 19 ticks in one second by the PIT: true

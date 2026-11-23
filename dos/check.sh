@@ -69,6 +69,31 @@ case "$out" in *'exiting with the timer hooked and mode 13h set'*) ;; *) fail "u
 case "$out" in *'the timer vector and text mode are back: true') ;; *) fail "exit did not put the machine back: $out" ;; esac
 echo "$out" | tail -2
 
+step "HW.EXE fast: a reprogrammed PIT at 60 and 560 Hz, the BIOS clock kept by chaining, the stopwatch and delay_us"
+run dist/d0 HW.EXE fast
+[ "$status" = 0 ] || fail "HW.EXE fast exited with status $status"
+same "HW.EXE fast" $EXP/hw-fast.txt
+echo "$out" | grep -E 'BIOS counter|fast ticks'
+
+step "HW.EXE fast-full: a full clean-up list refuses hook_rate and the PIT stays at the BIOS rate"
+run dist/d0 HW.EXE fast-full
+[ "$status" = 0 ] || fail "HW.EXE fast-full exited with status $status"
+same "HW.EXE fast-full" $EXP/hw-fast-full.txt
+echo "$out" | tail -1
+
+# The second command runs in the same DOSBox, so on the same emulated PIT: it is what shows the rate was restored.
+step "Exit with the PIT at 60 Hz: the clean-up list puts the vector and the BIOS rate back"
+DOS_THEN="HW.EXE rate-check" run dist/d0 HW.EXE fast-leave-hooked
+[ "$status" = 0 ] || fail "HW.EXE fast-leave-hooked exited with status $status"
+same "HW.EXE fast-leave-hooked" $EXP/hw-fast-leave-hooked.txt
+echo "$out" | tail -2
+
+step "A panic with the PIT at 60 Hz: the clean-up list puts the vector and the BIOS rate back"
+DOS_THEN="HW.EXE rate-check" run dist/d0 HW.EXE fast-panic
+[ "$status" = 3 ] || fail "HW.EXE fast-panic exited with status $status, not 3"
+same "HW.EXE fast-panic" $EXP/hw-fast-panic.txt
+echo "$out" | tail -2
+
 step "CLEANUP.EXE: the list runs last in, first out, and refuses a 17th entry"
 run dist/d0 CLEANUP.EXE
 [ "$status" = 0 ] || fail "CLEANUP.EXE exited with status $status"

@@ -1,0 +1,6 @@
+hw: panicking with the PIT at 60 Hz
+hw: after the clean-up list the timer vector is back and the fast timer is off: true
+RT PANIC: panicked at examples/src/hw.rs:L:C:
+index out of bounds: the len is 3 but the index is 5
+hw: rate-check: the fast timer is not installed: true
+hw: rate-check: the BIOS counter advanced 18 to 19 ticks in one second by the PIT: true
