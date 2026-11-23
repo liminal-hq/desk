@@ -21,7 +21,9 @@
 # rejected. Shell live: the same scenario's live form (tests/shell/live.scn and live-keys.scn) is played into the kernel's `shell-live` mode
 # through the QEMU monitor (mouse_move, mouse_button, sendkey), and the marks it prints and QEMU's screendumps at each mark must equal the
 # goldens; the same input with the mouse, a key or Alt+Tab left out, altered sums and the wrong depth must be rejected. Module loader: the
-# kernel loads HELLO.DMD from a buffer, runs it and unloads it, and a copy with one bit flipped is refused (`module`, `module-bad`). Skips (exit 0, with a message) only
+# kernel loads HELLO.DMD from a buffer, runs it and unloads it, and a copy with one bit flipped is refused (`module`, `module-bad`). Module window: HELLOWIN.DMD,
+# loaded by the real loader, draws a window in the shell through three services and its frames and screendumps must be the host scenario's goldens
+# (`module-window`, `module-live`). Skips (exit 0, with a message) only
 # when neither QEMU nor Docker is available.
 #
 # DESK_NATIVE_RUNNER=tools/native-run-bochs.sh runs the same checks under Bochs (see tools/native-test-bochs.sh); the runner must
@@ -388,5 +390,73 @@ cmp -s tests/native/expected-module.txt "$work/wrong-module.txt" && fail "the wr
 must_fail "a module transcript with a wrong log line" python3 -I tools/native-check.py "$work/wrong-module.txt" "$work/module.txt"
 must_fail "the module-bad transcript as the module run's" python3 -I tools/native-check.py tests/native/expected-module.txt "$work/module-bad.txt"
 rm -f dist/native-module.img dist/native-module-bad.img
+
+echo "== Module window (docs/LOADER.md, \"Visible-module spike\")"
+# HELLOWIN.DMD is loaded by the real loader with the window services bound, opens a window in the native shell and draws the scenario of
+# tests/shell/module-window.scn through desk_window_new, desk_fill and desk_text; it then makes one bad call of each kind, which the
+# kernel refuses with one transcript line each. `module-window` runs the scenario's steps (the module's draws replace the `hellowin`
+# open, fill and text steps) and takes a screendump at each frame, as the shell section does; the transcript's digests and QEMU's own
+# screendumps must be the PR 1 goldens' (tests/shell/module-window.sums), so the module through the services, the host scenario and the
+# emulator's display give one digest, at depth 8 on the std card and depth 4 on the Cirrus card. `module-live` is the watchable run: the
+# same set-up, the live loop, and when Escape arrives the kernel stops and unloads the module and prints mark 01; the marks and the
+# screendumps at them are held to the same sums. Before the shell is composed the kernel also loads HELLOWIN.DMD with only the base
+# services, which must be refused: outside a shell mode a window service cannot be bound at all.
+modwin_sums=tests/shell/module-window.sums
+modwin_scn=tests/shell/module-window.scn
+frames inject "$modwin_scn" > "$work/modwin.inject"
+# The live run's script: the first mark's screendump, Escape, the last mark's screendump, a key to end the kernel's pause.
+printf 'wait shell: mark 00\nscreendump {out}/drawn.ppm\nsendkey esc\nwait shell: mark 01\nscreendump {out}/closed.ppm\nsendkey spc\n' > "$work/modlive.inject"
+# run_modwin NAME IMAGE CARD DEPTH DIR: the run must succeed, its transcript must be the expected one and carry the sums' digests, and
+# its screendumps must equal the goldens' six-bit colours.
+run_modwin() {
+  local name=$1 image=$2 card=$3 depth=$4 dir=$5 got=0
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 60 --vga "$card" --inject "$work/modwin.inject" --shots "$dir" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+  python3 -I tools/native-check.py "tests/native/expected-module-window-$depth.txt" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  frames transcript "$modwin_sums" "$depth" "$work/$name.txt" > /dev/null || fail "$name: the transcript's digests are not the sums'"
+  frames check "$modwin_sums" "$depth" "$dir" > "$work/$name.check" || { cat "$work/$name.check" >&2; fail "$name: a screendump differs from the goldens"; }
+  echo "native: ok — $name: $(cat "$work/$name.check")"
+}
+# run_modlive NAME IMAGE CARD DEPTH DIR: the same for the live run, whose frames are marks 00 and 01.
+run_modlive() {
+  local name=$1 image=$2 card=$3 depth=$4 dir=$5 got=0
+  rm -rf "$dir"
+  tools/native-run.sh --timeout 60 --vga "$card" --inject "$work/modlive.inject" --shots "$dir" "$image" > "$work/$name.txt" 2> "$work/$name.err" || got=$?
+  [ "$got" = 0 ] || { tail -n 30 "$work/$name.txt" "$work/$name.err" >&2; fail "$name: exit status $got, expected 0"; }
+  python3 -I tools/native-check.py "tests/native/expected-module-live-$depth.txt" "$work/$name.txt" > /dev/null || fail "$name: transcript differs"
+  frames marks "$modwin_sums" "$modwin_scn" "$depth" "$work/$name.txt" > "$work/$name.marks" || { cat "$work/$name.marks" >&2; fail "$name: a mark differs from the sums"; }
+  frames check "$modwin_sums" "$depth" "$dir" > "$work/$name.check" || { cat "$work/$name.check" >&2; fail "$name: a screendump differs from the goldens"; }
+  echo "native: ok — $name: $(cat "$work/$name.marks"); $(cat "$work/$name.check")"
+}
+tools/native-image.sh --test-mode module-window --video vbe --out dist/native-modwin-8.img > /dev/null
+tools/native-image.sh --test-mode module-window --video text --out dist/native-modwin-4.img > /dev/null
+tools/native-image.sh --test-mode module-live --video vbe --out dist/native-modlive-8.img > /dev/null
+tools/native-image.sh --test-mode module-live --video text --out dist/native-modlive-4.img > /dev/null
+run_modwin modwin-8 dist/native-modwin-8.img std 8 dist/modwin-native-8
+run_modwin modwin-4 dist/native-modwin-4.img cirrus 4 dist/modwin-native-4
+run_modlive modlive-8 dist/native-modlive-8.img std 8 dist/modlive-native-8
+run_modlive modlive-4 dist/native-modlive-4.img cirrus 4 dist/modlive-native-4
+# The module's thirteen draws leave room for nineteen more, so the stop's twentieth fill is the one refused, and the module's twelve bad
+# calls print one line each: the transcript must say so, and the shell's frames must not have changed for any of them (the digests above).
+[ "$(grep -c '^module: desk_.* refused: ' "$work/modwin-8.txt")" = 13 ] || fail "modwin-8: not one refusal line for each of the twelve bad calls and the cap"
+# Negative: each of these must fail.
+awk '$1 == "drawn" && $2 == 8 { d = substr($5, 8, 1); $5 = substr($5, 1, 7) (d == "0" ? "1" : "0") } { print }' "$modwin_sums" > "$work/wrong-modwin.sums"
+cmp -s "$modwin_sums" "$work/wrong-modwin.sums" && fail "the altered module-window sums were not altered"
+must_fail "module screendumps checked against sums with one digest of drawn changed" frames check "$work/wrong-modwin.sums" 8 dist/modwin-native-8
+must_fail "the module transcript checked against those sums" frames transcript "$work/wrong-modwin.sums" 8 "$work/modwin-8.txt"
+must_fail "the depth 8 module screendumps checked against the depth 4 sums" frames check "$modwin_sums" 4 dist/modwin-native-8
+awk '$1 == "closed" && $2 == 8 { closed = $4 " " $5 } { line[NR] = $0 } END { for (i = 1; i <= NR; i++) { split(line[i], f, " "); if (f[1] == "drawn" && f[2] == 8) print "drawn 8 " f[3] " " closed; else print line[i] } }' "$modwin_sums" > "$work/swapped-modwin.sums"
+cmp -s "$modwin_sums" "$work/swapped-modwin.sums" && fail "the swapped module-window sums were not altered"
+must_fail "the drawn screendump checked against sums whose drawn carries closed's digest" frames check "$work/swapped-modwin.sums" 8 dist/modwin-native-8
+grep -v 'desk_fill refused: window 9 is not open' "$work/modwin-8.txt" > "$work/modwin-no9.txt"
+cmp -s "$work/modwin-8.txt" "$work/modwin-no9.txt" && fail "the window 9 refusal line was not in the transcript"
+must_fail "a module transcript without the window 9 refusal line" python3 -I tools/native-check.py tests/native/expected-module-window-8.txt "$work/modwin-no9.txt"
+grep -v '^shell: mark 01 ' "$work/modlive-8.txt" > "$work/modlive-nomark.txt"
+cmp -s "$work/modlive-8.txt" "$work/modlive-nomark.txt" && fail "mark 01 was not in the live transcript"
+must_fail "a live module transcript without mark 01" frames marks "$modwin_sums" "$modwin_scn" 8 "$work/modlive-nomark.txt"
+must_fail "the module-window transcript as the live run's" python3 -I tools/native-check.py tests/native/expected-module-live-8.txt "$work/modwin-8.txt"
+for d in dist/modwin-native-8 dist/modwin-native-4 dist/modlive-native-8 dist/modlive-native-4; do finish_shell "$d"; done
+rm -f dist/native-modwin-8.img dist/native-modwin-4.img dist/native-modlive-8.img dist/native-modlive-4.img
 
 printf 'native: all checks passed\n'
