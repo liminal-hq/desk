@@ -27,10 +27,14 @@ OBJDUMP="$(command -v llvm-objdump || command -v objdump || true)"
 [ -n "$OBJDUMP" ] || fail "no objdump on this machine, so the symbols in the linked image cannot be checked"
 disasm="$("$OBJDUMP" -d --no-show-raw-insn dos/target/dos-elf/release/hello)"
 # The body of one symbol: from its label to the next blank line.
-body() { printf '%s\n' "$disasm" | awk -v sym="<$1>:" '$2 == sym {on = 1; next} on && NF == 0 {exit} on'; }
+# awk reads all its input (no early exit) and each body is captured before it is grepped: an early exit anywhere in these pipes
+# would give the upstream command a SIGPIPE, which `pipefail` turns into a failure that comes and goes with the output's size.
+body() { printf '%s\n' "$disasm" | awk -v sym="<$1>:" '$2 == sym {on = 1; next} on && NF == 0 {on = 0} on'; }
 # llvm-objdump spells the dword string moves movsd and stosd; GNU objdump (the CI image has only that one) spells them movsl and `stos %eax`; the register operand is what tells the dword store from a byte one.
-body memcpy | grep -Eq 'rep movs[dl]' || fail "memcpy in the linked hello has no rep movsd: the weak compiler_builtins one won"
-body memset | grep -Eq 'rep stos.*eax' || fail "memset in the linked hello has no rep stosd: the weak compiler_builtins one won"
+memcpy_body="$(body memcpy)"
+memset_body="$(body memset)"
+grep -Eq 'rep movs[dl]' <<< "$memcpy_body" || fail "memcpy in the linked hello has no rep movsd: the weak compiler_builtins one won"
+grep -Eq 'rep stos.*eax' <<< "$memset_body" || fail "memset in the linked hello has no rep stosd: the weak compiler_builtins one won"
 echo "memcpy contains rep movsd and memset contains rep stosd"
 
 step "HELLO.EXE: output, arguments, heap, x87, DPMI, files"
@@ -100,6 +104,20 @@ run dist/d0 CLEANUP.EXE
 same CLEANUP.EXE $EXP/cleanup.txt
 echo "$out" | tail -4
 
+step "FILES.EXE: safe settings writes, recovery from a crash after the delete, and the INT 24h guard"
+run dist/d0 FILES.EXE
+[ "$status" = 0 ] || fail "FILES.EXE exited with status $status"
+same FILES.EXE $EXP/files.txt
+echo "$out" | grep -E 'read_recovering|stub called|after drop|vector untouched'
+
+# The second command runs in the same DOSBox. DOS restores INT 24h from the PSP when a program ends, so this line cannot tell the
+# clean-up list's restore from DOS's; the line the program prints after its own clean-up list ran can.
+step "Exit with the INT 24h guard held: the clean-up list puts the vector back"
+DOS_THEN="FILES.EXE check" run dist/d0 FILES.EXE leave-held
+[ "$status" = 0 ] || fail "FILES.EXE leave-held exited with status $status"
+same "FILES.EXE leave-held" $EXP/files-leave-held.txt
+echo "$out" | tail -2
+
 step "PROBE.EXE: video class, processor family, x87 with its control word untouched, memory and the game port"
 run dist/d0 PROBE.EXE
 [ "$status" = 0 ] || fail "PROBE.EXE exited with status $status"
@@ -156,6 +174,11 @@ run dist/d0 CLEANUP.EXE
 if (same CLEANUP.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the order swapped was accepted"; fi
 echo "rejected, as it should be"
 
+step "A transcript with the stub's answer changed fails the check"
+sed 's/returns AL=3/returns AL=0/' $EXP/files.txt > "$wrong"
+run dist/d0 FILES.EXE
+if (same FILES.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the wrong stub answer was accepted"; fi
+echo "rejected, as it should be"
 step "A transcript with the wrong video class or a changed control word fails the check"
 sed 's/video class Vga/video class Cga/' $EXP/probe.txt > "$wrong"
 run dist/d0 PROBE.EXE

@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 
 use desk_module::{load_into, FormatError, LoadError, Module, Placed, KIND_MODULE};
 
-use crate::{heap, memory, println};
+use crate::{heap, memory, modwin, println};
 
 /// The newest service table this kernel provides: SDK 1 is the four spike services (`docs/LOADER.md`).
 const CORE_SDK: u16 = 1;
@@ -31,34 +31,98 @@ extern "C" fn svc_panic(text: *const u8, len: usize) {
     panic!("module panic: {}", core::str::from_utf8(bytes).unwrap_or("<not UTF-8>"));
 }
 
+/// A service's function-pointer type, by the shape of the call. The table holds function pointers because an address cannot be turned
+/// into an integer in a `const`; `address` does it at load.
+#[derive(Clone, Copy)]
+pub(crate) enum Service {
+    /// `desk_log` and `desk_panic`: a text and its length.
+    Text(extern "C" fn(*const u8, usize)),
+    /// `desk_window_new` (`modwin.rs`).
+    WindowNew(extern "C" fn(u32, *const u8, u32, i32, i32, u32) -> u32),
+    /// `desk_fill`.
+    Fill(extern "C" fn(u32, i32, i32, i32, i32, u32)),
+    /// `desk_text`.
+    DrawText(extern "C" fn(u32, i32, i32, *const u8, u32, u32, u32)),
+}
+
+impl Service {
+    fn address(self) -> u32 {
+        match self {
+            Service::Text(f) => f as usize as u32,
+            Service::WindowNew(f) => f as usize as u32,
+            Service::Fill(f) => f as usize as u32,
+            Service::DrawText(f) => f as usize as u32,
+        }
+    }
+
+    /// Whether the service is one of the window services, which only a shell mode may bind.
+    fn is_window(self) -> bool {
+        !matches!(self, Service::Text(_))
+    }
+}
+
 /// The services by name, sorted. M4 binds `desk_log`, and `desk_panic` because the guest crate's panic handler links it into
 /// every module, so `hello` imports both (the plan's table listed `desk_log` alone); `desk_alloc` and `desk_free` arrive with
-/// M6. The table holds function pointers, because an address cannot be turned into an integer in a `static`; `resolve` does
-/// it at load.
-static SERVICES: [(&str, extern "C" fn(*const u8, usize)); 2] = [("desk_log", svc_log), ("desk_panic", svc_panic)];
+/// M6. The visible-module spike adds the three window services (`docs/LOADER.md`), which `resolve_window` binds and `resolve_base`
+/// does not.
+const SERVICES: [(&str, Service); 5] = [
+    ("desk_fill", Service::Fill(modwin::svc_fill)),
+    ("desk_log", Service::Text(svc_log)),
+    ("desk_panic", Service::Text(svc_panic)),
+    ("desk_text", Service::DrawText(modwin::svc_text)),
+    ("desk_window_new", Service::WindowNew(modwin::svc_window_new)),
+];
 
-fn resolve(name: &str) -> Option<u32> {
-    SERVICES
-        .iter()
-        .find(|(n, _)| *n == name)
-        .map(|&(_, service)| service as usize as u32)
+/// The names must ascend strictly, so a table that is out of order or repeats a name does not build.
+const _: () = {
+    let mut i = 1;
+    while i < SERVICES.len() {
+        let (a, b) = (SERVICES[i - 1].0.as_bytes(), SERVICES[i].0.as_bytes());
+        let mut j = 0;
+        while j < a.len() && j < b.len() && a[j] == b[j] {
+            j += 1;
+        }
+        // Ascending: the first difference is smaller in `a`, or `a` is a proper prefix of `b`.
+        let ascends = if j < a.len() && j < b.len() {
+            a[j] < b[j]
+        } else {
+            j == a.len() && j < b.len()
+        };
+        assert!(ascends, "SERVICES is not sorted");
+        i += 1;
+    }
+};
+
+fn find(name: &str) -> Option<Service> {
+    SERVICES.iter().find(|(n, _)| *n == name).map(|&(_, service)| service)
+}
+
+/// The address of a service the earlier modes' modules may bind: `desk_log` and `desk_panic`.
+pub(crate) fn resolve_base(name: &str) -> Option<u32> {
+    find(name).filter(|s| !s.is_window()).map(Service::address)
+}
+
+/// The address of any service. Used only when a shell is about to be lent to the module (`modwin.rs`), so outside a shell mode a
+/// window service cannot be bound at all.
+pub(crate) fn resolve_window(name: &str) -> Option<u32> {
+    find(name).map(Service::address)
 }
 
 /// Frames for an image, freed frame by frame when dropped.
-struct Frames {
-    base: u32,
+pub(crate) struct Frames {
+    pub(crate) base: u32,
     count: usize,
     bytes: usize,
 }
 
 impl Frames {
-    fn take(bytes: usize) -> Option<Frames> {
+    pub(crate) fn take(bytes: usize) -> Option<Frames> {
         let count = bytes.div_ceil(memory::FRAME_SIZE as usize);
         let base = memory::alloc_contiguous(count)?;
         Some(Frames { base, count, bytes })
     }
 
-    fn memory(&mut self) -> &mut [u8] {
+    pub(crate) fn memory(&mut self) -> &mut [u8] {
         // SAFETY: the frames were just taken from the allocator, are identity-mapped (there is no paging) and nothing else refers
         // to them; the slice lives no longer than the borrow of `self`.
         unsafe { core::slice::from_raw_parts_mut(self.base as *mut u8, self.bytes) }
@@ -79,7 +143,7 @@ fn refuse(name: &str, error: &dyn core::fmt::Display) {
 }
 
 /// Parses a file and prints the reason when it is refused.
-fn parse<'a>(name: &str, bytes: &'a [u8]) -> Option<Module<'a>> {
+pub(crate) fn parse<'a>(name: &str, bytes: &'a [u8]) -> Option<Module<'a>> {
     match Module::parse(bytes, CORE_SDK) {
         Ok(m) => Some(m),
         Err(FormatError::BadChecksum { stored, computed }) => {
@@ -125,7 +189,7 @@ pub fn run(bad: bool) {
 
     let mut frames = Frames::take(h.mem_size as usize).expect("no frames for the module");
     let base = frames.base;
-    let placed: Placed = match load_into(&m, KIND_MODULE, frames.memory(), base, &resolve) {
+    let placed: Placed = match load_into(&m, KIND_MODULE, frames.memory(), base, &resolve_base) {
         Ok(p) => p,
         Err(e) => {
             refuse("HELLO.DMD", &e);
@@ -159,7 +223,7 @@ pub fn run(bad: bool) {
     // An application needs a task (R77), so the module loader refuses it.
     let app = parse("APPMAIN.DKX", APPMAIN).expect("APPMAIN.DKX parses");
     let mut none: [u8; 0] = [];
-    match load_into(&app, KIND_MODULE, &mut none, 0x1000, &resolve) {
+    match load_into(&app, KIND_MODULE, &mut none, 0x1000, &resolve_base) {
         Err(LoadError::KindNotLoadable { kind: 2, .. }) => {
             println!("module: refused APPMAIN.DKX: an application (kind 2) is not loadable here")
         }

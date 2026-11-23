@@ -9,6 +9,7 @@ extern crate alloc;
 
 pub mod cleanup;
 pub mod ctx;
+pub mod files;
 pub mod hello;
 pub mod hw;
 pub mod panicky;

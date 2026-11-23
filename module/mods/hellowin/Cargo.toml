@@ -1,0 +1,17 @@
+[package]
+name = "hellowin"
+description = "The visible-module spike: opens a window and draws in it through three services, then makes a bad call of each kind"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+desk-guest = { path = "../../guest" }
+
+[[bin]]
+name = "hellowin"
+path = "src/main.rs"
+test = false
+bench = false

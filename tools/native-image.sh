@@ -15,7 +15,10 @@
 # need typed keys, for an emulator that cannot inject them), shell (the first window's scripted scenario, a frame at a time:
 # docs/FIRST-WINDOW.md), shell-corrupt (the same, with one pixel of the screen changed after the `moved` frame) and shell-live (the first
 # window on the PS/2 keyboard and mouse until Escape, with F12 printing a mark: docs/LIVE-INPUT.md), module (the kernel loads HELLO.DMD
-# from a buffer, runs it and unloads it: docs/LOADER.md) and module-bad (the same file with one bit flipped, which must be refused).
+# from a buffer, runs it and unloads it: docs/LOADER.md) and module-bad (the same file with one bit flipped, which must be refused),
+# module-window (HELLOWIN.DMD, loaded by the real loader, draws a window in the shell and the scenario of tests/shell/module-window.scn
+# is checked frame by frame like `shell`: docs/LOADER.md, "Visible-module spike") and module-live (the same, then the live loop until
+# Escape; 18 is left for the loader plan's module-noguard).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -35,6 +38,7 @@ case "$mode" in
   input) code=7 ;; input-masked) code=8 ;; input-idle) code=9 ;; gfx) code=10 ;; bios) code=11 ;; bios-solo) code=12 ;;
   shell) code=13 ;; shell-corrupt) code=14 ;; shell-live) code=15 ;;
   module) code=16 ;; module-bad) code=17 ;;
+  module-window) code=19 ;; module-live) code=20 ;;
   *) echo "unknown test mode: $mode" >&2; exit 2 ;;
 esac
 

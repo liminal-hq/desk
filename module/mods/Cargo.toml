@@ -2,7 +2,7 @@
 # applications (`.DKX`) for the kernel's target by `tools/build-modules.sh`. Its own workspace, because the default target here is not
 # the host's (`.cargo/config.toml`); `module/Cargo.toml` excludes it.
 [workspace]
-members = ["hello", "appmain"]
+members = ["hello", "appmain", "hellowin"]
 resolver = "2"
 
 [workspace.package]

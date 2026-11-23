@@ -21,6 +21,7 @@ mod idt;
 mod input;
 mod memory;
 mod module;
+mod modwin;
 mod pic;
 mod pit;
 mod scene;
@@ -108,6 +109,8 @@ enum TestMode {
     ShellLive = 15,
     Module = 16,
     ModuleBad = 17,
+    ModuleWindow = 19,
+    ModuleLive = 20,
 }
 
 impl TestMode {
@@ -130,6 +133,8 @@ impl TestMode {
             15 => TestMode::ShellLive,
             16 => TestMode::Module,
             17 => TestMode::ModuleBad,
+            19 => TestMode::ModuleWindow,
+            20 => TestMode::ModuleLive,
             _ => TestMode::Normal,
         }
     }
@@ -280,6 +285,12 @@ fn input_section(mode: TestMode, video: &video::Video, info: &BootInfo) {
         shell::live(video, ps2);
         return;
     }
+    if mode == TestMode::ModuleWindow || mode == TestMode::ModuleLive {
+        // HELLOWIN.DMD draws a window in the shell (`shell.rs`, `modwin.rs`, `docs/LOADER.md`).
+        println!("input: ready");
+        shell::module(video, ps2, mode == TestMode::ModuleLive);
+        return;
+    }
     let timeout_ticks = match mode {
         TestMode::Input => 1500,
         TestMode::InputMasked => 500,
@@ -305,7 +316,9 @@ fn run_test_mode(mode: TestMode) {
         | TestMode::ShellCorrupt
         | TestMode::ShellLive
         | TestMode::Module
-        | TestMode::ModuleBad => {}
+        | TestMode::ModuleBad
+        | TestMode::ModuleWindow
+        | TestMode::ModuleLive => {}
         TestMode::DivideError => {
             println!("test: dividing by zero");
             // SAFETY: deliberately faults; the exception handler reports it and exits.

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Builds the module loader's test modules and packs them: dmdpack (host), the modules for the kernel's target, then HELLO.DMD and
-# APPMAIN.DKX in dist/modules with each linked ELF beside them for debugging (docs/LOADER.md, "Building a module").
+# Builds the module loader's test modules and packs them: dmdpack (host), the modules for the kernel's target, then HELLO.DMD, APPMAIN.DKX
+# and HELLOWIN.DMD in dist/modules with each linked ELF beside them for debugging (docs/LOADER.md, "Building a module").
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -25,7 +25,7 @@ while [ $# -gt 0 ]; do
 done
 
 # name:kind pairs; the packed file is the name in upper case with .DMD for a module and .DKX for an application.
-modules=(hello:module appmain:app)
+modules=(hello:module appmain:app hellowin:module)
 
 target=${CARGO_TARGET_DIR:-module/target}
 cargo build --release --locked --quiet --manifest-path module/Cargo.toml -p dmdpack
