@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. No task has started and no code exists; lessons from S1-DXE3.md."
+   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. M1 to M4 are merged (the format crate #77, the host ELF reader #78, the packer and hello module #85, and the native kernel loading HELLO.DMD from an embedded buffer in QEMU, #103); nothing is loaded from disk yet, and M5 (the same on DOS) and M6 are next. A visible-module spike (decided 2026-11-22) is in progress, with nothing merged; lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
@@ -1477,14 +1477,14 @@
    "id": "ru-mem",
    "label": "String-instruction memset and memcpy",
    "branch": "hosted",
-   "state": "planned",
+   "state": "done-emu",
    "deps": [
     "rt",
     "ru-decision"
    ],
-   "what": "R132: A mem.rs in the promoted rt with rep stosd and rep movsd for memset and memcpy, and a rep movsd path for MmioRegion::write_bytes. Fizz 2 measured its screen copy dropping from 3,589 to 599 µs in DOSBox (its figure, not reproduced). Open: whether a string move meets the volatile contract.",
+   "what": "R132: Merged in two parts: a strong string-instruction memset and memcpy in dos/rt/src/mem.rs (rep stosd and rep movsd, T2, #111) and MmioRegion::copy_from for frame buffers only, with write_bytes unchanged (T3, #112; decision D2 of 2026-11-22). Fizz 2 measured its screen copy dropping from 3,589 to 599 µs in DOSBox (its figure, not reproduced); no speed claim is made here.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R132; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+   "evidence": "PRs #111 and #112; docs/ROADMAP.md R132 and docs/RUNTIME-PLAN.md. Run in emulators only (DOSBox Staging, QEMU as a 486): dos/check.sh checks the strong symbols linked and the golden transcripts stayed byte-identical; the host tests exercise copy_from's fallback only. Nothing on real hardware; whether rep movsd is safe on a real ISA VGA card is not established."
   },
   {
    "id": "ru-transcript",
@@ -1506,14 +1506,14 @@
    "id": "ru-pit",
    "label": "Reprogrammed PIT with per-interrupt chaining",
    "branch": "hosted",
-   "state": "planned",
+   "state": "done-emu",
    "deps": [
     "rt",
     "ru-decision"
    ],
-   "what": "R134: A hosted timer from Fizz 2's design: reprogram the PIT, keep the BIOS clock right with an accumulator, an integer Pacer with a catch-up cap, restore the divisor on exit. The HAL's Chain becomes a per-interrupt decision instead of one fixed at registration. Also serves R81.",
+   "what": "R134: Merged in three parts: BiosChain in desk-pit and an integer Pacer in desk-hal::time (T5, #107), a per-interrupt Action { Eoi, Chain } returned by IrqHandler (T4, #110), and the opt-in rt::timer::hook_rate at 60 and 560 Hz with clocks, delay_us and bios_elapsed, restoring the BIOS rate on exit (T6, #113; decision D4: the shell stays at 18.2 Hz). Nothing uses Pacer yet.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R134; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+   "evidence": "PRs #107, #110 and #113; docs/ROADMAP.md R134 and docs/RUNTIME-PLAN.md. HW.EXE fast ran in DOSBox Staging with wide ranges, because its timing is loose; the host tests cover BiosChain, Pacer and Action. Nothing on real hardware; no timing figure is claimed (R137)."
   },
   {
    "id": "ru-sound",
@@ -1572,7 +1572,7 @@
    "id": "ru-promote",
    "label": "Promote rt with Fizz 2's improvements",
    "branch": "hosted",
-   "state": "planned",
+   "state": "progress",
    "deps": [
     "rt",
     "ru-mem",
@@ -1580,9 +1580,9 @@
     "ru-sound",
     "ru-transcript"
    ],
-   "what": "R139: The promotion itself is done (R53, R148: dos/rt); what is left is to make the promoted runtime the union: R132 to R136 plus Fizz 2's probes, text.rs, the press-edge InputLatch, and safe settings writes with an INT 24h guard. The R54 findings are fixed once. Note: since R148 that path is `dos/rt`, so the runtime already sits in `dos/`; this row is recorded as written.",
+   "what": "R139: The promotion itself is done (R53, R148: dos/rt). Merged so far: T1 the clean-up list in order with 16 slots (#108), T2 memset and memcpy (#111), T3 copy_from (#112), T4 the Action return (#110), T5 BiosChain and Pacer (#107), T6 the opt-in fast timer (#113), and the R136 design note (#105). Still to do: T7 safe settings writes and the INT 24h guard, T8 probes, T9 the text screen, T10 InputLatch, the sound drivers (R135) and the documents. Nothing is copied from Fizz 2 (decision D1).",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R139; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+   "evidence": "docs/ROADMAP.md R139 and docs/RUNTIME-PLAN.md (the order table marks each task); PRs #105, #107, #108, #110, #111, #112 and #113. Emulators only; nothing on real hardware."
   },
   {
    "id": "ru-adopt",

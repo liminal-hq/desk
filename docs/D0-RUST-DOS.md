@@ -126,7 +126,7 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 
 ## 3. The runtime crate
 
-[`rt`](../dos/rt/) is about 1,600 lines in 13 files with the reasons commented in each. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
+[`rt`](../dos/rt/) was about 1,600 lines in 13 files when the spike was written, with the reasons commented in each; as promoted it is `dos/rt`, 2,675 lines in 16 files (counted with `wc -l` on 2026-11-23), the difference being the modules below the table's first rows: `irq`, `hal`, `bios_kbd`, and the growth of `timer`, `mem` and `cleanup`. Programs declare `rt::entry!(main)` with `fn main() -> i32`.
 
 | Module | What it gives | Notes |
 |---|---|---|
@@ -139,7 +139,8 @@ What `_start` has to do, and does ([`rt/src/start.rs`](../dos/rt/src/start.rs)):
 | `io` | `print!`, `println!` | Standard output, handle 1 |
 | `panic` | the panic handler | Runs the clean-up list, prints `RT PANIC: <location and message>` to standard output (the harness captures only that), exits with status 3. A panic inside the handler exits at once |
 | `cleanup` | `register`, `try_register`, `forget`, `len`, `run_all` | Strictly last in, first out: 16 slots, a re-registration moves the entry to the top, `forget` closes the gap, and a full list refuses (`register` returns false). `exit` and the panic handler run it. Every acquisition in `rt` registers first or rolls back, so a refusal leaves nothing hooked |
-| `timer`, `vga` | the hardware proofs below | |
+| `timer`, `vga` | the hardware proofs below | `timer` also has the opt-in fast hook, `hook_rate`, with `ticks`, `clocks`, `delay_us` and `bios_elapsed` (see [IRQ 0](#4-hardware-proof)) |
+| `irq`, `hal`, `bios_kbd` | the interrupt registry (a stub per IRQ line calling an `IrqHandler` and acting on its `Action`), the DOS side of the HAL (BIOS calls through DPMI, the display), and the BIOS keyboard bytes | Added after the spike; see [`HAL.md`](HAL.md) |
 | `mem` | `memcpy`, `memmove`, `memset`, `memcmp` | All four for the COFF target (stage 1); the ELF build defines only strong `memcpy` and `memset` (`rep movsd`, `rep stosd`) and takes `memmove` and `memcmp` from `compiler_builtins` |
 
 **Addressing.** The stub's data selector covers only the image's block. Memory from DPMI 0501h is somewhere else in the linear address space, so `dpmi::init` sets the limit of `DS` to 4 GiB (0008h) and reloads `DS`, `ES` and `SS`; a pointer to any linear address is then `linear − base`, wrapping, and the segment arithmetic (`base + offset` modulo 2^32) undoes it. The first megabyte (the PSP, the environment, the VGA frame buffer, the BIOS data area) is mapped at linear 0 by CWSDPMI, so it needs no selector either. This is the same near-pointer arrangement DJGPP programs use.
@@ -177,7 +178,7 @@ hw: frame buffer checksum 0x49fd8cc5, pattern in memory 0x49fd8cc5, match true
 | Whole spike check | | about 9 s warm; the full `tools/check.sh` about 10 s warm; about 32 s from a clean clone in the `ci-dos` image, cargo downloads included |
 | Startup | `dosrun` round trip 0.40 s | 0.36 s (`HELLO.EXE exit 0`); dominated by DOSBox itself, so the 0.04 s difference is probably the larger file and the C runtime's initialisation, not something a program start can be measured by here |
 | Steps and tools | `cargo`, `coff2go32.py`, `gcc` (driver, `as`, `ld`, `libc`, `libgcc`, `crt0`) | `cargo` with `rust-lld`, `elf2go32.py` and the stub bytes |
-| Source | about 75 lines of C, 91 of Python (converter) | 1,600 lines of `rt` (a lot of it comments), 139 lines of Python (packer) |
+| Source | about 75 lines of C, 91 of Python (converter) | 1,600 lines of `rt` when measured (a lot of it comments; 2,675 now), 139 lines of Python (packer) |
 
 `HELLO.EXE` has 46 KiB of code, 0 bytes of initialised data and 256 KiB of `.bss` (the stack). Stage 1 (stripped) is about 2.5 KiB larger than stage 2; the reason was not investigated.
 
