@@ -1,0 +1,4 @@
+hw: exiting with the PIT at 60 Hz
+hw: after the clean-up list the timer vector is back and the fast timer is off: true
+hw: rate-check: the fast timer is not installed: true
+hw: rate-check: the BIOS counter advanced 18 to 19 ticks in one second by the PIT: true

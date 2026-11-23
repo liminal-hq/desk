@@ -108,8 +108,9 @@ impl<P: PortIo> Pit<P> {
     /// by one per input clock (838 ns), so `divisor - count` is the time since the last tick. In the BIOS's mode 3, which the
     /// hosted track has unless it reprograms the PIT, the count runs down by two and covers each period twice, so it does not
     /// give sub-tick time without knowing the output's phase; reprogram with `program_divisor(MAX_DIVISOR)` (the same rate in mode
-    /// 2) first. Run with interrupts off: an interrupt handler that touches the PIT between the latch and the two reads would
-    /// scramble them.
+    /// 2) first. Prefer interrupts off: an interrupt handler that touches the PIT between the latch and the two reads would
+    /// scramble them. `rt::timer::clocks` reads it with interrupts on, which is safe there because neither the fast-timer handler
+    /// nor a standard BIOS timer handler touches the PIT.
     pub fn read_counter(&self) -> u16 {
         self.ports.outb(COMMAND, CMD_CH0_LATCH);
         let lo = self.ports.inb(CHANNEL0);
@@ -126,7 +127,7 @@ impl<P: PortIo> Pit<P> {
 /// A small `Copy` value with `u32` arithmetic only (no allocation, no floating point, no 64-bit division), so it can run inside
 /// the interrupt handler. A divisor of 0 means 65,536, as the chip reads it, and chains on every tick; so does any divisor above
 /// 65,536, which is clamped to it. The caller passes the divisor it programmed, which `check_divisor` has accepted (it refuses 1
-/// and anything above 65,536), so the clamp only matters if the two are out of step. Needed by the hosted fast timer (roadmap R139), which has not been built on it yet.
+/// and anything above 65,536), so the clamp only matters if the two are out of step. Used by the hosted fast timer (`rt::timer::hook_rate`, roadmap R139).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BiosChain {
     divisor: u32,
@@ -165,6 +166,47 @@ impl BiosChain {
     /// Empties the accumulator, as after reprogramming the PIT.
     pub fn reset(&mut self) {
         self.accumulator = 0;
+    }
+}
+
+/// How many ticks the BIOS counts in a day (0x1800B0, 1,573,040). The counter at 0040:006C starts again from 0 at midnight.
+pub const BIOS_TICKS_PER_DAY: u32 = 1_573_040;
+
+/// BIOS ticks from `start` to `now`, both readings of the counter at 0040:006C, with the midnight wrap: a `now` below `start` means
+/// the counter went back to 0 in between, once. A reading at or above `BIOS_TICKS_PER_DAY` is taken modulo the day. Exact for any
+/// span under a day.
+pub const fn bios_ticks_between(start: u32, now: u32) -> u32 {
+    let (start, now) = (start % BIOS_TICKS_PER_DAY, now % BIOS_TICKS_PER_DAY);
+    if now >= start {
+        now - start
+    } else {
+        now + BIOS_TICKS_PER_DAY - start
+    }
+}
+
+/// PIT input clocks since the channel was programmed with `divisor` in mode 2 (`Pit::program_divisor`), from the number of
+/// interrupts so far and one reading of the latched `count`: `ticks * divisor + (divisor - count)`. In mode 2 the count runs from
+/// the divisor down to 1 and then reloads, so `divisor - count` is the time since the last interrupt. A count of 0 (what the chip
+/// reads when the divisor is 65,536) or one above the divisor counts as no time since the interrupt. The result is the true count
+/// modulo 2^32 (about 3,599 seconds of clocks, one second short of an hour), so only differences taken with `wrapping_sub` mean anything.
+pub const fn clocks_at(ticks: u32, divisor: u32, count: u16) -> u32 {
+    let divisor = if divisor == 0 || divisor > MAX_DIVISOR {
+        MAX_DIVISOR
+    } else {
+        divisor
+    };
+    let count = count as u32;
+    let since = if count == 0 || count > divisor { 0 } else { divisor - count };
+    ticks.wrapping_mul(divisor).wrapping_add(since)
+}
+
+/// The PIT input clocks in `us` microseconds, rounded to the nearest and saturating at `u32::MAX` (3,599 s).
+pub const fn clocks_for_micros(us: u32) -> u32 {
+    let clocks = (us as u64 * INPUT_HZ as u64 + 500_000) / 1_000_000;
+    if clocks > u32::MAX as u64 {
+        u32::MAX
+    } else {
+        clocks as u32
     }
 }
 
@@ -349,6 +391,50 @@ mod tests {
         pit.program_periodic(100).unwrap();
         chip.borrow_mut().count = 5_000;
         assert_eq!(pit.read_counter(), 5_000);
+    }
+
+    #[test]
+    fn the_bios_day_wraps_at_midnight() {
+        assert_eq!(BIOS_TICKS_PER_DAY, 0x18_00B0);
+        assert_eq!(bios_ticks_between(100, 118), 18);
+        assert_eq!(bios_ticks_between(100, 100), 0);
+        assert_eq!(bios_ticks_between(BIOS_TICKS_PER_DAY - 5, 13), 18, "across midnight");
+        assert_eq!(bios_ticks_between(BIOS_TICKS_PER_DAY - 1, 0), 1);
+        assert_eq!(bios_ticks_between(0, BIOS_TICKS_PER_DAY - 1), BIOS_TICKS_PER_DAY - 1);
+        assert_eq!(
+            bios_ticks_between(BIOS_TICKS_PER_DAY + 10, 12),
+            2,
+            "a reading past the day is reduced"
+        );
+    }
+
+    #[test]
+    fn clocks_count_whole_periods_plus_the_part_of_one() {
+        assert_eq!(clocks_at(0, 2_131, 2_131), 0, "just reloaded");
+        assert_eq!(clocks_at(0, 2_131, 2_031), 100);
+        assert_eq!(clocks_at(3, 2_131, 2_131), 6_393);
+        assert_eq!(clocks_at(3, 2_131, 1), 6_393 + 2_130);
+        assert_eq!(
+            clocks_at(1, MAX_DIVISOR, 0),
+            65_536,
+            "a count of 0 is a full period of 65,536, none of the next"
+        );
+        assert_eq!(clocks_at(1, 100, 500), 100, "a count above the divisor adds nothing");
+        // The reading is the same value at the end of one period and the start of the next, so time never runs backwards.
+        assert_eq!(clocks_at(1, 2_131, 1) + 1, clocks_at(2, 2_131, 2_131));
+        // Differences survive the wrap of the 32-bit total.
+        let a = clocks_at(u32::MAX, 19_886, 19_000);
+        let b = clocks_at(u32::MAX.wrapping_add(2), 19_886, 18_000);
+        assert_eq!(b.wrapping_sub(a), 2 * 19_886 + 1_000);
+    }
+
+    #[test]
+    fn microseconds_become_clocks_to_the_nearest() {
+        assert_eq!(clocks_for_micros(0), 0);
+        assert_eq!(clocks_for_micros(1_000_000), INPUT_HZ);
+        assert_eq!(clocks_for_micros(10_000), 11_932);
+        assert_eq!(clocks_for_micros(1), 1);
+        assert_eq!(clocks_for_micros(u32::MAX), u32::MAX);
     }
 
     #[test]

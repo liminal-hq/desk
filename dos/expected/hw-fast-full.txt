@@ -1,0 +1,3 @@
+hw: fast-full: hook_rate refused with the clean-up list full: true
+hw: fast-full: nothing changed: true
+hw: fast-full: the BIOS counter advanced 18 to 19 ticks in one second by the PIT: true

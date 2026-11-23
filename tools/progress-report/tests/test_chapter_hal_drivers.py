@@ -68,7 +68,7 @@ class HalChaptersTests(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(gather.ROOT, "rt")))
         rt = rd("dos", "rt", "Cargo.toml")
         self.assertIn("desk-pic", rt)
-        self.assertNotIn("desk-pit", rt)
+        self.assertIn("desk-pit", rt)
         self.assertNotIn("desk-serial", rt)
 
     def test_the_serial_sequence_in_the_prose_is_the_drivers(self):
@@ -143,7 +143,8 @@ class HalChaptersTests(unittest.TestCase):
             self.assertIn(call, dos_irq)
         self.assertNotIn("Pic8259::new(unsafe { RawPorts::new() }).init", dos_irq)
         for f in sorted(os.listdir(os.path.join(gather.ROOT, "dos", "rt", "src"))):
-            self.assertNotIn("restore_bios_rate", rd("dos", "rt", "src", f))
+            # The hosted fast timer (R139 T6) is the one user of restore_bios_rate in rt, and only in timer.rs.
+            self.assertEqual("restore_bios_rate" in rd("dos", "rt", "src", f), f == "timer.rs", f)
         for f in ("serial.rs", "pic.rs", "pit.rs", "hal.rs", "main.rs", "bios.rs"):
             for fn in ("restore_bios_rate", "read_counter", ".probe()", "read_byte"):
                 self.assertNotIn(fn, rd("kernel", "src", f), f + " " + fn)
@@ -153,10 +154,10 @@ class HalChaptersTests(unittest.TestCase):
             return len(re.findall(r"#\[test\]", rd(*parts)))
         self.assertEqual(count("hal", "drivers", "serial", "src", "lib.rs"), 8)
         self.assertEqual(count("hal", "drivers", "pic", "src", "lib.rs"), 6)
-        self.assertEqual(count("hal", "drivers", "pit", "src", "lib.rs"), 12)
+        self.assertEqual(count("hal", "drivers", "pit", "src", "lib.rs"), 15)
         self.assertIn("eight tests", self.drv)
         self.assertIn("six tests", self.drv)
-        self.assertIn("twelve tests", self.drv)
+        self.assertIn("fifteen tests", self.drv)
 
 
 if __name__ == "__main__":
