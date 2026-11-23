@@ -378,8 +378,9 @@ The minimum outer size is 120 × 40 (`MIN_WIDTH`, `MIN_HEIGHT`): `ChromeLayout::
 ### Widgets
 
 ```rust
-pub enum Widget { Label(Label), TextLine(TextLine) }
+pub enum Widget { Label(Label), TextLine(TextLine), Fill(Fill) }
 pub struct Label { pub at: (i32, i32), pub text: String, pub role: Role }
+pub struct Fill { pub rect: Rect, pub role: Role }
 pub struct TextLine { pub at: (i32, i32), pub width: u32, pub text: String, pub max_chars: u16 }
 impl TextLine { pub fn new(at: (i32, i32), width: u32, max_chars: u16) -> TextLine; pub fn bounds(&self) -> Rect; }
 pub const FIELD_HEIGHT: u32 = 20; pub const CARET_HEIGHT: u32 = 12;
@@ -392,6 +393,12 @@ impl Widget {
 ```
 
 `TextLine` is a field: a `Border` outline, `Content` inside, its text in `Text`, and a 1 × 12 caret in `Accent` after the text, drawn only while it is the focused widget of the focused window (`Widget::paint`'s `focused` says so). Printable keys append (`desk_kbd::char_for`), Backspace removes one character; a field is `FIELD_HEIGHT` (20) high with the text's cell 3 pixels below its top and 6 in from its left, and the caret starts 4 pixels below the top, directly after the text; `key` returns the union of the old and new text cells and carets, inside the field. Only key presses count, and chords with Control, Alt or the Windows key, characters outside printable ASCII and keys at `max_chars` (or where the text and caret would no longer fit inside the outline) change nothing. The caret does not blink (blinking needs time, and the first window's frames must not depend on it).
+
+`Fill` is a rectangle in a colour role, `rect` in content coordinates, painted with the role's slot. `Rect` saturates, so any coordinates are accepted, and `Wm::paint` clips every widget to the window's content area: a fill that reaches past it shows only what lies inside. Fills and labels take no focus and no keys. A window's retained items are painted in the order they were added, so a later one lies over an earlier one.
+
+### Retained fills and text
+
+The shell is retained: `Wm::paint` repaints a window from its `widgets` whenever damage touches it, so whatever drew into a window (a scenario, or later a loaded module through its services; `docs/APP-MODEL.md`) never writes pixels. Each drawing call adds one retained item to its window. `Shell::text` adds a `Label` in the UI face and a role, `Shell::fill` adds a `Fill`, and `Shell::label` is `text` in the `Text` role. Each returns false when there is no such window. A window holds at most `MAX_ITEMS` (32) items, fields included, and refuses the next one; the cap is a throwaway spike limit, not a design number. `tests/shell/module-window.scn` is the reference for what a module's window draws: three lines of text, eight swatches and two fills that overhang the content area and must show clipped.
 
 ## desk-wm: windows, focus and damage
 
@@ -462,7 +469,9 @@ impl<'f> Shell<'f> {
     pub fn open(&mut self, name: &str, outer: Rect, title: &str) -> WindowId;
     pub fn close(&mut self, name: &str) -> bool;
     pub fn focus(&mut self, name: &str) -> bool;
-    pub fn label(&mut self, window: &str, x: i32, y: i32, text: &str) -> bool;
+    pub fn label(&mut self, window: &str, x: i32, y: i32, text: &str) -> bool;   // in the Text role
+    pub fn text(&mut self, window: &str, x: i32, y: i32, text: &str, role: Role) -> bool;
+    pub fn fill(&mut self, window: &str, rect: Rect, role: Role) -> bool;   // rect in content coordinates, clipped when painted
     pub fn field(&mut self, window: &str, x: i32, y: i32, width: u32) -> bool;   // also the window's focused widget
     pub fn damage_all(&mut self);                          // the next frame repaints and presents the whole screen
     pub fn back(&self) -> &Surface;  pub fn pointer(&self) -> (i32, i32);  pub fn depth(&self) -> Depth;
@@ -471,6 +480,7 @@ impl<'f> Shell<'f> {
 pub mod scenario {
     pub struct Scenario { pub screen: (u32, u32), pub depths: Vec<Depth>, pub steps: Vec<Step> }
     pub enum Step { Open { name: String, outer: Rect, title: String }, Label { window: String, x: i32, y: i32, text: String },
+                    Text { window: String, x: i32, y: i32, role: Role, text: String }, Fill { window: String, rect: Rect, role: Role },
                     Field { window: String, x: i32, y: i32, width: u32 }, Close(String), Focus(String),
                     Event(Event), Type(String), Frame(FrameName), ExpectDamage { depth: Depth, max_pixels: u32, max_rects: Option<u8> } }
     pub struct FrameName(/* 1 to 8 characters of a-z, 0-9 and - */);       // FrameName::new(&str) -> Option, as_str()
@@ -479,12 +489,13 @@ pub mod scenario {
     pub fn parse(text: &str) -> Result<Scenario, ParseError>;
     pub fn type_events(text: &str) -> Result<Vec<Event>, char>;   // what a `type` step does; Err is the first character no key types
     pub fn key_code(name: &str) -> Option<KeyCode>;               // a scenario's key name
+    pub fn role_of(name: &str) -> Option<Role>;                   // a scenario's role name
     /// Runs every step; after each Frame step's frame has been presented, calls `capture(name, &shell, stats)`.
     pub fn run<P: Present>(sc: &Scenario, depth: Depth, shell: &mut Shell, out: &mut P,
                            capture: impl FnMut(&FrameName, &Shell, FrameStats) -> Result<(), RunError>) -> Result<(), RunError>;
     /// One step's effect on the shell, everything but presenting (`Frame` and `ExpectDamage` do nothing): what `run` applies, and what the incremental-versus-full test steps through.
     pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError>;
-    pub enum RunError { UnknownWindow(String), Untypable(char), Present(HalError), DepthMismatch, DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
+    pub enum RunError { UnknownWindow(String), TooManyItems(String), Untypable(char), Present(HalError), DepthMismatch, DamageExceeded { depth, pixels, max_pixels, rects, max_rects }, NoFrame, Capture(String) }
 }
 ```
 
@@ -496,7 +507,7 @@ pub mod scenario {
 
 ## The scenario format
 
-A UTF-8 text file, one step per line, `#` starts a comment, blank lines are ignored. Names are 1 to 8 characters of `a-z`, `0-9` and `-`, so a frame's capture can be an 8.3 file on DOS, and no frame name may be a prefix of another, because the native run's monitor script waits for `shell: ready NAME` by substring. Numbers are decimal and may be negative where a coordinate allows. Strings are in double quotes with `\"` and `\\`.
+A UTF-8 text file, one step per line, `#` starts a comment, blank lines are ignored. Names are 1 to 8 characters of `a-z`, `0-9` and `-`, so a frame's capture can be an 8.3 file on DOS, and no frame name may be a prefix of another, because the native run's monitor script waits for `shell: ready NAME` by substring. Numbers are decimal and may be negative where a coordinate allows. Strings are in double quotes with `\"` and `\\`. A ROLE is the name of the `Role` variant, case and all (`Text`, `TextSecondary`, `Accent`, `Halo2`, `Selection`, …; `scenario::ROLE_NAMES` lists them in `Role::ALL`'s order). Each window holds at most 32 items (labels, texts, fills and fields), and a step past that stops the run with `TooManyItems`.
 
 | Line | Meaning |
 |---|---|
@@ -505,6 +516,8 @@ A UTF-8 text file, one step per line, `#` starts a comment, blank lines are igno
 | `depths 8 4` | The depths to run at (8, 4 or both) |
 | `open NAME X Y W H "TITLE"` | Open a window with that outer box; it is focused and on top |
 | `label NAME X Y "TEXT"` | A label in window NAME's content area, at (X, Y) from the content's top-left |
+| `text NAME X Y ROLE "TEXT"` | A line of text in the UI face and colour role ROLE, positioned like a label |
+| `fill NAME X Y W H ROLE` | A rectangle in colour role ROLE in window NAME's content coordinates; what lies outside the content area is clipped |
 | `field NAME X Y W` | A text field, which takes the window's keys |
 | `close NAME` / `focus NAME` | Close, or focus and raise |
 | `pointer X Y` | Move the pointer to (X, Y) |
