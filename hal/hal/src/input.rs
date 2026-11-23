@@ -247,10 +247,16 @@ pub struct Frame {
 /// atomic `swap`s (`xchg`) that an interrupt can only fall between, never inside. Two producers, or a producer on another core,
 /// would lose edges. The latch uses only load, store and `swap`, so it compiles to no compare-and-swap (`hal/clippy.toml`).
 /// Because the consumer takes its three words in sequence, an edge that arrives while `frame` runs lands in this frame or the
-/// next, never in neither.
+/// next, never in neither, and a release is never reported before its own press. `held` is read last, so for one frame it can
+/// disagree with the edges (a press that lands after `pressed` was taken shows in `held` now and in `pressed` next frame).
 ///
-/// Nothing uses this yet: it is host-tested only. The first user will be a game or the shell's keyboard handling (`docs/HAL.md`,
-/// "Input").
+/// The consumer must never call `set` or `release` itself: the handler can interrupt such a call in the middle of its
+/// read-modify-write and an edge would be lost. That is the easy way to get a second producer by accident (injected input, an
+/// `AUTOTYPE` helper); put such input through the producer side. The relaxed and acquire/release orderings only constrain the
+/// compiler on one core, and would not be enough on a multi-core target, where the plain read-modify-write would break anyway.
+///
+/// Nothing uses this yet: it is host-tested only (decision D6 of `docs/RUNTIME-PLAN.md`; the single-threaded tests cannot exercise
+/// an interrupt arriving between the steps of `frame`, which the contract above rests on reasoning for).
 #[derive(Debug, Default)]
 pub struct InputLatch {
     held: AtomicU32,
@@ -287,8 +293,10 @@ impl InputLatch {
 
     /// Takes the edges latched since the last call, and the bits held now. Consumer side, once per tick.
     pub fn frame(&self) -> Frame {
-        let pressed = self.pressed.swap(0, Ordering::AcqRel);
+        // `released` first, then `pressed`: a handler that runs between the two swaps can latch a press and then its release, and with
+        // this order the release is reported no earlier than its press (in the same frame or the one after), never before it.
         let released = self.released.swap(0, Ordering::AcqRel);
+        let pressed = self.pressed.swap(0, Ordering::AcqRel);
         let held = self.held.load(Ordering::Acquire);
         Frame { held, pressed, released }
     }
@@ -297,6 +305,61 @@ impl InputLatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_key_repeat_in_a_later_frame_is_not_a_new_press() {
+        let l = InputLatch::new();
+        l.set(0b1);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0b1,
+                pressed: 0b1,
+                released: 0
+            }
+        );
+        l.set(0b1); // the keyboard's auto-repeat: the bit is already down
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0b1,
+                pressed: 0,
+                released: 0
+            }
+        );
+    }
+
+    #[test]
+    fn a_fresh_latch_and_empty_frames_report_nothing() {
+        let l = InputLatch::new();
+        for _ in 0..3 {
+            assert_eq!(l.frame(), Frame::default());
+        }
+    }
+
+    #[test]
+    fn a_release_in_a_frame_of_its_own_reports_only_the_release() {
+        let l = InputLatch::new();
+        l.set(0b10);
+        l.frame();
+        l.release(0b10);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0,
+                pressed: 0,
+                released: 0b10
+            }
+        );
+        assert_eq!(l.frame(), Frame::default());
+    }
+
+    #[test]
+    fn a_latch_can_live_in_a_static() {
+        static L: InputLatch = InputLatch::new();
+        L.set(1);
+        assert_eq!(L.frame().pressed, 1);
+    }
 
     #[test]
     fn modifier_sets_combine_and_subtract() {
