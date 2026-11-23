@@ -141,7 +141,11 @@ impl OplModel {
                 self.flags = 0;
             }
             self.timer1_masked = value & 0x40 != 0;
-            self.timer1 = if value & 0x01 != 0 && value & 0x80 == 0 { Some(0) } else { None };
+            self.timer1 = if value & 0x01 != 0 && value & 0x80 == 0 {
+                Some(0)
+            } else {
+                None
+            };
         }
     }
 }

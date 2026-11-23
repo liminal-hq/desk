@@ -309,7 +309,14 @@ mod tests {
         let seq: Vec<_> = m.writes.iter().map(|w| (w.bank, w.reg, w.value)).collect();
         assert_eq!(
             seq,
-            vec![(0, 4, 0x60), (0, 4, 0x80), (0, 2, 0xFF), (0, 4, 0x21), (0, 4, 0x60), (0, 4, 0x80)]
+            vec![
+                (0, 4, 0x60),
+                (0, 4, 0x80),
+                (0, 2, 0xFF),
+                (0, 4, 0x21),
+                (0, 4, 0x60),
+                (0, 4, 0x80)
+            ]
         );
         assert_eq!(m.status_flags(), 0, "the flags are cleared again");
         assert!(!m.timer1_running());
@@ -357,7 +364,10 @@ mod tests {
         let m = model.borrow();
         let first: Vec<_> = m.writes.iter().take(9).map(|w| (w.bank, w.reg, w.value)).collect();
         assert_eq!(first, (0..9).map(|c| (0, 0xB0 + c, 0)).collect::<Vec<_>>());
-        assert!(m.writes.iter().all(|w| w.bank == 0 && w.value == 0), "an OPL2 reset never touches bank 1");
+        assert!(
+            m.writes.iter().all(|w| w.bank == 0 && w.value == 0),
+            "an OPL2 reset never touches bank 1"
+        );
         assert!(m.regs[0].iter().all(|&r| r == 0));
     }
 
