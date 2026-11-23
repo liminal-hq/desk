@@ -21,7 +21,7 @@ As of 2026-11-23 T1 to T6 and T12 are built and merged (see the order table); T7
 | D3 | The shape of the per-interrupt chain API (T4) | **Decided 2026-11-22: an `Action` return carried through `IrqHandler`.** Existing services keep `on_irq(&mut self)` and their trampolines return the `Chain` given at registration; a new `DecidingIrqService` returns an `Action` |
 | D4 | Hosted timer rates, and whether the shell switches to them (T6) | **Decided 2026-11-22: `rt` offers 60 and 560 Hz as an opt-in, and the shell stays at 18.2 Hz**, as HAL.md says |
 | D5 | The probe's x87 side effect (T8) | **Decided 2026-11-23: restore what it found** (T8 also restores the status and tag words). It detects the x87 and restores the control word it found, which keeps the float policy (R138) open |
-| D6 | Where `InputLatch` lives and who uses it first (T10) | Open. Proposed: `desk-hal::input`, over a `u32` mask, with host tests only |
+| D6 | Where `InputLatch` lives and who uses it first (T10) | **Decided 2026-11-23: `desk-hal::input`, over a `u32` mask, with host tests only** |
 | D7 | R136: which finished-frame present API | Open. The design note is `PRESENT-API.md` (merged, #105) |
 | D8 | Is sound (R135) part of R139 being done? | Open. Proposed: no; the OPL, speaker and Sound Blaster drivers come after, with their own plan |
 

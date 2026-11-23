@@ -41,7 +41,7 @@ pub mod x86;
 
 pub use bios::{Bios, BiosRegs};
 pub use error::HalError;
-pub use input::{InputSource, KeyCode, KeyEvent, Modifiers, MouseEvent, Scancode};
+pub use input::{Frame, InputLatch, InputSource, KeyCode, KeyEvent, Modifiers, MouseEvent, Scancode};
 pub use irq::{Action, DecidingIrqService, InterruptController, Irq, IrqHandler, IrqRegistry, IrqService, SharedIrqService};
 pub use mmio::MmioRegion;
 pub use port::PortIo;
