@@ -95,7 +95,9 @@ impl MmioRegion {
     /// On x86 the word part is one `rep movsd`. That relies on ES equalling DS and the direction flag being clear. The DOS runtime
     /// satisfies both (`_start` executes `cld` and its interrupt stub sets ES and executes `cld`; `dpmi::set_limit` reloads DS and ES
     /// with the same selector), and so does the kernel (`_start` and both interrupt stubs execute `cld`; `gdt::init` loads DS and ES
-    /// with the same flat selector). Other targets use volatile 32-bit stores in the same order.
+    /// with the same flat selector). Other targets use volatile 32-bit stores in the same order. The host tests run on x86_64, so
+    /// they exercise only that fallback; the x86 string-instruction path is compile-checked for both targets and run by the DOS and
+    /// native golden comparisons.
     pub fn copy_from(&mut self, offset: usize, src: &[u8]) -> Result<(), HalError> {
         match offset.checked_add(src.len()) {
             Some(end) if end <= self.len => {}
