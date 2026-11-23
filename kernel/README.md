@@ -4,4 +4,4 @@ The native track's `no_std` Rust kernel for 486-class PCs. It brings up the seri
 
 Build with [`../tools/native-build.sh`](../tools/native-build.sh), which sets `RUSTC_BOOTSTRAP=1` for the pinned stable toolchain; to build by hand, run `RUSTC_BOOTSTRAP=1 cargo build --release` in this directory.
 
-The kernel embeds the packed test modules with `include_bytes!` (`src/module.rs`), so `../dist/modules/HELLO.DMD` and `APPMAIN.DKX` must exist before `cargo build`: `../tools/native-build.sh` runs `../tools/build-modules.sh` first, and a by-hand build without them stops with a missing-file error.
+The kernel embeds the packed test modules with `include_bytes!` (`src/module.rs`), so `../dist/modules/HELLO.DMD`, `APPMAIN.DKX` and `HELLOWIN.DMD` must exist before `cargo build`: `../tools/native-build.sh` runs `../tools/build-modules.sh` first, and a by-hand build without them stops with a missing-file error.

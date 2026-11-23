@@ -4,15 +4,17 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# usage: tools/run-shell.sh native [--depth 8|4] [--display gtk|sdl] [--demo]
+# usage: tools/run-shell.sh native [--depth 8|4] [--display gtk|sdl] [--demo | --module]
 #        tools/run-shell.sh dos    [--depth 8|4] [--nomouse] [--demo]
 #
-#   native   the Rust kernel's `shell-live` mode in QEMU as a 486, on its PS/2 keyboard and mouse (needs qemu-system-i386 on the host;
+#   native   the Rust kernel's `shell-live` mode (`module-live` with --module) in QEMU as a 486, on its PS/2 keyboard and mouse (needs qemu-system-i386 on the host;
 #            the Docker route of tools/native-run.sh is headless)
 #   dos      SHELL.EXE in DOSBox Staging from vendor/, on IRQ 1 and the INT 33h mouse (tools/setup.sh puts DOSBox in vendor/)
 #   --depth  8 for 256 colours (the default) or 4 for 16 colours
 #   --display  native only: QEMU's display, gtk (the default, if QEMU has it) or sdl
 #   --nomouse  dos only: no mouse driver, keyboard only
+#   --module native only: the kernel's `module-live` mode, in which HELLOWIN.DMD, loaded by the real loader, draws a window in the shell
+#            (docs/LOADER.md, "Visible-module spike"); Escape stops and unloads the module and ends the session; not with --demo
 #   --demo   plays tests/shell/live.scn (native: the pointer and the keys) or live-keys.scn (dos: the keys) into the window, then leaves it to you
 #
 # A click in the window gives the emulator the pointer and the keyboard; the keys that give them back are printed before it starts.
@@ -26,19 +28,22 @@ stop() { echo "run-shell: $*" >&2; exit 1; }
 [ $# -ge 1 ] || usage
 track=$1
 shift
-depth=8 display="" nomouse="" demo=""
+depth=8 display="" nomouse="" demo="" module=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --depth) [ $# -ge 2 ] || usage; depth=$2; shift 2 ;;
     --display) [ $# -ge 2 ] || usage; display=$2; shift 2 ;;
     --nomouse) nomouse=1; shift ;;
     --demo) demo=1; shift ;;
+    --module) module=1; shift ;;
     *) usage ;;
   esac
 done
 case "$track" in native | dos) ;; *) usage ;; esac
 case "$depth" in 8 | 4) ;; *) stop "--depth is 8 or 4, not $depth" ;; esac
 [ "$track" = native ] || [ -z "$display" ] || stop "--display is for the native track"
+[ "$track" = native ] || [ -z "$module" ] || stop "--module is for the native track"
+[ -z "$module" ] || [ -z "$demo" ] || stop "--module and --demo cannot be used together"
 [ "$track" = dos ] || [ -z "$nomouse" ] || stop "--nomouse is for the dos track"
 case "$display" in "" | gtk | sdl) ;; *) stop "--display is gtk or sdl, not $display" ;; esac
 
@@ -66,8 +71,12 @@ run_native() {
   if [ "$depth" = 8 ]; then video=vbe card=std; else video=text card=cirrus; fi
   echo "run-shell: building the kernel"
   tools/native-build.sh > /dev/null
-  local image="dist/native-shell-live-$depth.img"
-  tools/native-image.sh --test-mode shell-live --video "$video" --out "$image" > /dev/null
+  local image="dist/native-shell-live-$depth.img" mode=shell-live
+  if [ -n "$module" ]; then
+    image="dist/native-module-live-$depth.img"
+    mode=module-live
+  fi
+  tools/native-image.sh --test-mode "$mode" --video "$video" --out "$image" > /dev/null
   local toolkit=GTK
   [ "$display" = gtk ] || toolkit=SDL
   cat <<HOTKEYS
@@ -75,6 +84,7 @@ QEMU ($toolkit): click in the window to give it the pointer and the keyboard. Pr
             Alt+Tab, Alt+F4 and Tab reach the first window while the keyboard is grabbed.
 HOTKEYS
   echo "Escape ends the session. Closing the window quits QEMU. The kernel's transcript scrolls below."
+  [ -z "$module" ] || echo "The window is drawn by HELLOWIN.DMD, loaded by the kernel's real module loader; Escape stops and unloads it first."
   local args=(--window "$display" --timeout 0 --vga "$card")
   if [ -n "$demo" ]; then
     # The live scenario's pointer and key steps, without its screendumps and without the closing Escape, so the session stays yours.

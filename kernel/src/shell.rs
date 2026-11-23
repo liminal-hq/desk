@@ -14,6 +14,7 @@
 
 use crate::gfx::{self, lfb_region, rendezvous, vga_window};
 use crate::hal::PORTS;
+use crate::modwin::{self, Instance};
 use crate::video::Video;
 use crate::{input, pit, println};
 use desk_font::Font;
@@ -145,6 +146,19 @@ fn live_session<P: Present>(depth: Depth, out: &mut P, ps2: &mut Ps2Input) {
     for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
         apply(&mut shell, step).unwrap_or_else(|e| panic!("shell: the set-up failed: {}", e));
     }
+    live_loop(&mut shell, out, ps2, depth, |_, _, _, _| {});
+}
+
+/// The live loop over a shell that is already set up: the first frame (mark 00), then each pass drains the mouse and the keys,
+/// presents when dirty and a tick has passed, and halts. When Escape ends the session `at_end` runs before the summary line (the
+/// module-live mode stops and unloads its module there); `shell-live` passes a hook that does nothing.
+fn live_loop<P: Present>(
+    shell: &mut Shell<'static>,
+    out: &mut P,
+    ps2: &mut Ps2Input,
+    depth: Depth,
+    at_end: impl FnOnce(&mut Shell<'static>, &mut P, &mut Ps2Input, &mut Tally),
+) {
     let mut tally = Tally::default();
     tally.frame(&shell.frame(out).expect("shell: the first frame"));
     println!("{}", live::mark_line(0, depth, &shell.digest()));
@@ -193,6 +207,7 @@ fn live_session<P: Present>(depth: Depth, out: &mut P, ps2: &mut Ps2Input) {
             }
         }
         if end {
+            at_end(shell, out, ps2, &mut tally);
             println!("{}", live::summary_line(&tally));
             return;
         }
@@ -279,4 +294,180 @@ pub fn run(video: &Video, mut ps2: Ps2Input, corrupt_pixel: bool) {
     }
     println!("shell: done");
     gfx::restore_text(font);
+}
+
+// The visible-module spike (`docs/LOADER.md`, "Visible-module spike"): the scenario of tests/shell/module-window.scn with the
+// `hellowin` window drawn by HELLOWIN.DMD, loaded through the real loader, instead of by the scenario's own steps.
+
+static MODULE_SCENARIO: &str = include_str!("../../tests/shell/module-window.scn");
+
+/// The scenario's name for the window the module draws.
+const MODULE_WINDOW: &str = "hellowin";
+
+/// How long the live module run holds its closed desktop after Escape, in PIT ticks (5 s at 100 Hz), unless a key ends it: the run
+/// script takes its last screendump then and presses one. It is long so that a stalled emulator or container does not miss it; a
+/// person at the window can press any key to skip it.
+const HOLD_TICKS: u32 = 500;
+
+/// The window a step names, if it names one.
+fn window_of(step: &Step) -> Option<&str> {
+    match step {
+        Step::Open { name: w, .. }
+        | Step::Label { window: w, .. }
+        | Step::Text { window: w, .. }
+        | Step::Fill { window: w, .. }
+        | Step::Field { window: w, .. }
+        | Step::Close(w)
+        | Step::Focus(w) => Some(w),
+        _ => None,
+    }
+}
+
+/// Where the module is in a run: not yet loaded, running, or unloaded.
+enum Module {
+    Waiting,
+    Running(Instance),
+    Gone,
+}
+
+impl Module {
+    /// Applies one step. Steps that do not name the module's window are the shell's; the first one that does loads the module and
+    /// starts it (its draws replace the scenario's `open`, `fill` and `text` steps for that window), and `close` stops and unloads it.
+    fn step(&mut self, shell: &mut Shell<'static>, step: &Step, screen: (u32, u32)) {
+        if window_of(step) != Some(MODULE_WINDOW) {
+            apply(shell, step).unwrap_or_else(|e| panic!("shell: the scenario failed: {}", e));
+            return;
+        }
+        match core::mem::replace(self, Module::Gone) {
+            Module::Waiting => {
+                let mut instance = Instance::load(screen);
+                instance.start(shell);
+                *self = Module::Running(instance);
+            }
+            Module::Running(instance) if matches!(step, Step::Close(_)) => instance.unload(shell),
+            other => *self = other,
+        }
+    }
+
+    /// Stops and unloads a module still running (the live run's end).
+    fn finish(&mut self, shell: &mut Shell<'static>) {
+        if let Module::Running(instance) = core::mem::replace(self, Module::Gone) {
+            instance.unload(shell);
+        }
+    }
+}
+
+/// Waits for a key press, or `HOLD_TICKS`, whichever is first; mouse events are dropped.
+fn hold(ps2: &mut Ps2Input) {
+    let start = pit::ticks();
+    loop {
+        while ps2.poll_mouse().is_some() {}
+        while let Some(k) = ps2.poll_key() {
+            if k.pressed {
+                return;
+            }
+        }
+        if pit::ticks().wrapping_sub(start) > HOLD_TICKS {
+            return;
+        }
+        input::idle(ps2);
+    }
+}
+
+/// What runs on the display once it is set: the scripted run (`module-window`) or the live one (`module-live`).
+struct ModuleRun {
+    ps2: Ps2Input,
+    live: bool,
+}
+
+impl ModuleRun {
+    fn run<P: Present>(&mut self, depth: Depth, out: &mut P) {
+        let sc = parse(MODULE_SCENARIO).unwrap_or_else(|e| panic!("shell: the scenario does not parse: {}", e));
+        assert!(
+            sc.depths.contains(&depth),
+            "shell: the scenario does not list depth {}",
+            bits(depth)
+        );
+        let mut shell = Shell::new(sc.screen.0, sc.screen.1, depth, fonts()).expect("shell: a shell for the scenario's screen");
+        let mut module = Module::Waiting;
+        if self.live {
+            for step in sc.steps.iter().take_while(|s| !matches!(s, Step::Frame(_))) {
+                module.step(&mut shell, step, sc.screen);
+            }
+            live_loop(&mut shell, out, &mut self.ps2, depth, |shell, out, ps2, tally| {
+                // Escape: the module stops, its window closes and its frames are freed, the desktop is presented, and that is the
+                // last mark; the run script's screendump of it happens in the pause.
+                module.finish(shell);
+                tally.frame(&shell.frame(out).expect("shell: the closing frame"));
+                println!("{}", live::mark_line(tally.marks, depth, &shell.digest()));
+                tally.marks += 1;
+                hold(ps2);
+            });
+            return;
+        }
+        for step in &sc.steps {
+            match step {
+                Step::Frame(name) => {
+                    let stats = shell.frame(out).expect("shell: a frame");
+                    let d = shell.digest();
+                    println!(
+                        "shell: frame {} {} {}x{} {:08x} {:08x}",
+                        name,
+                        bits(depth),
+                        d.width,
+                        d.height,
+                        d.index,
+                        d.colour
+                    );
+                    println!(
+                        "shell: damage {}: {} pixels repainted, {} presented in {} rectangles",
+                        name, stats.repainted, stats.presented, stats.rects
+                    );
+                    rendezvous(&mut self.ps2, "shell", name.as_str());
+                }
+                Step::ExpectDamage { .. } => {}
+                other => module.step(&mut shell, other, sc.screen),
+            }
+        }
+    }
+}
+
+/// Runs a body on the display the loader left, then restores text mode.
+fn on_display(video: &Video, depth: Depth, body: &mut ModuleRun) {
+    let font = video.font;
+    let colours = palette(depth);
+    match &video.lfb {
+        Some(l) => {
+            println!(
+                "shell: linear frame buffer, mode {:#06x}, {}x{}, pitch {}",
+                l.mode, l.width, l.height, l.pitch
+            );
+            dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
+            let mut region = lfb_region(l);
+            let mut out = LinearPresent::new(&mut region, l.width, l.height, l.pitch).expect("shell: the linear presenter");
+            body.run(depth, &mut out);
+            gfx::leave_vbe();
+        }
+        None => {
+            println!("shell: no linear frame buffer from the loader, mode 12h by registers");
+            regs::set_mode_12h(&PORTS);
+            dac::set_palette(&PORTS, 0, &colours).expect("shell: the palette");
+            let mut region = vga_window();
+            let mut out = PlanarPresent::new(&PORTS, &mut region, 640, 480, desk_vga::planar::PITCH_640)
+                .expect("shell: the planar presenter");
+            body.run(depth, &mut out);
+        }
+    }
+    println!("shell: done");
+    gfx::restore_text(font);
+}
+
+/// The test modes `module-window` (scripted: one rendezvous per frame) and `module-live` (the same set-up, then the live loop until
+/// Escape): HELLOWIN.DMD loaded by the real loader draws a window in the shell. First the negative: outside a shell mode the module
+/// cannot bind its services, so the loader refuses it.
+pub fn module(video: &Video, ps2: Ps2Input, live: bool) {
+    modwin::refuse_outside_shell();
+    let depth = depth_for(video);
+    println!("shell: {}depth {}", if live { "live, " } else { "" }, bits(depth));
+    on_display(video, depth, &mut ModuleRun { ps2, live });
 }
