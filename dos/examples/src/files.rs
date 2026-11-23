@@ -62,7 +62,7 @@ pub fn main() -> i32 {
     wipe();
 
     // The temporary names.
-    for n in ["DESK.INI", "DESK", "A:\\CFG.D\\DESK.INI", "DESK.NEW", "desk.new", "A.B.C"] {
+    for n in ["STATE.INI", "STATE", "A:\\CFG.D\\STATE.INI", "STATE.NEW", "desk.new", "A.B.C"] {
         match settings::temp_name(n) {
             Some(t) => println!("files: temp_name {} -> {}", n, t),
             None => println!("files: temp_name {} -> refused", n),

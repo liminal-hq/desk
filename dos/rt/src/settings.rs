@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 // `save_replacing(name, bytes)` writes the new bytes to a temporary file beside `name`, reads it back and compares, deletes the old
-// file and renames the temporary one into place. The temporary name is the 8.3 stem of `name` with `.NEW`: `DESK.INI` becomes
-// `DESK.NEW`, `DESK` becomes `DESK.NEW`, `A:\CFG\DESK.INI` becomes `A:\CFG\DESK.NEW`. A `name` that already ends in `.NEW` would be its
+// file and renames the temporary one into place. The temporary name is the 8.3 stem of `name` with `.NEW`: `STATE.INI` becomes
+// `STATE.NEW`, `STATE` becomes `STATE.NEW`, `A:\CFG\STATE.INI` becomes `A:\CFG\STATE.NEW`. A `name` that already ends in `.NEW` would be its
 // own temporary file, so it is refused (`ERR_TEMP_IS_NAME`) before anything is touched. Names should be 8.3: DOS truncates a longer
 // one on its own, and two names that truncate alike would share a temporary file.
 //

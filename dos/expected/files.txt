@@ -1,7 +1,7 @@
-files: temp_name DESK.INI -> DESK.NEW
-files: temp_name DESK -> DESK.NEW
-files: temp_name A:\CFG.D\DESK.INI -> A:\CFG.D\DESK.NEW
-files: temp_name DESK.NEW -> refused
+files: temp_name STATE.INI -> STATE.NEW
+files: temp_name STATE -> STATE.NEW
+files: temp_name A:\CFG.D\STATE.INI -> A:\CFG.D\STATE.NEW
+files: temp_name STATE.NEW -> refused
 files: temp_name desk.new -> refused
 files: temp_name A.B.C -> A.B.NEW
 files: save_replacing of a .NEW name refused: true
