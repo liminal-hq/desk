@@ -100,6 +100,20 @@ run dist/d0 CLEANUP.EXE
 same CLEANUP.EXE $EXP/cleanup.txt
 echo "$out" | tail -4
 
+step "FILES.EXE: safe settings writes, recovery from a crash after the delete, and the INT 24h guard"
+run dist/d0 FILES.EXE
+[ "$status" = 0 ] || fail "FILES.EXE exited with status $status"
+same FILES.EXE $EXP/files.txt
+echo "$out" | grep -E 'read_recovering|stub called|after drop|vector untouched'
+
+# The second command runs in the same DOSBox. DOS restores INT 24h from the PSP when a program ends, so this line cannot tell the
+# clean-up list's restore from DOS's; the line the program prints after its own clean-up list ran can.
+step "Exit with the INT 24h guard held: the clean-up list puts the vector back"
+DOS_THEN="FILES.EXE check" run dist/d0 FILES.EXE leave-held
+[ "$status" = 0 ] || fail "FILES.EXE leave-held exited with status $status"
+same "FILES.EXE leave-held" $EXP/files-leave-held.txt
+echo "$out" | tail -2
+
 step "Allocation failure is a panic"
 run dist/d0 HELLO.EXE oom
 [ "$status" = 3 ] || fail "HELLO.EXE oom exited with status $status, not 3"
@@ -142,6 +156,12 @@ step "A transcript with the clean-up order swapped fails the check"
 sed -e 's/run c$/run TMP/' -e 's/run b$/run c/' -e 's/run TMP$/run b/' $EXP/cleanup.txt > "$wrong"
 run dist/d0 CLEANUP.EXE
 if (same CLEANUP.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the order swapped was accepted"; fi
+echo "rejected, as it should be"
+
+step "A transcript with the stub's answer changed fails the check"
+sed 's/returns AL=3/returns AL=0/' $EXP/files.txt > "$wrong"
+run dist/d0 FILES.EXE
+if (same FILES.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the wrong stub answer was accepted"; fi
 echo "rejected, as it should be"
 
 printf '\nAll dos checks passed.\n'

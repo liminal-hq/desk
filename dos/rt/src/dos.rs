@@ -281,6 +281,50 @@ pub fn remove(path: &str) -> Result<(), DosError> {
     rm21(&mut r)
 }
 
+/// AH=56h: rename (or move within a drive) a file. DOS fails if `new` exists. Both names go through the transfer buffer, the old one first.
+pub fn rename(old: &str, new: &str) -> Result<(), DosError> {
+    if old.len() + 1 + new.len() + 1 > TB_SIZE {
+        return Err(DosError(3));
+    }
+    // SAFETY: the two names and their NULs fit in the buffer, checked above.
+    unsafe {
+        core::ptr::copy_nonoverlapping(old.as_ptr(), tb_ptr(), old.len());
+        tb_ptr().add(old.len()).write(0);
+        core::ptr::copy_nonoverlapping(new.as_ptr(), tb_ptr().add(old.len() + 1), new.len());
+        tb_ptr().add(old.len() + 1 + new.len()).write(0);
+    }
+    let mut r = RealRegs {
+        eax: 0x5600,
+        edx: 0,
+        edi: old.len() as u32 + 1,
+        ds: tb_segment(),
+        es: tb_segment(),
+        ..RealRegs::default()
+    };
+    rm21(&mut r)
+}
+
+/// AH=35h: the real-mode vector for interrupt `n`, as (segment, offset), read through DOS.
+pub fn get_vector(n: u8) -> Result<(u16, u16), DosError> {
+    let mut r = RealRegs {
+        eax: 0x3500 | n as u32,
+        ..RealRegs::default()
+    };
+    rm21(&mut r)?;
+    Ok((r.es, r.ebx as u16))
+}
+
+/// AH=25h: sets the real-mode vector for interrupt `n` to `segment:offset`, through DOS.
+pub fn set_vector(n: u8, segment: u16, offset: u16) -> Result<(), DosError> {
+    let mut r = RealRegs {
+        eax: 0x2500 | n as u32,
+        edx: offset as u32,
+        ds: segment,
+        ..RealRegs::default()
+    };
+    rm21(&mut r)
+}
+
 /// What a protected-mode INT 21h does with a pointer: AH=40h with DS:EDX naming `buf`, no transfer buffer. Returns the count DOS
 /// reports. The data DOS actually wrote is whatever sat at the real-mode DS:DX, not `buf`; this exists to demonstrate that.
 pub fn write_direct_unsafe(handle: u16, buf: &[u8]) -> Result<usize, DosError> {
