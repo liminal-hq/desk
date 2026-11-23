@@ -384,7 +384,7 @@ The core's entry is `fn run<P: Platform>(p: &mut P) -> !`. Associated types keep
 
 - Every crate in `hal/` is `#![no_std]` outside tests (`#![cfg_attr(not(any(test, feature = "std")), no_std)]`). The drivers and `desk-hal` do not use `alloc`; `desk-hal-mock` does (`Vec`, `VecDeque`, `Rc`), which is why it builds for the targets too.
 - **Feature `std`**: only for host builds (tests, a host bench, a host tool). It adds `std::error::Error` for `HalError` and nothing else; the cross builds never enable it. Dev-dependencies turn it on for tests.
-- **No other features yet.** Platform choice is not a feature: each binary picks its platform by depending on it. Optional hardware (an OPL3's second bank, a 16550's FIFO) is detected at run time, not configured at compile time.
+- **No other features yet.** Platform choice is not a feature: each binary picks its platform by depending on it. Optional hardware (an OPL3's second bank, a 16550's FIFO) is detected at run time, not configured at compile time. On DOS the platform's own probes (video class, processor family, x87, free memory, the game port) are `rt::probe`, each leaving the machine as it found it; see [`D0-RUST-DOS.md`](D0-RUST-DOS.md).
 - **No external crates.** `hal/Cargo.lock` lists only the workspace's own crates.
 
 ## How it fits the targets

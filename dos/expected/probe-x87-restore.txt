@@ -1,0 +1,5 @@
+probe: control word set to 0x0c7f, now 0x0c7f
+probe: x87 present true, control word found 0x0c7f
+probe: control word after the probe 0x0c7f
+probe: control word unchanged true, reported as found true, value on the stack kept true
+probe: control word put back to 0x037f

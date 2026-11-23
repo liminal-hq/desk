@@ -210,6 +210,49 @@ pub fn free_block(handle: u32) -> Result<(), Error> {
     call(0x0502, 0, 0, 0, handle >> 16, handle & 0xFFFF).map(|_| ())
 }
 
+/// What DPMI 0500h reports. Every field is `None` when the host answered 0xFFFFFFFF ("not available").
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct FreeMemory {
+    /// Offset 00h: the largest available free block, in bytes.
+    pub largest_free_block: Option<u32>,
+    /// Offset 04h: the maximum unlocked page allocation, in pages.
+    pub max_unlocked_pages: Option<u32>,
+    /// Offset 08h: the maximum locked page allocation, in pages.
+    pub max_locked_pages: Option<u32>,
+    /// Offset 0Ch: the size of the linear address space, in pages.
+    pub linear_pages: Option<u32>,
+    /// Offset 10h: the total number of unlocked pages.
+    pub unlocked_pages: Option<u32>,
+    /// Offset 14h: the number of free pages.
+    pub free_pages: Option<u32>,
+    /// Offset 18h: the total number of physical pages.
+    pub physical_pages: Option<u32>,
+    /// Offset 1Ch: the free linear address space, in pages.
+    pub free_linear_pages: Option<u32>,
+    /// Offset 20h: the size of the paging file or partition, in pages.
+    pub paging_file_pages: Option<u32>,
+}
+
+/// DPMI 0500h: get free memory information. The host fills a 30h-byte buffer at ES:EDI; the first nine dwords are the fields above
+/// and the rest is reserved. Only the first dword is guaranteed: the host sets every field it does not know to 0xFFFFFFFF.
+pub fn free_memory_info() -> Result<FreeMemory, Error> {
+    let mut buf = [u32::MAX; 12];
+    // ES is the flat data selector here (`init` reloads it), so the buffer's address is the offset in EDI.
+    call(0x0500, 0, 0, 0, 0, buf.as_mut_ptr() as usize as u32)?;
+    let field = |i: usize| if buf[i] == u32::MAX { None } else { Some(buf[i]) };
+    Ok(FreeMemory {
+        largest_free_block: field(0),
+        max_unlocked_pages: field(1),
+        max_locked_pages: field(2),
+        linear_pages: field(3),
+        unlocked_pages: field(4),
+        free_pages: field(5),
+        physical_pages: field(6),
+        free_linear_pages: field(7),
+        paging_file_pages: field(8),
+    })
+}
+
 /// DPMI 0600h: lock a linear region so the host never pages it out. Anything an interrupt handler touches must be locked.
 pub fn lock(linear: u32, len: u32) -> Result<(), Error> {
     call(0x0600, linear >> 16, linear & 0xFFFF, 0, len >> 16, len & 0xFFFF).map(|_| ())

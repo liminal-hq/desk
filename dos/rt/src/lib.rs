@@ -19,6 +19,7 @@
 // - `bios_kbd` the BIOS keyboard state in the data area (lock flags, type-ahead buffer), for a program that takes IRQ 1
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof), and the opt-in fast timer: a reprogrammed PIT, a stopwatch and `delay_us`
 // - `vga`      mode 13h and the frame buffer (hardware proof)
+// - `probe`    what the machine is: video class, processor family, x87, free memory and the game port, each found without changing it
 // - `hal`      the DOS platform's implementations of the HAL traits: `DosBios` (real-mode calls) and `DosDisplay` (VGA and VBE)
 //
 // Single-threaded, with one exception: interrupt handlers, which touch only `static`s and never allocate or call DOS.
@@ -39,6 +40,7 @@ pub mod irq;
 mod mem;
 #[cfg(feature = "panic-handler")]
 mod panic;
+pub mod probe;
 pub mod start;
 pub mod timer;
 pub mod vga;

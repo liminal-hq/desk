@@ -12,3 +12,4 @@ pub mod ctx;
 pub mod hello;
 pub mod hw;
 pub mod panicky;
+pub mod probe;

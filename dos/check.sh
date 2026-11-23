@@ -100,6 +100,18 @@ run dist/d0 CLEANUP.EXE
 same CLEANUP.EXE $EXP/cleanup.txt
 echo "$out" | tail -4
 
+step "PROBE.EXE: video class, processor family, x87 with its control word untouched, memory and the game port"
+run dist/d0 PROBE.EXE
+[ "$status" = 0 ] || fail "PROBE.EXE exited with status $status"
+same PROBE.EXE $EXP/probe.txt
+echo "$out" | sed -n 1,5p
+
+step "PROBE.EXE x87-restore: a control word that is not the power-on one, and a value on the x87 stack, survive the probe"
+run dist/d0 PROBE.EXE x87-restore
+[ "$status" = 0 ] || fail "PROBE.EXE x87-restore exited with status $status"
+same "PROBE.EXE x87-restore" $EXP/probe-x87-restore.txt
+echo "$out" | sed -n 1,4p
+
 step "Allocation failure is a panic"
 run dist/d0 HELLO.EXE oom
 [ "$status" = 3 ] || fail "HELLO.EXE oom exited with status $status, not 3"
@@ -143,5 +155,15 @@ sed -e 's/run c$/run TMP/' -e 's/run b$/run c/' -e 's/run TMP$/run b/' $EXP/clea
 run dist/d0 CLEANUP.EXE
 if (same CLEANUP.EXE "$wrong") > /dev/null 2>&1; then fail "a transcript with the order swapped was accepted"; fi
 echo "rejected, as it should be"
+
+step "A transcript with the wrong video class or a changed control word fails the check"
+sed 's/video class Vga/video class Cga/' $EXP/probe.txt > "$wrong"
+run dist/d0 PROBE.EXE
+if (same PROBE.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong video class was accepted"; fi
+echo "a wrong video class rejected, as it should be"
+sed 's/control word unchanged true, reported as found true/control word unchanged false, reported as found true/' $EXP/probe-x87-restore.txt > "$wrong"
+run dist/d0 PROBE.EXE x87-restore
+if (same "PROBE.EXE x87-restore" "$wrong") > /dev/null 2>&1; then fail "a changed control word was accepted"; fi
+echo "a changed control word rejected, as it should be"
 
 printf '\nAll dos checks passed.\n'

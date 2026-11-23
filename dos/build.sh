@@ -17,7 +17,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUT=dist/d0
-PROGRAMS="hello hw panicky ctx retstart cleanup"
+PROGRAMS="hello hw panicky ctx retstart cleanup probe"
 mkdir -p "$OUT/obj" "$OUT/solo"
 
 # 1. Rust: one cargo build links every program with rust-lld (the pinned toolchain ships it).
