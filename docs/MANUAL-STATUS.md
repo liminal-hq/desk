@@ -13,6 +13,7 @@ The state of the Manual of the Desk Progress Report as of 2026-10-23, written fo
 - [The next step](#the-next-step)
 - [Handoff of 2026-11-20: the layered layout](#handoff-of-2026-11-20-the-layered-layout)
 - [Handoff of 2026-11-20, after the merge](#handoff-of-2026-11-20-after-the-merge)
+- [Handoff of 2026-11-23, after R139 T1 to T6](#handoff-of-2026-11-23-after-r139-t1-to-t6)
 
 ## What is done
 
@@ -143,3 +144,26 @@ The stack for R148 merged on 2026-11-20: pull requests #90 to #94 and #96 to #99
 - R46 (the Manual published) still has no record that the report built from this `main` was published.
 
 **What the next run should do.** Run `build.py --manual-report` on `main`; take the chapters in the order above; for each, read the whole chapter against the watched files and the commits listed, fix what is untrue, add a Revisions entry, and move `reviewed` only when the chapter was read in full. Rerun M20's try block where QEMU and NASM are available. Refresh the snapshot after the next merge.
+
+## Handoff of 2026-11-23, after R139 T1 to T6
+
+This pass (branch `docs/progress-refresh-2`, written against `d7775ed`, #113) brought the documents and the Manual up to date with the runtime work that merged since the last handoff: R48 M4 (#103), R54 (#102), the R136 design note (#105) and R139 tasks T1 to T6 (#108, #111, #112, #110, #107, #113). Nothing was run on real hardware, and the opt-in js-dos and Bochs steps were not run.
+
+**What changed.**
+
+- `docs/ROADMAP.md`: R132 and R134 are `done` (everything their rows promise is built; the evidence is emulators and host tests only and no speed claim is made, since R137 provides the measuring tools); R139 stays `in progress` with T1 to T6 listed with their pull request numbers and what remains; R48 records M4 and one sentence on the visible-module spike (in progress, nothing merged); R136 is unchanged. The counts were recounted with a script over the tables: 148 items, 55 `done`, 13 `in progress`, 67 `planned`, 11 `idea` and 2 `blocked`, and every row has the column count of its table. The summary sentence in the status block now says so and says that earlier paragraphs' counts are those of the day they were written (the old sentence gave 51, 12 and 72 for the list "with R148", which did not match the tables). `tools/progress-report/roadmap.json` is in step (`ru-mem` and `ru-pit` are `done-emu`, `ru-promote` and `loader` updated).
+- `docs/FIZZ2-COMPARISON.md` has a dated status line; `docs/RUNTIME-PLAN.md` marks T1 to T6 in its order table; `docs/D0-RUST-DOS.md` states the crate's size and modules as they are; `docs/HAL.md` was already mostly current (the builders had edited it) and two sentences were fixed (`Pacer` has no user, and the fast timer is the one implementor of `DecidingIrqService`).
+- Manual chapters **re-read in full and moved to `reviewed: d7775ed`**: M17, M9, M10 and M16. M9's and M10's try blocks (host) and M16's native shell run and goldens were rerun on the host, with QEMU 11.1.3 and NASM 3.02; M17's try block was not rerun (it needs the DOS image), and the chapter says so. M16 needed the most: the live-input work had made several of its statements untrue (no native free-running loop, no interactive native mode, the DOS transcript printed as it goes).
+- Chapters with only sentences corrected, `reviewed` **unchanged**: M3 (a label), M13 (the presenters use `copy_from`) and M19 (the strong `memcpy` and `memset`), each with a Revisions entry that says the chapter was not re-read. Log chapter 18f has a dated update under its table; its older text is kept.
+- The `gh` snapshot was refreshed (`gather.py --update-snapshot`, read-only `gh` calls); no email address is in it, and the 257 generator tests pass.
+
+**What was not re-read, and why.** M1, M2 (already `fb6eba6`), M4 to M8 (M8 already `fb6eba6`), M11 to M15, M18, M20, M21 and M22 were not opened in full: the pass spent its time on the runtime chapters the brief named, and M16 turned out to be large. M11 to M15 (the live-input stack, the window manager and the scenarios) are the most likely to hold untrue statements; M5, M6 and M7 were touched by the native module loader (#103) and `cargo fmt`, and M4 and M5 name the module test modes, so they should be read against `kernel/` next. `build.py --manual-report` lists the commits behind each.
+
+**Still stale or unverified.**
+
+- M17's worked example (the SHELL.EXE arithmetic, of 2026-10-23) and its try block (sizes of 2026-11-20) predate the string-instruction `memcpy` and `memset`, the fast timer and the 16-slot clean-up list, so a rebuild gives other sizes. M20's try block was not rerun. M21's prose count of the steps that run only when asked was not recounted.
+- `docs/HAL.md` outside the three sections checked: the platforms table still calls `rt::hal` and `kernel::hal` planned, and "What was and was not verified" still says no binary uses the crates. Both are untrue. `docs/FIRST-WINDOW.md`, `docs/NATIVE-BOOT.md` and `docs/RUST-TARGETS.md` (see "Known gaps") are still uncorrected; `docs/FIRST-WINDOW.md` was left alone on purpose because a builder is changing the shell crates.
+- R46 (the Manual published) still has no record that the report built from this `main` was published. The generator's staleness mechanism marks the roadmap node `ru-transcript` and two others as dropping to "progress" because CI did not pass on every merge commit it can see; it was not looked into.
+- The live-input and native-module checks were read from their scripts and committed expected files, not run, apart from the native shell run and the boot transcript.
+
+**What the next run should do.** After T7 to T10 and the sound drivers merge, run `build.py --manual-report`, update M17, M9 and M10 again (the clean-up list will have a user for the INT 24h guard, `InputLatch` will join the HAL, and the probes and text screen will join `rt`), and take M11 to M15 next. Rerun M17's try block in the CI image and M20's where QEMU and NASM are present, and refresh the snapshot after the next merge.
