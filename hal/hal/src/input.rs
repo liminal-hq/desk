@@ -7,6 +7,8 @@
 // A key is named by a `KeyCode` that does not depend on a scancode set, so the same event stream comes out of a PS/2 keyboard
 // under the native kernel and out of the BIOS-independent IRQ 1 handler under DOS.
 
+use core::sync::atomic::{AtomicU32, Ordering};
+
 /// A raw scancode byte as port 0x60 delivers it with the 8042's translation on (scancode set 1).
 pub type Scancode = u8;
 
@@ -219,6 +221,79 @@ pub trait InputSource {
     }
 }
 
+/// What one tick of input looks like: see `InputLatch::frame`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Frame {
+    /// The bits that are down at the moment of the frame.
+    pub held: u32,
+    /// Every bit that went down since the previous frame, including one that went down and up again in between.
+    pub pressed: u32,
+    /// Every bit that went up since the previous frame.
+    pub released: u32,
+}
+
+/// A press-edge latch over a 32-bit mask (a key, a button or a direction per bit), so a tap shorter than one tick still counts
+/// as a press.
+///
+/// The producer (an interrupt handler or an event callback) calls `set` when bits go down and `release` when they go up. The
+/// consumer calls `frame` once per tick and gets the bits held now, the bits pressed since its last call and the bits released
+/// since then. A bit that goes down and up again between two frames shows in `pressed` and `released` with `held` clear, which
+/// is the point of the latch. A `set` of a bit that is already down (a key repeat) is not an edge, and nor is a `release` of a
+/// bit that is already up.
+///
+/// Concurrency contract: one producer context and one consumer context, on a single core. The producer's updates are plain
+/// load-then-store sequences, which is sound only because the consumer cannot run in the middle of one: the producer is an
+/// interrupt handler (or otherwise cannot be preempted by the consumer), and on a single core the consumer's own steps are
+/// atomic `swap`s (`xchg`) that an interrupt can only fall between, never inside. Two producers, or a producer on another core,
+/// would lose edges. The latch uses only load, store and `swap`, so it compiles to no compare-and-swap (`hal/clippy.toml`).
+/// Because the consumer takes its three words in sequence, an edge that arrives while `frame` runs lands in this frame or the
+/// next, never in neither.
+///
+/// Nothing uses this yet: it is host-tested only. The first user will be a game or the shell's keyboard handling (`docs/HAL.md`,
+/// "Input").
+#[derive(Debug, Default)]
+pub struct InputLatch {
+    held: AtomicU32,
+    pressed: AtomicU32,
+    released: AtomicU32,
+}
+
+impl InputLatch {
+    pub const fn new() -> InputLatch {
+        InputLatch {
+            held: AtomicU32::new(0),
+            pressed: AtomicU32::new(0),
+            released: AtomicU32::new(0),
+        }
+    }
+
+    /// The bits in `mask` went down. Producer side.
+    pub fn set(&self, mask: u32) {
+        let held = self.held.load(Ordering::Relaxed);
+        let fresh = mask & !held;
+        self.pressed
+            .store(self.pressed.load(Ordering::Relaxed) | fresh, Ordering::Relaxed);
+        self.held.store(held | mask, Ordering::Release);
+    }
+
+    /// The bits in `mask` went up. Producer side.
+    pub fn release(&self, mask: u32) {
+        let held = self.held.load(Ordering::Relaxed);
+        let was_down = mask & held;
+        self.released
+            .store(self.released.load(Ordering::Relaxed) | was_down, Ordering::Relaxed);
+        self.held.store(held & !mask, Ordering::Release);
+    }
+
+    /// Takes the edges latched since the last call, and the bits held now. Consumer side, once per tick.
+    pub fn frame(&self) -> Frame {
+        let pressed = self.pressed.swap(0, Ordering::AcqRel);
+        let released = self.released.swap(0, Ordering::AcqRel);
+        let held = self.held.load(Ordering::Acquire);
+        Frame { held, pressed, released }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,5 +305,160 @@ mod tests {
         assert!(m.contains(Modifiers::NONE));
         assert_eq!(m.without(Modifiers::SHIFT), Modifiers::CTRL);
         assert_eq!(Modifiers::default(), Modifiers::NONE);
+    }
+
+    #[test]
+    fn a_tap_between_frames_is_pressed_and_released_with_nothing_held() {
+        let l = InputLatch::new();
+        l.set(1);
+        l.release(1);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0,
+                pressed: 1,
+                released: 1
+            }
+        );
+    }
+
+    #[test]
+    fn a_held_press_is_pressed_once_then_held() {
+        let l = InputLatch::new();
+        l.set(4);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 4,
+                pressed: 4,
+                released: 0
+            }
+        );
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 4,
+                pressed: 0,
+                released: 0
+            }
+        );
+        l.release(4);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0,
+                pressed: 0,
+                released: 4
+            }
+        );
+    }
+
+    #[test]
+    fn a_bit_pressed_twice_is_one_edge() {
+        let l = InputLatch::new();
+        l.set(2);
+        l.set(2);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 2,
+                pressed: 2,
+                released: 0
+            }
+        );
+        assert_eq!(l.frame().pressed, 0);
+    }
+
+    #[test]
+    fn independent_bits_do_not_disturb_each_other() {
+        let l = InputLatch::new();
+        l.set(0b01);
+        let _ = l.frame();
+        l.set(0b10);
+        l.release(0b01);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0b10,
+                pressed: 0b10,
+                released: 0b01
+            }
+        );
+    }
+
+    #[test]
+    fn frame_clears_the_edges() {
+        let l = InputLatch::new();
+        l.set(8);
+        l.release(8);
+        assert_ne!(l.frame(), Frame::default());
+        assert_eq!(l.frame(), Frame::default());
+    }
+
+    #[test]
+    fn press_release_press_ends_held_with_pressed_set() {
+        let l = InputLatch::new();
+        l.set(1);
+        l.release(1);
+        l.set(1);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 1,
+                pressed: 1,
+                released: 1
+            }
+        );
+    }
+
+    #[test]
+    fn a_release_of_a_bit_that_is_not_down_is_not_an_edge() {
+        let l = InputLatch::new();
+        l.release(0xF);
+        assert_eq!(l.frame(), Frame::default());
+    }
+
+    #[test]
+    fn all_thirty_two_bits_work() {
+        let l = InputLatch::new();
+        for bit in 0..32 {
+            let m = 1u32 << bit;
+            l.set(m);
+            assert_eq!(
+                l.frame(),
+                Frame {
+                    held: m,
+                    pressed: m,
+                    released: 0
+                }
+            );
+            l.release(m);
+            assert_eq!(
+                l.frame(),
+                Frame {
+                    held: 0,
+                    pressed: 0,
+                    released: m
+                }
+            );
+        }
+        l.set(u32::MAX);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: u32::MAX,
+                pressed: u32::MAX,
+                released: 0
+            }
+        );
+        l.release(u32::MAX);
+        assert_eq!(
+            l.frame(),
+            Frame {
+                held: 0,
+                pressed: 0,
+                released: u32::MAX
+            }
+        );
     }
 }
