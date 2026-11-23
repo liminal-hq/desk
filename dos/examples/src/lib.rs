@@ -13,3 +13,4 @@ pub mod files;
 pub mod hello;
 pub mod hw;
 pub mod panicky;
+pub mod probe;

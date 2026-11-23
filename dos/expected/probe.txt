@@ -1,0 +1,8 @@
+probe: video class Vga (by display combination code, code 0x08)
+probe: video has mode 13h and 12h: true
+probe: processor I486
+probe: a 486 or later (the AC flag can be set): true; CPUID exists (the ID flag can be toggled, CPUID not run): false
+probe: x87 present true, control word found 0x037f, after the probe 0x037f
+probe: control word unchanged true, same as the probe reported true
+probe: memory largest free block in range: true, free pages in range: true
+probe: joystick poll ended within the bound: true, axes within a nibble: true
