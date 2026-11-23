@@ -5,7 +5,7 @@ part: V
 title: The core III: windows, events and scenarios
 summary: The window manager (windows, z-order, focus, hit testing, dragging and the damage each change makes), the shell that turns input events into frames, the scenario format that scripts them, and the narrow seam the two platforms call.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d5f3328
 watches: [shell/wm/, shell/shell/, tests/shell/, docs/FIRST-WINDOW.md]
 log: [firstwindow]
 anatomy: [desk:wm, desk:shell, desk:seam, dos:wm, dos:shell]
@@ -42,11 +42,11 @@ Dragging puts the grabbed point under the pointer and then clamps the window so 
 
 ### Keys
 
-`Wm::key(e, fonts, damage)` sends a key to the focused window's focused widget, and to nothing else. A window has at most one widget that takes keys, set by whoever adds it; if there is none, the key is dropped. The widget (a text line in this scenario) handles the key and returns the rectangle it changed, in its own coordinates; the manager offsets it by the content area's origin, cuts it to the content area, and adds it. Typing a letter into the field therefore damages the field's changed part, not the window.
+`Wm::key(e, fonts, damage)` first asks whether the key is the window manager's own, and only otherwise sends it to the focused window's focused widget. The manager's keys came with the live-input work (`docs/LIVE-INPUT.md`): **Alt+Tab** (with Shift, the other way) moves a cycle one window along the stacking order and draws nothing; releasing Alt focuses the window the cycle reached, as a click would (and ends a title-bar drag or an armed close box, because the pointer's gesture was on a window that is no longer the focused one); Escape cancels a cycle; **Alt+F4**, outside a cycle, closes the focused window (its auto-repeat is held off until the key's release, so one press closes one window); and **Tab**, with no Control or Windows key, moves the focus to the window's next text field, Shift+Tab to the previous, wrapping and skipping the labels and fills (`takes_focus`). Every other key goes to the focused widget. A window has at most one widget that takes keys, set by whoever adds it; if there is none, the key is dropped. The widget (a text line in this scenario) handles the key and returns the rectangle it changed, in its own coordinates; the manager offsets it by the content area's origin, cuts it to the content area, and adds it. Typing a letter into the field therefore damages the field's changed part, not the window.
 
 ### The damage each change makes
 
-The whole design of the manager is that it reports damage precisely, so that the compositor repaints no more than it must. The table is the contract, and the eleven tests of `shell/wm/tests/damage.rs` are its rows.
+The whole design of the manager is that it reports damage precisely, so that the compositor repaints no more than it must. The table is the contract. The eleven tests of `shell/wm/tests/damage.rs` are its first ten rows and the eleventh test's row; the last four rows are held by the 21 tests of `shell/wm/tests/keys.rs`.
 
 | Change | Damage added | Where decided |
 |---|---|---|
@@ -60,6 +60,10 @@ The whole design of the manager is that it reports damage precisely, so that the
 | A drag that does not change the position | nothing | `Wm::drag_to` |
 | A key into a text field | the changed rectangle of the field, on screen | `Wm::key` |
 | Pointer motion with no drag | nothing: the cursor is overlay damage, added by the shell | `Wm::pointer` |
+| A step of an Alt+Tab cycle | nothing: nothing is drawn while Alt is held | `Wm::key` |
+| Alt released after a cycle | as a focus that raises, for the window the cycle reached (nothing if that is the top window) | `Wm::key` |
+| Alt+F4 | as a close of the focused window | `Wm::key` |
+| Tab or Shift+Tab | the two fields' carets | `Wm::key` |
 
 The merge rule is in `desk-gfx` ([M13](chapter:m-pixels)): the damage set holds at most 16 disjoint rectangles, and two that overlap become their bounding box. That is why the numbers in the worked example below are areas of bounding boxes.
 
@@ -75,9 +79,9 @@ The merge rule is in `desk-gfx` ([M13](chapter:m-pixels)): the damage set holds 
 
 The cursor is not a window and not part of the scene. The compositor draws it at present time over the back buffer, and moving it adds *overlay* damage: it is presented but never repainted. That is why pointer motion costs two small rectangles and no repainting.
 
-`Shell` has its own methods to change the screen without input: `open`, `close`, `focus` (by name, returning false for an unknown name), `label` and `field` (which add a widget to the named window, and make the field the window's focused widget), and `damage_all`. Each reports its damage to the compositor, and that is the point of having them. `Shell::wm()` hands out the manager for looking, and its doc comment warns that a change made through it directly is not damaged. A caller that bypasses the shell would draw a stale picture, with no error: the incremental-versus-full test (`incremental_equals_full_after_every_step`) exists to catch such a mistake by repainting the whole screen after every step and comparing it with the incrementally damaged one.
+`Shell` has its own methods to change the screen without input: `open`, `close`, `focus` (by name, returning false for an unknown name), `label`, `text`, `fill` and `field` (which add a retained item to the named window; `field` also makes the field the window's focused widget), and `damage_all`. `text` is a label in the UI face and a colour role (`label` is `text` in the `Text` role) and `fill` is a rectangle in a role, `rect` in content coordinates: any rectangle is accepted and what reaches past the content area is clipped when the window paints, and a label's position is added with saturating arithmetic, so an `i32` an app supplies cannot overflow (`shell/shell/tests/items.rs` holds the extremes). Each returns false when there is no such window, and a window holds at most `MAX_ITEMS` (32) items, fields included, and refuses the next: a throwaway limit of the visible-module spike, not a design number. Items are painted in the order they were added, so a later one lies over an earlier one. They are what a loaded module's window draws through the kernel's three services ([M16](chapter:m-platforms), `docs/LOADER.md`): the module names what to draw and the shell paints, so no module is ever handed a pixel. Each reports its damage to the compositor, and that is the point of having them. `Shell::wm()` hands out the manager (as `&mut`, which the kernel's window services use to look a window up by name), and its doc comment warns that a change made through it directly is not damaged. A caller that bypasses the shell would draw a stale picture, with no error: the incremental-versus-full test (`incremental_equals_full_after_every_step`) exists to catch such a mistake by repainting the whole screen after every step and comparing it with the incrementally damaged one.
 
-`Shell::frame(&mut out)` repaints what changed and presents it, cursor included, and returns `FrameStats`: `repainted` pixels (the area of the scene damage), `presented` pixels (the area handed to the presenter, after widening to its alignment and adding the overlay) and `rects`, the number of rectangles. A frame with nothing changed writes nothing (`a_frame_with_no_events_writes_nothing`). `Shell::digest` returns the two checksums of what is on the screen. Nothing in the shell sleeps, waits or reads a clock: the core is a function of the events given to it, which is what lets a scenario produce the same bytes everywhere.
+`Shell::is_dirty` says whether a frame would draw anything (damage is pending, or the cursor is not where it was last presented), which a live loop asks instead of presenting to find out; and the cursor's damage is coalesced. `Shell::frame(&mut out)` repaints what changed and presents it, cursor included, and returns `FrameStats`: `repainted` pixels (the area of the scene damage), `presented` pixels (the area handed to the presenter, after widening to its alignment and adding the overlay) and `rects`, the number of rectangles. A frame with nothing changed writes nothing (`a_frame_with_no_events_writes_nothing`). `Shell::digest` returns the two checksums of what is on the screen. Nothing in the shell sleeps, waits or reads a clock: the core is a function of the events given to it, which is what lets a scenario produce the same bytes everywhere.
 
 ### The scenario format
 
@@ -89,6 +93,8 @@ A [scenario](term:scenario) is a UTF-8 text file with one step per line. A `#` s
 | `depths 8 4` | (header) | which depths to run at; both if absent |
 | `open NAME X Y W H "TITLE"` | `Step::Open` | focused and on top |
 | `label NAME X Y "TEXT"` | `Step::Label` | position from the content area's top-left |
+| `text NAME X Y ROLE "TEXT"` | `Step::Text` | a line in the UI face and colour role `ROLE` (a `Role` name such as `TextMuted`), positioned like a label |
+| `fill NAME X Y W H ROLE` | `Step::Fill` | a rectangle in `ROLE`, in the window's content coordinates; what lies outside is clipped |
 | `field NAME X Y W` | `Step::Field` | takes the window's keys |
 | `close NAME`, `focus NAME` | `Step::Close`, `Step::Focus` | |
 | `pointer X Y` | `Step::Event(PointerTo)` | |
@@ -99,7 +105,7 @@ A [scenario](term:scenario) is a UTF-8 text file with one step per line. A `#` s
 | `frame NAME` | `Step::Frame` | present, then capture |
 | `expect-damage DEPTH PIXELS [RECTS]` | `Step::ExpectDamage` | bound on the last frame, at that depth only |
 
-The parser does a great deal of checking, so that a bad scenario is an error naming its line and never a wrong picture. It refuses a first line other than `desk-scenario 1`, a `screen` or `depths` line twice or after a step, a name that is not one to eight characters of `a-z`, `0-9` and `-` (so a frame's capture can be an 8.3 file on DOS), a frame name used twice, and one that is a prefix of another (the native run waits for the line `shell: ready NAME` by substring, so a name that began another would match early). It refuses a window used before it is opened or after it is closed, a key name that is not a `KeyCode`, and a `type` string with a character that no key types. `ParseErrorKind` has one variant per mistake, and `tests/parse.rs` checks each of them. The parser keeps the button and modifier state as it goes, so `press` and `release` produce pointer events whose `buttons` are the state afterwards, as the HAL reports them.
+The parser does a great deal of checking, so that a bad scenario is an error naming its line and never a wrong picture. It refuses a first line other than `desk-scenario 1`, a `screen` or `depths` line twice or after a step, a name that is not one to eight characters of `a-z`, `0-9` and `-` (so a frame's capture can be an 8.3 file on DOS), a frame name used twice, and one that is a prefix of another (the native run waits for the line `shell: ready NAME` by substring, so a name that began another would match early). It refuses a window used before it is opened or after it is closed, a key name that is not a `KeyCode`, and a `type` string with a character that no key types. `ParseErrorKind` has one variant per mistake, and `tests/parse.rs` checks each of them. A step that adds an item to a window already holding `MAX_ITEMS` fails the run and says so, and one for a window that is not there says that instead. The parser keeps the button and modifier state as it goes, so `press` and `release` produce pointer events whose `buttons` are the state afterwards, as the HAL reports them.
 
 `type "desk"` shows what a step becomes. `type_events` turns each character into a key-down and a key-up, found by asking `desk_kbd::char_for` which key produces that character, preferring the unshifted one. A capital or a shifted symbol is wrapped in Left Shift down and up, so `type "aB"` is six events (a down and up for `a`, then shift down, `B` down and up, shift up). "desk" is eight events. Each event's modifiers are the state *after* it, as the HAL reports them.
 
@@ -113,7 +119,7 @@ What the platform does with all this is small, and it is the seam of the title. 
 
 ## Why it is this way
 
-- **Focus is position.** The last window is the focused one, so there is exactly one state to keep right and "focus always raises" cannot be violated (`Wm` header comment). The price is that focus without raising is impossible, a thing some window systems allow. `docs/FIRST-WINDOW.md` ("desk-wm") states the rule, and out-of-scope lists Alt+Tab and resizing.
+- **Focus is position.** The last window is the focused one, so there is exactly one state to keep right and "focus always raises" cannot be violated (`Wm` header comment). The price is that focus without raising is impossible, a thing some window systems allow. `docs/FIRST-WINDOW.md` ("desk-wm") states the rule, and its first list of what was out of scope named Alt+Tab and resizing; Alt+Tab was built later by the live-input work and resizing has not been.
 - **Report the damage, do not discover it.** Each manager method adds the rectangles it knows it disturbed, and the compositor never compares frames. The alternative, repainting and diffing, would cost a full-screen compare per frame; the decision is recorded in `docs/FIRST-WINDOW.md` ("Decisions", the dirty-rectangle entry), and the cost is the need for a test per row of the table above.
 - **The extent is added whole.** A focus change disturbs a title bar and four rings, which merge into the extent anyway; adding the extent directly avoids five calls for the same result (`wm.rs` header).
 - **Edges, not levels.** Reports from a real mouse repeat the button state every time. Acting on a change makes the same code right for a scenario (which sends `press` once) and a device (which sends the state every time).
@@ -133,9 +139,10 @@ What the platform does with all this is small, and it is the seam of the title. 
 | [`shell/shell/src/shell.rs`](repo:shell/shell/src/shell.rs) | [`Shell`](sym:shell/shell/src/shell.rs::Shell): [`handle`](sym:shell/shell/src/shell.rs::handle), [`frame`](sym:shell/shell/src/shell.rs::frame), [`digest`](sym:shell/shell/src/shell.rs::digest), the by-name changes and [`damage_all`](sym:shell/shell/src/shell.rs::damage_all) |
 | [`shell/shell/src/lib.rs`](repo:shell/shell/src/lib.rs) | [`Event`](sym:shell/shell/src/lib.rs::Event) |
 | [`shell/shell/src/scenario.rs`](repo:shell/shell/src/scenario.rs) | [`Scenario`](sym:shell/shell/src/scenario.rs::Scenario), [`Step`](sym:shell/shell/src/scenario.rs::Step), [`FrameName`](sym:shell/shell/src/scenario.rs::FrameName), [`ParseErrorKind`](sym:shell/shell/src/scenario.rs::ParseErrorKind), [`parse`](sym:shell/shell/src/scenario.rs::parse), [`type_events`](sym:shell/shell/src/scenario.rs::type_events) |
+| [`shell/shell/src/live.rs`](repo:shell/shell/src/live.rs) | the live loop's pure part: which keys the platform keeps (Escape ends, F12 marks), the counters of a session and the lines it prints |
 | [`shell/shell/src/run.rs`](repo:shell/shell/src/run.rs) | [`run`](sym:shell/shell/src/run.rs::run), [`apply`](sym:shell/shell/src/run.rs::apply), [`RunError`](sym:shell/shell/src/run.rs::RunError) |
-| [`shell/wm/tests/damage.rs`](repo:shell/wm/tests/damage.rs), [`behaviour.rs`](repo:shell/wm/tests/behaviour.rs) | the damage table and the hit, press, drag and close rules, as tests |
-| [`shell/shell/tests/`](repo:shell/shell/tests/) | `accounting.rs` (pixels written per change), `incremental.rs` (incremental equals full, the runner), `parse.rs` (every parse error), `scenarios.rs` (every `.scn` through every presenter against its sums) |
+| [`shell/wm/tests/damage.rs`](repo:shell/wm/tests/damage.rs), [`behaviour.rs`](repo:shell/wm/tests/behaviour.rs), [`keys.rs`](repo:shell/wm/tests/keys.rs) | the damage table and the hit, press, drag and close rules, and the window manager's keys, as tests |
+| [`shell/shell/tests/`](repo:shell/shell/tests/) | `accounting.rs` (pixels written per change), `incremental.rs` (incremental equals full, the runner), `items.rs` (retained fills and text at the extremes and past the cap), `parse.rs` (every parse error), `scenarios.rs` (every `.scn` through every presenter against its sums) |
 | [`tests/shell/first-window.scn`](repo:tests/shell/first-window.scn) | the scenario the worked example follows |
 | [`tests/shell/first-window.sums`](repo:tests/shell/first-window.sums) | the two checksums of each frame at each depth |
 | [`tests/shell/README.md`](repo:tests/shell/README.md) | what the files are, what the host test checks, how to re-record |
@@ -171,7 +178,7 @@ id: shell.wm
 label: Windows, z-order, focus, hit testing, dragging, the close box and the damage each change reports
 state: built-verified
 evidence: test:shell/wm/tests/damage.rs::focus_that_raises_reports_the_raised_extent_and_the_previous_focus, test:shell/wm/tests/behaviour.rs::press_motion_release_on_a_title_moves_the_window_by_the_motion, sym:shell/wm/src/wm.rs::Wm
-note: Host tests, run for this chapter (cargo test in shell/: 161 passed, 0 failed). 28 of those are the wm's own. Minimise and maximise are inert by design.
+note: Host tests, run for this chapter on 2026-11-23 (cargo test in shell/: 210 passed, 0 failed). 49 of those are the wm's own (17 behaviour, 11 damage, 21 keys). Minimise and maximise are inert by design.
 
 id: shell.shell
 label: Shell::handle, Shell::frame, the cursor and the damage accounting
@@ -199,12 +206,19 @@ id: shell.live
 label: Live keys and mouse driving the shell on DOS (the interactive mode)
 state: built-unverified
 evidence: sym:shell/dos/src/main.rs::interactive, doc:docs/FIRST-WINDOW.md#the-platform-wirings
-note: Keys were typed by AUTOTYPE in the project's own check; the mouse is not exercised by any check. Not run for this chapter.
+note: Keys were typed by AUTOTYPE in the project's own check, and the DOS mouse path has an opt-in check under Xvfb (it is not part of the default run). Not run for this chapter.
+
+id: shell.items
+label: Retained fills and text, the fill and text scenario steps, and the item cap
+state: built-verified
+evidence: pr:114, test:shell/shell/tests/items.rs::a_window_refuses_the_item_past_the_cap, test:shell/shell/tests/items.rs::text_and_fills_at_the_extremes_of_i32_do_not_panic_or_leave_the_content_area, repo:tests/shell/module-window.scn
+note: Host tests, and the reference scenario held to its sums through every presenter. The cap of 32 items and the numbering of the roles are spike limits.
 
 id: shell.livenative
-label: Live input and a free-running frame loop on the native kernel
-state: planned
-evidence: doc:docs/FIRST-WINDOW.md#both-tracks-at-once
+label: Live input and a free-running frame loop on the native kernel (the shell-live test mode)
+state: built-unverified
+evidence: sym:kernel/src/shell.rs::live, repo:tests/native/expected-shell-live-8.txt, repo:tests/shell/live.sums
+note: Built and checked by tools/native-test.sh with input injected through QEMU's monitor, which this pass did not run; read from the script and the committed files. No person at a real keyboard or mouse.
 
 id: shell.hardware
 label: The shell on a real VGA card, monitor and 486
@@ -212,7 +226,7 @@ state: planned
 evidence: doc:docs/FIRST-WINDOW.md#not-verified
 ```
 
-The window manager and the shell are {{state.shell.wm}} and {{state.shell.shell}} on the host, and the runner is {{state.shell.scenario}}. The native run is {{state.shell.native}} in QEMU; the DOS run is {{state.shell.dos}}; live input on DOS is {{state.shell.live}} and on the native kernel {{state.shell.livenative}}; a real machine is {{state.shell.hardware}}. "Verified" here means on the host or in an emulator.
+The window manager and the shell are {{state.shell.wm}} and {{state.shell.shell}} on the host, and the runner is {{state.shell.scenario}}. Retained fills and text are {{state.shell.items}}. The native run is {{state.shell.native}} in QEMU; the DOS run is {{state.shell.dos}}; live input on DOS is {{state.shell.live}} and on the native kernel {{state.shell.livenative}}; a real machine is {{state.shell.hardware}}. "Verified" here means on the host or in an emulator.
 
 > **From the stacks — Stacking.** The Wikipedia article on stacking window managers says the order in which windows are stacked is called their z-order, and that the Xerox Alto, which it describes as containing the first working commercial GUI, used a stacking window manager. It also says the Xerox Star used tiling for most main application windows and overlapping only for dialogue windows. The page names no inventor.
 > Source: [Stacking window manager, Wikipedia](https://en.wikipedia.org/wiki/Stacking_window_manager)
@@ -223,22 +237,25 @@ The host tests need only `cargo`. The suite is the whole `shell/` workspace, so 
 
 ```try
 needs: host: cargo
-ran: 2026-10-23 on the host
+ran: 2026-11-23 on the host at d5f3328
 $ cd shell && cargo test --locked 2>&1 | grep -E "^test result: ok\. [1-9]"
 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.71s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
-test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.73s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.59s
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-The eleven lines add up to 161 passed and none failed. The window manager's own are the last two (17 behaviour tests and 11 damage tests); the shell's are the 11 accounting, 12 incremental, 16 parse and 1 scenario test. The scenario test is the one that matters most: it plays every `.scn` through three presenters and holds the result to the sums. To re-record the goldens after a deliberate change, `tools/shell-goldens.sh` runs it in record mode; run on a clean tree it left `git status` empty and ended with `ok: 12 golden PNGs match tests/shell/first-window.sums`.
+The fourteen lines add up to 210 passed and none failed (161 on 2026-10-23). The window manager's own are the last three (17 behaviour, 11 damage and 21 key tests); the shell's are the 13 unit tests (4 of the transcript lines, 9 of the live loop's key routing), 12 accounting, 12 incremental, 6 item, 17 parse and 2 scenario tests. The scenario test is the one that matters most: it plays every `.scn` (the first window's, the keys, the live ones and the module window) through three presenters and holds the result to the sums. To re-record the goldens after a deliberate change, `tools/shell-goldens.sh` runs it in record mode; run on a clean tree it left `git status` empty and ended with `ok: 12 golden PNGs match tests/shell/first-window.sums`.
 
 **Exercises.** (1) Without running anything, work out the damage when `Notes` is dragged by (-100, 0) from its starting place (60, 60): where does the clamp stop it, and is the answer one rectangle or two? Then add a `move -100 0` to a scratch copy of the scenario's drag and read the `dragged` line of the host failure. (2) Add `expect-damage 8 100 1` after `frame focus` in a scratch copy and predict which `RunError` the host test prints and what numbers it contains (the transcript line above has the pixel count). (3) Write a scenario that closes `welcome` by `close welcome` and not by a click; predict whether the `closed` damage changes (compare `Shell::close` with the manager's release path) and the parser errors you would get by closing it twice.
 
@@ -276,3 +293,4 @@ at: explainer firstwindow
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The worked example reproduces the `focus`, `dragged`, `moved`, `open` and `closed` damage lines of the native transcript from the window extents (506 × 296, 346 × 216, 2 × 228 and 466 × 266). `cargo test` in `shell/` and the native depth 8 shell run were rerun for this chapter. Found while writing: `docs/FIRST-WINDOW.md` and `tests/shell/README.md` say the platforms skip `expect-damage`; the native kernel enforces it because it plays the scenario with `run`, and only the DOS program skips it (see "Why it is this way").
+- 2026-11-23: re-read in full against `shell/wm/src/wm.rs`, `shell/shell/src/shell.rs`, `scenario.rs`, `live.rs`, `tests/shell/module-window.scn` and `docs/FIRST-WINDOW.md` at `d5f3328`, and `reviewed` moves to it. Corrected: the keys section (Alt+Tab, Alt+F4 and Tab are the window manager's), four rows added to the damage table, the shell's methods (`text`, `fill`, `is_dirty`, `wm()` as `&mut`, the item cap and the saturating label position), two rows of the scenario table (`text` and `fill`) and the cap's error, the out-of-scope sentence, the code table, the native live record (it was `planned`; it is built, checked by `tools/native-test.sh`, not run by this pass) and a new record for retained items. `cargo test` in `shell/` was rerun on the host (210 passed) and the try block replaced. The worked example's numbers were checked against `tests/native/expected-shell-8.txt` and are unchanged. Not rerun: the native and DOS runs. In `docs/FIRST-WINDOW.md` one sentence was corrected (Alt+Tab is no longer out of scope); its section on retained fills and text and its scenario table matched the code.

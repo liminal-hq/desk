@@ -39,7 +39,7 @@ One scripted scene, the same on every platform, at 640 × 480 in two depths: **8
 
 The scene is driven by a **scenario** (a short text file of steps), and at each `frame` step the picture is captured. The host renders the scenario into memory and keeps **golden PNGs**; the DOS program and the kernel run the same scenario on real (emulated) display hardware, and their captures must equal the goldens pixel for pixel.
 
-Out of scope: the launcher bar, menus, Alt+Tab, resizing, minimise and maximise (the boxes are drawn but inert), the 1993 look, wallpapers other than Void, fades (the DAC fade exists in `desk-vga` and is untouched), apps and the SDK, and any change to the HAL's traits.
+Out of scope for the first window (Alt+Tab, Alt+F4 and Tab were added later by the live-input work): the launcher bar, menus, resizing, minimise and maximise (the boxes are drawn but inert), the 1993 look, wallpapers other than Void, fades (the DAC fade exists in `desk-vga` and is untouched), apps and the SDK, and any change to the HAL's traits.
 
 ## Decisions
 
