@@ -1,0 +1,28 @@
+# What a module loaded through the real loader draws: a window of retained text and fills over a backdrop window, then closed.
+# The same steps are the single source of truth for the native module test (docs/FIRST-WINDOW.md, "Retained fills and text").
+desk-scenario 1
+screen 640 480
+depths 8 4
+open notes 40 40 260 140 "Notes"
+label notes 12 12 "A window behind the module's."
+pointer 600 440
+# The module's window: a 320 x 160 content area under the 22-pixel title bar and its 1-pixel rule, centred on the screen.
+open hellowin 160 148 320 183 "HELLOWIN.DMD"
+# The overhang at the top-left is drawn first, so the first line of text lies over it.
+fill hellowin -10 -10 30 20 Halo2
+text hellowin 8 8 Text "Drawn by HELLOWIN.DMD"
+text hellowin 8 28 TextSecondary "a loaded module, through three services"
+text hellowin 8 48 TextMuted "desk_window_new, desk_fill, desk_text"
+fill hellowin 8 76 28 20 Raised
+fill hellowin 44 76 28 20 Line
+fill hellowin 80 76 28 20 Border
+fill hellowin 116 76 28 20 TextMuted
+fill hellowin 152 76 28 20 TextSecondary
+fill hellowin 188 76 28 20 Text
+fill hellowin 224 76 28 20 Accent
+fill hellowin 260 76 28 20 Selection
+# The overhang at the bottom-right.
+fill hellowin 250 110 200 200 Accent
+frame drawn
+close hellowin
+frame closed
