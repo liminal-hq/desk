@@ -66,7 +66,7 @@ hal/                          one Cargo workspace; no default target, so `cargo 
 │   ├── vga/                  desk-vga            DAC, retrace, mode 13h/12h registers      spike A, then D
 │   ├── vgatext/              desk-vgatext        80x25 text console (from kernel/vga.rs)   migration step 1
 │   ├── dma8237/              desk-dma8237        ISA DMA controller                        sound milestone
-│   ├── opl/                  desk-opl            OPL2/OPL3 register writes                 sound milestone
+│   ├── opl/                  desk-opl            OPL2/OPL3 register writes                 built (R139 S1), no user yet
 │   ├── sb/                   desk-sb             Sound Blaster DSP                         sound milestone
 │   └── ata/, fdc/            desk-ata, desk-fdc  IDE and floppy block devices              storage milestone
 └── platform/
@@ -77,7 +77,7 @@ kernel/src/hal.rs                   kernel::hal     the native platform         
 
 **Why the real platforms are not crates in `hal/`.** The DOS platform is DPMI calls, the interrupt stub and the clean-up list, all of which are `rt`; the native platform is the IDT, the frame allocator and the boot information, all of which are the kernel. A separate `platform/dos` crate would only re-export `rt`, and would not build for the host, which would split the workspace's `cargo test`. If Lieutenant Fizz Episode 2 or the `liminal-hq/dos-rs` idea in `DIRECTION.md` wants `rt` and its platform without Desk, they move together.
 
-Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic`, `desk-kbd`, `desk-i8042` and `desk-hal-mock`. The native kernel depends on them (migration step 1, done with spike C); nothing else does yet.
+Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic`, `desk-kbd`, `desk-i8042`, `desk-opl` and `desk-hal-mock`. The native kernel depends on them (migration step 1, done with spike C); nothing else does yet.
 
 ## The surfaces
 
@@ -313,6 +313,7 @@ pub trait PcmOut {
 ```
 
 - `desk-opl` is port writes at `0x388`/`0x389` (or the Sound Blaster's base) with the datasheet delays; `desk-sb` is the DSP (reset at base + 6, read at + 0Ah, write at + 0Ch, status at + 0Eh), and `desk-dma8237` programs the DMA controller (mask, flip-flop clear, mode, address, count, page register, unmask), all over `PortIo`. The only platform parts are the DMA buffer (`PhysMem`), the IRQ (`IrqRegistry`) and the configuration: `BLASTER` under DOS, probing natively.
+- **The OPL driver is built (R139 S1, [`RUNTIME-PLAN.md`](RUNTIME-PLAN.md)), and nothing uses it yet.** `desk-opl` is `Opl::new(ports, base)` over a `PortIo`, with no `Delay`: the chip's settling is a count of status reads, as the classic AdLib practice does it (`INDEX_SETTLE_READS`, 6 after the index write for the 3.3 µs, and `DATA_SETTLE_READS`, 35 after the data write for the 23 µs), because a driver that depends on a calibrated clock could not run before the clock exists. `write` and `write_hi` are the two banks (ports `base`/`base + 1` and `base + 2`/`base + 3`); `detect` is the standard timer test (reset the timers, start timer 1 with 0xFF, wait a bounded `TIMER_WAIT_READS`, expect the status mask 0xE0 to be 0xC0, reset again) and returns `Chip::None`, `Opl2` or `Opl3` by status bits 1 and 2 (clear is an OPL3; a convention that some clones break); `enter_opl3` and `leave_opl3` write 1 and 0 to register 5 of bank 1, so a program puts the chip back to OPL2 mode when it finishes; `reset` keys off every channel and zeroes the register file; `tone` and `silence` set a channel's frequency, block and key, and no more (no instruments). A bank 1 write to an OPL2 is not checked: use `detect` first. The mock's `OplModel` is the register file and timer 1, and records the status reads around every write, so the tests pin the settling counts. The 560 Hz audio service that will use the driver has its own plan.
 - Audio cannot be checked headless (DOSBox's sound is off in the checks); the driver tests check the register sequence against the mock.
 
 ### Storage (sketch; the native storage milestone builds it)
