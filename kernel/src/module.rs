@@ -83,7 +83,11 @@ const _: () = {
             j += 1;
         }
         // Ascending: the first difference is smaller in `a`, or `a` is a proper prefix of `b`.
-        let ascends = if j < a.len() && j < b.len() { a[j] < b[j] } else { j == a.len() && j < b.len() };
+        let ascends = if j < a.len() && j < b.len() {
+            a[j] < b[j]
+        } else {
+            j == a.len() && j < b.len()
+        };
         assert!(ascends, "SERVICES is not sorted");
         i += 1;
     }

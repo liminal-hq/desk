@@ -306,7 +306,11 @@ impl Instance {
             "module: HELLOWIN unloaded, {} window{} closed, frames as before: {}",
             closed,
             if closed == 1 { "" } else { "s" },
-            if memory::free_frames() == self.free_before { "yes" } else { "no" }
+            if memory::free_frames() == self.free_before {
+                "yes"
+            } else {
+                "no"
+            }
         );
     }
 }

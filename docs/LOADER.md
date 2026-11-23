@@ -22,6 +22,7 @@ The design for roadmap item R48, the executable-format and loader spike: what a 
 - [Load addresses and randomisation](#load-addresses-and-randomisation)
 - [Libraries, `std` and data files](#libraries-std-and-data-files)
 - [What the spike will and will not prove](#what-the-spike-will-and-will-not-prove)
+- [Visible-module spike](#visible-module-spike)
 - [Risks](#risks)
 - [What changes in other documents](#what-changes-in-other-documents)
 - [Questions for the owner](#questions-for-the-owner)
@@ -288,6 +289,28 @@ The platform chooses where an image goes; the format only says how to fix it up 
 - CPU-fault containment on the hosted track; recovery from a stack overflow, a wild write or an infinite loop on either track.
 - How long a load takes on a 486: emulator timings are not hardware timings ([`TOOLCHAIN.md`](TOOLCHAIN.md)).
 - Apps that use `std`, apps in C, or modules that depend on each other.
+
+## Visible-module spike
+
+A module loaded through the real loader draws a window in the native shell, and QEMU shows it. The owner decided this on 2026-11-23 as a two-part spike under R48 (it is tracked as a follow-up to R48, not as part of M4 to M9): the first part is the shell's retained `Fill` and `Text` items ([`FIRST-WINDOW.md`](FIRST-WINDOW.md#retained-fills-and-text)), the second is this one. The module is `module/mods/hellowin`, packed as `HELLOWIN.DMD` and embedded in the kernel like `HELLO.DMD`; it is not loaded from a disk, receives no input and no events, and nothing here is a promise about the ABI.
+
+**The three services** follow the names and shapes of [`SDK.md`](SDK.md); handles are `u32` and 0 is never valid.
+
+```c
+u32  desk_window_new(u32 app, const u8 *title, u32 len, i32 w, i32 h, u32 flags);
+void desk_fill(u32 win, i32 x, i32 y, i32 w, i32 h, u32 role);
+void desk_text(u32 win, i32 x, i32 y, const u8 *s, u32 len, u32 font, u32 role);
+```
+
+`desk_window_new` takes the size of the content area; the kernel adds the title bar and its rule through `ChromeLayout`, centres the window on the screen (a placement that is throwaway), focuses it and names it `app{app}-{handle}` for the shell. It returns the slot number plus one out of four slots, or 0 when it refuses: `app` is not the running instance, `flags` is not 0, the title is null with a length, wraps, is over 64 bytes or is not UTF-8, the width is outside 1 to 600 or the height outside 1 to 400, or the four slots are used. `desk_fill` and `desk_text` refuse a handle that is 0, out of range, an empty slot or a window the shell no longer has, a role of 15 or more, and a window that already holds 32 items (the shell's `MAX_ITEMS`); `desk_fill` also refuses a rectangle with no area, and `desk_text` a font other than 0, a null pointer with a length, a range that wraps, text over 160 bytes, text that is not UTF-8 and text with a control character. A role is the index into `desk_ui::Role::ALL`; that numbering is throwaway, and R79 will name the roles in the SDK. Every refusal prints one transcript line, such as `module: desk_fill refused: window 9 is not open`, and the call returns without drawing. Whether the bytes of a title or text lie in the module's own memory is not checked, as for `desk_log`; that is R78's work.
+
+**Binding.** The kernel's service table holds typed entries (`Service`), and its names are checked at build time to ascend. `resolve_base` binds `desk_log` and `desk_panic` only, and the `module` and `module-bad` modes use it, so their transcripts are unchanged. `resolve_window` binds all five and is used only when a shell is about to be lent, so a window service cannot be bound outside a shell mode: the kernel loads `HELLOWIN.DMD` with `resolve_base` before it composes the shell and prints `module: refused HELLOWIN.DMD: missing import 0: desk_fill`. The shell is lent through a pointer that is stored for the length of `app_start` or `app_stop` and cleared after (`kernel/src/modwin.rs`); it is only loaded and stored, never compare-and-swapped, and a service that finds it null panics the kernel, which binding makes impossible. The module is never handed a pixel, a presenter or the frame buffer ([`PRESENT-API.md`](PRESENT-API.md)); it names what to draw and the shell paints.
+
+**The test modes.** `module-window` (code 19) plays `tests/shell/module-window.scn` in the kernel with every step that does not name `hellowin` applied as usual; at the first one that does, the kernel loads the module and starts it, and its draws replace the scenario's `open`, `fill` and `text` steps for that window; at `close hellowin` it stops and unloads the module. At each `frame` step it prints the digests and waits for the run script's screendump, as the `shell` mode does, and the digests, the transcript and QEMU's own picture must be the goldens of the host scenario, at depth 8 and depth 4. After `app_start` the module makes one bad call of each kind the kernel refuses; `app_stop` asks for twenty 1 x 1 fills, one more than the window can hold, so the transcript shows the cap refusing. `module-live` (code 20; 18 stays free for the loader plan's `module-noguard`) does the same set-up and then the live loop; Escape stops and unloads the module, presents the closed desktop as mark 01 and ends. `tools/run-shell.sh native --module` is the way to watch it.
+
+**What is throwaway and what is kept.** Kept: the typed service table and its two resolvers, the lending of the shell by a pointer stored around a call, the refusal of a bad call with a line and no effect, the rule that a module names what to draw and never receives pixels, and the checks that hold the module's window to the host's goldens. Throwaway: the numbering of the colour roles, the placement of the window, the single font, the cap of 32 items, the four slots, the exception to the four-service rule ([`LOADER-PLAN.md`](LOADER-PLAN.md)), the instance number fixed at 1 and the embedded buffer.
+
+**Later, as the owner has directed:** more colour depth than the two the shell has now, and higher resolutions where the hardware supports them. Nothing here depends on 640 x 480 at 8 or 4 bits except the test's screen, the centring and the limits on a window's size, and they are the first things to change.
 
 ## Risks
 

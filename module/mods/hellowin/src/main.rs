@@ -97,6 +97,7 @@ fn bad_calls(app: u32, win: u32) {
     fill(9, 0, 0, 4, 4, TEXT); // a handle that is not a slot
     fill(win, 0, 0, 0, 10, TEXT); // an empty rectangle
     fill(win, 0, 0, 4, 4, NO_ROLE); // a role that does not exist
+
     // SAFETY: as above.
     unsafe {
         desk_text(win, 0, 0, not_utf8.as_ptr(), 2, UI_FONT, TEXT); // not UTF-8
