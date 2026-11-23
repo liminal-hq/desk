@@ -1,0 +1,19 @@
+[package]
+name = "desk-speaker"
+description = "The PC speaker through PIT channel 2 and port 0x61, written once against the HAL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+desk-hal.workspace = true
+desk-pit = { path = "../pit" }
+
+[features]
+# Only for host builds; see `desk-hal`.
+std = ["desk-hal/std", "desk-pit/std"]
+
+[dev-dependencies]
+desk-hal = { workspace = true, features = ["std"] }
+desk-hal-mock = { workspace = true, features = ["std"] }
