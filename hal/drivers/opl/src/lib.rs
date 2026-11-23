@@ -173,7 +173,8 @@ impl<P: PortIo> Opl<P> {
     }
 
     /// Writes 0 to register 0x05 of bank 1: the chip is back in OPL2 mode, as an OPL2-only program expects it. A program that
-    /// entered OPL3 mode puts this back when it finishes.
+    /// entered OPL3 mode puts this back when it finishes. It does not key off or clear bank 1: call `reset` first, while still in OPL3
+    /// mode, or the bank 1 channels and the 4-operator bits stay as they were.
     pub fn leave_opl3(&mut self) {
         self.write_hi(REG_NEW, 0);
         self.opl3 = false;
@@ -182,7 +183,9 @@ impl<P: PortIo> Opl<P> {
     /// Silences the chip and clears it: key-off for every channel (registers 0xB0..=0xB8, and the same in bank 1 after
     /// `enter_opl3`), then 0 to every register from 0x01 to 0xF5 of bank 0 (and of bank 1, except the NEW bit at 0x05, which
     /// stays as `enter_opl3` and `leave_opl3` left it). That is 9 (OPL2) or 18 (OPL3) key-offs and then 245 or 489 more writes,
-    /// each about 41 status reads, so a reset takes some tens of milliseconds.
+    /// each about 41 status reads, so a reset takes about 7 ms on an OPL2 and about 20 ms on an OPL3 (at the classic figure of 0.66 µs a read, not measured). It also
+    /// zeroes registers 0xC0..=0xC8, which clears the OPL3's left and right output enables: in OPL3 mode a channel is silent until
+    /// it is set up again.
     pub fn reset(&self) {
         for ch in 0..9 {
             self.write(REG_KEY_BLOCK + ch, 0);
