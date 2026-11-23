@@ -5,7 +5,7 @@ part: IV
 title: Drivers I: serial, interrupt controllers and the timer
 summary: The 16550 driver, the two-8259 driver and the 8254 driver with PitClock: their register sequences word by word, their tests against the mock bus, and how the kernel and the DOS runtime each use them.
 date: 2026-10-23
-reviewed: d7775ed
+reviewed: d5f3328
 watches: [hal/drivers/serial/, hal/drivers/pic/, hal/drivers/pit/, kernel/src/serial.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/hal.rs, dos/rt/src/irq.rs, docs/HAL.md]
 log: [hal]
 anatomy: [desk:drivers]
@@ -268,3 +268,4 @@ def: Initialisation command word: one of the up-to-four bytes that set up an 825
 
 - 2026-10-23: first written, against `44f0265`. The three drivers were read in full and their tests run on the host (6, 8 and 8 passing); the native kernel was built and booted in QEMU and its transcript matched `tests/native/expected.txt`. Found while writing: the DOS runtime uses `desk-pic` but neither `desk-serial` nor `desk-pit`, although `docs/HAL.md` lists them as shared and plans a `PitClock` for the hosted platform; `restore_bios_rate`, `read_counter`, `probe` and `read_byte` have no caller outside their tests; and the header comments of `desk-serial`, `desk-pic` and `desk-pit` still name the kernel's old `serial.rs`, `pic.rs` and `pit.rs` as the reference for code those files now call the drivers with.
 - 2026-11-23: brought up to date after R139 T1 to T6 (#107 to #113). Corrected: the claims that nobody calls `restore_bios_rate` or `read_counter` (the DOS fast timer does), the sentence on which drivers the hosted track shares, and the code table; added `BiosChain` and the stopwatch helpers, a status record `drv.dos-pit-fast`, and changed `drv.dos-pit` to say it is about `PitClock`. The whole chapter was re-read against `hal/drivers/serial`, `pic` and `pit`, `kernel/src/hal.rs` and `dos/rt/src/irq.rs` and `timer.rs`; the try block was rerun (host tests, a native build, QEMU as a 486, the transcript check: 38 lines match). `reviewed` moved to `d7775ed`.
+- 2026-11-23, at `d5f3328`: checked, not rewritten. The only change to this chapter's watched paths since `d7775ed` is three sentences of `docs/HAL.md` (the only implementor of `DecidingIrqService`, `Pacer`'s first user not being the fast timer, and a new `InputLatch` paragraph); the diff was read and none of it is stated otherwise here, and no driver, kernel file or `dos/rt/src/irq.rs` changed. The chapter was read in full at `d7775ed`, not again in full for this entry. `reviewed` moves to `d5f3328`.
