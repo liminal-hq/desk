@@ -108,8 +108,9 @@ impl<P: PortIo> Pit<P> {
     /// by one per input clock (838 ns), so `divisor - count` is the time since the last tick. In the BIOS's mode 3, which the
     /// hosted track has unless it reprograms the PIT, the count runs down by two and covers each period twice, so it does not
     /// give sub-tick time without knowing the output's phase; reprogram with `program_divisor(MAX_DIVISOR)` (the same rate in mode
-    /// 2) first. Run with interrupts off: an interrupt handler that touches the PIT between the latch and the two reads would
-    /// scramble them.
+    /// 2) first. Prefer interrupts off: an interrupt handler that touches the PIT between the latch and the two reads would
+    /// scramble them. `rt::timer::clocks` reads it with interrupts on, which is safe there because neither the fast-timer handler
+    /// nor a standard BIOS timer handler touches the PIT.
     pub fn read_counter(&self) -> u16 {
         self.ports.outb(COMMAND, CMD_CH0_LATCH);
         let lo = self.ports.inb(CHANNEL0);
@@ -126,7 +127,7 @@ impl<P: PortIo> Pit<P> {
 /// A small `Copy` value with `u32` arithmetic only (no allocation, no floating point, no 64-bit division), so it can run inside
 /// the interrupt handler. A divisor of 0 means 65,536, as the chip reads it, and chains on every tick; so does any divisor above
 /// 65,536, which is clamped to it. The caller passes the divisor it programmed, which `check_divisor` has accepted (it refuses 1
-/// and anything above 65,536), so the clamp only matters if the two are out of step. Needed by the hosted fast timer (roadmap R139), which has not been built on it yet.
+/// and anything above 65,536), so the clamp only matters if the two are out of step. Used by the hosted fast timer (`rt::timer::hook_rate`, roadmap R139).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BiosChain {
     divisor: u32,

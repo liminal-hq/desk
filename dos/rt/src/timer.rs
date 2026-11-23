@@ -185,7 +185,8 @@ fn pit() -> Pit<RawPorts> {
 /// list is full or the timer line is taken. The clean-up entry goes in first, so a full list refuses before anything changes.
 /// `unhook_rate`, which exit and a panic also run, puts the vector back and only then the BIOS rate, so a handler cannot run after
 /// the rate is restored. In the few microseconds between the vector and the rate being set the handler counts a tick at the BIOS
-/// rate, which can at worst delay one BIOS clock tick.
+/// rate, which can at worst delay one BIOS clock tick. The other way round, in the instant between the vector going back and the
+/// BIOS rate being restored, the BIOS handler itself runs at the fast rate and can at worst gain one.
 pub fn hook_rate(divisor: u32) -> Result<(), HalError> {
     check_divisor(divisor)?;
     if is_hooked() || is_fast() {
@@ -253,7 +254,9 @@ pub fn fast_ticks() -> u32 {
 ///
 /// It wraps at 2^32 clocks (about 3,599 seconds): take differences with `wrapping_sub`, and call it at least every 30 minutes (the
 /// guard that stops it running backwards compares as a signed difference). A reading taken in the instant the counter has reloaded
-/// but the interrupt has not yet been counted would be one period too low, so `clocks` returns the previous reading then. It reads
+/// but the interrupt has not yet been counted would be one period too low, so `clocks` returns the previous reading then (which keeps it monotonic; after a long gap between calls
+/// the previous reading is older than the true time, so a reading taken in that instant can be up to one period short, 16.7 ms at
+/// 60 Hz, and a `delay_us` ending on it can be short by the same). It reads
 /// the latch of channel 0 with interrupts on, which is safe because neither handler touches the PIT, and retries if a tick lands
 /// between reading the tick count and the latch.
 pub fn clocks() -> u32 {
