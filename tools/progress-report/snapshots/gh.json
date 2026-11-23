@@ -1,15 +1,879 @@
 {
- "capturedAt": "2026-11-23T01:59:03-05:00",
+ "capturedAt": "2026-11-23T10:20:08-05:00",
  "data": {
   "openWork": {
-   "commitsOnBranches": 0,
+   "commitsOnBranches": 4,
    "conflicts": [],
-   "prs": [],
-   "tips": [],
+   "prs": [
+    {
+     "ahead": 4,
+     "base": "main",
+     "branch": "feat/rt-probes",
+     "ci": "passing",
+     "commitCount": 4,
+     "commits": [
+      {
+       "date": "2026-11-23T02:50:09-05:00",
+       "hash": "76d2d6d",
+       "merge": false,
+       "subject": "feat(rt): probe the video class, processor, x87, free memory and game port"
+      },
+      {
+       "date": "2026-11-23T03:12:17-05:00",
+       "hash": "b478925",
+       "merge": true,
+       "subject": "Merge origin/main into feat/rt-probes"
+      },
+      {
+       "date": "2026-11-23T03:24:02-05:00",
+       "hash": "ec4d574",
+       "merge": false,
+       "subject": "fix(rt): read the EGA colour flag from BH, say what the x87 probe does not promise, and fix the line counts"
+      },
+      {
+       "date": "2026-11-23T10:08:11-05:00",
+       "hash": "c5c0608",
+       "merge": true,
+       "subject": "Merge origin/main into feat/rt-probes"
+      }
+     ],
+     "createdAt": "2026-11-23T08:24:50Z",
+     "ghAdditions": 559,
+     "ghChangedFiles": 14,
+     "ghDeletions": 10,
+     "head": "c5c0608",
+     "headFull": "c5c0608291a133671696a8ad7ddc1609490fef64",
+     "isReport": false,
+     "labels": [
+      "enhancement",
+      "rust",
+      "dos"
+     ],
+     "number": 119,
+     "stackedOn": [],
+     "state": "in review",
+     "title": "Add platform probes to the DOS runtime (R139 T8)",
+     "updatedAt": "2026-11-23T15:15:06Z",
+     "url": "https://github.com/liminal-hq/desk/pull/119"
+    }
+   ],
+   "tips": [
+    {
+     "halLines": 10991,
+     "hostTests": 222,
+     "kernelLines": 4882,
+     "number": 119,
+     "transcripts": 40
+    }
+   ],
    "warnings": [],
-   "widest": null
+   "widest": 119
   },
   "prs": [
+   {
+    "additions": 559,
+    "baseRefName": "main",
+    "changedFiles": 14,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: HAL",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: shell",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: kernel",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: core, module, tools and spike lints",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: b-dos-input",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T08:24:50Z",
+    "deletions": 10,
+    "headRefName": "feat/rt-probes",
+    "headRefOid": "c5c0608291a133671696a8ad7ddc1609490fef64",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": null,
+    "number": 119,
+    "state": "OPEN",
+    "title": "Add platform probes to the DOS runtime (R139 T8)",
+    "updatedAt": "2026-11-23T15:15:06Z",
+    "url": "https://github.com/liminal-hq/desk/pull/119"
+   },
+   {
+    "additions": 297,
+    "baseRefName": "main",
+    "changedFiles": 4,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: HAL",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: shell",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: kernel",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: core, module, tools and spike lints",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: b-dos-input",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T08:05:01Z",
+    "deletions": 2,
+    "headRefName": "feat/hal-input-latch",
+    "headRefOid": "b0afed716fdacafd2bdc2470db2bd852f796222c",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1f6feb",
+      "description": "Mouse and keyboard input",
+      "id": "LA_kwDOVTolZM8AAAAC-q8KrA",
+      "name": "input"
+     }
+    ],
+    "mergedAt": "2026-11-23T08:25:00Z",
+    "number": 118,
+    "state": "MERGED",
+    "title": "Add InputLatch, a press-edge latch (R139 T10)",
+    "updatedAt": "2026-11-23T08:25:02Z",
+    "url": "https://github.com/liminal-hq/desk/pull/118"
+   },
+   {
+    "additions": 1173,
+    "baseRefName": "main",
+    "changedFiles": 25,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: HAL",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: shell",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: kernel",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: core, module, tools and spike lints",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "matrix.title",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T07:42:29Z",
+    "deletions": 38,
+    "headRefName": "feat/module-window",
+    "headRefOid": "b6f822e048de8862785d180e584e9b1257ad6a2d",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "0e8a16",
+      "description": "Desk apps: Files, Programs, Settings and the optional ones",
+      "id": "LA_kwDOVTolZM8AAAAC-q8Maw",
+      "name": "apps"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": "2026-11-23T08:05:10Z",
+    "number": 117,
+    "state": "MERGED",
+    "title": "Let a loaded module draw a window in the native shell (visible-module spike, part 2)",
+    "updatedAt": "2026-11-23T08:05:13Z",
+    "url": "https://github.com/liminal-hq/desk/pull/117"
+   },
+   {
+    "additions": 595,
+    "baseRefName": "main",
+    "changedFiles": 13,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: HAL",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: shell",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: kernel",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: core, module, tools and spike lints",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: skeleton, s1-dxe3, d0-rust-dos, a-vga-vbe",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "DOS: b-dos-input",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T07:34:14Z",
+    "deletions": 3,
+    "headRefName": "feat/rt-safe-writes",
+    "headRefOid": "8db28d547b05f8a779070c6e654a3d8d8aae5497",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "dea584",
+      "description": "Rust tooling, code, or integration work",
+      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
+      "name": "rust"
+     },
+     {
+      "color": "1d76db",
+      "description": "DOS platform: real mode, DPMI, interrupts, memory",
+      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
+      "name": "dos"
+     }
+    ],
+    "mergedAt": "2026-11-23T07:47:32Z",
+    "number": 116,
+    "state": "MERGED",
+    "title": "Add safe settings writes and an INT 24h guard to the DOS runtime (R139 T7)",
+    "updatedAt": "2026-11-23T07:47:35Z",
+    "url": "https://github.com/liminal-hq/desk/pull/116"
+   },
+   {
+    "additions": 5041,
+    "baseRefName": "main",
+    "changedFiles": 16,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "matrix.title",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "matrix.title",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "NEUTRAL",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T07:02:11Z",
+    "deletions": 3230,
+    "headRefName": "docs/progress-refresh-2",
+    "headRefOid": "0e94490aa8857520ce61cf58a6c1b56d6f9d2ee9",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
+      "name": "documentation"
+     },
+     {
+      "color": "5319e7",
+      "description": "Internal-only change",
+      "id": "LA_kwDOVTolZM8AAAAC-q8BCw",
+      "name": "internal"
+     }
+    ],
+    "mergedAt": "2026-11-23T07:22:04Z",
+    "number": 115,
+    "state": "MERGED",
+    "title": "Update the roadmap, the plan and the Manual after R139 T1 to T6",
+    "updatedAt": "2026-11-23T07:22:06Z",
+    "url": "https://github.com/liminal-hq/desk/pull/115"
+   },
+   {
+    "additions": 444,
+    "baseRefName": "main",
+    "changedFiles": 18,
+    "checks": [
+     {
+      "conclusion": "SUCCESS",
+      "name": "Choose check groups",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Licence headers, docs and the scope table",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Progress report and frame tools",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Fonts",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: HAL",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: shell",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: kernel",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Rust: core, module, tools and spike lints",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "matrix.title",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SKIPPED",
+      "name": "Spike e-std-stubs",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Shell on DOS",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Native boot in QEMU",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Both tracks compared",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "CI passed",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk Rust tests",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     },
+     {
+      "conclusion": "SUCCESS",
+      "name": "Desk steps",
+      "status": "COMPLETED",
+      "workflow": "CI"
+     }
+    ],
+    "createdAt": "2026-11-23T06:59:57Z",
+    "deletions": 23,
+    "headRefName": "feat/shell-fill-text",
+    "headRefOid": "93d85c69ae94033a773988cc4571da0fadaa1460",
+    "isDraft": false,
+    "labels": [
+     {
+      "color": "a2eeef",
+      "description": "New feature or request",
+      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
+      "name": "enhancement"
+     },
+     {
+      "color": "1f6feb",
+      "description": "The Desk shell: event loop, desktop, launcher bar",
+      "id": "LA_kwDOVTolZM8AAAAC-q8J4g",
+      "name": "shell"
+     },
+     {
+      "color": "e99695",
+      "description": "Experiment that answers an open architecture question",
+      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
+      "name": "spike"
+     }
+    ],
+    "mergedAt": "2026-11-23T07:21:46Z",
+    "number": 114,
+    "state": "MERGED",
+    "title": "Add retained fills and text to the shell (visible-module spike, part 1)",
+    "updatedAt": "2026-11-23T07:21:48Z",
+    "url": "https://github.com/liminal-hq/desk/pull/114"
+   },
    {
     "additions": 643,
     "baseRefName": "main",
@@ -6579,360 +7443,6 @@
     "title": "Run spike B: the keyboard on IRQ 1 and the mouse on INT 33h on the DOS runtime",
     "updatedAt": "2026-10-23T07:04:46Z",
     "url": "https://github.com/liminal-hq/desk/pull/15"
-   },
-   {
-    "additions": 2219,
-    "baseRefName": "main",
-    "changedFiles": 46,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T04:55:01Z",
-    "deletions": 50,
-    "headRefName": "spike/d-native-vga",
-    "headRefOid": "29157d99fd6d72f56a80e58842b155fefcf95782",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "fbca04",
-      "description": "Tests, fixtures, and test tooling updates",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
-      "name": "testing"
-     },
-     {
-      "color": "dea584",
-      "description": "Rust tooling, code, or integration work",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
-      "name": "rust"
-     },
-     {
-      "color": "1d76db",
-      "description": "VESA, VGA, palette, fonts and drawing",
-      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
-      "name": "graphics"
-     },
-     {
-      "color": "e99695",
-      "description": "Experiment that answers an open architecture question",
-      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
-      "name": "spike"
-     }
-    ],
-    "mergedAt": "2026-10-23T06:58:24Z",
-    "number": 14,
-    "state": "MERGED",
-    "title": "Draw from the native kernel: VBE from the loader, a cursor and a first window",
-    "updatedAt": "2026-10-23T06:58:27Z",
-    "url": "https://github.com/liminal-hq/desk/pull/14"
-   },
-   {
-    "additions": 2283,
-    "baseRefName": "main",
-    "changedFiles": 37,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T04:32:55Z",
-    "deletions": 10,
-    "headRefName": "spike/s5-jsdos",
-    "headRefOid": "f918c1870fd198ee0acee0150029cfca8e76a917",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "fbca04",
-      "description": "Tests, fixtures, and test tooling updates",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
-      "name": "testing"
-     },
-     {
-      "color": "e99695",
-      "description": "Spike/proof-of-concept work, not a committed direction",
-      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
-      "name": "experimental"
-     },
-     {
-      "color": "1d76db",
-      "description": "DOS platform: real mode, DPMI, interrupts, memory",
-      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
-      "name": "dos"
-     },
-     {
-      "color": "e99695",
-      "description": "Experiment that answers an open architecture question",
-      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
-      "name": "spike"
-     }
-    ],
-    "mergedAt": "2026-10-23T07:53:29Z",
-    "number": 13,
-    "state": "MERGED",
-    "title": "Run spike s5: DOS programs and the VBE linear frame buffer work in js-dos 8",
-    "updatedAt": "2026-10-23T07:53:33Z",
-    "url": "https://github.com/liminal-hq/desk/pull/13"
-   },
-   {
-    "additions": 2275,
-    "baseRefName": "main",
-    "changedFiles": 44,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T04:28:09Z",
-    "deletions": 9,
-    "headRefName": "spike/e-std-stubs",
-    "headRefOid": "0d1bffcf91a05d72df0762e3bff6b11af1016aa3",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "dea584",
-      "description": "Rust tooling, code, or integration work",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
-      "name": "rust"
-     },
-     {
-      "color": "e99695",
-      "description": "Spike/proof-of-concept work, not a committed direction",
-      "id": "LA_kwDOVTolZM8AAAAC-q8FAw",
-      "name": "experimental"
-     },
-     {
-      "color": "e99695",
-      "description": "Experiment that answers an open architecture question",
-      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
-      "name": "spike"
-     }
-    ],
-    "mergedAt": "2026-10-23T07:38:55Z",
-    "number": 12,
-    "state": "MERGED",
-    "title": "Run spike E: build std for an invented OS and patch in a platform layer",
-    "updatedAt": "2026-10-23T07:38:57Z",
-    "url": "https://github.com/liminal-hq/desk/pull/12"
-   },
-   {
-    "additions": 4127,
-    "baseRefName": "main",
-    "changedFiles": 49,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T04:12:56Z",
-    "deletions": 8,
-    "headRefName": "spike/a-vga-vbe-rust",
-    "headRefOid": "eb694cd0a417e97d93ebd5e79102803ff854a91b",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "fbca04",
-      "description": "Tests, fixtures, and test tooling updates",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
-      "name": "testing"
-     },
-     {
-      "color": "dea584",
-      "description": "Rust tooling, code, or integration work",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
-      "name": "rust"
-     },
-     {
-      "color": "1d76db",
-      "description": "DOS platform: real mode, DPMI, interrupts, memory",
-      "id": "LA_kwDOVTolZM8AAAAC-q8JXQ",
-      "name": "dos"
-     },
-     {
-      "color": "1d76db",
-      "description": "VESA, VGA, palette, fonts and drawing",
-      "id": "LA_kwDOVTolZM8AAAAC-q8Kdw",
-      "name": "graphics"
-     },
-     {
-      "color": "e99695",
-      "description": "Experiment that answers an open architecture question",
-      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
-      "name": "spike"
-     }
-    ],
-    "mergedAt": "2026-10-23T06:52:54Z",
-    "number": 11,
-    "state": "MERGED",
-    "title": "Add the VGA and VBE driver and prove it on the DOS runtime",
-    "updatedAt": "2026-10-23T06:52:56Z",
-    "url": "https://github.com/liminal-hq/desk/pull/11"
-   },
-   {
-    "additions": 3963,
-    "baseRefName": "main",
-    "changedFiles": 42,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T04:11:15Z",
-    "deletions": 131,
-    "headRefName": "spike/c-kernel-input",
-    "headRefOid": "20b4de25681be51bb190b22e6752842cfa409423",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "fbca04",
-      "description": "Tests, fixtures, and test tooling updates",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
-      "name": "testing"
-     },
-     {
-      "color": "dea584",
-      "description": "Rust tooling, code, or integration work",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CkQ",
-      "name": "rust"
-     },
-     {
-      "color": "e99695",
-      "description": "Experiment that answers an open architecture question",
-      "id": "LA_kwDOVTolZM8AAAAC-q8OaQ",
-      "name": "spike"
-     }
-    ],
-    "mergedAt": "2026-10-23T06:47:08Z",
-    "number": 10,
-    "state": "MERGED",
-    "title": "Add keyboard and PS/2 mouse input to the native kernel",
-    "updatedAt": "2026-10-23T06:47:12Z",
-    "url": "https://github.com/liminal-hq/desk/pull/10"
-   },
-   {
-    "additions": 4694,
-    "baseRefName": "main",
-    "changedFiles": 37,
-    "checks": [
-     {
-      "conclusion": "SUCCESS",
-      "name": "check",
-      "status": "COMPLETED",
-      "workflow": "CI"
-     }
-    ],
-    "createdAt": "2026-10-23T03:43:39Z",
-    "deletions": 5,
-    "headRefName": "docs/progress-report",
-    "headRefOid": "2f5ba39a5641aae828a0b5545b4aba2bd52fe5e8",
-    "isDraft": false,
-    "labels": [
-     {
-      "color": "0075ca",
-      "description": "Improvements or additions to documentation",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yTg",
-      "name": "documentation"
-     },
-     {
-      "color": "a2eeef",
-      "description": "New feature or request",
-      "id": "LA_kwDOVTolZM8AAAAC-q7yeQ",
-      "name": "enhancement"
-     },
-     {
-      "color": "fbca04",
-      "description": "Tests, fixtures, and test tooling updates",
-      "id": "LA_kwDOVTolZM8AAAAC-q8CBg",
-      "name": "testing"
-     },
-     {
-      "color": "0075ca",
-      "description": "Design documents and specs",
-      "id": "LA_kwDOVTolZM8AAAAC-q8G8g",
-      "name": "design-docs"
-     }
-    ],
-    "mergedAt": "2026-10-23T06:00:08Z",
-    "number": 9,
-    "state": "MERGED",
-    "title": "Add the progress report generator and its chapters",
-    "updatedAt": "2026-10-23T06:00:11Z",
-    "url": "https://github.com/liminal-hq/desk/pull/9"
    }
   ],
   "repo": {
@@ -6979,6 +7489,159 @@
    "visibility": "PUBLIC"
   },
   "runs": [
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T15:14:37Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "d5f33289ef7032cb681d143d62dcb42909244b32",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45203015527",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:31:21Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "d5f33289ef7032cb681d143d62dcb42909244b32",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45139296154",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:29:53Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "d5f33289ef7032cb681d143d62dcb42909244b32",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45139080154",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:25:03Z",
+    "displayTitle": "Add InputLatch, a press-edge latch (R139 T10) (#118)",
+    "event": "push",
+    "headSha": "d5f33289ef7032cb681d143d62dcb42909244b32",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45138436248",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:10:35Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "f7f290303bf097e82fd5de4c99ad436e8f5aed5c",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45136488623",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:10:07Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "f7f290303bf097e82fd5de4c99ad436e8f5aed5c",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45136423563",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T08:05:13Z",
+    "displayTitle": "Let a loaded module draw a window in the native shell (visible-module\u2026",
+    "event": "push",
+    "headSha": "f7f290303bf097e82fd5de4c99ad436e8f5aed5c",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45135801898",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:52:24Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "314e8a401b1cd85493a80bcd8c6d2a0fb98fc039",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45134245188",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:47:48Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "314e8a401b1cd85493a80bcd8c6d2a0fb98fc039",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45133705931",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:47:35Z",
+    "displayTitle": "Add safe settings writes and an INT 24h guard to the DOS runtime (R13\u2026",
+    "event": "push",
+    "headSha": "314e8a401b1cd85493a80bcd8c6d2a0fb98fc039",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45133679816",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:39:13Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "c83946cc491682caa19a6fab8157897096c80529",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45132666301",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:31:30Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "c83946cc491682caa19a6fab8157897096c80529",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45131730673",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:26:46Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "c83946cc491682caa19a6fab8157897096c80529",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45131140670",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:22:07Z",
+    "displayTitle": "Update the roadmap, the plan and the Manual after R139 T1 to T6 (#115)",
+    "event": "push",
+    "headSha": "c83946cc491682caa19a6fab8157897096c80529",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45130576708",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:21:48Z",
+    "displayTitle": "Add retained fills and text to the shell (visible-module spike, part \u2026",
+    "event": "push",
+    "headSha": "e5ae49d8a4bdd81a7d6c062c2170f20cd6f81569",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45130538250",
+    "workflowName": "CI"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:05:36Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "d7775eda954afd1516a8ed8f52d6bd5259d3ec91",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45128610999",
+    "workflowName": "Publish Test Results"
+   },
+   {
+    "conclusion": "success",
+    "createdAt": "2026-11-23T07:04:25Z",
+    "displayTitle": "Publish Test Results",
+    "event": "workflow_run",
+    "headSha": "d7775eda954afd1516a8ed8f52d6bd5259d3ec91",
+    "url": "https://github.com/liminal-hq/desk/actions/runs/45128467048",
+    "workflowName": "Publish Test Results"
+   },
    {
     "conclusion": "success",
     "createdAt": "2026-11-23T02:04:31Z",

@@ -83,9 +83,9 @@ The test for step 3 is `mergeable`: two non-empty rectangles are mergeable when 
 
 ### The compositor
 
-`Compositor` owns the back buffer and two `Damage` lists. *Scene damage* is what must be repainted into the back buffer and also presented. *Overlay damage* is the cursor's: it is only presented, because the cursor is not stored in the back buffer at all. `CursorLayer` is a position, a visible flag, a sprite and two palette indices for its outline and fill. A frame is, in order:
+`Compositor` owns the back buffer and two `Damage` lists. *Scene damage* is what must be repainted into the back buffer and also presented. *Overlay damage* is the cursor's: it is only presented, because the cursor is not stored in the back buffer at all. `CursorLayer` is a position, a visible flag, a sprite and two palette indices for its outline and fill, and the compositor remembers where the sprite was last *presented* (`shown`). `is_dirty` says whether the next frame would draw anything: scene or overlay damage is pending, or the cursor is not where it was last presented (moved, hidden or shown). A frame is, in order:
 
-1. If both lists are empty, return zeros without calling anything: an idle frame costs nothing.
+1. If nothing is dirty (`is_dirty` is false), return zeros without calling anything: an idle frame costs nothing.
 2. Check the presenter. If its size differs from the compositor's, or its alignment does not divide the width, return `InvalidArgument` before painting anything.
 3. For each scene rectangle, set the surface's clip to it and call the caller's `paint` closure. The compositor does not know what a window is; the closure repaints the rectangle from whatever the scene is.
 4. Union the scene damage and the overlay damage and widen it to the presenter's alignment. Clear both lists.
@@ -94,7 +94,7 @@ The test for step 3 is `mergeable`: two non-empty rectangles are mergeable when 
 
 If the presenter fails part-way, `end` is still called (the planar presenter's `begin` changed the hardware's state and `end` undoes it) and the damage that was being presented goes back into the scene damage, so the next frame tries again.
 
-A cursor move is the case the structure exists for. `move_cursor` adds the old and the new sprite rectangles to the *overlay* list and touches nothing else, so the next frame repaints nothing and presents two small rectangles, with the cursor drawn over the unchanged back buffer. There is no save-under: the pixels beneath a cursor are in the back buffer already, and the presenter writes them back from there when the cursor leaves. That is why the design could do without ever reading video memory, which is how the [software cursor](term:software-cursor) of [M12](chapter:m-graphics) has to work without it. `digest` computes the digests of the screen as it is now, back buffer plus cursor, a row at a time, with no second buffer; `back()` is the scene without the cursor, and a test checks that the two differ exactly by the cursor.
+A cursor move is the case the structure exists for. Since the live-input work `move_cursor` only records the new position (and `set_cursor_visible` only the flag): the next frame adds to the *overlay* list the rectangle the sprite was last presented at and the one it is at now, however many moves came between, so a burst of fifty reports costs at most two sprite rectangles, and a move that ends where it began presents nothing. Hiding after a move restores the place the sprite was drawn, not the place it had reached, and a failed present keeps `shown` as it was, so the next frame still erases the old sprite. Either way the frame repaints nothing and presents two small rectangles, with the cursor drawn over the unchanged back buffer. There is no save-under: the pixels beneath a cursor are in the back buffer already, and the presenter writes them back from there when the cursor leaves. That is why the design could do without ever reading video memory, which is how the [software cursor](term:software-cursor) of [M12](chapter:m-graphics) has to work without it. `digest` computes the digests of the screen as it is now, back buffer plus cursor, a row at a time, with no second buffer; `back()` is the scene without the cursor, and a test checks that the two differ exactly by the cursor.
 
 ### Frame digests
 
@@ -166,7 +166,7 @@ shell: damage moved: 0 pixels repainted, 456 presented in 2 rectangles
 
 and at depth 4 `tests/native/expected-shell-4.txt` says `0 pixels repainted, 608 presented in 2 rectangles`. Here is how both come out of the code.
 
-The pointer moves from (320, 240) to (420, 300). `move_cursor` adds the old and new sprite rectangles to the overlay list. `ARROW.rect_at` gives a 12 × 19 rectangle with the hot spot at its corner, so:
+The pointer moves from (320, 240) to (420, 300). On the next frame the compositor adds the old and new sprite rectangles to the overlay list. `ARROW.rect_at` gives a 12 × 19 rectangle with the hot spot at its corner, so:
 
 | | x0 | y0 | x1 | y1 | area |
 |---|---|---|---|---|---|
@@ -377,3 +377,4 @@ at: figure fw-digests
 
 - 2026-10-23: first written, against `44f0265`. The host tests (161) and the native `shell` mode at both depths were run for this chapter. Every damage number in the worked example is derived from the merge rules and checked against `tests/native/expected-shell-8.txt` and `expected-shell-4.txt` by the chapter's test. Disagreements between the documents and the code were small: `docs/FIRST-WINDOW.md` describes the sprite's transparent cells as `.` where the code treats any byte other than `X` and `o` as transparent, and a comment in `shell/wm/src/wm.rs` says a focus change adds "four rings" while the code paints three (`HALO` is 3); neither changes a pixel.
 - 2026-11-23: two sentences corrected after R139 T3 (#112): the presenters now call `MmioRegion::copy_from`, not `write_bytes`. Only those sentences were checked, against `shell/present/src/linear.rs` and `planar.rs`; the chapter was not re-read in full and `reviewed` is unchanged.
+- 2026-11-23: the compositor's cursor handling corrected after the live-input work (`shown`, `is_dirty` and the coalescing of a burst of moves: `shell/gfx/src/compose.rs`, five new tests), in the frame's first step, in the cursor-move paragraph and in the worked example's first sentence. The numbers of the worked example are unchanged (456 and 608 are still what the native transcripts print). Only these paragraphs were checked against the code; the rest of the chapter was not re-read, so `reviewed` stays `44f0265`. The host test counts quoted in the chapter (161) are those of 2026-10-23; the workspace now has 210.
