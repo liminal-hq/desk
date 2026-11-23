@@ -37,6 +37,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-pit"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+]
+
+[[package]]
 name = "desk-vga"
 version = "0.0.0"
 dependencies = [
@@ -60,5 +67,6 @@ version = "0.0.0"
 dependencies = [
  "desk-hal",
  "desk-pic",
+ "desk-pit",
  "desk-vga",
 ]

@@ -400,7 +400,11 @@ mod tests {
         assert_eq!(bios_ticks_between(BIOS_TICKS_PER_DAY - 5, 13), 18, "across midnight");
         assert_eq!(bios_ticks_between(BIOS_TICKS_PER_DAY - 1, 0), 1);
         assert_eq!(bios_ticks_between(0, BIOS_TICKS_PER_DAY - 1), BIOS_TICKS_PER_DAY - 1);
-        assert_eq!(bios_ticks_between(BIOS_TICKS_PER_DAY + 10, 12), 2, "a reading past the day is reduced");
+        assert_eq!(
+            bios_ticks_between(BIOS_TICKS_PER_DAY + 10, 12),
+            2,
+            "a reading past the day is reduced"
+        );
     }
 
     #[test]
@@ -409,7 +413,11 @@ mod tests {
         assert_eq!(clocks_at(0, 2_131, 2_031), 100);
         assert_eq!(clocks_at(3, 2_131, 2_131), 6_393);
         assert_eq!(clocks_at(3, 2_131, 1), 6_393 + 2_130);
-        assert_eq!(clocks_at(1, MAX_DIVISOR, 0), 65_536, "a count of 0 is a full period of 65,536, none of the next");
+        assert_eq!(
+            clocks_at(1, MAX_DIVISOR, 0),
+            65_536,
+            "a count of 0 is a full period of 65,536, none of the next"
+        );
         assert_eq!(clocks_at(1, 100, 500), 100, "a count above the divisor adds nothing");
         // The reading is the same value at the end of one period and the start of the next, so time never runs backwards.
         assert_eq!(clocks_at(1, 2_131, 1) + 1, clocks_at(2, 2_131, 2_131));

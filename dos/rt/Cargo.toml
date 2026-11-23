@@ -14,4 +14,5 @@ panic-handler = []
 [dependencies]
 desk-hal = { path = "../../hal/hal" }
 desk-pic = { path = "../../hal/drivers/pic" }
+desk-pit = { path = "../../hal/drivers/pit" }
 desk-vga = { path = "../../hal/drivers/vga" }

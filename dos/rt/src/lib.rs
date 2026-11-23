@@ -17,7 +17,7 @@
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
 // - `irq`      the interrupt registry: a stub per IRQ line that calls a Rust `IrqHandler`, and the end-of-interrupt
 // - `bios_kbd` the BIOS keyboard state in the data area (lock flags, type-ahead buffer), for a program that takes IRQ 1
-// - `timer`    a hook on IRQ 0 that counts ticks (hardware proof)
+// - `timer`    a hook on IRQ 0 that counts ticks (hardware proof), and the opt-in fast timer: a reprogrammed PIT, a stopwatch and `delay_us`
 // - `vga`      mode 13h and the frame buffer (hardware proof)
 // - `hal`      the DOS platform's implementations of the HAL traits: `DosBios` (real-mode calls) and `DosDisplay` (VGA and VBE)
 //
