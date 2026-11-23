@@ -46,7 +46,7 @@ pub trait PlaneSink {
     }
 }
 
-/// The VGA's planes at A0000h: the sequencer map mask picks the plane, then a `write_bytes` into the region.
+/// The VGA's planes at A0000h: the sequencer map mask picks the plane, then a `copy_from` into the region (write mode 0 does no latch reads, so the width of the stores does not matter).
 pub struct VgaPlanes<'a, P: PortIo> {
     ports: &'a P,
     region: &'a mut MmioRegion,
@@ -83,7 +83,7 @@ impl<P: PortIo> PlaneSink for VgaPlanes<'_, P> {
     }
 
     fn write(&mut self, offset: usize, bytes: &[u8]) -> Result<(), HalError> {
-        self.region.write_bytes(offset, bytes)
+        self.region.copy_from(offset, bytes)
     }
 
     /// Restores the map mask to all four planes, the state the BIOS and other drivers expect.

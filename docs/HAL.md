@@ -113,7 +113,9 @@ impl MmioRegion {
     pub fn write8(&mut self, offset: usize, value: u8) -> Result<(), HalError>;
     pub fn read32(&self, offset: usize) -> Result<u32, HalError>;      // address must be a multiple of 4
     pub fn write32(&mut self, offset: usize, value: u32) -> Result<(), HalError>;
-    pub fn write_bytes(&mut self, offset: usize, bytes: &[u8]) -> Result<(), HalError>;
+    pub fn write_bytes(&mut self, offset: usize, bytes: &[u8]) -> Result<(), HalError>;   // one byte store each, byte-exact
+    pub fn copy_from(&mut self, offset: usize, src: &[u8]) -> Result<(), HalError>;       // frame buffers only (below)
+    pub fn fill8(&mut self, offset: usize, len: usize, value: u8) -> Result<(), HalError>;
 }
 
 // sketch
@@ -139,7 +141,7 @@ pub trait PhysMem {
 - **The VGA window at `A0000h`** (64 KiB) and the text buffer at `B8000h` need no `PhysMem` call: on the native kernel they are identity mapped, and under CWSDPMI the first megabyte is mapped at linear 0 and reached through the 4 GiB data segment (`rt::dpmi::linear_to_ptr`, as `rt::vga` does). The platform hands the driver an `MmioRegion` over them.
 - **The VBE linear frame buffer** is above 16 MiB on most cards. Natively it is identity mapped while there is no paging (the kernel has none yet); with paging, the kernel maps it uncached. Under DPMI it is function 0800h (physical address mapping) and 0801h on clean-up.
 - **DMA buffers** for the Sound Blaster (8-bit channel 1, 16-bit channel 5) and the floppy (channel 2) must be physically contiguous, below 16 MiB, and must not cross a 64 KiB (or 128 KiB) boundary, because the 8237 counts within a page and the page register does not carry. The platform allocates twice the length and uses the half that does not cross, or aligns to the boundary. Natively that is `memory::alloc_contiguous` restricted to frames below 16 MiB. Under DOS it is DPMI 0100h (conventional memory, below 1 MiB), where linear equals physical **only without a V86 memory manager**: under EMM386 or QEMM the platform must use Virtual DMA Services (INT 4Bh, flagged by bit 5 of `0040:007B`) to lock the buffer and get its physical address. Not handled yet; see [open questions](#open-questions).
-- **Performance.** `write_bytes` is one volatile byte store at a time, which is correct for any device memory and slow for a 64,000-byte blit on a 486. The compositor's blit will be a platform fast path (`rep movsd` into the frame buffer) behind the same bounds check; until it is measured, the volatile loop is the reference.
+- **Performance.** `write_bytes` is unchanged: one volatile byte store at a time, correct for any device memory, and the only copy for a register window where the width of an access matters. `copy_from` is the separate method for frame buffers only (D2 in [`RUNTIME-PLAN.md`](RUNTIME-PLAN.md)). Its contract: each destination byte is written exactly once, in ascending order, by aligned stores up to 32 bits wide (head bytes to the next 4-byte boundary of the destination address, whole words, then the tail), and nothing is read from the region. On x86 the word part is one `rep movsd` (and `fill8`'s one `rep stosd`), which relies on `ES` equalling `DS` and the direction flag being clear; the DOS runtime and the kernel both guarantee that. On other targets it is a volatile 32-bit store loop in the same order. The frame-buffer presenters (`desk-vga`'s `Linear8::blit`, the shell's linear and planar presenters) use it. No speed figure is claimed until the measuring tools of R137 exist.
 
 ### Interrupts (built)
 

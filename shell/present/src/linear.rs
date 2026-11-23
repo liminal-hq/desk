@@ -1,4 +1,4 @@
-// The linear presenter: an 8-bit frame buffer (VBE 640 × 480 × 8, or mode 13h), one `write_bytes` per span.
+// The linear presenter: an 8-bit frame buffer (VBE 640 × 480 × 8, or mode 13h), one `copy_from` per span.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -44,6 +44,6 @@ impl Present for LinearPresent<'_> {
         if y >= self.height || u64::from(x) + pixels.len() as u64 > u64::from(self.width) {
             return Err(HalError::InvalidArgument);
         }
-        self.region.write_bytes(y as usize * self.pitch as usize + x as usize, pixels)
+        self.region.copy_from(y as usize * self.pitch as usize + x as usize, pixels)
     }
 }

@@ -107,7 +107,7 @@ impl Canvas for Linear8<'_> {
         Ok(())
     }
 
-    /// Each visible row is copied with one `write_bytes`, which is the fast path a platform can replace.
+    /// Each visible row is copied with one `copy_from`, the frame-buffer copy (`write_bytes` stays byte-exact for register windows).
     fn blit(&mut self, x: i32, y: i32, w: u32, h: u32, src: &[u8], src_pitch: usize) {
         let (Some((x0, nw)), Some((y0, nh))) = (clip_span(x, w, self.width), clip_span(y, h, self.height)) else {
             return;
@@ -119,7 +119,7 @@ impl Canvas for Linear8<'_> {
             let Some(bytes) = src.get(from..) else { return };
             let n = (nw as usize).min(bytes.len());
             let dst = self.offset(x0, y0 + row as u32);
-            let _ = self.region.write_bytes(dst, &bytes[..n]);
+            let _ = self.region.copy_from(dst, &bytes[..n]);
         }
     }
 }
