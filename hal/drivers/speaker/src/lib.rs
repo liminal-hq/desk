@@ -33,6 +33,8 @@ pub const fn divisor_for(hz: u32) -> Result<u32, HalError> {
     if hz == 0 {
         return Err(HalError::InvalidArgument);
     }
+    // Truncates, where `desk_pit` rounds to the nearest divisor: a tone is off by under one count (440 Hz is 2711, not 2712), which
+    // no ear can tell, and the range of accepted frequencies is the same.
     check_divisor(INPUT_HZ / hz)
 }
 

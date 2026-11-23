@@ -1,0 +1,5 @@
+text: leave-held: found mode 1
+text: leave-held: mode now 3
+text: leave-held: exiting with the text screen held
+text: after the clean-up list the mode and the cursor shape are back as found: true
+text: check: the mode and the cursor shape are as before the text screen: true

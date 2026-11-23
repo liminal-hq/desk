@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 // Written from the public Sound Blaster programming conventions (the DSP's ports at the base address plus 6, 0xA, 0xC and 0xE),
-// not from any other program's source. Every wait is a bounded count of status reads, so an absent card costs a few milliseconds
-// and never hangs the machine. An absent card's ports float to 0xFF: every check below treats that as "no card", never as success.
+// not from any other program's source. Every wait is a bounded count of status reads, so an absent card costs up to about 65 ms
+// (`version` and `speaker` spin every poll waiting for a write buffer that reads busy) and never hangs the machine. An absent card's ports float to 0xFF: every check below treats that as "no card", never as success.
 //
 // No DMA playback here: it needs a buffer below 16 MiB that does not cross a 64 KiB page, the DMA controller and the card's IRQ,
 // none of which is needed yet. Nothing in the repository uses this driver yet (roadmap R135); the audio service that will gets its

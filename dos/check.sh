@@ -130,6 +130,18 @@ run dist/d0 PROBE.EXE x87-restore
 same "PROBE.EXE x87-restore" $EXP/probe-x87-restore.txt
 echo "$out" | sed -n 1,4p
 
+step "TEXT.EXE: mode 3 and the text buffer, a test screen read back, the bounds checks, poll_key, and the mode and cursor put back"
+DOS_THEN="TEXT.EXE check" run dist/d0 TEXT.EXE
+[ "$status" = 0 ] || fail "TEXT.EXE exited with status $status"
+same TEXT.EXE $EXP/text.txt
+echo "$out" | grep -E 'entered|digest|mismatches|refused|poll_key|check:'
+
+step "Exit with a text screen held: the clean-up list puts the mode and the cursor shape back"
+DOS_THEN="TEXT.EXE check" run dist/d0 TEXT.EXE leave-held
+[ "$status" = 0 ] || fail "TEXT.EXE leave-held exited with status $status"
+same "TEXT.EXE leave-held" $EXP/text-leave-held.txt
+echo "$out" | tail -2
+
 step "Allocation failure is a panic"
 run dist/d0 HELLO.EXE oom
 [ "$status" = 3 ] || fail "HELLO.EXE oom exited with status $status, not 3"
@@ -188,5 +200,15 @@ sed 's/control word unchanged true, reported as found true/control word unchange
 run dist/d0 PROBE.EXE x87-restore
 if (same "PROBE.EXE x87-restore" "$wrong") > /dev/null 2>&1; then fail "a changed control word was accepted"; fi
 echo "a changed control word rejected, as it should be"
+
+step "A transcript with the wrong digest, or a wrong restored mode, fails the check"
+sed -E 's/^(text: digest 0x)[0-9a-f]{8}$/\10badf00d/' $EXP/text.txt > "$wrong"
+run dist/d0 TEXT.EXE
+if (same TEXT.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong text digest was accepted"; fi
+echo "a wrong digest rejected, as it should be"
+sed 's/text: check: the mode and the cursor shape are as before the text screen: true/text: check: the mode and the cursor shape are as before the text screen: false/' $EXP/text.txt > "$wrong"
+DOS_THEN="TEXT.EXE check" run dist/d0 TEXT.EXE
+if (same TEXT.EXE "$wrong") > /dev/null 2>&1; then fail "a wrong restore line was accepted"; fi
+echo "a wrong restore line rejected, as it should be"
 
 printf '\nAll dos checks passed.\n'

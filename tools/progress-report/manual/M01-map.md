@@ -57,7 +57,7 @@ One part of this table differs from `docs/HAL.md`, which names `core/` as the ho
 | `boot/` | Boot | The two NASM stages: the boot sector and the loader | [M4](chapter:m-loader) |
 | `kernel/` | Platform (native) and kernel | The Rust kernel: GDT, IDT, PIC and PIT set-up, memory, the BIOS trampoline, the native platform, test modes | [M5](chapter:m-boot) to [M8](chapter:m-bioscalls) |
 | `hal/hal/` | HAL | `desk-hal`: ports, interrupts, time, rings, memory-mapped regions, video and input types | [M9](chapter:m-hal) |
-| `hal/drivers/` | Drivers | `desk-serial`, `desk-pit`, `desk-pic`, `desk-vga`, `desk-kbd`, `desk-i8042`, `desk-int33` | [M10](chapter:m-sysdrivers) to [M12](chapter:m-graphics) |
+| `hal/drivers/` | Drivers | `desk-serial`, `desk-pit`, `desk-pic`, `desk-vga`, `desk-kbd`, `desk-i8042`, `desk-int33`, `desk-opl` | [M10](chapter:m-sysdrivers) to [M12](chapter:m-graphics) |
 | `hal/platform/mock/` | Platform (host) | A mock port bus and device models, so drivers are tested without a machine | [M9](chapter:m-hal) |
 | `shell/` | Desk core | `desk-gfx`, `desk-font`, `desk-ui`, `desk-wm`, `desk-shell`, and `desk-present`, which the platforms use | [M13](chapter:m-pixels) to [M15](chapter:m-shell) |
 | `shell/dos/` | Platform (DOS), program | `SHELL.EXE`, the hosted wiring of the first window | [M16](chapter:m-platforms) |
@@ -148,7 +148,7 @@ For depth: `docs/DIRECTION.md` ([two tracks](doc:docs/DIRECTION.md#two-tracks-in
 
 The two cases show how the tags are decided. Neither box is more or less true than the other; one cites something that can fail and one does not.
 
-**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds eleven members: `desk-hal`, nine drivers and the mock. The host tests pass in both workspaces, 161 tests in `shell/` and 179 in `hal/` when this chapter was written (the commands are below). The log's anatomy chapter quotes the same 161 for the core.
+**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds twelve members: `desk-hal`, ten drivers and the mock. The host tests pass in both workspaces, 161 tests in `shell/` and 179 in `hal/` when this chapter was written (the commands are below). The log's anatomy chapter quotes the same 161 for the core.
 
 **The edge that goes one way.** `desk-gfx` lists `desk-vga` only under `[dev-dependencies]`, because one of its tests compares the software cursor sprite with the VGA driver's arrow. In production code the core never depends on a driver's register-level API, as the rules require; the tests are allowed to look across.
 
