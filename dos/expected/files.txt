@@ -1,0 +1,34 @@
+files: temp_name DESK.INI -> DESK.NEW
+files: temp_name DESK -> DESK.NEW
+files: temp_name A:\CFG.D\DESK.INI -> A:\CFG.D\DESK.NEW
+files: temp_name DESK.NEW -> refused
+files: temp_name desk.new -> refused
+files: temp_name A.B.C -> A.B.NEW
+files: save_replacing of a .NEW name refused: true
+files: save: Ok(())
+files: no temporary file left: true
+files: read: Ok(true)
+files: second save: Ok(())
+files: read: Ok(true)
+files: save of 70000 bytes: Ok(())
+files: read: Ok(true)
+files: simulated crash: FILES.INI is missing: true
+files: read_recovering: Ok(true)
+files: the name is back and the temporary is gone: true
+files: neither file: Err(DosError(2))
+files: compare: same true, one byte differs false, short false
+files: rename onto an existing file: Err(DosError(5))
+files: rename: Ok(())
+files: rename of a missing file: Err(DosError(2))
+files: INT 24h before, during: moved true
+files: during points at the stub: true
+files: the stub called through INT 24h returns AL=3
+files: nested guard: depth 2, same stub true
+files: inner dropped: depth 1, still held true
+files: after drop: depth 0, vector back true, no stub true
+files: the guard is a clean-up entry only while held: true
+files: the list holds 16 of 16
+files: a guard on a full list: refused true, vector untouched true
+files: save_replacing on a full list: refused true
+files: exiting
+files: after the clean-up list INT 24h is back as it was found: true
