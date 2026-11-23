@@ -5,7 +5,7 @@ part: IV
 title: The HAL
 summary: The contract crate desk-hal read from the code: port I/O and where the unsafe sits, memory-mapped regions, interrupts and the ring, time, video and input types, errors, no_std and features, the alternatives rejected, the mock platform, and the migration steps done and not done.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d7775ed
 watches: [hal/hal/, hal/platform/mock/, hal/README.md, hal/clippy.toml, docs/HAL.md, kernel/src/hal.rs, dos/rt/src/hal.rs, dos/rt/src/irq.rs]
 log: [hal]
 anatomy: [desk:hal, dos:rthal]
@@ -47,14 +47,15 @@ The trait's header comment also states the ordering rule. Each access is perform
 
 ### Memory-mapped regions
 
-Some devices are addresses, not ports: the VGA window at `0xA0000` and the linear frame buffer. [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion) is a raw pointer and a length. Its constructor `MmioRegion::new` is the `unsafe` step (the region must stay mapped and no Rust reference may cover it), and everything after is safe and checked. `read8`, `write8`, `read32` and `write32` fail with `HalError::InvalidArgument` if the access falls outside the length or, for 32-bit accesses, is not aligned to 4 (`check` adds the offset and the size with `checked_add`, so an offset of `usize::MAX` is refused rather than wrapping, and tests the alignment of the address, base plus offset, not of the offset alone). All stores are volatile. `write_bytes` copies one volatile byte at a time and is the reference a faster path must match; `fill8` writes the unaligned head and tail bytewise and the aligned middle a 32-bit word at a time, which cuts the bus writes to a quarter and was added by the native VGA spike. The platform makes the region (`kernel/src/gfx.rs` builds one over `0xA0000`, 64 KiB; `rt::hal::DosDisplay` builds one over the same window through DPMI, or over a mapped [linear frame buffer](term:lfb)).
+Some devices are addresses, not ports: the VGA window at `0xA0000` and the linear frame buffer. [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion) is a raw pointer and a length. Its constructor `MmioRegion::new` is the `unsafe` step (the region must stay mapped and no Rust reference may cover it), and everything after is safe and checked. `read8`, `write8`, `read32` and `write32` fail with `HalError::InvalidArgument` if the access falls outside the length or, for 32-bit accesses, is not aligned to 4 (`check` adds the offset and the size with `checked_add`, so an offset of `usize::MAX` is refused rather than wrapping, and tests the alignment of the address, base plus offset, not of the offset alone). All stores are volatile. `write_bytes` copies one volatile byte at a time, stays byte-exact (the only copy for a register window, where the width of an access matters) and is the reference the fast path is tested against. `copy_from` (R139 T3, #112; decision D2 of `docs/RUNTIME-PLAN.md`) is the separate method for frame buffers only: bytes up to the next 4-byte boundary of the destination, then whole 32-bit words, then the tail, each destination byte written once in ascending order and nothing read back; on x86 the word part is one `rep movsd` (which relies on `ES` equalling `DS` and the direction flag being clear, both of which the DOS runtime and the kernel arrange) and on other targets a volatile 32-bit loop in the same order. The host tests run only that fallback on x86_64, so the string-instruction path is compile-checked for both targets and exercised by the DOS and native golden comparisons, and no speed figure is claimed (the measuring tools are R137). `fill8` writes the unaligned head and tail bytewise and the aligned middle a 32-bit word at a time (a `rep stosd` on x86 since the same change), which cuts the bus writes to a quarter and was added by the native VGA spike. The platform makes the region (`kernel/src/gfx.rs` builds one over `0xA0000`, 64 KiB; `rt::hal::DosDisplay` builds one over the same window through DPMI, or over a mapped [linear frame buffer](term:lfb)).
 
 ### Interrupts and the ring
 
-An interrupt line is an [`Irq`](sym:hal/hal/src/irq.rs::Irq), a newtype over 0 to 15 with named constants (`Irq::TIMER` is 0, `KEYBOARD` 1, `CASCADE` 2, `COM1` 4, `MOUSE` 12 and so on) and a constructor, `Irq::new`, that returns `InvalidArgument` for 16 and above. `is_slave` is true for 8 to 15. A handler is not a closure. [`IrqHandler`](sym:hal/hal/src/irq.rs::IrqHandler) is two words, an `unsafe extern "C" fn(*mut ())` and a context pointer, because an assembly stub must call it from an interrupt with nothing but what it stored at registration, and under a DPMI host everything the handler reaches must sit in locked memory. Two safe constructors cover driver code:
+An interrupt line is an [`Irq`](sym:hal/hal/src/irq.rs::Irq), a newtype over 0 to 15 with named constants (`Irq::TIMER` is 0, `KEYBOARD` 1, `CASCADE` 2, `COM1` 4, `MOUSE` 12 and so on) and a constructor, `Irq::new`, that returns `InvalidArgument` for 16 and above. `is_slave` is true for 8 to 15. A handler is not a closure. [`IrqHandler`](sym:hal/hal/src/irq.rs::IrqHandler) is two words, an `unsafe extern "C" fn(*mut ())` and a context pointer, because an assembly stub must call it from an interrupt with nothing but what it stored at registration, and under a DPMI host everything the handler reaches must sit in locked memory. Three safe constructors cover driver code:
 
 - `IrqHandler::from_static` takes a `&'static mut T` where `T: IrqService + Send`. The mutable reference moves to the handler for good, so nothing else can alias the state; whatever the handler shares with the core is inside it behind a shared reference (an atomic, a ring's producer).
 - `IrqHandler::from_shared` takes a `&'static T` where `T: SharedIrqService`, state that is all atomics, such as a tick counter. It can be a plain `static`.
+- `IrqHandler::from_deciding` takes a `&'static mut T` where `T: DecidingIrqService` (R139 T4, #110): as `from_static`, but `on_irq` returns an `Action`, `Eoi` or `Chain`, so the handler decides on each interrupt whether the platform sends the end-of-interrupt or passes the interrupt to the previous owner. The function an `IrqHandler` holds returns an `Action` (in `EAX`, so the DOS stub can test it); the handlers from `IrqService` and `SharedIrqService` always return `Eoi`, and the line's `Chain` is the registration's, so no existing driver changed. A free function, `chains`, is the rule the platforms apply: pass the interrupt on if there is a previous owner and the line was registered `Chain::Previous` or the handler returned `Chain`. Natively there is no previous owner, so a returned `Chain` is treated as `Eoi`. The only implementor so far is the fast timer in `dos/rt/src/timer.rs`.
 
 `from_raw` is the unsafe escape for a platform's own handlers, and `call` is unsafe with a one-caller-at-a-time contract. Registration is the trait [`IrqRegistry`](sym:hal/hal/src/irq.rs::IrqRegistry), with `register(irq, handler, chain)` and `unregister`; `Chain::None` means the platform sends the end-of-interrupt and `Chain::Previous` means the previous owner of the vector runs next and sends it. The controller side is [`InterruptController`](sym:hal/hal/src/irq.rs::InterruptController): `mask`, `unmask`, `is_masked`, `eoi`, and two provided methods for the [spurious](term:spurious-interrupt) case (`is_spurious` defaults to false, `eoi_spurious` to nothing). Two rules in its doc comments carry the design: drivers never send the [EOI](term:eoi), the platform does after the handler returns, because under DOS a chained BIOS handler sends it and a second one would acknowledge a different interrupt; and `mask` and `unmask` are a read-modify-write of a register every line shares, so callers outside interrupt context hold the platform's critical section, which a driver cannot enter by design.
 
@@ -66,7 +67,7 @@ The reason there is no compare-and-swap anywhere is in `hal/clippy.toml`. DOSBox
 
 ### Time
 
-A 486 has no time-stamp counter, so the clock is an interrupt counted in a 32-bit word. [`TickCounter`](sym:hal/hal/src/time.rs::TickCounter) holds an `AtomicU32`; `tick` is a `fetch_add` and `now` an acquire load. It implements `SharedIrqService`, so `IrqHandler::from_shared(&COUNTER)` is the whole timer handler. [`Ticks`](sym:hal/hal/src/time.rs::Ticks) is a `u32` newtype whose `since` uses wrapping subtraction, so an interval is right across one wrap of the counter. The trait [`Clock`](sym:hal/hal/src/time.rs::Clock) has `now` and `millihertz`, the rate in thousandths of a hertz so that the BIOS's 18.2 Hz (18,207) and the PIT's real "100 Hz" (99,998) are both exact enough; `millis_since` is provided and uses 64-bit arithmetic, which is plain code on a 486 (only 64-bit atomics are missing), rounding down and saturating at `u32::MAX`. [`Delay`](sym:hal/hal/src/time.rs::Delay) is the calibrated busy wait for device timing, and no platform implements it yet. The header of `time.rs` works out the wrap: about 497 days at 100 Hz and 49 days at 1 kHz.
+A 486 has no time-stamp counter, so the clock is an interrupt counted in a 32-bit word. [`TickCounter`](sym:hal/hal/src/time.rs::TickCounter) holds an `AtomicU32`; `tick` is a `fetch_add` and `now` an acquire load. It implements `SharedIrqService`, so `IrqHandler::from_shared(&COUNTER)` is the whole timer handler. [`Ticks`](sym:hal/hal/src/time.rs::Ticks) is a `u32` newtype whose `since` uses wrapping subtraction, so an interval is right across one wrap of the counter. The trait [`Clock`](sym:hal/hal/src/time.rs::Clock) has `now` and `millihertz`, the rate in thousandths of a hertz so that the BIOS's 18.2 Hz (18,207) and the PIT's real "100 Hz" (99,998) are both exact enough; `millis_since` is provided and uses 64-bit arithmetic, which is plain code on a 486 (only 64-bit atomics are missing), rounding down and saturating at `u32::MAX`. [`Delay`](sym:hal/hal/src/time.rs::Delay) is the calibrated busy wait for device timing, and only the mock implements it; the fast timer's `delay_us` in `rt` is its own function over the PIT's latch, not this trait. [`Pacer`](sym:hal/hal/src/time.rs::Pacer) (R139 T5, #107) turns a tick source into whole fixed-length steps with integer arithmetic: the first call to `due` fixes the origin and returns 0, later calls return the whole steps elapsed and carry the remainder, and when more than a cap are owed it returns the cap and re-synchronises, so a stall is not followed by a burst. It is tested across the counter's wrap, and nothing uses it yet. The header of `time.rs` works out the wrap: about 497 days at 100 Hz and 49 days at 1 kHz.
 
 ### Video, input, the BIOS and errors
 
@@ -111,7 +112,7 @@ The models are the author's reading of the data sheets. None has been compared w
 |---|---|---|
 | 0 | The workspace, traits, ring, region, three drivers, mock, tests and cross builds | Done. `hal/` is a workspace of nine members; `tools/check.sh` runs `fmt`, `clippy -D warnings` and `cargo test` there, and the two cross builds |
 | 1 | The native kernel uses the shared drivers | Done. `kernel/Cargo.toml` depends on `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic` and the rest; `kernel/src/port.rs` no longer exists; `PORTS`, `PIC`, `SERIAL`, `CLOCK` and `IRQS` are in `kernel/src/hal.rs`. Not done within it: `vga.rs` has not moved to a `desk-vgatext` over an `MmioRegion` (that crate does not exist; the plan called it optional) |
-| 2 | The DOS runtime becomes the hosted platform | Partly. `rt::hal` has `DosBios` and `DosDisplay`, and `rt::irq` has `DosIrq` (a stub per line, `Chain::Previous`, the clean-up list, the stack switch). Since R148 merged, `rt` has moved from the spike to `dos/rt`, a layer of its own above the HAL (`docs/LAYERS.md`), which is where the plan wanted a top-level crate; not done: `rt::timer` is still its own hook and nothing under DOS uses `desk-pit` or `PitClock`; `desk-serial` is not used by `rt`; no `PhysMem`, `WallClock` or `DebugOut` over standard output |
+| 2 | The DOS runtime becomes the hosted platform | Partly. `rt::hal` has `DosBios` and `DosDisplay`, and `rt::irq` has `DosIrq` (a stub per line, `Chain::Previous`, the clean-up list, the stack switch). Since R148 merged, `rt` has moved from the spike to `dos/rt`, a layer of its own above the HAL (`docs/LAYERS.md`), which is where the plan wanted a top-level crate; `rt::timer` has two hooks: the first is still its own eight-instruction hook (the shell uses it at the BIOS rate), and the opt-in `hook_rate` (R139 T6, #113) is the first code under DOS to use `desk-pit` (`Pit`, `BiosChain`, the stopwatch arithmetic), over `DosIrq`, though not `PitClock`; not done: `desk-serial` is not used by `rt`; no `PhysMem`, `WallClock` or `DebugOut` over standard output |
 | 3 | The hosted skeleton moves to the HAL | Not done. `core/` is unchanged, and the shell lives in `shell/` |
 | 4 | New drivers in `hal/drivers/` | Partly. `desk-vga`, `desk-kbd`, `desk-i8042` and `desk-int33` exist; `desk-dma8237`, `desk-opl`, `desk-sb`, `desk-ata`, `desk-fdc` and `desk-rtc` do not |
 | 5 | The core runs on both platforms through `Platform` | Not done. There is no `Platform` trait in the code, and no `PhysMem` or `BlockDevice` |
@@ -125,10 +126,10 @@ The pieces the document marks as sketch and the code lacks are the physical-memo
 | [`hal/hal/src/lib.rs`](repo:hal/hal/src/lib.rs) | The module list, the `no_std` attribute, the re-exports and [`DebugOut`](sym:hal/hal/src/lib.rs::DebugOut) |
 | [`hal/hal/src/port.rs`](repo:hal/hal/src/port.rs) | [`PortIo`](sym:hal/hal/src/port.rs::PortIo), [`POST_PORT`](sym:hal/hal/src/port.rs::POST_PORT) and the blanket impl for `&P` |
 | [`hal/hal/src/x86.rs`](repo:hal/hal/src/x86.rs) | [`RawPorts`](sym:hal/hal/src/x86.rs::RawPorts) and its `unsafe` constructor: the one audited boundary for port I/O |
-| [`hal/hal/src/mmio.rs`](repo:hal/hal/src/mmio.rs) | [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion): bounds- and alignment-checked volatile access, `write_bytes`, `fill8` |
-| [`hal/hal/src/irq.rs`](repo:hal/hal/src/irq.rs) | [`Irq`](sym:hal/hal/src/irq.rs::Irq), [`InterruptController`](sym:hal/hal/src/irq.rs::InterruptController), [`IrqService`](sym:hal/hal/src/irq.rs::IrqService), [`SharedIrqService`](sym:hal/hal/src/irq.rs::SharedIrqService), [`IrqHandler`](sym:hal/hal/src/irq.rs::IrqHandler), [`Chain`](sym:hal/hal/src/irq.rs::Chain), [`IrqRegistry`](sym:hal/hal/src/irq.rs::IrqRegistry) |
+| [`hal/hal/src/mmio.rs`](repo:hal/hal/src/mmio.rs) | [`MmioRegion`](sym:hal/hal/src/mmio.rs::MmioRegion): bounds- and alignment-checked volatile access, `write_bytes`, [`copy_from`](sym:hal/hal/src/mmio.rs::copy_from) for frame buffers, `fill8` |
+| [`hal/hal/src/irq.rs`](repo:hal/hal/src/irq.rs) | [`Irq`](sym:hal/hal/src/irq.rs::Irq), [`InterruptController`](sym:hal/hal/src/irq.rs::InterruptController), [`IrqService`](sym:hal/hal/src/irq.rs::IrqService), [`SharedIrqService`](sym:hal/hal/src/irq.rs::SharedIrqService), [`DecidingIrqService`](sym:hal/hal/src/irq.rs::DecidingIrqService), [`Action`](sym:hal/hal/src/irq.rs::Action), [`IrqHandler`](sym:hal/hal/src/irq.rs::IrqHandler), [`Chain`](sym:hal/hal/src/irq.rs::Chain), [`IrqRegistry`](sym:hal/hal/src/irq.rs::IrqRegistry) |
 | [`hal/hal/src/ring.rs`](repo:hal/hal/src/ring.rs) | [`SpscRing`](sym:hal/hal/src/ring.rs::SpscRing), its `Producer` and `Consumer`, and the three ring tests |
-| [`hal/hal/src/time.rs`](repo:hal/hal/src/time.rs) | [`Ticks`](sym:hal/hal/src/time.rs::Ticks), [`Clock`](sym:hal/hal/src/time.rs::Clock), [`Delay`](sym:hal/hal/src/time.rs::Delay), [`TickCounter`](sym:hal/hal/src/time.rs::TickCounter) |
+| [`hal/hal/src/time.rs`](repo:hal/hal/src/time.rs) | [`Ticks`](sym:hal/hal/src/time.rs::Ticks), [`Clock`](sym:hal/hal/src/time.rs::Clock), [`Delay`](sym:hal/hal/src/time.rs::Delay), [`TickCounter`](sym:hal/hal/src/time.rs::TickCounter), [`Pacer`](sym:hal/hal/src/time.rs::Pacer) |
 | [`hal/hal/src/video.rs`](repo:hal/hal/src/video.rs) | [`Rgb6`](sym:hal/hal/src/video.rs::Rgb6), [`PixelLayout`](sym:hal/hal/src/video.rs::PixelLayout), [`ModeInfo`](sym:hal/hal/src/video.rs::ModeInfo), [`FrameBuffer`](sym:hal/hal/src/video.rs::FrameBuffer), [`Display`](sym:hal/hal/src/video.rs::Display) |
 | [`hal/hal/src/input.rs`](repo:hal/hal/src/input.rs) | [`Modifiers`](sym:hal/hal/src/input.rs::Modifiers), [`KeyCode`](sym:hal/hal/src/input.rs::KeyCode), [`KeyEvent`](sym:hal/hal/src/input.rs::KeyEvent), [`MouseEvent`](sym:hal/hal/src/input.rs::MouseEvent), [`InputSource`](sym:hal/hal/src/input.rs::InputSource) |
 | [`hal/hal/src/bios.rs`](repo:hal/hal/src/bios.rs) | [`Bios`](sym:hal/hal/src/bios.rs::Bios), [`BiosRegs`](sym:hal/hal/src/bios.rs::BiosRegs), `BIOS_BUFFER_MAX` |
@@ -163,7 +164,7 @@ id: hal.contract
 label: The traits and types of desk-hal pass their host tests (ring, region, time, interrupts, video, input)
 state: built-verified
 evidence: test:hal/hal/src/ring.rs::a_producer_thread_and_a_consumer_thread_agree, test:hal/hal/src/mmio.rs::accesses_are_bounded_and_aligned, test:hal/hal/src/time.rs::intervals_survive_the_wrap, test:hal/hal/src/irq.rs::a_handler_reaches_its_context, sym:hal/hal/src/lib.rs::DebugOut
-note: Run on the host: 13 tests in desk-hal, and 179 in the whole hal/ workspace, in the run recorded below.
+note: Run on the host on 2026-11-23: 22 tests in desk-hal, and 210 in the whole hal/ workspace, in the run recorded below. The copy_from, Action, chains and Pacer tests are among them; the x86 string-instruction path of copy_from is not (the host is x86_64).
 
 id: hal.rawports
 label: RawPorts executes in and out in ring 0 on the native kernel
@@ -251,18 +252,18 @@ The first command runs the whole workspace's host tests and keeps the summary li
 
 ```try
 needs: host: cargo, grep
-ran: 2026-10-23 on the host at 44f0265, Rust stable
+ran: 2026-11-23 on the host at d7775ed, Rust 1.98.0 stable; the commands, the clippy line and the two greps are those of 2026-10-23 and gave the same results apart from the test lists
 $ cd hal && cargo test 2>&1 | grep -E "^test result: ok. [1-9]"
-test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -270,17 +271,28 @@ test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 $ cd hal && cargo test -p desk-hal 2>&1 | grep -E "^test "
 test input::tests::modifier_sets_combine_and_subtract ... ok
 test irq::tests::a_handler_reaches_its_context ... ok
-test irq::tests::a_shared_handler_needs_only_a_static ... ok
 test irq::tests::lines_above_fifteen_do_not_exist ... ok
+test irq::tests::chains_needs_a_previous_owner_and_a_reason ... ok
+test irq::tests::a_shared_handler_needs_only_a_static ... ok
 test mmio::tests::accesses_are_bounded_and_aligned ... ok
+test irq::tests::the_handlers_of_the_old_traits_return_eoi_and_a_deciding_one_returns_its_choice ... ok
+test mmio::tests::copy_from_refuses_out_of_bounds_and_writes_nothing ... ok
 test ring::tests::items_come_out_in_order_and_a_full_ring_drops ... ok
 test ring::tests::the_indices_wrap ... ok
+test time::tests::a_stall_is_capped_and_resynchronises ... ok
 test time::tests::intervals_survive_the_wrap ... ok
+test time::tests::reset_restarts_the_origin ... ok
 test time::tests::the_counter_as_a_service_ticks ... ok
+test time::tests::the_counter_wrap_is_harmless ... ok
+test time::tests::the_first_call_sets_the_origin ... ok
+test time::tests::whole_steps_only_and_the_remainder_carries ... ok
 test video::tests::rgb8_converts_both_ways ... ok
 test video::tests::scaling_rounds_down_and_clamps ... ok
 test mmio::tests::fill_covers_unaligned_heads_and_tails_and_stays_inside ... ok
 test ring::tests::a_producer_thread_and_a_consumer_thread_agree ... ok
+test mmio::tests::copy_from_matches_a_byte_loop_and_stays_inside ... ok
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cd hal && cargo clippy --locked --all-targets -- -D warnings 2>&1 | tail -1
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.35s
 $ grep -c unsafe hal/drivers/serial/src/lib.rs hal/drivers/pic/src/lib.rs hal/drivers/pit/src/lib.rs hal/hal/src/x86.rs
@@ -294,7 +306,7 @@ kernel/src/console.rs:0
 kernel/src/serial.rs:0
 ```
 
-The test summary is 179 tests in all; the document that first described the workspace counts 35. The last command shows a gap between that document and the kernel: `DebugOut` is implemented by the serial driver, and nothing uses it.
+The test summary is 210 tests in all (179 on 2026-10-23); the document that first described the workspace counts 35. The last command shows a gap between that document and the kernel: `DebugOut` is implemented by the serial driver, and nothing uses it.
 
 **Exercises.** (1) Without running it, predict what `SpscRing::<u8, 3>::new()` does, then try it in a scratch test and read the error. (2) Write a host test in a scratch branch that attaches a `Uart16550` model at `COM2` and checks that after `init(9_600)` its `divisor` is 12; then find the existing test that already does it (`the_divisor_follows_the_rate`). (3) Add a `compare_exchange` call to any file in `hal/hal/src/` and run `cargo clippy` in `hal/`; say which entry of `clippy.toml` fires. (4) In `MockIrq`, `raise` on a masked line returns false: predict what `register` then `mask` then `raise` returns, and check.
 
@@ -335,3 +347,4 @@ at: explainer m-crates
 - 2026-10-23: first written, against `44f0265`. Every surface was read in `hal/hal/src/`, the mock in `hal/platform/mock/src/`, the two platforms' use of the contract in `kernel/src/hal.rs` and `dos/rt/src/`, and `docs/HAL.md` in full; `cargo test` in `hal/` was run on the host (179 tests, all passing). Where `docs/HAL.md` and the code disagree, the code is followed. Found while writing: (1) the document's opening status and its "What was and was not verified" say no binary uses the crates and that the kernel and `rt` are unchanged, but the kernel depends on the crates (migration step 1 is done, as the document's own crate-layout paragraph says); (2) it counts 35 host tests, and the workspace now has 179; (3) its platforms table marks `kernel::hal` and `rt::hal` as planned, and both exist; (4) its `Display` sketch has infallible `set_palette` and `palette`, and the code returns `Result` (the document notes this in its video section); (5) it says the panic handlers of both platforms use `DebugOut`, but nothing outside `desk-serial` and `desk-hal` names the trait, and the kernel's panic handler prints with `println!`; (6) it says `Serial16550` is a `DebugOut` for both platforms, but the DOS runtime does not use `desk-serial` or `desk-pit`; (7) its "Today `hal/` holds" list omits `desk-vga` and `desk-int33`, which the workspace has. The `Display`, `Bios` and input surfaces are lightly covered here and taught in M11 and M12.
 - 2026-11-20: reviewed against R148 (in review). The migration table said `rt` was still `dos/rt` and not promoted, which the move made untrue; it now says where `rt` lives on the branch in review. The rule that `hal/` names nothing and `dos/` names only `hal/` is stated, with the pointer to the layering check. The paths in the status records were already rewritten by the move. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The migration table and the note on the record say that `rt` is at `dos/rt` on `main`, and the platforms bullet names the pull request that added the check. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
+- 2026-11-23: brought up to date after R139 T1 to T6 (#107 to #113). Corrected: the memory-mapped region paragraph (`copy_from`, `write_bytes` unchanged, `fill8`'s word path), the interrupt paragraph (a third constructor, the `Action` return and `chains`), the time paragraph (`Pacer`; `Delay` is implemented only by the mock), the migration table's step 2 (the fast timer is the first DOS user of `desk-pit`), the code table, and the test counts (22 in `desk-hal`, 210 in all). The try block's first two commands were rerun on the host and their outputs replaced; the clippy line and the two greps were rerun and gave the same results as before. The rest of the chapter (port I/O, the ring, video, input, the BIOS, errors, the mock) was re-read against `hal/hal/src` and `hal/platform/mock/src` and needed no change. `reviewed` moved to `d7775ed`.

@@ -1,4 +1,4 @@
-// The widgets of the first window: a one-line label and a one-line text field with a caret.
+// The widgets of the first window: a one-line label, a one-line text field with a caret, and a filled rectangle.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -29,6 +29,13 @@ pub struct Label {
     pub role: Role,
 }
 
+/// A filled rectangle in a colour role. Its rectangle is relative to the content area and may reach past it: the window clips it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Fill {
+    pub rect: Rect,
+    pub role: Role,
+}
+
 /// A field: a `Border` outline, `Content` inside, the text in `Text`, and a caret in `Accent` after the text while it is the
 /// focused widget of the focused window. It is `width` wide and `FIELD_HEIGHT` high at `at`, and holds at most `max_chars` characters, fewer when they would not fit inside the outline with the caret.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,6 +50,7 @@ pub struct TextLine {
 pub enum Widget {
     Label(Label),
     TextLine(TextLine),
+    Fill(Fill),
 }
 
 impl TextLine {
@@ -139,6 +147,7 @@ impl Widget {
         match self {
             Widget::Label(l) => Rect::new(l.at.0, l.at.1, font.advance(&l.text), font.height()),
             Widget::TextLine(f) => f.bounds(),
+            Widget::Fill(f) => f.rect,
         }
     }
 
@@ -147,9 +156,18 @@ impl Widget {
     pub fn paint(&self, s: &mut Surface, t: &Theme, font: &Font, origin: (i32, i32), focused: bool) {
         match self {
             Widget::Label(l) => {
-                draw_text(s, font, l.at.0 + origin.0, l.at.1 + origin.1, &l.text, t.slot(l.role));
+                // Saturating, because an app-supplied position can be any i32; the clip keeps whatever lands outside the window out.
+                draw_text(
+                    s,
+                    font,
+                    l.at.0.saturating_add(origin.0),
+                    l.at.1.saturating_add(origin.1),
+                    &l.text,
+                    t.slot(l.role),
+                );
             }
             Widget::TextLine(f) => f.paint(s, t, font, origin, focused),
+            Widget::Fill(f) => s.fill(f.rect.offset(origin.0, origin.1), t.slot(f.role)),
         }
     }
 
@@ -161,16 +179,16 @@ impl Widget {
     /// The rectangle of the widget's caret relative to the content area, for a widget that has one.
     pub fn caret(&self, font: &Font) -> Option<Rect> {
         match self {
-            Widget::Label(_) => None,
+            Widget::Label(_) | Widget::Fill(_) => None,
             Widget::TextLine(f) => Some(f.caret(font)),
         }
     }
 
     /// A key for the focused widget; `Some(rect relative to the content area)` when it changed, covering the old and new text and
-    /// caret. A label takes no keys.
+    /// caret. A label or a fill takes no keys.
     pub fn key(&mut self, e: KeyEvent, font: &Font) -> Option<Rect> {
         match self {
-            Widget::Label(_) => None,
+            Widget::Label(_) | Widget::Fill(_) => None,
             Widget::TextLine(f) => f.key(e, font),
         }
     }

@@ -15,7 +15,7 @@ pub mod scenario;
 mod shell;
 pub mod transcript;
 
-pub use shell::Shell;
+pub use shell::{Shell, MAX_ITEMS};
 
 use desk_hal::{KeyEvent, MouseEvent};
 

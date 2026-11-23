@@ -1,4 +1,4 @@
-// The shell's look: theme roles and palettes, text drawing, the window chrome with its stepped halo, and the label and text-field widgets.
+// The shell's look: theme roles and palettes, text drawing, the window chrome with its stepped halo, and the label, text-field and fill widgets.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -20,4 +20,4 @@ pub use icons::{Icon, CLOSE, MAXIMISE, MINIMISE};
 pub use palette::{palette, AFTERGLOW_SURFACES, DESK16};
 pub use text::{draw_text, fit_with_ellipsis};
 pub use theme::{Depth, Role, Theme};
-pub use widget::{Label, TextLine, Widget, CARET_HEIGHT, FIELD_HEIGHT};
+pub use widget::{Fill, Label, TextLine, Widget, CARET_HEIGHT, FIELD_HEIGHT};

@@ -13,6 +13,7 @@ The first window's scripted run and what it is expected to draw (`docs/FIRST-WIN
 - `first-window.scn` — the first window, scripted (`docs/FIRST-WINDOW.md`). Its sums, goldens and the expected transcripts never change without a regression.
 - `keys.scn` — Alt+Tab, Shift+Alt+Tab, Alt+F4 and Tab between fields, on the first window's set-up.
 - `live.scn` and `live-keys.scn` — the first window played with real input (`docs/LIVE-INPUT.md`): their steps after the first frame are what `tools/frames.py live` turns into mouse and key input for an emulator, and each frame is checked against its golden when the live run prints its mark. The steps before the first frame must equal `first-window.scn`'s (the host test and `frames.py live` both check it).
+- `module-window.scn` — what a module loaded through the real loader draws: a backdrop window, then `hellowin` with three lines of text, eight swatches and two fills that overhang the content area and must show clipped (`fill` and `text` steps; `docs/FIRST-WINDOW.md`, "Retained fills and text"). Closing it leaves the backdrop alone.
 
 ## What the host test checks
 
