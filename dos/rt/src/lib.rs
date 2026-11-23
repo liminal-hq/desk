@@ -15,6 +15,8 @@
 // - `mem`      memcpy and friends for the COFF (stage 1) build; in the ELF build only strong `memcpy` and `memset` (string instructions), the rest from compiler_builtins
 // - `panic`    the panic handler: report, run the clean-up list, exit with status 3 (the `panic-handler` feature, on by default)
 // - `cleanup`  what must be undone before the program ends, by exit or by panic
+// - `critical` `FailCritical`: INT 24h made to fail the call instead of prompting, put back by drop, exit or panic
+// - `settings` `save_replacing` and `read_recovering`: a settings file replaced so a crash leaves the old or the new one whole
 // - `irq`      the interrupt registry: a stub per IRQ line that calls a Rust `IrqHandler`, and the end-of-interrupt
 // - `bios_kbd` the BIOS keyboard state in the data area (lock flags, type-ahead buffer), for a program that takes IRQ 1
 // - `timer`    a hook on IRQ 0 that counts ticks (hardware proof), and the opt-in fast timer: a reprogrammed PIT, a stopwatch and `delay_us`
@@ -28,6 +30,7 @@ extern crate alloc;
 
 pub mod bios_kbd;
 pub mod cleanup;
+pub mod critical;
 pub mod dos;
 pub mod dpmi;
 pub mod env;
@@ -39,6 +42,7 @@ pub mod irq;
 mod mem;
 #[cfg(feature = "panic-handler")]
 mod panic;
+pub mod settings;
 pub mod start;
 pub mod timer;
 pub mod vga;
