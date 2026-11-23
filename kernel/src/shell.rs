@@ -304,9 +304,10 @@ static MODULE_SCENARIO: &str = include_str!("../../tests/shell/module-window.scn
 /// The scenario's name for the window the module draws.
 const MODULE_WINDOW: &str = "hellowin";
 
-/// How long the live module run holds its closed desktop after Escape, in PIT ticks (2 s at 100 Hz), unless a key ends it: the run
-/// script takes its last screendump then and presses one.
-const HOLD_TICKS: u32 = 200;
+/// How long the live module run holds its closed desktop after Escape, in PIT ticks (5 s at 100 Hz), unless a key ends it: the run
+/// script takes its last screendump then and presses one. It is long so that a stalled emulator or container does not miss it; a
+/// person at the window can press any key to skip it.
+const HOLD_TICKS: u32 = 500;
 
 /// The window a step names, if it names one.
 fn window_of(step: &Step) -> Option<&str> {
