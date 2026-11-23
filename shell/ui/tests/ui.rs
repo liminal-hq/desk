@@ -374,6 +374,7 @@ fn text_of(w: &Widget) -> &str {
     match w {
         Widget::TextLine(f) => &f.text,
         Widget::Label(l) => &l.text,
+        Widget::Fill(_) => "",
     }
 }
 
@@ -522,4 +523,28 @@ fn chords_do_not_backspace_and_a_full_field_refuses_what_would_not_fit() {
     assert!(font.advance(&f.text) + 6 + 1 < f.width - 1);
     assert!(w.key(key(KeyCode::W, Modifiers::SHIFT), &font).is_none());
     assert!(w.key(key(KeyCode::Backspace, Modifiers::NONE), &font).is_some());
+}
+
+#[test]
+fn a_fill_paints_its_rectangle_in_its_role_and_only_inside_the_clip() {
+    let font = Font::parse(UI).unwrap();
+    let t = Theme::afterglow(Depth::Bits8);
+    let w = Widget::Fill(desk_ui::Fill {
+        rect: Rect::new(-5, 2, 40, 10),
+        role: Role::Accent,
+    });
+    assert_eq!(w.bounds(&font), Rect::new(-5, 2, 40, 10));
+    assert!(!w.takes_focus());
+    assert_eq!(w.caret(&font), None);
+    let mut s = Surface::new(100, 60, 0);
+    // The content area's top-left is (20, 10) and the clip is the content area, (20, 10, 60, 40).
+    let clip = Rect::new(20, 10, 60, 40);
+    s.set_clip(clip);
+    w.paint(&mut s, &t, &font, (20, 10), false);
+    let want = Rect::new(15, 12, 40, 10).intersect(&clip);
+    for y in 0..60 {
+        for x in 0..100 {
+            assert_eq!(s.get(x, y) == Some(t.slot(Role::Accent)), want.contains(x, y), "({x}, {y})");
+        }
+    }
 }

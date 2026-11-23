@@ -6,17 +6,21 @@
 // `Shell` owns everything a frame is a function of: the compositor (back buffer, damage, cursor), the window manager, the theme and
 // the faces. It holds no platform type; a platform drains its input into `handle`, calls `frame` with its presenter, and reads
 // `digest` for the frame's checksums. The window manager reports its damage to the caller, so every change that goes through the
-// shell (events, and `open`, `close`, `focus`, `label` and `field`) hands that damage on to the compositor.
+// shell (events, and `open`, `close`, `focus`, `label`, `text`, `fill` and `field`) hands that damage on to the compositor.
 
 use crate::Event;
 use alloc::string::String;
 use desk_gfx::{Compositor, Damage, FrameDigest, FrameStats, Present, Rect, Surface};
 use desk_hal::{HalError, KeyEvent};
-use desk_ui::{palette, Depth, Label, Role, TextLine, Theme, Widget};
+use desk_ui::{palette, Depth, Fill, Label, Role, TextLine, Theme, Widget};
 use desk_wm::{Fonts, WindowId, WindowSpec, Wm};
 
 /// How many characters a scenario's text field holds, before its width stops further ones.
 const FIELD_CHARS: u16 = 64;
+
+/// How many retained items (labels, texts, fills and fields) one window holds. A spike limit, not a design number: past it
+/// `label`, `text`, `fill` and `field` return false and add nothing.
+pub const MAX_ITEMS: usize = 32;
 
 pub struct Shell<'f> {
     compositor: Compositor,
@@ -119,20 +123,33 @@ impl<'f> Shell<'f> {
         true
     }
 
-    /// Adds a label to the named window's content area, at `(x, y)` from its top-left; false when there is no such window.
+    /// Adds a label to the named window's content area, at `(x, y)` from its top-left, in the `Text` role; false when there is no
+    /// such window or it already holds `MAX_ITEMS`.
     pub fn label(&mut self, window: &str, x: i32, y: i32, text: &str) -> bool {
+        self.text(window, x, y, text, Role::Text)
+    }
+
+    /// Adds a line of text in the UI face and `role` to the named window, at `(x, y)` from its content area's top-left; false when
+    /// there is no such window or it already holds `MAX_ITEMS`. The text is clipped to the content area when it is painted.
+    pub fn text(&mut self, window: &str, x: i32, y: i32, text: &str, role: Role) -> bool {
         self.add_widget(
             window,
             Widget::Label(Label {
                 at: (x, y),
                 text: String::from(text),
-                role: Role::Text,
+                role,
             }),
             false,
         )
     }
 
-    /// Adds a text field to the named window and makes it the window's focused widget; false when there is no such window.
+    /// Adds a filled rectangle in `role` to the named window, `rect` in content coordinates; false when there is no such window or
+    /// it already holds `MAX_ITEMS`. Any rectangle is accepted: what lies outside the content area is clipped when it is painted.
+    pub fn fill(&mut self, window: &str, rect: Rect, role: Role) -> bool {
+        self.add_widget(window, Widget::Fill(Fill { rect, role }), false)
+    }
+
+    /// Adds a text field to the named window and makes it the window's focused widget; false when there is no such window or it already holds `MAX_ITEMS`.
     pub fn field(&mut self, window: &str, x: i32, y: i32, width: u32) -> bool {
         self.add_widget(window, Widget::TextLine(TextLine::new((x, y), width, FIELD_CHARS)), true)
     }
@@ -140,6 +157,9 @@ impl<'f> Shell<'f> {
     fn add_widget(&mut self, window: &str, widget: Widget, focus: bool) -> bool {
         let Some(id) = self.wm.by_name(window) else { return false };
         let Some(w) = self.wm.window_mut(id) else { return false };
+        if w.widgets.len() >= MAX_ITEMS {
+            return false;
+        }
         let content = w.layout().content;
         let bounds = widget
             .bounds(&self.fonts.ui)

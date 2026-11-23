@@ -270,7 +270,7 @@ fn with_field(wm: &mut Wm, id: desk_wm::WindowId) {
 fn text(wm: &mut Wm, id: desk_wm::WindowId) -> String {
     match &wm.window_mut(id).unwrap().widgets[0] {
         Widget::TextLine(f) => f.text.clone(),
-        Widget::Label(_) => unreachable!(),
+        Widget::Label(_) | Widget::Fill(_) => unreachable!(),
     }
 }
 

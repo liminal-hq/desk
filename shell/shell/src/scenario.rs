@@ -15,7 +15,7 @@ use core::fmt;
 use desk_gfx::Rect;
 use desk_hal::{KeyCode, KeyEvent, Modifiers, MouseEvent};
 use desk_kbd::char_for;
-use desk_ui::Depth;
+use desk_ui::{Depth, Role};
 
 use crate::Event;
 
@@ -46,6 +46,20 @@ pub enum Step {
         x: i32,
         y: i32,
         text: String,
+    },
+    /// A line of text in a colour role, at `(x, y)` from the content's top-left.
+    Text {
+        window: String,
+        x: i32,
+        y: i32,
+        role: Role,
+        text: String,
+    },
+    /// A filled rectangle in a colour role, in content coordinates; what lies outside the content area is clipped.
+    Fill {
+        window: String,
+        rect: Rect,
+        role: Role,
     },
     /// A text field, which takes the window's keys.
     Field {
@@ -139,6 +153,8 @@ pub enum ParseErrorKind {
     MissingScreen,
     /// A depth that is not 8 or 4, or one listed twice.
     BadDepth(String),
+    /// A role name that is not one `ROLE_NAMES` lists.
+    BadRole(String),
     /// A key name that is not a `desk_hal::KeyCode` name.
     BadKey(String),
     /// Not `down` or `up`.
@@ -420,6 +436,11 @@ impl Args {
         w.parse().map_err(|_| Kind::BadNumber(w))
     }
 
+    fn role(&mut self) -> Result<Role, Kind> {
+        let w = self.word("role")?;
+        role_of(&w).ok_or(Kind::BadRole(w))
+    }
+
     /// A number of at least 1.
     fn positive(&mut self, what: &'static str) -> Result<u32, Kind> {
         let w = self.word(what)?;
@@ -435,6 +456,30 @@ impl Args {
             Some(Tok::Word(w) | Tok::Str(w)) => Err(Kind::ExtraArgument(w)),
         }
     }
+}
+
+/// How a scenario spells each role: the name of the `Role` variant, in `Role::ALL`'s order.
+pub const ROLE_NAMES: [&str; Role::COUNT] = [
+    "Desktop",
+    "Chrome",
+    "Content",
+    "Raised",
+    "Line",
+    "Border",
+    "TextMuted",
+    "TextSecondary",
+    "Text",
+    "Accent",
+    "Halo2",
+    "Halo3",
+    "Selection",
+    "CursorOutline",
+    "CursorFill",
+];
+
+/// The role a scenario names (`Text`, `Accent`, …), exactly as `Role` spells it.
+pub fn role_of(name: &str) -> Option<Role> {
+    ROLE_NAMES.iter().position(|n| *n == name).map(|i| Role::ALL[i])
 }
 
 fn depth_of(w: &str) -> Result<Depth, Kind> {
@@ -559,6 +604,30 @@ impl Parser {
                     x,
                     y,
                     text,
+                }
+            }
+            "text" => {
+                let window = a.name("name")?;
+                let (x, y): (i32, i32) = (a.number("x")?, a.number("y")?);
+                let role = a.role()?;
+                let text = a.string("text")?;
+                Step::Text {
+                    window: self.window(window)?,
+                    x,
+                    y,
+                    role,
+                    text,
+                }
+            }
+            "fill" => {
+                let window = a.name("name")?;
+                let (x, y): (i32, i32) = (a.number("x")?, a.number("y")?);
+                let (w, h): (u32, u32) = (a.number("width")?, a.number("height")?);
+                let role = a.role()?;
+                Step::Fill {
+                    window: self.window(window)?,
+                    rect: Rect::new(x, y, w, h),
+                    role,
                 }
             }
             "field" => {

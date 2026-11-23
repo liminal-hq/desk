@@ -19,6 +19,8 @@ use desk_ui::Depth;
 pub enum RunError {
     /// A step names a window that is not open.
     UnknownWindow(String),
+    /// A window already holds `MAX_ITEMS` retained items.
+    TooManyItems(String),
     /// A `type` step has a character that no key types.
     Untypable(char),
     /// The presenter failed.
@@ -43,6 +45,7 @@ impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RunError::UnknownWindow(n) => write!(f, "no window named {n}"),
+            RunError::TooManyItems(n) => write!(f, "window {n} holds no more items"),
             RunError::Untypable(c) => write!(f, "no key types {c:?}"),
             RunError::Present(e) => write!(f, "presenting failed: {e}"),
             RunError::DamageExceeded {
@@ -76,6 +79,16 @@ impl From<HalError> for RunError {
 
 /// Applies one step's effect on `shell`: everything except presenting, so `Frame` and `ExpectDamage` do nothing here.
 pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError> {
+    // An item that is refused is for a window that is not there, or one that is full.
+    let item = |shell: &mut Shell, ok: bool, name: &str| {
+        if ok {
+            Ok(())
+        } else if shell.wm().by_name(name).is_some() {
+            Err(RunError::TooManyItems(String::from(name)))
+        } else {
+            Err(RunError::UnknownWindow(String::from(name)))
+        }
+    };
     let unknown = |ok: bool, name: &str| {
         if ok {
             Ok(())
@@ -88,8 +101,28 @@ pub fn apply(shell: &mut Shell, step: &Step) -> Result<(), RunError> {
             shell.open(name, *outer, title);
             Ok(())
         }
-        Step::Label { window, x, y, text } => unknown(shell.label(window, *x, *y, text), window),
-        Step::Field { window, x, y, width } => unknown(shell.field(window, *x, *y, *width), window),
+        Step::Label { window, x, y, text } => {
+            let ok = shell.label(window, *x, *y, text);
+            item(shell, ok, window)
+        }
+        Step::Field { window, x, y, width } => {
+            let ok = shell.field(window, *x, *y, *width);
+            item(shell, ok, window)
+        }
+        Step::Text {
+            window,
+            x,
+            y,
+            role,
+            text,
+        } => {
+            let ok = shell.text(window, *x, *y, text, *role);
+            item(shell, ok, window)
+        }
+        Step::Fill { window, rect, role } => {
+            let ok = shell.fill(window, *rect, *role);
+            item(shell, ok, window)
+        }
         Step::Close(name) => unknown(shell.close(name), name),
         Step::Focus(name) => unknown(shell.focus(name), name),
         Step::Event(e) => {

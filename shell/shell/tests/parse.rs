@@ -5,9 +5,9 @@
 
 use desk_gfx::Rect;
 use desk_hal::{KeyCode, KeyEvent, Modifiers, MouseEvent};
-use desk_shell::scenario::{key_code, parse, type_events, FrameName, ParseErrorKind as K, Scenario, Step};
+use desk_shell::scenario::{key_code, parse, role_of, type_events, FrameName, ParseErrorKind as K, Scenario, Step, ROLE_NAMES};
 use desk_shell::Event;
-use desk_ui::Depth;
+use desk_ui::{Depth, Role};
 
 /// The first window's scenario, as `docs/FIRST-WINDOW.md` gives it.
 const EXAMPLE: &str = r#"desk-scenario 1
@@ -285,6 +285,32 @@ fn each_malformed_line_is_an_error_naming_its_line() {
         ("frame ok\nkey a down", K::BadKey("a".into())),
         ("frame ok\nkey A sideways", K::BadKeyState("sideways".into())),
         ("frame ok\npress forward", K::BadButton("forward".into())),
+        ("frame ok\nopen w 1 2 3 4 \"T\"\nfill w 1 2 3 4", K::MissingArgument("role")),
+        (
+            "frame ok\nopen w 1 2 3 4 \"T\"\nfill w 1 2 3 4 accent",
+            K::BadRole("accent".into()),
+        ),
+        (
+            "frame ok\nopen w 1 2 3 4 \"T\"\nfill w 1 2 3 Accent",
+            K::BadNumber("Accent".into()),
+        ),
+        (
+            "frame ok\nopen w 1 2 3 4 \"T\"\nfill w 1 2 -3 4 Accent",
+            K::BadNumber("-3".into()),
+        ),
+        (
+            "frame ok\nopen w 1 2 3 4 \"T\"\nfill w 1 2 3 4 Accent extra",
+            K::ExtraArgument("extra".into()),
+        ),
+        ("frame ok\nfill nowhere 1 2 3 4 Accent", K::UnknownWindow("nowhere".into())),
+        (
+            "frame ok\nopen w 1 2 3 4 \"T\"\ntext w 1 2 Bogus \"T\"",
+            K::BadRole("Bogus".into()),
+        ),
+        ("frame ok\nopen w 1 2 3 4 \"T\"\ntext w 1 2 Text T", K::ExpectedString("text")),
+        ("frame ok\nopen w 1 2 3 4 \"T\"\ntext w 1 2 \"T\"", K::ExpectedWord("role")),
+        ("frame ok\nopen w 1 2 3 4 \"T\"\ntext w 1 2 Text", K::MissingArgument("text")),
+        ("frame ok\ntext nowhere 1 2 Text \"T\"", K::UnknownWindow("nowhere".into())),
         ("frame ok\nclose nowhere", K::UnknownWindow("nowhere".into())),
         ("frame ok\nlabel nowhere 1 2 \"T\"", K::UnknownWindow("nowhere".into())),
         (
@@ -424,4 +450,35 @@ fn a_typed_step_produces_the_characters_it_was_given() {
 fn the_scenario_type_is_public_data() {
     let sc: Scenario = parse(&with("type \"Hi\"")).unwrap();
     assert_eq!(sc.steps, [Step::Type("Hi".into())]);
+}
+
+#[test]
+fn fill_and_text_steps_parse_with_the_role_names_of_role() {
+    let sc = parse(&with(
+        "open w 0 0 200 100 \"W\"\nfill w -10 -10 30 20 Accent\ntext w 8 8 TextSecondary \"Hi # there\"",
+    ))
+    .unwrap();
+    assert_eq!(
+        sc.steps[1..],
+        [
+            Step::Fill {
+                window: "w".into(),
+                rect: Rect::new(-10, -10, 30, 20),
+                role: Role::Accent,
+            },
+            Step::Text {
+                window: "w".into(),
+                x: 8,
+                y: 8,
+                role: Role::TextSecondary,
+                text: "Hi # there".into(),
+            },
+        ]
+    );
+    // Every role has one name, and it is the variant's own.
+    for (name, role) in ROLE_NAMES.iter().zip(Role::ALL) {
+        assert_eq!(role_of(name), Some(role));
+        assert_eq!(format!("{role:?}"), *name);
+    }
+    assert_eq!(role_of("text"), None);
 }
