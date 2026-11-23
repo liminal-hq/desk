@@ -582,7 +582,7 @@
    ],
    "what": "A format both tracks share, with symbol import, per-module state, panic containment, unload.",
    "why": "Apps loaded from disk; native milestone 6.",
-   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. M1 to M4 are merged (the format crate #77, the host ELF reader #78, the packer and hello module #85, and the native kernel loading HELLO.DMD from an embedded buffer in QEMU, #103); nothing is loaded from disk yet, and M5 (the same on DOS) and M6 are next. A visible-module spike (decided 2026-11-22) is in progress, with nothing merged; lessons from S1-DXE3.md."
+   "evidence": "docs/LOADER.md (the design: one container with a 96-byte header, .DMD modules and .DKX applications, relocated from a preferred base, with named import slots, on both tracks) and docs/LOADER-PLAN.md (the build plan, nine tasks); roadmap item R48, in progress. M1 to M4 are merged (the format crate #77, the host ELF reader #78, the packer and hello module #85, and the native kernel loading HELLO.DMD from an embedded buffer in QEMU, #103); nothing is loaded from disk yet, and M5 (the same on DOS) and M6 are next. A visible-module spike (decided 2026-11-22, tracked under R48) is merged: the shell side (#114: retained fills and text, the fill and text scenario steps) and the kernel side (#117: HELLOWIN.DMD, loaded through the real loader from an embedded buffer, draws a window in the native shell through three services; test modes 19 and 20). It is a stopgap and not the app interface (R79): nothing is loaded from disk, the module gets no input, and nothing promises an ABI. Headless QEMU screendumps at both depths match one digest; no person watched the module window during the build. Lessons from S1-DXE3.md."
   },
   {
    "id": "abi",
@@ -1580,9 +1580,9 @@
     "ru-sound",
     "ru-transcript"
    ],
-   "what": "R139: The promotion itself is done (R53, R148: dos/rt). Merged so far: T1 the clean-up list in order with 16 slots (#108), T2 memset and memcpy (#111), T3 copy_from (#112), T4 the Action return (#110), T5 BiosChain and Pacer (#107), T6 the opt-in fast timer (#113), and the R136 design note (#105). Still to do: T7 safe settings writes and the INT 24h guard, T8 probes, T9 the text screen, T10 InputLatch, the sound drivers (R135) and the documents. Nothing is copied from Fizz 2 (decision D1).",
+   "what": "R139: The promotion itself is done (R53, R148: dos/rt). Merged so far: T1 the clean-up list in order with 16 slots (#108), T2 memset and memcpy (#111), T3 copy_from (#112), T4 the Action return (#110), T5 BiosChain and Pacer (#107), T6 the opt-in fast timer (#113), T7 rename, the INT 24h guard and safe settings writes (#116), T10 InputLatch (#118, no user yet), and the R136 design note (#105). In review and not merged: T8 the platform probes (#119) and T9 the text screen (stacked on it). Still to do: the sound drivers (R135) and the documents. Nothing is copied from Fizz 2 (decision D1).",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R139 and docs/RUNTIME-PLAN.md (the order table marks each task); PRs #105, #107, #108, #110, #111, #112 and #113. Emulators only; nothing on real hardware."
+   "evidence": "docs/ROADMAP.md R139 and docs/RUNTIME-PLAN.md (the order table marks each task); PRs #105, #107, #108, #110, #111, #112, #113, #116 and #118 (merged; #119 is open). Emulators only; nothing on real hardware."
   },
   {
    "id": "ru-adopt",

@@ -5,7 +5,7 @@ part: V
 title: The core II: text, themes and window chrome
 summary: Reading .DFN faces, glyph lookup and measuring, colour roles and palettes, drawing text, the window chrome with its stepped halo, the control icons and the first two widgets.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d5f3328
 watches: [shell/font/, shell/ui/, fonts/generated/, docs/PALETTE.md, docs/HIG.md, tests/shell/]
 log: [firstwindow, faces]
 anatomy: [desk:ui, dos:ui]
@@ -68,7 +68,7 @@ A drawing routine in the core never names a palette number. It names a *role*, a
 | `Desktop` | The Void wallpaper | `#050507` | 97 | 0 |
 | `Chrome` | Title bars, control boxes | `#0c0c10` | 98 | 1 |
 | `Content` | Window content, the inside of a field | `#111116` | 99 | 2 |
-| `Raised` | Hovered control boxes (not used yet) | `#1b1e28` | 102 | 3 |
+| `Raised` | Hovered control boxes (not used yet by the chrome; a swatch of the module window's scenario) | `#1b1e28` | 102 | 3 |
 | `Line` | The rule under a title bar, the unfocused hairline | `#262a37` | 103 | 4 (`#333847`) |
 | `Border` | Field outlines | `#333847` | 104 | 4 |
 | `TextMuted` | Unfocused control icons | `#7c8796` | 5 | 5 |
@@ -77,7 +77,7 @@ A drawing routine in the core never names a palette number. It names a *role*, a
 | `Accent` | Halo ring 1, the caret | `#ffaa40` | 8 | 8 |
 | `Halo2` | Halo ring 2 | `#7d5422` | 9 | 9 |
 | `Halo3` | Halo ring 3 | `#372612` | 10 | 10 |
-| `Selection` | Not used yet | `#372612` | 10 | 10 |
+| `Selection` | Not used yet by the chrome (a swatch of the module window's scenario) | `#372612` | 10 | 10 |
 | `CursorOutline` | The arrow's outline | `#050507` | 240 | 0 |
 | `CursorFill` | The arrow's fill | `#e0e0e0` | 241 | 7 |
 
@@ -108,9 +108,9 @@ The three icons are `Icon`s: 10 rows of two bytes in the `.DFN` row form, writte
 
 ### The first widgets
 
-A widget lives in a window's content area; its position is relative to the content's top-left, and `paint` takes that corner as an `origin`. `Widget` is an enum of two: a `Label` (a position, a string and a colour role) and a `TextLine`, a one-line text field. A label paints its text. A field is `FIELD_HEIGHT` = 20 pixels high at its position and as wide as it was given: a `Border` outline, `Content` inside, the text in `Text` starting 6 pixels in with the cell 3 pixels down, and, while its window is focused, a 1 × 12 caret in `Accent` directly after the text, starting 4 pixels down. The caret does not blink, because blinking needs time and a frame in this core depends on nothing but the steps that led to it. The field paints its text with the clip set to the inside of the outline, so text can never run over the border.
+A widget lives in a window's content area; its position is relative to the content's top-left, and `paint` takes that corner as an `origin`. `Widget` is an enum of three: a `Label` (a position, a string and a colour role), a `TextLine`, a one-line text field, and a `Fill` (a rectangle in a colour role, added by the visible-module spike). A label paints its text; its position is added to the content's corner with saturating arithmetic, because a position an app supplies can be any `i32`, and the clip keeps whatever lands outside the window out. A fill paints its rectangle (relative to the content area, and allowed to reach past it) with the role's slot, and the window's clip cuts the overhang. Only the text field takes focus (`Widget::takes_focus`), which is what Tab moves between ([M15](chapter:m-shell)). A field is `FIELD_HEIGHT` = 20 pixels high at its position and as wide as it was given: a `Border` outline, `Content` inside, the text in `Text` starting 6 pixels in with the cell 3 pixels down, and, while it is the focused widget of the focused window, a 1 × 12 caret in `Accent` directly after the text, starting 4 pixels down. The caret does not blink, because blinking needs time and a frame in this core depends on nothing but the steps that led to it. The field paints its text with the clip set to the inside of the outline, so text can never run over the border.
 
-`key` is how a widget takes input. Only key presses count; chords with Control, Alt or the Windows key are ignored; Backspace removes the last character; any other key is turned into a character with `desk_kbd::char_for` ([M11](chapter:m-input)), and only printable ASCII is accepted. A character is also refused when the field is at `max_chars` or when the text and its caret would no longer fit inside the outline. The return value is the useful part: `Some(rect)` when the field changed, where the rectangle covers the old and new text and caret, relative to the content area, so the window manager can damage exactly that and nothing more. A label takes no keys.
+`key` is how a widget takes input. Only key presses count; chords with Control, Alt or the Windows key are ignored; Backspace removes the last character; any other key is turned into a character with `desk_kbd::char_for` ([M11](chapter:m-input)), and only printable ASCII is accepted. A character is also refused when the field is at `max_chars` or when the text and its caret would no longer fit inside the outline. The return value is the useful part: `Some(rect)` when the field changed, where the rectangle covers the old and new text and caret, relative to the content area, so the window manager can damage exactly that and nothing more. A label or a fill takes no keys.
 
 ## Why it is this way
 
@@ -120,7 +120,7 @@ A widget lives in a window's content area; its position is relative to the conte
 - **Fonts are embedded for the first window** (decision 10), because the native kernel has no filesystem yet. The DOS program loads the same files as a second path that must give the same digests.
 - **No kerning.** A line's width is the sum of advances, so measuring is trivial and exact and a golden is not at the mercy of a pairing table.
 - **Chrome is measured from the outer box, and the halo is outside it.** That makes the layout independent of focus and lets `extent` be a constant inflation. The measurements follow board 3a and the v4 prototype's "Stepped halo" in `design/`, which is reference only.
-- **The first window has two widgets.** A label and a one-line field are enough to exercise text drawing and keyboard focus; menus, tabs, a toolbar and the rest of `docs/HIG.md`'s anatomy are not built.
+- **The first window has two widgets, and a third came for modules.** A label and a one-line field are enough to exercise text drawing and keyboard focus, and the fill, a plain rectangle in a role, is what a loaded module's window needs to draw swatches without being handed a pixel; menus, tabs, a toolbar and the rest of `docs/HIG.md`'s anatomy are not built.
 
 > **From the stacks — One image set per size.** A bitmap font stores each glyph as an array of pixels, and the Wikipedia article says a bitmap typeface "requires a separate font design for each size". Its example is that a font with three sizes and any combination of bold and italic needs 12 complete sets of images. It also says the limited processing power and memory of early computer systems forced the exclusive use of bitmap fonts. The Desk accepts the same trade with four faces of three cell heights (8, 14 and 16 rows) and draws each by hand.
 > Source: [Bitmap fonts, Wikipedia](https://en.wikipedia.org/wiki/Bitmap_fonts)
@@ -135,7 +135,7 @@ A widget lives in a window's content area; its position is relative to the conte
 | [`shell/ui/src/text.rs`](repo:shell/ui/src/text.rs) | [`draw_text`](sym:shell/ui/src/text.rs::draw_text) and [`fit_with_ellipsis`](sym:shell/ui/src/text.rs::fit_with_ellipsis) |
 | [`shell/ui/src/chrome.rs`](repo:shell/ui/src/chrome.rs) | [`ChromeLayout`](sym:shell/ui/src/chrome.rs::ChromeLayout), [`paint_chrome`](sym:shell/ui/src/chrome.rs::paint_chrome), [`HALO`](sym:shell/ui/src/chrome.rs::HALO), [`TITLE_HEIGHT`](sym:shell/ui/src/chrome.rs::TITLE_HEIGHT) and [`BOX`](sym:shell/ui/src/chrome.rs::BOX) |
 | [`shell/ui/src/icons.rs`](repo:shell/ui/src/icons.rs) | [`Icon`](sym:shell/ui/src/icons.rs::Icon) and the three icons [`MINIMISE`](sym:shell/ui/src/icons.rs::MINIMISE), [`MAXIMISE`](sym:shell/ui/src/icons.rs::MAXIMISE) and [`CLOSE`](sym:shell/ui/src/icons.rs::CLOSE) |
-| [`shell/ui/src/widget.rs`](repo:shell/ui/src/widget.rs) | [`Widget`](sym:shell/ui/src/widget.rs::Widget), [`Label`](sym:shell/ui/src/widget.rs::Label), [`TextLine`](sym:shell/ui/src/widget.rs::TextLine) and the field's measurements |
+| [`shell/ui/src/widget.rs`](repo:shell/ui/src/widget.rs) | [`Widget`](sym:shell/ui/src/widget.rs::Widget), [`Label`](sym:shell/ui/src/widget.rs::Label), [`TextLine`](sym:shell/ui/src/widget.rs::TextLine), [`Fill`](sym:shell/ui/src/widget.rs::Fill) and the field's measurements |
 | [`fonts/generated/ui.dfn`](repo:fonts/generated/ui.dfn) | The Desk UI face the first window draws its body text in; [`title.dfn`](repo:fonts/generated/title.dfn) is the title face |
 | [`docs/PALETTE.md`](repo:docs/PALETTE.md) | The slot table and the 16-colour set that a test compares with the code |
 
@@ -195,7 +195,7 @@ The title `Notes` in Desk Title is 35 pixels wide (the sum of its five advances)
 
 ## State of this layer
 
-Verified here means that the record cites a test that runs in `cargo test` in `shell/`, which was run for this chapter on 2026-10-23 (161 tests, all passing), or a native transcript that the native test checks and that was also run. It means on the host and in QEMU, never on a real machine. The frames the window draws were looked at by the project's own review only for the four `typed` frames (see [the first window](chapter:firstwindow)); the rest rest on digests.
+Verified here means that the record cites a test that runs in `cargo test` in `shell/`, which was run for this chapter on 2026-11-23 (210 tests in the workspace, all passing; 161 on 2026-10-23), or a native transcript that the native test checks and that was also run. It means on the host and in QEMU, never on a real machine. The frames the window draws were looked at by the project's own review only for the four `typed` frames (see [the first window](chapter:firstwindow)); the rest rest on digests.
 
 ```status
 id: text.dfn
@@ -232,9 +232,9 @@ state: built-verified
 evidence: test:shell/ui/tests/ui.rs::the_control_icons_are_drawn_centred_in_each_box_in_the_icon_colour, sym:shell/ui/src/icons.rs::CLOSE
 
 id: text.widgets
-label: The label and the one-line text field with its caret
+label: The label, the filled rectangle and the one-line text field with its caret
 state: built-verified
-evidence: test:shell/ui/tests/ui.rs::the_returned_rectangle_covers_the_old_and_new_text_and_caret_and_stays_in_the_field, test:shell/ui/tests/ui.rs::a_field_paints_its_outline_inside_text_and_a_caret_only_when_focused, test:shell/ui/tests/ui.rs::chords_do_not_backspace_and_a_full_field_refuses_what_would_not_fit, sym:shell/ui/src/widget.rs::TextLine
+evidence: test:shell/ui/tests/ui.rs::the_returned_rectangle_covers_the_old_and_new_text_and_caret_and_stays_in_the_field, test:shell/ui/tests/ui.rs::a_field_paints_its_outline_inside_text_and_a_caret_only_when_focused, test:shell/ui/tests/ui.rs::chords_do_not_backspace_and_a_full_field_refuses_what_would_not_fit, sym:shell/ui/src/widget.rs::TextLine, test:shell/shell/tests/items.rs::an_overhanging_fill_and_text_stay_inside_the_content_area
 note: Keys reach the field from scripted events. Nothing here was driven by a person at a real keyboard on the native track.
 
 id: text.frames
@@ -253,7 +253,7 @@ id: text.widgets-more
 label: Menus, toolbars, tabs and the rest of the guidelines' anatomy
 state: planned
 evidence: doc:docs/HIG.md#anatomy
-note: Only a label and a text field exist.
+note: Only a label, a text field and a plain filled rectangle exist.
 
 id: text.ramps
 label: The hue ramps and a Horizon wallpaper in the palette
@@ -272,11 +272,11 @@ The reader and the drawing are {{state.text.dfn}} and {{state.text.draw}}, and t
 
 ## Try it yourself
 
-These commands look at the `.DFN` headers this chapter reads by eye and run the tests of the two crates. They need `xxd` and a Rust toolchain on the host. Output is from a run on 2026-10-23 at `44f0265`.
+These commands look at the `.DFN` headers this chapter reads by eye and run the tests of the two crates. They need `xxd` and a Rust toolchain on the host. Output is from a run on 2026-11-23 at `d5f3328`.
 
 ```try
 needs: host: xxd, cargo
-ran: 2026-10-23 on the host, cargo 1.98.0
+ran: 2026-11-23 on the host, cargo 1.98.0
 $ xxd -l 8 fonts/generated/ui.dfn
 00000000: 4446 4e31 0e0b 2101                      DFN1..!.
 $ xxd -l 8 fonts/generated/fixed.dfn
@@ -291,10 +291,10 @@ test a_long_title_ends_in_an_ellipsis_before_the_control_boxes ... ok
 test the_focused_halo_has_three_rings_and_nothing_at_four ... ok
 test the_unfocused_window_has_a_hairline_and_nothing_further_out ... ok
 $ cd shell && cargo test 2>&1 | grep -c "^test .* ok$"
-161
+210
 ```
 
-The first two commands show the header: `DFN1`, height 14 (`0e`), baseline 11 (`0b`) and the count `21 01` (289) for Desk UI, and height 16 (`10`), baseline 13 (`0d`) and `4c 01` (332) for Desk Fixed. The last command is the whole shared core's test count, the same 161 that [M13](chapter:m-pixels) counts.
+The first two commands show the header: `DFN1`, height 14 (`0e`), baseline 11 (`0b`) and the count `21 01` (289) for Desk UI, and height 16 (`10`), baseline 13 (`0d`) and `4c 01` (332) for Desk Fixed. The last command is the whole shared core's test count, the same count [M13](chapter:m-pixels) gives (161 when this chapter was written).
 
 **Exercises.** (1) Without running anything, read the header `44 46 4E 31 08 07 21 01` and say the face's height, baseline and glyph count, then find which file it is above. (2) The close box of a window whose outer box is (100, 40, 200 × 120): predict its rectangle, then check against `the_layout_follows_the_chrome_table` in `shell/ui/tests/ui.rs`. (3) Predict what `xxd -s 1328 -l 20 fonts/generated/ui.dfn` prints for the letter `d` and compare it with the worked example.
 
@@ -341,3 +341,4 @@ thumb: svg
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The `.DFN` headers were read from the files, the host tests (161) and the native `shell` mode at both depths in QEMU were run for this chapter, and every number in the worked example is checked against the font files and the layout code by the chapter's test. Disagreements found: `docs/FIRST-WINDOW.md` ("The pixel model") describes `docs/PALETTE.md` as rounding to a multiple of four, while `docs/PALETTE.md` now says the nearest DAC value and the code uses it; `docs/HIG.md` ("Colour roles") describes fields as sunken `#050507`, where the first window's text field is a `Border` outline round a `Content` fill (`#111116`), so the field follows the first window's design, not the guidelines.
+- 2026-11-23: re-read in full against `shell/ui/src/` (`widget.rs`, `theme.rs`, `chrome.rs`), `shell/font/src/lib.rs`, the four `.dfn` files and `docs/FIRST-WINDOW.md` at `d5f3328`, and `reviewed` moves to it. Corrected: the widget section (a third widget, `Fill`, the saturating label position, the caret's rule, `takes_focus`), two role notes, the widget record and the code table. The `.DFN` headers, the glyph at offset 1,328, the chrome arithmetic and the palette tables were checked and needed no change; the try block was rerun on the host (210 tests in the workspace, 161 before). Not rerun: the native `shell` mode's frames at both depths, which this chapter's `text.frames` record rests on (see M5's and M15's revisions of this date for what the native check was run for).

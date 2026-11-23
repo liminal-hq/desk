@@ -5,14 +5,14 @@ part: IV
 title: The HAL
 summary: The contract crate desk-hal read from the code: port I/O and where the unsafe sits, memory-mapped regions, interrupts and the ring, time, video and input types, errors, no_std and features, the alternatives rejected, the mock platform, and the migration steps done and not done.
 date: 2026-10-23
-reviewed: d7775ed
+reviewed: d5f3328
 watches: [hal/hal/, hal/platform/mock/, hal/README.md, hal/clippy.toml, docs/HAL.md, kernel/src/hal.rs, dos/rt/src/hal.rs, dos/rt/src/irq.rs]
 log: [hal]
 anatomy: [desk:hal, dos:rthal]
 ---
 ## What it is
 
-The [HAL](term:hal) (hardware abstraction layer) is the one small crate, `desk-hal`, that every driver is written against and every [platform](term:platform) implements. Nothing in it touches a chip. It holds traits (`PortIo`, `InterruptController`, `IrqRegistry`, `Clock`, `Delay`, `Display`, `InputSource`, `Bios`, `DebugOut`), a few plain types (`Irq`, `Ticks`, `Rgb6`, `KeyEvent`, `MouseEvent`, `HalError`), and three small tools that make interrupt-safe code possible without locks: a bounds-checked view of device memory (`MmioRegion`), a lock-free queue (`SpscRing`) and a counter (`TickCounter`). The rule it exists to enforce is the one the [log chapter](chapter:hal) states: a line of device logic exists once, in a driver, and a platform contains only what genuinely differs.
+The [HAL](term:hal) (hardware abstraction layer) is the one small crate, `desk-hal`, that every driver is written against and every [platform](term:platform) implements. Nothing in it touches a chip. It holds traits (`PortIo`, `InterruptController`, `IrqRegistry`, `Clock`, `Delay`, `Display`, `InputSource`, `Bios`, `DebugOut`), a few plain types (`Irq`, `Ticks`, `Rgb6`, `KeyEvent`, `MouseEvent`, `HalError`), and small tools that make interrupt-safe code possible without locks: a bounds-checked view of device memory (`MmioRegion`), a lock-free queue (`SpscRing`), a counter (`TickCounter`) and, since R139 T10, a press-edge latch over a 32-bit mask (`InputLatch`). The rule it exists to enforce is the one the [log chapter](chapter:hal) states: a line of device logic exists once, in a driver, and a platform contains only what genuinely differs.
 
 On the map of the system ([M1](chapter:m-map)) it is the `hal` box of the native track's anatomy page and, on the hosted track, the DOS platform's side of it, the `rthal` box (`DosBios` and `DosDisplay`). The rest of the layer is taught elsewhere: the drivers that use the traits are in [M10](chapter:m-sysdrivers) (serial port, interrupt controllers, timer), [M11](chapter:m-input) (keyboard and mouse) and [M12](chapter:m-graphics) (VGA and VBE); the hardware they drive is in [M3](chapter:m-devices); the native kernel's half of the interrupt contract is in [M6](chapter:m-interrupts) and its BIOS half in [M8](chapter:m-bioscalls). This chapter is the contract between them.
 
@@ -75,6 +75,8 @@ The video types are plain data. `Rgb6` is a [DAC](term:dac) colour, six bits a c
 
 The input types are `Scancode` (a `u8`), `Modifiers` (a bit set of shift, control, alt, GUI and the three locks), `KeyCode` (a Desk enum that does not depend on a [scancode](term:scancode) set), `KeyEvent { code, pressed, modifiers }` and `MouseEvent { dx, dy, buttons, wheel }` where positive `dy` is down the screen. The `InputSource` trait the core drains is `poll_key`, `poll_mouse` and a provided `has_mouse` that is true unless a hosted platform finds no mouse driver.
 
+[`InputLatch`](sym:hal/hal/src/input.rs::InputLatch) (R139 T10, #118; decision D6 of `docs/RUNTIME-PLAN.md`) is for input that is a mask of bits (a key, a button or a direction per bit) and is read once per tick, such as a game's. The producer, an interrupt handler or an event callback, calls `set` when bits go down and `release` when they go up; the consumer calls `frame` once per tick and gets a `Frame` of the bits `held` now, those `pressed` since its last call and those `released` since. A tap shorter than one tick is the point: it shows in `pressed` and `released` with `held` clear. A `set` of a bit that is already down (the keyboard's auto-repeat) and a `release` of a bit that is up are not edges. It is three `AtomicU32`s and uses only `load`, `store` and `swap`, so it compiles to no compare-and-swap; the contract is one producer and one consumer on one core, and the consumer must never call `set` or `release` itself. `frame` takes `released` before `pressed` so that a release is never reported before its own press. Nothing uses it yet, and the single-threaded tests cannot exercise an interrupt arriving between the steps of `frame`, which the contract rests on reasoning for.
+
 `Bios` is the one trait that exists for firmware: `int` runs a real-mode software interrupt with a `BiosRegs` and an optional buffer of at most `BIOS_BUFFER_MAX` (512) bytes that the platform copies below 1 MiB and back, and `read_low` reads the first megabyte. Under DOS it is the DPMI call; the native kernel implements it with the real-mode trampoline of [M8](chapter:m-bioscalls) (`impl Bios for NativeBios` in `kernel/src/bios.rs`).
 
 Every fallible operation returns [`HalError`](sym:hal/hal/src/error.rs::HalError), a `Copy` enum of seven cases: `Unsupported`, `NoDevice`, `Timeout`, `InvalidArgument`, `Busy`, `OutOfMemory` and `Platform(u16)` for a passed-through DPMI code. It has `Display`, and `std::error::Error` only on a host build. Device classes that need more would add their own error type; none has yet.
@@ -131,7 +133,7 @@ The pieces the document marks as sketch and the code lacks are the physical-memo
 | [`hal/hal/src/ring.rs`](repo:hal/hal/src/ring.rs) | [`SpscRing`](sym:hal/hal/src/ring.rs::SpscRing), its `Producer` and `Consumer`, and the three ring tests |
 | [`hal/hal/src/time.rs`](repo:hal/hal/src/time.rs) | [`Ticks`](sym:hal/hal/src/time.rs::Ticks), [`Clock`](sym:hal/hal/src/time.rs::Clock), [`Delay`](sym:hal/hal/src/time.rs::Delay), [`TickCounter`](sym:hal/hal/src/time.rs::TickCounter), [`Pacer`](sym:hal/hal/src/time.rs::Pacer) |
 | [`hal/hal/src/video.rs`](repo:hal/hal/src/video.rs) | [`Rgb6`](sym:hal/hal/src/video.rs::Rgb6), [`PixelLayout`](sym:hal/hal/src/video.rs::PixelLayout), [`ModeInfo`](sym:hal/hal/src/video.rs::ModeInfo), [`FrameBuffer`](sym:hal/hal/src/video.rs::FrameBuffer), [`Display`](sym:hal/hal/src/video.rs::Display) |
-| [`hal/hal/src/input.rs`](repo:hal/hal/src/input.rs) | [`Modifiers`](sym:hal/hal/src/input.rs::Modifiers), [`KeyCode`](sym:hal/hal/src/input.rs::KeyCode), [`KeyEvent`](sym:hal/hal/src/input.rs::KeyEvent), [`MouseEvent`](sym:hal/hal/src/input.rs::MouseEvent), [`InputSource`](sym:hal/hal/src/input.rs::InputSource) |
+| [`hal/hal/src/input.rs`](repo:hal/hal/src/input.rs) | [`Modifiers`](sym:hal/hal/src/input.rs::Modifiers), [`KeyCode`](sym:hal/hal/src/input.rs::KeyCode), [`KeyEvent`](sym:hal/hal/src/input.rs::KeyEvent), [`MouseEvent`](sym:hal/hal/src/input.rs::MouseEvent), [`InputSource`](sym:hal/hal/src/input.rs::InputSource), [`InputLatch`](sym:hal/hal/src/input.rs::InputLatch) and [`Frame`](sym:hal/hal/src/input.rs::Frame) |
 | [`hal/hal/src/bios.rs`](repo:hal/hal/src/bios.rs) | [`Bios`](sym:hal/hal/src/bios.rs::Bios), [`BiosRegs`](sym:hal/hal/src/bios.rs::BiosRegs), `BIOS_BUFFER_MAX` |
 | [`hal/hal/src/error.rs`](repo:hal/hal/src/error.rs) | [`HalError`](sym:hal/hal/src/error.rs::HalError) |
 | [`hal/clippy.toml`](repo:hal/clippy.toml) | The ten banned atomic methods |
@@ -164,7 +166,7 @@ id: hal.contract
 label: The traits and types of desk-hal pass their host tests (ring, region, time, interrupts, video, input)
 state: built-verified
 evidence: test:hal/hal/src/ring.rs::a_producer_thread_and_a_consumer_thread_agree, test:hal/hal/src/mmio.rs::accesses_are_bounded_and_aligned, test:hal/hal/src/time.rs::intervals_survive_the_wrap, test:hal/hal/src/irq.rs::a_handler_reaches_its_context, sym:hal/hal/src/lib.rs::DebugOut
-note: Run on the host on 2026-11-23: 22 tests in desk-hal, and 210 in the whole hal/ workspace, in the run recorded below. The copy_from, Action, chains and Pacer tests are among them; the x86 string-instruction path of copy_from is not (the host is x86_64).
+note: Run on the host on 2026-11-23 at d5f3328: 34 tests in desk-hal, and 222 in the whole hal/ workspace, in the run recorded below. The copy_from, Action, chains, Pacer and InputLatch tests are among them; the x86 string-instruction path of copy_from is not (the host is x86_64).
 
 id: hal.rawports
 label: RawPorts executes in and out in ring 0 on the native kernel
@@ -252,9 +254,9 @@ The first command runs the whole workspace's host tests and keeps the summary li
 
 ```try
 needs: host: cargo, grep
-ran: 2026-11-23 on the host at d7775ed, Rust 1.98.0 stable; the commands, the clippy line and the two greps are those of 2026-10-23 and gave the same results apart from the test lists
+ran: 2026-11-23 on the host at d5f3328, Rust 1.98.0 stable; the commands, the clippy line and the two greps are those of 2026-10-23 and gave the same results apart from the test lists
 $ cd hal && cargo test 2>&1 | grep -E "^test result: ok. [1-9]"
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -269,7 +271,19 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cd hal && cargo test -p desk-hal 2>&1 | grep -E "^test "
+test input::tests::a_fresh_latch_and_empty_frames_report_nothing ... ok
+test input::tests::a_held_press_is_pressed_once_then_held ... ok
+test input::tests::a_bit_pressed_twice_is_one_edge ... ok
+test input::tests::a_key_repeat_in_a_later_frame_is_not_a_new_press ... ok
+test input::tests::a_latch_can_live_in_a_static ... ok
+test input::tests::a_release_in_a_frame_of_its_own_reports_only_the_release ... ok
+test input::tests::a_release_of_a_bit_that_is_not_down_is_not_an_edge ... ok
+test input::tests::a_tap_between_frames_is_pressed_and_released_with_nothing_held ... ok
+test input::tests::all_thirty_two_bits_work ... ok
+test input::tests::frame_clears_the_edges ... ok
+test input::tests::independent_bits_do_not_disturb_each_other ... ok
 test input::tests::modifier_sets_combine_and_subtract ... ok
+test input::tests::press_release_press_ends_held_with_pressed_set ... ok
 test irq::tests::a_handler_reaches_its_context ... ok
 test irq::tests::lines_above_fifteen_do_not_exist ... ok
 test irq::tests::chains_needs_a_previous_owner_and_a_reason ... ok
@@ -291,7 +305,7 @@ test video::tests::scaling_rounds_down_and_clamps ... ok
 test mmio::tests::fill_covers_unaligned_heads_and_tails_and_stays_inside ... ok
 test ring::tests::a_producer_thread_and_a_consumer_thread_agree ... ok
 test mmio::tests::copy_from_matches_a_byte_loop_and_stays_inside ... ok
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cd hal && cargo clippy --locked --all-targets -- -D warnings 2>&1 | tail -1
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.35s
@@ -306,7 +320,7 @@ kernel/src/console.rs:0
 kernel/src/serial.rs:0
 ```
 
-The test summary is 210 tests in all (179 on 2026-10-23); the document that first described the workspace counts 35. The last command shows a gap between that document and the kernel: `DebugOut` is implemented by the serial driver, and nothing uses it.
+The test summary is 222 tests in all (179 on 2026-10-23, 210 at d7775ed); the document that first described the workspace counts 35. The last command shows a gap between that document and the kernel: `DebugOut` is implemented by the serial driver, and nothing uses it.
 
 **Exercises.** (1) Without running it, predict what `SpscRing::<u8, 3>::new()` does, then try it in a scratch test and read the error. (2) Write a host test in a scratch branch that attaches a `Uart16550` model at `COM2` and checks that after `init(9_600)` its `divisor` is 12; then find the existing test that already does it (`the_divisor_follows_the_rate`). (3) Add a `compare_exchange` call to any file in `hal/hal/src/` and run `cargo clippy` in `hal/`; say which entry of `clippy.toml` fires. (4) In `MockIrq`, `raise` on a masked line returns false: predict what `register` then `mask` then `raise` returns, and check.
 
@@ -348,3 +362,4 @@ at: explainer m-crates
 - 2026-11-20: reviewed against R148 (in review). The migration table said `rt` was still `dos/rt` and not promoted, which the move made untrue; it now says where `rt` lives on the branch in review. The rule that `hal/` names nothing and `dos/` names only `hal/` is stated, with the pointer to the layering check. The paths in the status records were already rewritten by the move. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The migration table and the note on the record say that `rt` is at `dos/rt` on `main`, and the platforms bullet names the pull request that added the check. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
 - 2026-11-23: brought up to date after R139 T1 to T6 (#107 to #113). Corrected: the memory-mapped region paragraph (`copy_from`, `write_bytes` unchanged, `fill8`'s word path), the interrupt paragraph (a third constructor, the `Action` return and `chains`), the time paragraph (`Pacer`; `Delay` is implemented only by the mock), the migration table's step 2 (the fast timer is the first DOS user of `desk-pit`), the code table, and the test counts (22 in `desk-hal`, 210 in all). The try block's first two commands were rerun on the host and their outputs replaced; the clippy line and the two greps were rerun and gave the same results as before. The rest of the chapter (port I/O, the ring, video, input, the BIOS, errors, the mock) was re-read against `hal/hal/src` and `hal/platform/mock/src` and needed no change. `reviewed` moved to `d7775ed`.
+- 2026-11-23, at `d5f3328`: added `InputLatch` and `Frame` (R139 T10, #118) to the opening, the input section and the code table, and replaced the test counts and list (34 in `desk-hal`, 222 in all; the whole try block's first two commands and the clippy line were rerun on the host). Re-read against `hal/hal/src/input.rs` for this change; the rest of the chapter was already read in full at `d7775ed` and the only commits to `hal/` since are the two that add the latch, so `reviewed` moves to `d5f3328`.

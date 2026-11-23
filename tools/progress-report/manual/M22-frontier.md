@@ -12,7 +12,7 @@ anatomy: [desk:appmodel, desk:sdk, desk:winown, desk:syscalls, desk:loader, desk
 ---
 ## What it is
 
-The rest of this manual describes what exists. This chapter describes what does not, because a manual that stopped at the edge of the code would leave the most important sentence unsaid: **there is no operating system yet**. What exists is a kernel that boots and checks itself, a hosted program on DOS, a set of shared drivers, and the first piece of a shared core that draws two windows, text and a cursor on both tracks. It has no apps, no system calls, no loader, no processes, no storage and no sound. Everything in this chapter is a plan, and the chapter's job is to say which parts of each plan are written down, which are open, and what the built layers would have to provide before the plan could start.
+The rest of this manual describes what exists. This chapter describes what does not, because a manual that stopped at the edge of the code would leave the most important sentence unsaid: **there is no operating system yet**. What exists is a kernel that boots and checks itself, a hosted program on DOS, a set of shared drivers, and the first piece of a shared core that draws two windows, text and a cursor on both tracks. It has no apps, no system calls, no processes, no storage and no sound, and its loader is a first piece: a kernel that loads one test module from a buffer built into it, and nothing from disk. Everything in this chapter is a plan, and the chapter's job is to say which parts of each plan are written down, which are open, and what the built layers would have to provide before the plan could start.
 
 On the map ([M1](chapter:m-map)) these are the boxes drawn dashed: eight of them on [the anatomy page](chapter:anatomydesk), at the top, bottom and in the middle of the stack. Nothing in the state table below is built; every record is tagged `planned`, and each cites the document that plans it, so a reader can follow the claim to where it was made. The chapter adds four more records for things the documents sketch without a box of their own: paging, storage, sound and the V86 task that FreeDOS might need. It invents nothing: where a document leaves a decision open the chapter says it is open, and where the chapter explains what a thing would need it says what the built code offers, not what a design would choose.
 
@@ -28,13 +28,13 @@ A box is `planned` when no code implements it. A design document may describe it
 
 The documents sketch an app (the [app model](term:app-model) is the open question of what an app is and how it runs) as a module behind a C-compatible interface. `docs/SDK.md` is that interface: every function `extern "C"`, taking and returning only integers, pointers and lengths; handles are 32-bit with zero never valid; strings are UTF-8 with a length. An app exports three entry points, `app_start`, `app_event` and `app_stop`, and the core calls them. Its functions cover memory (`desk_alloc`, `desk_free`), logging, windows (`desk_window_new` and the rest), drawing, widgets, files, the clipboard, sound, settings, timers and more. [`HAL.md`](doc:docs/HAL.md#apps-and-modules) adds a rule that the SDK is the app's only door: an app never holds a port, never registers an interrupt handler and never sees a frame buffer; the core owns the screen and the palette, and the HAL is internal.
 
-What is built: on the hosted track, the DXE3 spike proved the route with five functions (`desk_log`, `desk_alloc`, `desk_free`, a stub `desk_window_new` and `desk_panic`), a three-function lifecycle, two modules side by side and 200 load and unload cycles with memory unchanged. Every other function in the document is design. On the native track there is nothing: no module format, no table of exported functions, no call from the kernel into code it did not link. The box is tagged as an open design question in the anatomy data, and what an app *is* (a module in one shared address space, or a process) depends on the open decisions below.
+What is built: on the hosted track, the DXE3 spike proved the route with five functions (`desk_log`, `desk_alloc`, `desk_free`, a stub `desk_window_new` and `desk_panic`), a three-function lifecycle, two modules side by side and 200 load and unload cycles with memory unchanged. Every other function in the document is design. On the native track the first pieces exist since the loader spike of R48 (`docs/LOADER.md`): a module format (`.DMD`, one container with a 96-byte header), a strict packer, and a kernel that loads `HELLO.DMD` from a buffer built into it, binds its imports by name against a table of exported functions (`desk_log` and `desk_panic`), calls its entry points and unloads it, in QEMU as a 486 (#77, #78, #85 and #103). A second test module, `HELLOWIN.DMD`, draws a window in the native shell through three services, `desk_window_new`, `desk_fill` and `desk_text`, while the kernel lends it the shell (#114 and #117). That is a stopgap: nothing is loaded from disk, the module gets no input or events, nothing checks its pointers, and nothing is promised about the interface, which stays R79. Every other function in the SDK document is design. The box is tagged as an open design question in the anatomy data, and what an app *is* (a module in one shared address space, or a process) depends on the open decisions below.
 
-To start, an app model would need from the layers below: memory from the heap ([M7](chapter:m-memory)), the event contract the two tracks share ([M11](chapter:m-input)), drawing through the core ([M13](chapter:m-pixels), [M14](chapter:m-text)), windows ([M15](chapter:m-shell)) and a loader. Of these, only the last is missing outright.
+To start, an app model would need from the layers below: memory from the heap ([M7](chapter:m-memory)), the event contract the two tracks share ([M11](chapter:m-input)), drawing through the core ([M13](chapter:m-pixels), [M14](chapter:m-text)), windows ([M15](chapter:m-shell)) and a loader. Of these, only the last is mostly missing: a loader exists for test modules (see below), and what is absent is an app interface, apps from disk and a place to run them.
 
 ### Windows owned by apps
 
-In the first window the scenario, which the shell runs, opens both windows: no app opens one. The window manager ([M15](chapter:m-shell)) keeps windows, a z-order and a focus, and decides the damage each change makes, but a window has no owner that would receive its events, close it when it crashes or count its memory. In the SDK's sketch the core unloads a crashed app, closes its windows and shows a notice; that needs the owner relation, which nothing records yet.
+In the first window the scenario, which the shell runs, opens both windows. Since the visible-module spike one test module does open a window, through a stopgap service (`kernel/src/modwin.rs`): the kernel keeps four slots per module instance, names each window after the instance, and closes what the instance still holds when it unloads. That is the owner relation in its smallest form, in the kernel and not in the shell, and the module gets no events. The window manager ([M15](chapter:m-shell)) keeps windows, a z-order and a focus, and decides the damage each change makes, but a window has no owner that would receive its events, close it when it crashes or count its memory. In the SDK's sketch the core unloads a crashed app, closes its windows and shows a notice; that needs the owner relation, which nothing records yet.
 
 ### System calls and a boundary
 
@@ -47,7 +47,7 @@ The last sentence of that note is the point: whether there is a boundary at all 
 
 ### A loader and an executable format
 
-A loader reads a file in some [executable format](term:executable-format) and puts the program in memory. The hosted track proved loading a Rust module with DJGPP's DXE3 format; its limits are in the spike's result: link-time optimisation is mandatory, a stack overflow in a module cannot be recovered, a page fault could not be tested under DOSBox and one file is one instance ([`S1-DXE3.md`](doc:docs/S1-DXE3.md#verdict-and-recommendation)). A native loader would need a format that it can load without DJGPP's runtime, and `docs/DIRECTION.md` and the anatomy data list that as an open question, planned after live input. The repository has two packers that show the shape of the problem without solving it: `dos/tools/elf2go32.py` makes a DOS executable out of a Rust ELF, and `tools/elf2bin.py` flattens the kernel's ELF into the image ([M17](chapter:m-rt), [M19](chapter:m-toolchain)). Neither is a loader, and neither loads anything at run time.
+A loader reads a file in some [executable format](term:executable-format) and puts the program in memory. The hosted track proved loading a Rust module with DJGPP's DXE3 format; its limits are in the spike's result: link-time optimisation is mandatory, a stack overflow in a module cannot be recovered, a page fault could not be tested under DOSBox and one file is one instance ([`S1-DXE3.md`](doc:docs/S1-DXE3.md#verdict-and-recommendation)). The native track has its own format and loader without DJGPP's runtime (`docs/LOADER.md`, R48): `HELLO.DMD` and `HELLOWIN.DMD` are loaded from buffers built into the kernel, relocated, bound to named services and unloaded, with a flipped bit and an application file refused. What is not built is the rest of the plan: loading from a disk, `.DKX` applications, several modules and a missing import under test (M6 to M9 of `docs/LOADER-PLAN.md`), the same loader on DOS (M5) and isolation. The repository has two packers that show the shape of the problem without solving it: `dos/tools/elf2go32.py` makes a DOS executable out of a Rust ELF, and `tools/elf2bin.py` flattens the kernel's ELF into the image ([M17](chapter:m-rt), [M19](chapter:m-toolchain)). Neither is a loader; the loader is `kernel/src/module.rs` over the `desk-module` crate.
 
 ### Tasks, scheduling, protection and paging
 
@@ -75,7 +75,7 @@ These come from `docs/DIRECTION.md` ("Open questions"), where each is stated wit
 |---|---|---|
 | Scheduling | Cooperative in one address space; preemptive processes | A single flow of control; the timer tick is built |
 | Memory protection | Flat and shared; per-app address spaces on the 486's MMU | No paging; flat segments |
-| App isolation | Trusted module; sandboxed process | Nothing |
+| App isolation | Trusted module; sandboxed process | Nothing: the test modules are trusted and their pointers are not checked |
 | Filesystem | FAT12 and FAT16; perhaps a system volume of our own | None |
 | Boot media | Floppy; IDE disk image; both; our loader or an existing one | A floppy loader of our own |
 | Early disk access | BIOS calls in the loader; own drivers in the kernel | BIOS calls in the loader and, from the kernel, through a trampoline |
@@ -137,7 +137,7 @@ id: frontier.winown
 label: Windows owned by apps
 state: planned
 evidence: repo:docs/FIRST-WINDOW.md
-note: The scenario, run by the shell, opens both windows today. No app owns a window.
+note: The scenario, run by the shell, opens both windows today; one test module opens a window through a stopgap (#117). No app owns a window.
 
 id: frontier.syscalls
 label: System calls
@@ -149,7 +149,7 @@ id: frontier.loader
 label: An executable format and a loader
 state: planned
 evidence: repo:docs/DIRECTION.md, repo:docs/S1-DXE3.md
-note: DXE3 was proved on the hosted track only. A native loader needs a format it can load without DJGPP's runtime; planned after live input.
+note: DXE3 was proved on the hosted track. The native track loads test modules from a buffer in the kernel (R48 M1 to M4 and the visible-module spike); nothing is loaded from disk and there are no applications, so the box stays planned.
 
 id: frontier.process
 label: Tasks, scheduling and memory protection
@@ -241,3 +241,4 @@ at: figure anatomy-desk
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. Every planned box of `anatomy-desk.json` has a record in the status block with the box's evidence, and a test keeps the two in step. The `try` commands were run on the host. No disagreement was found between the documents and the code for this layer.
+- 2026-11-23: prose corrected against `d5f3328` where the loader work had made it untrue (the opening, "Apps and the SDK", "Windows owned by apps", "A loader and an executable format", one cell of the table and the notes of two records, and the matching boxes in `anatomy-desk.json`). The chapter was **not** re-read in full against `kernel/src/main.rs`, `gdt.rs` and `idt.rs` beyond the statements it makes about them, so `reviewed` stays `44f0265`. The records stay `planned`: there is no app model, no interface and nothing from disk.
