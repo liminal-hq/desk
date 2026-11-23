@@ -40,6 +40,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-opl"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-hal-mock",
+]
+
+[[package]]
 name = "desk-pic"
 version = "0.0.0"
 dependencies = [

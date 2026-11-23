@@ -1135,7 +1135,7 @@ class MapAndProcessorChaptersTests(unittest.TestCase):
     def test_m1_counts_of_workspace_members_are_the_manifests(self):
         hal = rd(os.path.join(gather.ROOT, "hal", "Cargo.toml"))
         shell = rd(os.path.join(gather.ROOT, "shell", "Cargo.toml"))
-        self.assertEqual(len(re.findall(r'"[^"]+"', re.search(r"members = \[(.*?)\]", hal).group(1))), 9)
+        self.assertEqual(len(re.findall(r'"[^"]+"', re.search(r"members = \[(.*?)\]", hal).group(1))), 10)
         self.assertEqual(len(re.findall(r'"[^"]+"', re.search(r"members = \[(.*?)\]", shell).group(1))), 6)
 
     def test_m2_defines_the_terms_it_promises(self):
