@@ -62,7 +62,19 @@ pub fn main() -> i32 {
     wipe();
 
     // The temporary names.
-    for n in ["STATE.INI", "STATE", "A:\\CFG.D\\STATE.INI", "STATE.NEW", "desk.new", "A.B.C"] {
+    for n in [
+        "STATE.INI",
+        "STATE",
+        "A:\\CFG.D\\STATE.INI",
+        "STATE.NEW",
+        "desk.new",
+        "A.B.C",
+        "",
+        "DIR\\",
+        ".INI",
+        "FILE.NEWX",
+        "LONGSTEM9.INI",
+    ] {
         match settings::temp_name(n) {
             Some(t) => println!("files: temp_name {} -> {}", n, t),
             None => println!("files: temp_name {} -> refused", n),
@@ -70,7 +82,7 @@ pub fn main() -> i32 {
     }
     println!(
         "files: save_replacing of a .NEW name refused: {}",
-        settings::save_replacing("X.NEW", b"x") == Err(DosError(settings::ERR_TEMP_IS_NAME))
+        settings::save_replacing("X.NEW", b"x") == Err(DosError(settings::ERR_BAD_NAME))
     );
 
     // Save, read back, replace.

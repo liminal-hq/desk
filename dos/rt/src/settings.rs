@@ -5,9 +5,10 @@
 //
 // `save_replacing(name, bytes)` writes the new bytes to a temporary file beside `name`, reads it back and compares, deletes the old
 // file and renames the temporary one into place. The temporary name is the 8.3 stem of `name` with `.NEW`: `STATE.INI` becomes
-// `STATE.NEW`, `STATE` becomes `STATE.NEW`, `A:\CFG\STATE.INI` becomes `A:\CFG\STATE.NEW`. A `name` that already ends in `.NEW` would be its
-// own temporary file, so it is refused (`ERR_TEMP_IS_NAME`) before anything is touched. Names should be 8.3: DOS truncates a longer
-// one on its own, and two names that truncate alike would share a temporary file.
+// `STATE.NEW`, `STATE` becomes `STATE.NEW`, `A:\CFG\STATE.INI` becomes `A:\CFG\STATE.NEW`. A `name` that is not a clean 8.3 file name (empty, ending in a
+// separator, no stem, a stem over 8 characters, an extension over 3, more than one dot) or that already has the extension `.NEW`
+// is refused (`ERR_BAD_NAME`) before anything is touched: DOS truncates a longer part on its own, so two long names could share a
+// temporary file, and a `.NEW` name would be its own.
 //
 // The crash windows, in order:
 //
@@ -15,6 +16,10 @@
 //    overwritten by the next save. `read_recovering` ignores a `.NEW` while `name` exists.
 // 2. after the delete and before the rename: only `.NEW` exists, and it is whole, because the delete happens only after the
 //    read-back matched. `read_recovering` completes the rename and returns it.
+//
+//    The exception is the very first save, when `name` does not exist yet: a crash while `.NEW` is being written then leaves a
+//    partly written `.NEW` and no `name`, and `read_recovering` cannot tell that from a whole one (it has no checksum to look at).
+//    A program for which that matters keeps a length or a checksum in its settings format and checks it on reading.
 // 3. after the rename: the new file is in place.
 //
 // Between the delete and the rename there is a moment at which `name` does not exist; a program other than this one that looks at
@@ -26,28 +31,32 @@ use crate::dos::{self, DosError, File, Mode};
 use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Not a DOS code: `name` ends in `.NEW`, so its temporary file would be itself.
-pub const ERR_TEMP_IS_NAME: u16 = 0x8002;
+/// Not a DOS code: `name` is not a name `save_replacing` can use. It is empty, ends in a separator, has no stem, is not 8.3 (a stem
+/// over 8 characters, an extension over 3, or more than one dot), or has the extension `.NEW`, which would make it its own
+/// temporary file.
+pub const ERR_BAD_NAME: u16 = 0x8002;
 /// Not a DOS code: the file read back from the disk is not the bytes written.
 pub const ERR_MISMATCH: u16 = 0x8003;
 
 const NOT_FOUND: u16 = 2;
 
-/// The temporary name for `name`: the stem (everything before the last `.` of the last path component) with `.NEW`. `None` if
-/// that is `name` itself, compared without regard to case.
+/// The temporary name for `name`: its directory part and stem with `.NEW`. `None` if `name` is not a clean 8.3 file name (see
+/// `ERR_BAD_NAME`): DOS truncates a longer part on its own, so two long names could share one temporary file, and a name that is
+/// already `.NEW` would be its own.
 pub fn temp_name(name: &str) -> Option<String> {
     let component = name.rfind(['\\', '/', ':']).map_or(0, |i| i + 1);
-    let stem_end = match name[component..].rfind('.') {
-        Some(0) | None => name.len(),
-        Some(i) => component + i,
+    let file = &name[component..];
+    let (stem, ext) = match file.split_once('.') {
+        Some((stem, ext)) => (stem, Some(ext)),
+        None => (file, None),
     };
-    let mut tmp = String::from(&name[..stem_end]);
-    tmp.push_str(".NEW");
-    if tmp.eq_ignore_ascii_case(name) {
-        None
-    } else {
-        Some(tmp)
+    if stem.is_empty() || stem.len() > 8 || ext.is_some_and(|e| e.len() > 3 || e.contains('.') || e.eq_ignore_ascii_case("NEW")) {
+        return None;
     }
+    let mut tmp = String::from(&name[..component]);
+    tmp.push_str(stem);
+    tmp.push_str(".NEW");
+    Some(tmp)
 }
 
 /// Whether what was read back is what was written: the same length and the same bytes.
@@ -66,7 +75,7 @@ fn read_all(name: &str) -> Result<Vec<u8>, DosError> {
 
 /// Replaces `name` with `bytes`, as the module comment describes. On any error before the delete `name` is as it was.
 pub fn save_replacing(name: &str, bytes: &[u8]) -> Result<(), DosError> {
-    let tmp = temp_name(name).ok_or(DosError(ERR_TEMP_IS_NAME))?;
+    let tmp = temp_name(name).ok_or(DosError(ERR_BAD_NAME))?;
     let _guard = FailCritical::new()?;
     let checked = write_new(&tmp, bytes).and_then(|()| {
         if matches(bytes, &read_all(&tmp)?) {
