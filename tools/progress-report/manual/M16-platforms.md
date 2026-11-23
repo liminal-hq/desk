@@ -5,7 +5,7 @@ part: VI
 title: Two platforms, one core
 summary: What a platform is, side by side: the native kernel's shell test mode and the DOS program SHELL.EXE compared line for line, who owns the loop, how a display and input are opened, how damage reaches the screen, how a run ends, and why there is no Platform trait yet.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d7775ed
 watches: [kernel/src/shell.rs, kernel/src/hal.rs, shell/dos/src/main.rs, docs/FIRST-WINDOW.md, docs/HAL.md, tools/shell-compare.sh, tools/shell-goldens.sh]
 log: [firstwindow, oneevent]
 anatomy: [desk:native, desk:dos, desk:seam, dos:main]
@@ -16,7 +16,7 @@ The shared core ([M13](chapter:m-pixels) to [M15](chapter:m-shell)) draws pictur
 
 This chapter reads the two programs against each other. The boxes are `native` and `dos` on the [Desk anatomy page](chapter:anatomydesk#box-desk-native) and `main` on the [DOS anatomy page](chapter:anatomydos#box-dos-main), with the `seam` between them and the core ([M15](chapter:m-shell)). After it you should be able to say, for any step of a run, which of the two programs does it and with what; find the one place a platform has to change if you add a third; and explain why the repository has a sketch of a `Platform` trait in a design document and no such trait in any source file.
 
-The honest limits come first. Both runs are in emulators. Nothing here ran on a real VGA card or a real 486. The input is scripted: neither run moved a real mouse, and the native run has no free-running loop at all. The two tracks' equality is a claim about six-bit colours in an emulated card's memory and in QEMU's rendering of it. [M21](chapter:m-evidence) says what such a claim is worth.
+The honest limits come first. Both runs are in emulators. Nothing here ran on a real VGA card or a real 486. The scenario runs are scripted, and the live runs (added by the live-input work, `docs/LIVE-INPUT.md`) are fed by an emulator's keyboard and mouse injection, not by a person at a machine: neither run moved a real mouse or typed on a real keyboard. The two tracks' equality is a claim about six-bit colours in an emulated card's memory and in QEMU's rendering of it. [M21](chapter:m-evidence) says what such a claim is worth.
 
 ## How it works
 
@@ -37,7 +37,7 @@ The [HAL](term:hal) already covers the parts of this that touch devices: ports (
 
 The [seam](term:seam) is the narrow place where a platform meets the core. For the shell it is exactly this: the platform owns the [run loop](term:run-loop) and calls two methods, `Shell::handle` and `Shell::frame`; it may also use the scenario runner (`run`) or just the step function (`apply`) when a scenario drives it. The core calls nothing back. `docs/FIRST-WINDOW.md` ("Where it sits") says why it is that narrow: the first window needs a display and input, both platforms already have those, and folding the two calls into a general type is a later step.
 
-The anatomy pages draw it as the box `seam` ("The platform owns the loop"), and the sentence is accurate in a sense the code makes concrete. In the kernel the loop is the shared runner's: `play` hands the whole scenario to `run_scenario` and the platform is called back for each frame. In the DOS program the loop is the platform's own: `scenario` is a `for` over the steps, and `interactive` is a `loop` that polls. So the shared runner and a platform-owned loop both exist, and the seam is satisfied by both because the core only ever sees `handle`, `frame` and `apply`.
+The anatomy pages draw it as the box `seam` ("The platform owns the loop"), and the sentence is accurate in a sense the code makes concrete. In the kernel's scenario run the loop is the shared runner's: `play` hands the whole scenario to `run_scenario` and the platform is called back for each frame. In the kernel's live mode (`shell-live`) it is the platform's own: `live_session` is a `loop` that drains the mouse and the keys, presents when the shell is dirty and a tick has passed, and halts until the next interrupt. In the DOS program the loop is the platform's own as well: `scenario` is a `for` over the steps, and `interactive` is a `loop` that polls. So the shared runner and a platform-owned loop both exist, and the seam is satisfied by both because the core only ever sees `handle`, `frame` and `apply` (and, for the live loops, the shared `live` module that routes a key to the shell, a mark or the end).
 
 <!-- figure anatomy-desk -->
 
@@ -49,7 +49,7 @@ Each row is one thing a platform does. The kernel column cites a symbol in `kern
 
 | What | Native kernel (`shell` test mode) | DOS (`SHELL.EXE`) |
 |---|---|---|
-| Entry | [`run`](sym:kernel/src/shell.rs::run), called by the kernel's `input_section` when the test-mode byte is 13 or 14, after the keyboard and mouse are set up | [`main`](sym:shell/dos/src/main.rs::main), the `rt::entry!` program; arguments `depth8 depth4 scenario dump fontfile corrupt timeout=N` |
+| Entry | [`run`](sym:kernel/src/shell.rs::run), called by the kernel's `input_section` when the test-mode byte is 13 or 14, after the keyboard and mouse are set up; the live mode `shell-live` enters at [`live`](sym:kernel/src/shell.rs::live) | [`main`](sym:shell/dos/src/main.rs::main), the `rt::entry!` program; arguments `depth8 depth4 scenario dump fontfile corrupt timeout=N` |
 | Scenario and faces | [`SCENARIO`](sym:kernel/src/shell.rs::SCENARIO), [`UI_FONT`](sym:kernel/src/shell.rs::UI_FONT) and `TITLE_FONT`: `include_str!` and `include_bytes!` of the repository's files | [`SCENARIO`](sym:shell/dos/src/main.rs::SCENARIO), [`UI_DFN`](sym:shell/dos/src/main.rs::UI_DFN) and `TITLE_DFN`: the same files, embedded; `fontfile` reads `UI.DFN` and `TITLE.DFN` instead through [`load`](sym:shell/dos/src/main.rs::load) |
 | Port bus | [`PORTS`](sym:kernel/src/hal.rs::PORTS), one `static` made by the one `unsafe` step in `hal.rs`, ring 0 | [`RawPorts`](sym:shell/dos/src/main.rs::RawPorts), made inside `interactive` with a `SAFETY` note: a DPMI client may use the controller's ports under CWSDPMI |
 | Interrupts | [`IRQS`](sym:kernel/src/hal.rs::IRQS), the table the IDT stubs dispatch through | [`DosIrq`](sym:shell/dos/src/main.rs::DosIrq), which hooks IRQ 1 through DPMI, and [`KBD_SERVICE`](sym:shell/dos/src/main.rs::KBD_SERVICE), the handler's state in the image |
@@ -58,14 +58,14 @@ Each row is one thing a platform does. The kernel column cites a symbol in `kern
 | Palette | [`set_palette`](sym:kernel/src/shell.rs::set_palette) of `desk_vga::dac`, over `PORTS`, with `desk_ui::palette(depth)` | [`set_palette`](sym:shell/dos/src/main.rs::set_palette) of `DosDisplay`, with the same `palette(depth)` |
 | Presenter | [`LinearPresent`](sym:kernel/src/shell.rs::LinearPresent) over `lfb_region`, or [`PlanarPresent`](sym:kernel/src/shell.rs::PlanarPresent) over `vga_window`, each a concrete type handed to the generic `play` | [`Screen`](sym:shell/dos/src/main.rs::Screen) holds the depth and frame buffer and makes the presenter for each use; [`Dyn`](sym:shell/dos/src/main.rs::Dyn) puts either behind one `Present` so a single closure serves both depths |
 | Who runs the steps | [`play`](sym:kernel/src/shell.rs::play) calls the shared [`run_scenario`](sym:kernel/src/shell.rs::run_scenario) with a closure the runner calls after each frame | [`scenario`](sym:shell/dos/src/main.rs::scenario) is the platform's own `for` over `sc.steps`, calling `apply` for each step and `Shell::frame` at each `Frame` step |
-| Input source | [`Ps2Input`](sym:kernel/src/shell.rs::Ps2Input), used only to wait for a key that acknowledges a screendump; the scenario's events are scripted | [`KEYS`](sym:shell/dos/src/main.rs::KEYS), a lock-free ring from the IRQ 1 handler, and `DosInput` for the INT 33h mouse, in the interactive mode only; the scenario is scripted as well |
-| A free-running loop | none: [`play`](sym:kernel/src/shell.rs::play) only plays the scenario and returns; the kernel has no interactive shell mode | [`interactive`](sym:shell/dos/src/main.rs::interactive): drain keys and mouse into `handle`, present a frame, repeat until Escape or the timeout |
-| Damage to the screen | the runner presents one frame per `frame` step; the closure [`play`](sym:kernel/src/shell.rs::play) hands the runner prints a `shell: damage` line from its `FrameStats` | `Shell::frame` through [`Screen`](sym:shell/dos/src/main.rs::Screen); the stats are not printed, and [`scenario`](sym:shell/dos/src/main.rs::scenario) does not look at them |
+| Input source | [`Ps2Input`](sym:kernel/src/shell.rs::Ps2Input): in the scenario run only to wait for a key that acknowledges a screendump (the scenario's events are scripted); in `shell-live` it is the keyboard and mouse, polled with `poll_key` and `poll_mouse` | [`KEYS`](sym:shell/dos/src/main.rs::KEYS), a lock-free ring from the IRQ 1 handler, and `DosInput` for the INT 33h mouse, in the interactive mode only; the scenario is scripted as well |
+| A free-running loop | none in the scenario run: [`play`](sym:kernel/src/shell.rs::play) only plays the scenario and returns. In `shell-live`, `live_session`: drain the mouse and the keys (`live::route` sends a key to the shell, asks for a mark, or ends on Escape), present when the shell is dirty and at least one PIT tick (10 ms) has passed, and `input::idle` until the next interrupt | [`interactive`](sym:shell/dos/src/main.rs::interactive): the set-up steps and mark 00, then drain keys and mouse into `handle` through the same `live::route`, present a frame when the shell is dirty, print a mark on F12, repeat until Escape or the timeout, and print the summary line |
+| Damage to the screen | the runner presents one frame per `frame` step; the closure [`play`](sym:kernel/src/shell.rs::play) hands the runner prints a `shell: damage` line from its `FrameStats` | `Shell::frame` through [`Screen`](sym:shell/dos/src/main.rs::Screen); the stats are not printed as a damage line, and [`scenario`](sym:shell/dos/src/main.rs::scenario) does not look at them (the live loop counts them into the summary) |
 | Damage bound | [`run_scenario`](sym:kernel/src/shell.rs::run_scenario) enforces `expect-damage` for the depth in use, so a frame that wrote too much panics the run | [`apply`](sym:shell/dos/src/main.rs::apply) ignores `ExpectDamage` and `Frame` steps; nothing on DOS checks the bound |
 | Evidence of the picture | [`rendezvous`](sym:kernel/src/gfx.rs::rendezvous), called from the closure in [`play`](sym:kernel/src/shell.rs::play), prints `shell: ready NAME` and waits for a key while the run script takes a QEMU screendump | [`write_capture`](sym:shell/dos/src/main.rs::write_capture) after reading the frame buffer and DAC back, with the digests printed on a `shell: readback` line |
 | Negative check | [`CORRUPT_AFTER`](sym:kernel/src/shell.rs::CORRUPT_AFTER) and [`CORRUPT_AT`](sym:kernel/src/shell.rs::CORRUPT_AT): after `moved`, one pixel of the *screen* (600, 440) is changed through a second presenter, so only the screendump is wrong | the `corrupt` argument of [`scenario`](sym:shell/dos/src/main.rs::scenario): after `moved`, one pixel at the corner is changed in the frame buffer and the read-back must report `DIFFERENT` |
-| Ending the run | [`run`](sym:kernel/src/shell.rs::run) prints `shell: done`, leaves VBE and restores text mode (`restore_text`), and returns into the kernel, which prints `boot complete` and exits through the debug-exit port | [`main`](sym:shell/dos/src/main.rs::main) returns the status itself: 0, 1 (a read-back differed or a step failed), 2 (no video mode), 4 (the interactive timeout), 5 (an unknown argument); 3 is the runtime's panic status |
-| Putting the machine back | [`restore_text`](sym:kernel/src/gfx.rs::restore_text), called at the end of [`run`](sym:kernel/src/shell.rs::run), reloads the registers, the palette and the 8 by 16 font | `display.restore_text_mode()` at the end of [`main`](sym:shell/dos/src/main.rs::main) (and on the error path of [`scenario`](sym:shell/dos/src/main.rs::scenario)); [`report`](sym:shell/dos/src/main.rs::report), registered first so that it runs last on the runtime's clean-up list, prints the mode DOS sees (`0x03`), after the keyboard flags and mouse have been restored by the functions [`interactive`](sym:shell/dos/src/main.rs::interactive) registers |
+| Ending the run | [`run`](sym:kernel/src/shell.rs::run) prints `shell: done`, leaves VBE and restores text mode (`restore_text`), and returns into the kernel, which prints `boot complete` and exits through the debug-exit port | [`main`](sym:shell/dos/src/main.rs::main) returns the status itself: 0, 1 (a read-back differed or a step failed), 2 (no video mode), 4 (the interactive timeout), 5 (an unknown argument); 3 is the runtime's panic status. Every `shell: ...` line is filed in a fixed 16,384-byte buffer (`desk_shell::transcript`) and printed by `flush_transcript` after the clean-up list has put the text mode back, because the DOS console would draw the text onto the frame buffer while graphics are on |
+| Putting the machine back | [`restore_text`](sym:kernel/src/gfx.rs::restore_text), called at the end of [`run`](sym:kernel/src/shell.rs::run), reloads the registers, the palette and the 8 by 16 font | `display.restore_text_mode()` at the end of [`main`](sym:shell/dos/src/main.rs::main) (and on the error path of [`scenario`](sym:shell/dos/src/main.rs::scenario)); the clean-up list is last in, first out, so the transcript flush, registered before anything that changes the screen, runs after the video mode is back, and [`report`](sym:shell/dos/src/main.rs::report), registered before it, prints the mode DOS sees (`0x03`) last, after the keyboard flags and mouse have been restored by the functions [`interactive`](sym:shell/dos/src/main.rs::interactive) registers |
 
 The rows are cut to what the code does, and a few things in them deserve a sentence. The kernel panics where the DOS program returns a status, because a panic in the kernel is already a failing run: its panic handler prints the message and writes the failure value to the debug-exit port ([M5](chapter:m-boot)). The DOS program cannot panic into a clean exit, so it counts: an exit status is how a script learns what happened. The two programs also differ in *when* they know the picture is right. The kernel does not read its own display back (it only writes the frame buffer and the VGA window, and reading video memory is the slow direction), so a second party (QEMU) takes the picture. The DOS program can read its card back, so it checks itself and writes the files for a script to compare. [`tools/shell-compare.sh`](repo:tools/shell-compare.sh) puts the two kinds of capture side by side.
 
@@ -79,7 +79,7 @@ The input events are the same two types on both tracks, and the chapter on them 
 
 <!-- explainer pipelines -->
 
-What the table above adds is the limit of the evidence. In the scenario runs, neither platform sends the shell an event from a device: the scenario's `press`, `move` and `type` are values built by the parser. The native kernel uses its PS/2 driver only to wait for a key, so `handle` never sees a real report there. The DOS program's interactive mode does feed `handle` from IRQ 1 and INT 33h, and the project's check types keys into it with DOSBox's `AUTOTYPE`; the mouse is not exercised by any check, and nothing on the native side drives the shell live. These are the first items on the "not verified" list of `docs/FIRST-WINDOW.md`.
+What the table above adds is the limit of the evidence. In the scenario runs, neither platform sends the shell an event from a device: the scenario's `press`, `move` and `type` are values built by the parser. The native scenario run uses its PS/2 driver only to wait for a key, so `handle` never sees a real report there. The live modes do: the kernel's `shell-live` feeds `handle` from the PS/2 keyboard and mouse, and the project's native check plays a live scenario into it through QEMU's monitor (`mouse_move`, `mouse_button` and `sendkey`, from `tools/frames.py live --qemu`) and holds each mark to the goldens; the DOS program's interactive mode feeds `handle` from IRQ 1 and INT 33h, and its default check types keys into it with DOSBox's `AUTOTYPE` and reads each mark back, while the mouse path is tried under Xvfb only in an opt-in step (`INPUT_EXTRA=1`) that this pass did not run. The chapter's own run and the `docs/FIRST-WINDOW.md` list of what was not verified predate those modes; the live runs are read here from the check scripts and the committed expected files, and were not rerun (the native live check and the DOS checks need QEMU with the monitor scripts and the DOS toolchain image respectively).
 
 ## Why it is this way
 
@@ -94,10 +94,10 @@ What the table above adds is the limit of the evidence. In the scenario runs, ne
 
 | Where | What it holds |
 |---|---|
-| [`kernel/src/shell.rs`](repo:kernel/src/shell.rs) | the native wiring: [`run`](sym:kernel/src/shell.rs::run), [`play`](sym:kernel/src/shell.rs::play), [`corrupt`](sym:kernel/src/shell.rs::corrupt) and the embedded scenario and faces |
+| [`kernel/src/shell.rs`](repo:kernel/src/shell.rs) | the native wiring: [`run`](sym:kernel/src/shell.rs::run), [`play`](sym:kernel/src/shell.rs::play), [`corrupt`](sym:kernel/src/shell.rs::corrupt), the live mode ([`live`](sym:kernel/src/shell.rs::live), `live_session`) and the embedded scenario and faces |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | [`PORTS`](sym:kernel/src/hal.rs::PORTS), the drivers as statics, [`IrqTable`](sym:kernel/src/hal.rs::IrqTable) and the end-of-interrupt rule |
 | [`kernel/src/gfx.rs`](repo:kernel/src/gfx.rs) | the pieces `run` uses: `rendezvous`, `lfb_region`, `vga_window`, `leave_vbe`, `restore_text` |
-| [`shell/dos/src/main.rs`](repo:shell/dos/src/main.rs) | the hosted wiring: [`main`](sym:shell/dos/src/main.rs::main), [`start_screen`](sym:shell/dos/src/main.rs::start_screen), [`scenario`](sym:shell/dos/src/main.rs::scenario), [`interactive`](sym:shell/dos/src/main.rs::interactive), [`Screen`](sym:shell/dos/src/main.rs::Screen) |
+| [`shell/dos/src/main.rs`](repo:shell/dos/src/main.rs) | the hosted wiring: [`main`](sym:shell/dos/src/main.rs::main), [`start_screen`](sym:shell/dos/src/main.rs::start_screen), [`scenario`](sym:shell/dos/src/main.rs::scenario), [`interactive`](sym:shell/dos/src/main.rs::interactive), `mark`, `flush_transcript`, [`Screen`](sym:shell/dos/src/main.rs::Screen) |
 | [`shell/dos/check.sh`](repo:shell/dos/check.sh), [`shell/dos/build.sh`](repo:shell/dos/build.sh) | the DOS build and its checks in headless DOSBox |
 | [`tests/native/expected-shell-8.txt`](repo:tests/native/expected-shell-8.txt), [`expected-shell-4.txt`](repo:tests/native/expected-shell-4.txt) | the native transcripts at each depth |
 | [`tests/shell/expected-dos-8.txt`](repo:tests/shell/expected-dos-8.txt), [`expected-dos-4.txt`](repo:tests/shell/expected-dos-4.txt) | the DOS transcripts |
@@ -179,9 +179,10 @@ evidence: doc:docs/HAL.md#a-platform-as-one-value-sketch, doc:docs/FIRST-WINDOW.
 note: A sketch in a design document only. No trait of that name exists in any source file.
 
 id: platforms.livenative
-label: Live keyboard and mouse driving the shell on the native kernel, and a free-running native frame loop
-state: planned
-evidence: doc:docs/FIRST-WINDOW.md#both-tracks-at-once
+label: Live keyboard and mouse driving the shell on the native kernel (shell-live), each mark held to the goldens
+state: built-unverified
+evidence: sym:kernel/src/shell.rs::live, repo:tests/native/expected-shell-live-8.txt, repo:tests/shell/live.sums
+note: Built and checked by tools/native-test.sh with input injected through QEMU's monitor, which this pass did not run; read from the script and the committed files. No person at a real keyboard or mouse.
 
 id: platforms.hardware
 label: Either wiring on a real VGA card, monitor and 486
@@ -193,11 +194,11 @@ The native wiring is {{state.platforms.native}} in QEMU and the DOS wiring is {{
 
 ## Try it yourself
 
-The native shell run, by hand, is the same as `tools/native-test.sh` does for depth 8: build the kernel, patch the image to test mode `shell` with the VBE loader, and run it in QEMU with the monitor script that `frames.py` writes from the scenario. Then check the transcript against its expected file and the screendumps against the sums, and prove that the check can say no by changing the 456 to 457. It needs `nasm`, `cargo` and `qemu-system-i386`. This was run on the host with QEMU 11.1.2 and NASM 3.02. The commands were run from the repository root; the lines are in the order they were typed, with the output that matters.
+The native shell run, by hand, is the same as `tools/native-test.sh` does for depth 8: build the kernel, patch the image to test mode `shell` with the VBE loader, and run it in QEMU with the monitor script that `frames.py` writes from the scenario. Then check the transcript against its expected file and the screendumps against the sums, and prove that the check can say no by changing the 456 to 457. It needs `nasm`, `cargo` and `qemu-system-i386`. This was run on the host with QEMU 11.1.3 and NASM 3.02. The commands were run from the repository root; the lines are in the order they were typed, with the output that matters.
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386, python3
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-23 on the host at d7775ed, QEMU 11.1.3, NASM 3.02; every output below matched the 2026-10-23 run (the transcript is still 64 lines), and the goldens command now also checks the live goldens, as its second block shows
 $ tools/native-build.sh > /dev/null && tools/native-image.sh --test-mode shell --video vbe --out dist/native-shell-8.img > /dev/null
 $ python3 -I tools/frames.py inject tests/shell/first-window.scn > dist/shell.inject
 $ tools/native-run.sh --timeout 60 --vga std --inject dist/shell.inject --shots dist/shell-native-8 dist/native-shell-8.img > dist/shell-8.txt 2> dist/shell-8.err; echo "exit $?"
@@ -219,11 +220,13 @@ Re-recording the goldens, which also checks that the host test is deterministic,
 
 ```try
 needs: host: bash, cargo, python3
-ran: 2026-10-23 on the host
-$ tools/shell-goldens.sh 2>&1 | tail -3
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
-
+ran: 2026-11-23 on the host at d7775ed (the command's last four checked lines, the live goldens having joined it since 2026-10-23)
+$ tools/shell-goldens.sh 2>&1 | grep -E '^(test result|ok:)'
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.75s
 ok: 12 golden PNGs match tests/shell/first-window.sums
+ok: 20 golden PNGs match tests/shell/keys.sums
+ok: 8 golden PNGs match tests/shell/live-keys.sums
+ok: 16 golden PNGs match tests/shell/live.sums
 ```
 
 `tools/shell-compare.sh` compares the DOS captures with the native ones. It needs `dist/shell/dumps-*` from `shell/dos/check.sh`, which runs DOSBox in the project's toolchain image, so it was **not run** for this chapter; with `--run` it runs both checks first, which is slow. Read its list of comparisons that must fail: five, from the depths swapped to a frame replaced by another.
@@ -243,7 +246,7 @@ term: Seam
 def: The narrow place where a platform meets the shared core. For the shell it is two calls, Shell::handle for an input event and Shell::frame to repaint and present, with the platform owning everything around them; the core never calls back.
 
 term: Run loop
-def: The loop that drains input into the shell, asks for a frame and waits, which in the Desk belongs to the platform, not the core. The DOS program has its own (poll, handle, present, repeat); the native kernel hands the scenario to the shared runner and is called back after each frame.
+def: The loop that drains input into the shell, asks for a frame and waits, which in the Desk belongs to the platform, not the core. The DOS program has its own (poll, handle, present, repeat), and so has the native kernel's live mode; the native scenario run hands the scenario to the shared runner and is called back after each frame.
 ```
 
 ```figures
@@ -265,3 +268,4 @@ at: figure anatomy-dos
 - 2026-10-23: first written, against `44f0265`. The native depth 8 shell run and `tools/shell-goldens.sh` were rerun for this chapter; `tools/shell-compare.sh` and the DOS run were not (they need the DOS toolchain). Found while writing: `docs/HAL.md` ("The platforms") still labels `rt::hal` and `kernel::hal` planned; `docs/FIRST-WINDOW.md` and `tests/shell/README.md` say the platforms skip `expect-damage` and the native kernel does not; the document names `desk_vga::set_mode_12h` where the code calls `regs::set_mode_12h`.
 - 2026-11-20: reviewed against R148 (in review). A bullet in "Why it is this way" names the two wirings as the layers `adapter-dos` and `system-native` and the seam `docs/LAYERS.md` leaves alone. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The bullet on the two wirings says the layout is merged. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
+- 2026-11-23: re-read in full against `kernel/src/shell.rs`, `kernel/src/hal.rs` and `shell/dos/src/main.rs` and brought up to date for the live-input work (merged before `fb6eba6`) and the later runtime changes. The chapter had said the native kernel has no free-running loop and no interactive mode and that the DOS program prints its lines as it goes; the table rows for the entry, the input source, the free-running loop, the ending of the run and the putting back of the machine, the paragraph on where input reaches the shell, the code table, the record `platforms.livenative` (was planned, now built, not verified, because the native live check was not run here) and the glossary entry for the run loop were corrected. The kernel's `kernel/src/hal.rs` change (a returned `Action::Chain` is treated as an end-of-interrupt, R139 T4) does not change what the chapter says. The native depth 8 run, the transcript and screendump checks, the negative check and `tools/shell-goldens.sh` were rerun on the host and matched. Not rerun: `tools/shell-compare.sh`, every DOS run, and the live checks. `docs/FIRST-WINDOW.md` was read only where the chapter cites it and was not changed (a builder is changing the shell crates). `reviewed` moved to `d7775ed`.

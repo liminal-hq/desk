@@ -161,7 +161,7 @@ evidence: test:tests/native/expected.txt::pic: remapped to 0x20 and 0x28, test:h
 note: QEMU's controllers are an emulation. The document that records the reinitialisation says a chipset with an integrated controller is the thing most likely to differ.
 
 id: devices.pit
-label: The 8254 at 100 Hz with divisor 11,932 (restoring the BIOS rate is written and host-tested, but nothing calls it yet)
+label: The 8254 at 100 Hz with divisor 11,932 (restoring the BIOS rate is written and host-tested, and the DOS fast timer calls it on unhook since #113)
 state: built-verified
 evidence: test:hal/drivers/pit/src/lib.rs::programming_100_hz_writes_what_the_kernel_writes, test:tests/native/expected.txt::timer: waited for 10 ticks with hlt, sym:hal/drivers/pit/src/lib.rs::INPUT_HZ
 
@@ -330,3 +330,4 @@ thumb: specimen
 
 - 2026-10-23: first written, against `44f0265`. Every port and IRQ number named was checked against the driver constant or the assembly that uses it, and the commands above were run on the host. One disagreement between a document and the code: `docs/HAL.md` ("Console and debug output") lists a VGA text console `desk-vgatext` as an implementer of `DebugOut`, but no such crate exists in `hal/` and the kernel's text console is `kernel/src/vga.rs` writing to `0xB8000` directly (`docs/C-INPUT.md` says plainly that `vga.rs` was left alone, and `docs/HAL.md` marks the move optional). Also noted: `docs/A-VGA-VBE.md`'s status block says QEMU and the native kernel are not verified, which the later `docs/D-NATIVE-VGA.md` and `docs/N3-BIOS-PATH.md` superseded.
 - 2026-11-20: the try block was rerun on the host at `fb6eba6` (see its provenance line); the commands were unchanged and the results matched. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
+- 2026-11-23: one label corrected (`restore_bios_rate` has a caller since R139 T6, #113). Only that label was checked; the chapter was not re-read in full and `reviewed` is unchanged.

@@ -2,7 +2,7 @@
 
 The plan for making `dos/rt` the union of R132 to R136, Fizz 2's probes, `text.rs`, the press-edge `InputLatch` and safe settings writes with an INT 24h guard (R139). The owner decided on 2026-11-11 that Desk's runtime is canonical and Fizz 2's improvements come back into it ([`FIZZ2-COMPARISON.md`](FIZZ2-COMPARISON.md), a read of two code bases and not a run). The promotion itself is done (R53, R148: the runtime is `dos/rt`, and R54's fixes are merged). What is left is the union.
 
-Nothing here is built. The plan was drafted by reading Desk's code and Fizz 2's runtime (read only; its head was newer than the commit the comparison read), and it has not been reviewed by a second reader yet. Every claim about Fizz 2 is from that read, not from a run.
+As of 2026-11-23 T1 to T6 and T12 are built and merged (see the order table); T7 to T10, the sound drivers and the documents are not. The plan was drafted by reading Desk's code and Fizz 2's runtime (read only; its head was newer than the commit the comparison read), and it has not been reviewed by a second reader yet. Every claim about Fizz 2 is from that read, not from a run.
 
 ## Contents
 
@@ -22,7 +22,7 @@ Nothing here is built. The plan was drafted by reading Desk's code and Fizz 2's 
 | D4 | Hosted timer rates, and whether the shell switches to them (T6) | **Decided 2026-11-22: `rt` offers 60 and 560 Hz as an opt-in, and the shell stays at 18.2 Hz**, as HAL.md says |
 | D5 | The probe's x87 side effect (T8) | Open. Proposed: detect the x87 and restore the control word it found, which keeps the float policy (R138) open |
 | D6 | Where `InputLatch` lives and who uses it first (T10) | Open. Proposed: `desk-hal::input`, over a `u32` mask, with host tests only |
-| D7 | R136: which finished-frame present API | Open. The design note is `PRESENT-API.md` (its own pull request, in review) |
+| D7 | R136: which finished-frame present API | Open. The design note is `PRESENT-API.md` (merged, #105) |
 | D8 | Is sound (R135) part of R139 being done? | Open. Proposed: no; the OPL, speaker and Sound Blaster drivers come after, with their own plan |
 
 ## Rules for every task
@@ -44,10 +44,10 @@ At most two code tasks run at once.
 |---|---|---|
 | 0 | R54 merged (done, #102) | none |
 | 1 | T1 clean-up list (merged, #108) ∥ T5 accumulator and `Pacer` (merged, #107) ∥ T12 design note (merged, #105) | none |
-| 2 | T2 `memset` and `memcpy` ∥ T4 per-interrupt chain | T1; D3 |
-| 3 | T3 fast copy into device memory ∥ T6 fast timer | T2; T4, T5; D4 |
-| 4 | T7 safe writes and INT 24h ∥ T8 probes | T1; D5 |
-| 5 | T9 `text.rs` ∥ T10 `InputLatch` | T1, T8; D6 |
+| 2 | T2 `memset` and `memcpy` (merged, #111) ∥ T4 per-interrupt chain (merged, #110) | T1; D3 |
+| 3 | T3 fast copy into device memory (merged, #112) ∥ T6 fast timer (merged, #113) | T2; T4, T5; D4 |
+| 4 | T7 safe writes and INT 24h ∥ T8 probes (not started) | T1; D5 |
+| 5 | T9 `text.rs` ∥ T10 `InputLatch` (not started) | T1, T8; D6 |
 | 6 | T13 documents and the Manual (Gregory) | all of the above |
 | later | S1 OPL driver ∥ S2 speaker and Sound Blaster drivers | T6; D8 |
 
@@ -132,7 +132,7 @@ Labels: `enhancement`, `input`. A press-edge latch over a `u32` mask with `set` 
 
 ### T12. The design note for R136 (no code)
 
-Labels: `documentation`, `design-docs`, `graphics`. `PRESENT-API.md` (its own pull request, in review): the finished-frame present API against the framebuffer-lifetime gap, with its options and a recommendation, for the owner to decide before R79. The code comes afterwards and is planned separately.
+Labels: `documentation`, `design-docs`, `graphics`. `PRESENT-API.md` (merged, #105): the finished-frame present API against the framebuffer-lifetime gap, with its options and a recommendation, for the owner to decide before R79. The code comes afterwards and is planned separately.
 
 ### S1 and S2. Sound drivers (R135; D8, after T6)
 
