@@ -5,16 +5,16 @@ part: IV
 title: Drivers I: serial, interrupt controllers and the timer
 summary: The 16550 driver, the two-8259 driver and the 8254 driver with PitClock: their register sequences word by word, their tests against the mock bus, and how the kernel and the DOS runtime each use them.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: d7775ed
 watches: [hal/drivers/serial/, hal/drivers/pic/, hal/drivers/pit/, kernel/src/serial.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/hal.rs, dos/rt/src/irq.rs, docs/HAL.md]
 log: [hal]
 anatomy: [desk:drivers]
 ---
 ## What it is
 
-Three small crates are the first drivers written against [the HAL](chapter:m-hal), and the ones every boot uses. `desk-serial` is the 16550 [UART](term:uart) behind COM1, the kernel's console. `desk-pic` is the pair of 8259 interrupt controllers ([PIC](term:pic)). `desk-pit` is the 8254 timer ([PIT](term:pit)) and `PitClock`, the monotonic clock it drives. Each is a single `lib.rs` with its tests below it, generic over a `PortIo` bus, with no `unsafe` and no `alloc`. Together they are about 850 lines, tests included.
+Three small crates are the first drivers written against [the HAL](chapter:m-hal), and the ones every boot uses. `desk-serial` is the 16550 [UART](term:uart) behind COM1, the kernel's console. `desk-pic` is the pair of 8259 interrupt controllers ([PIC](term:pic)). `desk-pit` is the 8254 timer ([PIT](term:pit)) and `PitClock`, the monotonic clock it drives. Each is a single `lib.rs` with its tests below it, generic over a `PortIo` bus, with no `unsafe` and no `alloc`. Together they are about 1,040 lines, tests included (850 when the chapter was first written; the PIT crate grew with the accumulator and the stopwatch helpers).
 
-On the map ([M1](chapter:m-map)) they are the `PIT` and `PIC` entries of the `drivers` box of the native track's anatomy page. [M3](chapter:m-devices) explained the chips and their ports; [M6](chapter:m-interrupts) followed the kernel's side of the interrupt and timer steps. This chapter is the drivers' side: what each function writes to which port in which order, why each choice was made, what the tests pin, and which platform calls which function. After it you should be able to read any of the three `lib.rs` files, predict the port writes of `init` for a given rate or mask, write a test against the mock bus for a change, and say what the DOS runtime does with each driver (the answer is not the same as the kernel's, and for two of them it is nothing).
+On the map ([M1](chapter:m-map)) they are the `PIT` and `PIC` entries of the `drivers` box of the native track's anatomy page. [M3](chapter:m-devices) explained the chips and their ports; [M6](chapter:m-interrupts) followed the kernel's side of the interrupt and timer steps. This chapter is the drivers' side: what each function writes to which port in which order, why each choice was made, what the tests pin, and which platform calls which function. After it you should be able to read any of the three `lib.rs` files, predict the port writes of `init` for a given rate or mask, write a test against the mock bus for a change, and say what the DOS runtime does with each driver (the answer is not the same as the kernel's: for the serial driver it is nothing, and for the timer driver it is the opt-in fast timer only).
 
 The three share one design, which the file headers state. Each was written to reproduce the native kernel's earlier code exactly (the kernel's own `serial.rs`, `pic.rs` and `pit.rs` before they were replaced), and its test spells out the kernel's port writes by hand and demands the driver make the same ones. Beyond that, each adds what a second platform needs: a refused argument in place of a silent truncation, a probe, a restore of the BIOS rate, a read of the in-service register.
 
@@ -80,9 +80,11 @@ The rest implements the HAL's `InterruptController` trait:
 
 - `divisor_for(hz)` computes `(INPUT_HZ + hz / 2) / hz`, a division rounded to the nearest, and passes the result through `check_divisor`, the one copy of the range rule: a divisor must be from 2 (`MIN_DIVISOR`, because mode 2 needs at least 2) to 65,536 (`MAX_DIVISOR`). In whole hertz that leaves 19 Hz (divisor 62,799) to 795,454 Hz (divisor 2); 18 Hz, which needs 66,288, and 795,455 and above are refused. The kernel's old code truncated; this refuses, and the test `rates_the_chip_cannot_produce_are_refused` lists `0, 1, 18, 795_455, 1_193_182, u32::MAX`.
 - `program_divisor(divisor)` writes the three bytes: `0x34` to `0x43`, the low byte, then the high byte, both to `0x40`. A divisor of 65,536 is written as zero, which is how the chip encodes it (`% MAX_DIVISOR`). `program_periodic(hz)` computes the divisor and calls it, writing nothing if the rate is out of range, and `program_clock(&clock, hz)` does that and records the divisor in a `PitClock` in the same step, so the clock's rate cannot differ from the chip's.
-- `restore_bios_rate()` writes `0x36` to `0x43` and two zero bytes to `0x40`: what the BIOS had, mode 3 and divisor 65,536, about 18.2 Hz. It exists for the hosted platform to run on exit; nobody calls it yet.
-- `read_counter()` latches channel 0 (`0x00` to `0x43`), then reads the low and high bytes from `0x40`. In mode 2 the count falls by one per input clock, 838 nanoseconds, so `divisor - count` is the time since the last tick, which is how sub-tick time would be had on a CPU with no time-stamp counter. The doc comment says it must be run with interrupts off and that in the BIOS's mode 3 the count falls by two and covers each period twice, so the hosted track would reprogram to mode 2 first. Nothing calls it yet either.
+- `restore_bios_rate()` writes `0x36` to `0x43` and two zero bytes to `0x40`: what the BIOS had, mode 3 and divisor 65,536, about 18.2 Hz. It exists for the hosted platform to run on exit, and `rt::timer::unhook_rate` (R139 T6, #113) now does: it puts the interrupt vector back first and then calls this, so a handler cannot run after the rate is restored.
+- `read_counter()` latches channel 0 (`0x00` to `0x43`), then reads the low and high bytes from `0x40`. In mode 2 the count falls by one per input clock, 838 nanoseconds, so `divisor - count` is the time since the last tick, which is how sub-tick time would be had on a CPU with no time-stamp counter. The doc comment says it must be run with interrupts off and that in the BIOS's mode 3 the count falls by two and covers each period twice, so the hosted track has to reprogram to mode 2 first. `rt::timer::clocks` is the caller (the fast timer reprograms the chip, so the mode is right); it reads with interrupts on, which the doc comment now says is safe there because neither the fast-timer handler nor a standard BIOS handler touches the PIT.
 - `actual_millihertz(divisor)` is the rate the divisor really gives, rounded to the nearest thousandth of a hertz: 99,998 for 11,932, 18,207 for 65,536 and 1,000,153 for 1,193. It returns zero for a divisor of 0, which is not a rate.
+- `BiosChain` (R139 T5, #107) is a small `Copy` accumulator for a PIT that runs faster than the BIOS rate. The BIOS counts one tick per 65,536 input clocks (18.2065 Hz), so a handler running at a faster divisor adds that divisor on every interrupt (`tick`) and chains to the BIOS handler exactly when the sum reaches 65,536, keeping the remainder, which makes the number of chains over a run `floor(ticks * divisor / 65,536)` give or take one. It is `u32` arithmetic alone (the sum is at most 65,535 + 65,536), so it can run inside the interrupt handler; a divisor of 0 means 65,536 and chains every tick. Its tests are at the divisors the fast timer uses, 19,886 (60 Hz) and 2,131 (560 Hz), and at 0, 1, 32,768 and 65,535.
+- Three pure helpers serve the hosted stopwatch: `bios_ticks_between(start, now)` (BIOS ticks with the midnight wrap at `BIOS_TICKS_PER_DAY`, 1,573,040), `clocks_at(ticks, divisor, count)` (input clocks since the channel was programmed, from the interrupt count and one latched reading, `ticks * divisor + (divisor - count)`, modulo 2^32) and `clocks_for_micros(us)` (microseconds to input clocks, rounded and saturating).
 
 [`PitClock`](sym:hal/drivers/pit/src/lib.rs::PitClock) is the `Clock` the core reads. It contains a HAL `TickCounter` and an `AtomicU32` for the rate, and lives in a `static`. `counter()` returns the `TickCounter`, which is the IRQ 0 work: the platform registers `IrqHandler::from_shared(CLOCK.counter())` and every interrupt does one `fetch_add`. `now()` reads the counter and `millihertz()` the recorded rate (zero until `set_divisor` or `program_clock` records one). A clock whose rate is zero reports zero milliseconds, so a clock that was never programmed cannot be mistaken for one that is running.
 
@@ -94,7 +96,7 @@ The rest implements the HAL's `InterruptController` trait:
 | `desk-pic` | `static PIC` in `hal.rs`; `pic::init` calls `PIC.init(REMAPPED_BASES, 0xFFFE)`; `IrqTable::register` calls `unmask`; `irq_dispatch` calls `is_spurious`, `eoi_spurious` and `eoi`; `bios.rs` calls `init(BIOS_BASES, …)` and back, `mask_bits`, `pending_mask` and `in_service_mask` | `rt_irq_dispatch` makes a `Pic8259` over `RawPorts` and calls `is_spurious`, `eoi_spurious` and `eoi` for a line Desk owns; `DosIrq::register` calls `is_masked` and `unmask`. It never calls `init`: the BIOS owns the controllers at `0x08` and `0x70` |
 | `desk-pit` | `static CLOCK: PitClock`; `pit::init` calls `Pit::new(PORTS).program_clock(&CLOCK, hz)` and registers `IrqHandler::from_shared(CLOCK.counter())` on IRQ 0 with `Chain::None`; `pit::ticks` reads `CLOCK.now().0` | Used for the opt-in fast timer: `rt::timer::hook_rate` programs the PIT through `Pit` and drives `BiosChain` from a Rust `DecidingIrqService` handler registered through `DosIrq`. The older `rt::timer::hook` still counts BIOS-rate ticks with its own handler and chains to the BIOS |
 
-So the three drivers are fully shared only on the native track. On the hosted track the PIC driver is shared and the other two are not, although the design intends them to be (`docs/HAL.md`, "The platforms": a `PitClock` at 18,207 mHz and `restore_bios_rate` on exit). The kernel side of every row is taught in [M6](chapter:m-interrupts) and the boot transcript lines they print are in [M5](chapter:m-boot).
+So the three drivers are fully shared only on the native track. On the hosted track the PIC driver is shared, `desk-pit` is shared for the opt-in fast timer only (`Pit`, `BiosChain` and the stopwatch arithmetic, and `restore_bios_rate` on exit), and `PitClock` and `desk-serial` are not used, although the design intends the hosted platform to run a `PitClock` at 18,207 mHz (`docs/HAL.md`, "The platforms"). The shell stays at the BIOS rate with the older hook (decision D4 of `docs/RUNTIME-PLAN.md`). The kernel side of every row is taught in [M6](chapter:m-interrupts) and the boot transcript lines they print are in [M5](chapter:m-boot).
 
 ## Why it is this way
 
@@ -112,7 +114,7 @@ So the three drivers are fully shared only on the native track. On the hosted tr
 |---|---|
 | [`hal/drivers/serial/src/lib.rs`](repo:hal/drivers/serial/src/lib.rs) | [`Serial16550`](sym:hal/drivers/serial/src/lib.rs::Serial16550) with `init`, `probe`, `write_byte`, `read_byte`; [`divisor_for`](sym:hal/drivers/serial/src/lib.rs::divisor_for); [`COM1`](sym:hal/drivers/serial/src/lib.rs::COM1) to `COM4`; [`MAX_BAUD`](sym:hal/drivers/serial/src/lib.rs::MAX_BAUD); [`WRITE_POLLS`](sym:hal/drivers/serial/src/lib.rs::WRITE_POLLS); eight tests |
 | [`hal/drivers/pic/src/lib.rs`](repo:hal/drivers/pic/src/lib.rs) | [`Pic8259`](sym:hal/drivers/pic/src/lib.rs::Pic8259) with `init`, `set_mask`, `mask_bits`, `in_service_mask`, `pending_mask` and the `InterruptController` impl; [`MASTER`](sym:hal/drivers/pic/src/lib.rs::MASTER), [`SLAVE`](sym:hal/drivers/pic/src/lib.rs::SLAVE), [`BIOS_BASES`](sym:hal/drivers/pic/src/lib.rs::BIOS_BASES), [`REMAPPED_BASES`](sym:hal/drivers/pic/src/lib.rs::REMAPPED_BASES); six tests |
-| [`hal/drivers/pit/src/lib.rs`](repo:hal/drivers/pit/src/lib.rs) | [`Pit`](sym:hal/drivers/pit/src/lib.rs::Pit), [`PitClock`](sym:hal/drivers/pit/src/lib.rs::PitClock), [`divisor_for`](sym:hal/drivers/pit/src/lib.rs::divisor_for), [`check_divisor`](sym:hal/drivers/pit/src/lib.rs::check_divisor), [`actual_millihertz`](sym:hal/drivers/pit/src/lib.rs::actual_millihertz), [`INPUT_HZ`](sym:hal/drivers/pit/src/lib.rs::INPUT_HZ), [`BiosChain`](sym:hal/drivers/pit/src/lib.rs::BiosChain); fifteen tests |
+| [`hal/drivers/pit/src/lib.rs`](repo:hal/drivers/pit/src/lib.rs) | [`Pit`](sym:hal/drivers/pit/src/lib.rs::Pit), [`PitClock`](sym:hal/drivers/pit/src/lib.rs::PitClock), [`divisor_for`](sym:hal/drivers/pit/src/lib.rs::divisor_for), [`check_divisor`](sym:hal/drivers/pit/src/lib.rs::check_divisor), [`actual_millihertz`](sym:hal/drivers/pit/src/lib.rs::actual_millihertz), [`INPUT_HZ`](sym:hal/drivers/pit/src/lib.rs::INPUT_HZ), [`BiosChain`](sym:hal/drivers/pit/src/lib.rs::BiosChain), [`bios_ticks_between`](sym:hal/drivers/pit/src/lib.rs::bios_ticks_between), [`clocks_at`](sym:hal/drivers/pit/src/lib.rs::clocks_at), [`clocks_for_micros`](sym:hal/drivers/pit/src/lib.rs::clocks_for_micros); fifteen tests |
 | [`hal/platform/mock/src/devices.rs`](repo:hal/platform/mock/src/devices.rs) | The [`Uart16550`](sym:hal/platform/mock/src/devices.rs::Uart16550) and [`Pit8254`](sym:hal/platform/mock/src/devices.rs::Pit8254) models the tests attach |
 | [`kernel/src/serial.rs`](repo:kernel/src/serial.rs), [`pic.rs`](repo:kernel/src/pic.rs), [`pit.rs`](repo:kernel/src/pit.rs) | The kernel's thin wrappers: [`serial::init`](sym:kernel/src/serial.rs::init), [`pic::init`](sym:kernel/src/pic.rs::init), [`pit::init`](sym:kernel/src/pit.rs::init) |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The statics [`PIC`](sym:kernel/src/hal.rs::PIC), [`SERIAL`](sym:kernel/src/hal.rs::SERIAL) and [`CLOCK`](sym:kernel/src/hal.rs::CLOCK) |
@@ -190,7 +192,7 @@ id: drv.pit-extras
 label: restore_bios_rate and read_counter
 state: built-verified
 evidence: test:hal/drivers/pit/src/lib.rs::the_chip_model_sees_mode_2_and_the_reload_value, test:hal/drivers/pit/src/lib.rs::the_counter_is_latched_then_read_low_then_high
-note: Host tests against the mock only; nothing calls either function on a platform.
+note: Host tests against the mock, and, since R139 T6 (#113), the fast timer in the DOS runtime calls both (`restore_bios_rate` from `unhook_rate`, `read_counter` from `clocks`); that run is recorded under drv.dos-pit-fast, in headless DOSBox only.
 
 id: drv.dos-pic
 label: The DOS runtime sending EOIs and unmasking lines through Pic8259
@@ -199,9 +201,15 @@ evidence: sym:dos/rt/src/irq.rs::rt_irq_dispatch, repo:docs/B-DOS-INPUT.md
 note: Written and recorded in the spike's document as run in headless DOSBox; not run for this chapter.
 
 id: drv.dos-pit
-label: PitClock and desk-pit under DOS (the BIOS rate as a clock, restore on exit)
+label: PitClock under DOS (the BIOS rate as a clock, the hosted platform's Clock)
 state: planned
 evidence: doc:docs/HAL.md#the-platforms
+
+id: drv.dos-pit-fast
+label: desk-pit under DOS: the opt-in fast timer (Pit, BiosChain, the stopwatch, restore on exit)
+state: built-verified
+evidence: sym:dos/rt/src/timer.rs::hook_rate, test:dos/expected/hw-fast.txt::60 Hz: fast ticks in one second within 59 to 61, test:dos/expected/hw-fast.txt::after unhook: the BIOS counter advanced 18 to 19 ticks in one second by the PIT, test:hal/drivers/pit/src/lib.rs::the_counter_is_latched_then_read_low_then_high
+note: Headless DOSBox Staging with wide ranges, because its timing is loose; the transcript is the committed one and was not rerun for this chapter. Nothing on real hardware, no timing figure is claimed, and the shell does not use it.
 
 id: drv.hardware
 label: Any of the three drivers on a real machine
@@ -209,7 +217,7 @@ state: planned
 evidence: doc:docs/HAL.md#what-was-and-was-not-verified
 ```
 
-The three drivers are {{state.drv.serial-init}}, {{state.drv.pic-init}} and {{state.drv.pit-program}} on the host and in QEMU. Their use under DOS is {{state.drv.dos-pic}} for the PIC and {{state.drv.dos-pit}} for the PIT; a real machine is {{state.drv.hardware}}.
+The three drivers are {{state.drv.serial-init}}, {{state.drv.pic-init}} and {{state.drv.pit-program}} on the host and in QEMU. Their use under DOS is {{state.drv.dos-pic}} for the PIC, {{state.drv.dos-pit-fast}} for the PIT in the opt-in fast timer and {{state.drv.dos-pit}} for `PitClock`; a real machine is {{state.drv.hardware}}.
 
 ## Try it yourself
 
@@ -217,10 +225,10 @@ The first command runs the three drivers' tests. The second boots the kernel in 
 
 ```try
 needs: host: bash, cargo, nasm, qemu-system-i386, tr, grep
-ran: 2026-10-23 on the host at 44f0265, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-23 on the host at d7775ed, QEMU 11.1.3, NASM 3.02; all four commands were rerun and matched the 2026-10-23 output except the PIT crate's test count (15, not 8, with the new accumulator and stopwatch tests) and the order of the crates
 $ cd hal && cargo test -p desk-serial -p desk-pic -p desk-pit 2>&1 | grep -E "^test result: ok. [1-9]"
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 $ tools/native-build.sh > /dev/null 2>&1 && tools/native-image.sh > /dev/null 2>&1 && tools/native-run.sh --serial dist/serial.txt > /dev/null 2>&1; echo "exit $?"
 exit 0
@@ -259,3 +267,4 @@ def: Initialisation command word: one of the up-to-four bytes that set up an 825
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The three drivers were read in full and their tests run on the host (6, 8 and 8 passing); the native kernel was built and booted in QEMU and its transcript matched `tests/native/expected.txt`. Found while writing: the DOS runtime uses `desk-pic` but neither `desk-serial` nor `desk-pit`, although `docs/HAL.md` lists them as shared and plans a `PitClock` for the hosted platform; `restore_bios_rate`, `read_counter`, `probe` and `read_byte` have no caller outside their tests; and the header comments of `desk-serial`, `desk-pic` and `desk-pit` still name the kernel's old `serial.rs`, `pic.rs` and `pit.rs` as the reference for code those files now call the drivers with.
+- 2026-11-23: brought up to date after R139 T1 to T6 (#107 to #113). Corrected: the claims that nobody calls `restore_bios_rate` or `read_counter` (the DOS fast timer does), the sentence on which drivers the hosted track shares, and the code table; added `BiosChain` and the stopwatch helpers, a status record `drv.dos-pit-fast`, and changed `drv.dos-pit` to say it is about `PitClock`. The whole chapter was re-read against `hal/drivers/serial`, `pic` and `pit`, `kernel/src/hal.rs` and `dos/rt/src/irq.rs` and `timer.rs`; the try block was rerun (host tests, a native build, QEMU as a 486, the transcript check: 38 lines match). `reviewed` moved to `d7775ed`.
