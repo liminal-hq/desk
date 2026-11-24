@@ -64,11 +64,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "desk-sb"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-hal-mock",
+]
+
+[[package]]
 name = "desk-serial"
 version = "0.0.0"
 dependencies = [
  "desk-hal",
  "desk-hal-mock",
+]
+
+[[package]]
+name = "desk-speaker"
+version = "0.0.0"
+dependencies = [
+ "desk-hal",
+ "desk-hal-mock",
+ "desk-pit",
 ]
 
 [[package]]

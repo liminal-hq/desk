@@ -18,8 +18,8 @@ from mdlite import Raw, esc
 ID = "m-crates"
 
 KINDS = [("platform", "Platforms"), ("core", "Shared core"), ("presenter", "Presenter"), ("driver", "Drivers"), ("hal", "HAL contract")]
-CHAPTER = {"desk-hal": "m-hal", "desk-serial": "m-sysdrivers", "desk-pic": "m-sysdrivers", "desk-pit": "m-sysdrivers", "desk-i8042": "m-input", "desk-kbd": "m-input", "desk-int33": "m-input",
-           "desk-vga": "m-graphics", "desk-hal-mock": "m-hal", "desk-opl": "m-hal", "desk-gfx": "m-pixels", "desk-present": "m-pixels", "desk-font": "m-text", "desk-ui": "m-text", "desk-wm": "m-shell",
+CHAPTER = {"desk-hal": "m-hal", "desk-serial": "m-sysdrivers", "desk-pic": "m-sysdrivers", "desk-pit": "m-sysdrivers", "desk-i8042": "m-input", "desk-kbd": "m-input", "desk-int33": "m-input", "desk-sb": "m-sysdrivers", "desk-speaker": "m-sysdrivers", "desk-opl": "m-hal",
+           "desk-vga": "m-graphics", "desk-hal-mock": "m-hal", "desk-gfx": "m-pixels", "desk-present": "m-pixels", "desk-font": "m-text", "desk-ui": "m-text", "desk-wm": "m-shell",
            "desk-shell": "m-shell", "desk-kernel": "m-platforms", "desk-shell-dos": "m-platforms", "rt": "m-rt"}
 # What each directory holds, for the kind: a glob of manifests and the kind its crates have
 SOURCES = [("hal/hal/Cargo.toml", "hal"), ("hal/drivers/*/Cargo.toml", "driver"), ("hal/platform/*/Cargo.toml", "platform"), ("shell/gfx/Cargo.toml", "core"), ("shell/font/Cargo.toml", "core"),

@@ -7,6 +7,7 @@
 //   models attached to port ranges, and returns a floating bus (all ones) for anything else, as an empty ISA slot does.
 // - `devices` holds small models of real chips (the 16550, the 8254, the 8042 with a keyboard and a mouse in `ps2`), just enough to check what a driver programs.
 // - `OplModel` is the OPL2 or OPL3's register file and timer 1, with the settling reads counted for each write (or an empty port).
+// - `SbModel` is a Sound Blaster DSP (reset, version, speaker commands, status delays) and `Port61` the PC speaker's gate and data bits.
 // - `VgaModel` is the VGA's register file at 0x3C0..=0x3DF (attribute controller, sequencer, graphics controller, CRTC, DAC).
 // - `MockBios` answers real-mode calls from a script, for the VBE layer.
 // - `Int33Model` is a DOS mouse driver behind INT 33h, for the hosted platform's input tests.
@@ -25,6 +26,8 @@ pub mod int33;
 pub mod irq;
 pub mod opl;
 pub mod ps2;
+pub mod sb;
+pub mod speaker;
 pub mod time;
 pub mod vga;
 pub mod video;
@@ -34,6 +37,8 @@ pub use int33::{Int33Kind, Int33Model};
 pub use irq::MockIrq;
 pub use opl::{OplKind, OplModel, OplWrite};
 pub use ps2::I8042Model;
+pub use sb::SbModel;
+pub use speaker::Port61;
 pub use time::{MockClock, MockDelay};
 pub use vga::VgaModel;
 pub use video::MockBios;

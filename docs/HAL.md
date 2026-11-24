@@ -67,7 +67,8 @@ hal/                          one Cargo workspace; no default target, so `cargo 
 │   ├── vgatext/              desk-vgatext        80x25 text console (from kernel/vga.rs)   migration step 1
 │   ├── dma8237/              desk-dma8237        ISA DMA controller                        sound milestone
 │   ├── opl/                  desk-opl            OPL2/OPL3 register writes                 built (R139 S1), no user yet
-│   ├── sb/                   desk-sb             Sound Blaster DSP                         sound milestone
+│   ├── sb/                   desk-sb             Sound Blaster DSP: reset, version, BLASTER built (R135), no DMA yet
+│   ├── speaker/              desk-speaker        PC speaker: PIT channel 2 and port 0x61   built (R135)
 │   └── ata/, fdc/            desk-ata, desk-fdc  IDE and floppy block devices              storage milestone
 └── platform/
     └── mock/                 desk-hal-mock       MockPortBus, device models, MockIrq      built
@@ -77,7 +78,12 @@ kernel/src/hal.rs                   kernel::hal     the native platform         
 
 **Why the real platforms are not crates in `hal/`.** The DOS platform is DPMI calls, the interrupt stub and the clean-up list, all of which are `rt`; the native platform is the IDT, the frame allocator and the boot information, all of which are the kernel. A separate `platform/dos` crate would only re-export `rt`, and would not build for the host, which would split the workspace's `cargo test`. If Lieutenant Fizz Episode 2 or the `liminal-hq/dos-rs` idea in `DIRECTION.md` wants `rt` and its platform without Desk, they move together.
 
-Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic`, `desk-kbd`, `desk-i8042`, `desk-opl` and `desk-hal-mock`. The native kernel depends on them (migration step 1, done with spike C); nothing else does yet.
+Today `hal/` holds `desk-hal`, `desk-serial`, `desk-pit`, `desk-pic`, `desk-kbd`, `desk-i8042`, `desk-opl`, `desk-sb`, `desk-speaker` and `desk-hal-mock`. The native kernel depends on the older ones (migration step 1, done with spike C); the three sound drivers are built and used by nothing yet.
+
+Two sound drivers are built and unused (roadmap R135, task S2 of [`RUNTIME-PLAN.md`](RUNTIME-PLAN.md)); no code in the repository depends on them, and the 560 Hz audio service that will use them gets its own plan. Both are written fresh over `PortIo` and tested against the mock bus (`SbModel`, `Port61` and the existing 8254 model), so what the host tests check is the port sequence and nothing audible.
+
+- **`desk-sb`** drives the DSP at a base port. `parse_blaster` reads the `BLASTER` value (`A` and `P` in hexadecimal, `I`, `D`, `H`, `T` in decimal, unknown letters skipped, refused without an `A` or with a base outside 0x210 to 0x280 in steps of 0x10, or with a malformed number). `reset` writes 1 then 0 to base + 6 with at least 3 µs between (eight reads), then polls base + 0xE bit 7 up to 65,536 times and wants 0xAA from base + 0xA, so an empty slot (0xFF everywhere) is not a card. `version` waits for base + 0xC bit 7 to clear, writes 0xE1 and reads two bytes, each after base + 0xE bit 7. `speaker(on)` sends 0xD1 or 0xD3 and returns `Timeout` if the write buffer never frees. There is no DMA playback yet.
+- **`desk-speaker`** drives the PC speaker. `tone(hz)` divides the PIT's 1,193,182 Hz by `hz` (440 Hz gives 2,711), checks the divisor with `desk_pit::check_divisor` (19 Hz to 596,591 Hz in whole hertz; 0 and everything else is `InvalidArgument` with nothing written), programs channel 2 in mode 3 (0xB6 to port 0x43, then the two bytes to port 0x42), then sets bits 0 and 1 of port 0x61. `off` clears those two bits. Every write to port 0x61 reads it first and keeps the other bits (the keyboard controller's and the parity bits). `is_on` is both bits set.
 
 ## The surfaces
 
