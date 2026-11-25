@@ -354,6 +354,56 @@ fn mouse_init_resets_sets_defaults_and_streams() {
 }
 
 #[test]
+fn starting_the_mouse_alone_enables_the_aux_port_and_touches_nothing_else() {
+    let mut m = I8042Model::new();
+    m.mouse.wheel_capable = true;
+    let (bus, model) = rig(m);
+    bus.outb(0x64, 0xA7);
+    model.borrow_mut().commands.clear();
+    let info = I8042::new(&bus).start_mouse(true).unwrap();
+    assert_eq!(info, MouseInfo { id: 3 });
+    let m = model.borrow();
+    assert_eq!(&m.commands[..1], [0xA8], "the port comes first");
+    assert!(m.aux_port_enabled);
+    assert!(
+        m.commands.iter().all(|c| matches!(c, 0xA8 | 0xD4)),
+        "no self-test, no keyboard commands, no configuration write: {:02x?}",
+        m.commands
+    );
+    assert!(m.mouse.streaming);
+}
+
+#[test]
+fn stopping_the_mouse_drops_the_packets_in_flight_and_leaves_the_output_buffer_empty() {
+    let (bus, model) = rig(I8042Model::new());
+    let ctl = I8042::new(&bus);
+    ctl.start_mouse(false).unwrap();
+    // Three packets were on their way when the stop command went in; the acknowledgement follows them.
+    model.borrow_mut().send_mouse_bytes(&[0x09, 1, 2, 0x09, 3, 4, 0x09, 5, 6]);
+    assert_eq!(ctl.stop_mouse(), Ok(()));
+    let m = model.borrow();
+    assert!(!m.mouse.streaming);
+    assert_eq!(m.mouse.knobs.received.last(), Some(&0xF5));
+    drop(m);
+    assert_eq!(
+        ctl.status() & status::OUTPUT_FULL,
+        0,
+        "the keyboard's bytes can come through again"
+    );
+}
+
+#[test]
+fn stopping_a_mouse_that_never_acknowledges_times_out_and_still_empties_the_buffer() {
+    let (bus, model) = rig(I8042Model::new());
+    let ctl = I8042::new(&bus);
+    ctl.start_mouse(false).unwrap();
+    model.borrow_mut().mouse.knobs.silent = true;
+    model.borrow_mut().send_mouse_bytes(&[0x09, 1, 2]);
+    assert_eq!(ctl.stop_mouse(), Err(Error::Timeout));
+    assert_eq!(ctl.status() & status::OUTPUT_FULL, 0);
+}
+
+#[test]
 fn the_wheel_probe_sends_200_100_80_and_reads_the_id() {
     let mut m = I8042Model::new();
     m.mouse.wheel_capable = true;

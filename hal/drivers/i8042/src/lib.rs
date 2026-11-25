@@ -440,6 +440,46 @@ impl<P: PortIo> I8042<P> {
         Ok(MouseInfo { id })
     }
 
+    /// Starts the mouse alone, on a machine whose BIOS still owns the keyboard: enables the auxiliary port (the BIOS may have left it
+    /// off), then `init_mouse`. Nothing else in the controller is touched, so the keyboard keeps working as the BIOS left it. The
+    /// mouse's interrupt is still off: register the `MouseIrq` handler, then turn it on with `set_interrupts`.
+    ///
+    /// The controller's replies (the configuration byte `set_interrupts` reads) are polled for here, and a BIOS handler for IRQ 1 that
+    /// runs in the meantime reads them first, as scancodes. The caller holds IRQ 1 off (masks it in the PIC) from this call to the
+    /// last `set_interrupts` or `stop_mouse`.
+    pub fn start_mouse(&self, wheel: bool) -> Result<MouseInfo, Error> {
+        self.write_command(command::ENABLE_AUX)?;
+        self.init_mouse(wheel)
+    }
+
+    /// Stops the mouse reporting and leaves the controller's output buffer empty. Turn the mouse's interrupt off first
+    /// (`set_interrupts`), so no handler takes the bytes still on their way: a byte left in the output buffer stops the keyboard's
+    /// bytes coming through. Packets the mouse had already sent are read and dropped until the acknowledgement of the stop
+    /// command arrives (at most `FLUSH_LIMIT` bytes), then anything else is flushed.
+    ///
+    /// `Timeout` if the acknowledgement never comes (the output buffer is flushed all the same).
+    pub fn stop_mouse(&self) -> Result<(), Error> {
+        self.write_command(command::WRITE_AUX)?;
+        self.write_data(device::DISABLE_SCANNING)?;
+        let mut acknowledged = false;
+        for _ in 0..FLUSH_LIMIT {
+            match self.read_from(true, POLLS) {
+                Ok(reply::ACK) => {
+                    acknowledged = true;
+                    break;
+                }
+                Ok(_) => {}
+                Err(_) => break,
+            }
+        }
+        self.flush();
+        if acknowledged {
+            Ok(())
+        } else {
+            Err(Error::Timeout)
+        }
+    }
+
     fn probe_wheel(&self) -> Result<(), Error> {
         for rate in [200, 100, 80] {
             self.device_command_with(true, device::SET_RATE, rate)?;
