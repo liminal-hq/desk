@@ -49,7 +49,8 @@ pub mod func {
     pub const RANGE_Y: u16 = 0x0008;
     /// Motion since the last call, in mickeys: CX = horizontal, DX = vertical, both signed 16 bit; the counters are then zero.
     pub const MOTION: u16 = 0x000B;
-    /// The CuteMouse wheel API's detection: AX = 574Dh ("WM") when the driver reports a wheel.
+    /// The CuteMouse wheel API: AX = 574Dh ("WM") when the driver has the API, and bit 0 of CX when the mouse has a wheel. CuteMouse
+    /// answers 574Dh on every mouse, so the signature alone does not say there is a wheel.
     pub const WHEEL_API: u16 = 0x0011;
     /// The size in bytes of the buffer the driver's state needs: BX.
     pub const STORAGE: u16 = 0x0015;
@@ -59,7 +60,7 @@ pub mod func {
     pub const TYPE: u16 = 0x0024;
 }
 
-/// The answer of `func::WHEEL_API` when the driver implements the wheel API.
+/// The answer of `func::WHEEL_API` when the driver implements the wheel API (with or without a wheel on the mouse).
 pub const WHEEL_API_SIGNATURE: u16 = 0x574D;
 
 /// Why a mouse could not be used.
@@ -176,14 +177,14 @@ impl<B: Bios> Mouse<B> {
         self.buttons
     }
 
-    /// Whether the driver implements the CuteMouse wheel API (function 0011h answers 574Dh).
+    /// Whether the mouse has a wheel the driver reports: function 0011h answers 574Dh and sets bit 0 of CX.
     pub fn has_wheel(&self) -> bool {
         self.wheel
     }
 
     fn wheel_api(&self) -> Result<bool, Error> {
         let r = self.func(func::WHEEL_API, 0, 0, 0)?;
-        Ok(r.eax as u16 == WHEEL_API_SIGNATURE)
+        Ok(r.eax as u16 == WHEEL_API_SIGNATURE && r.ecx & 1 != 0)
     }
 
     /// Function 0001h. Desk draws its own cursor, so the platform never calls this except to prove the call works.
