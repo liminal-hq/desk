@@ -5,7 +5,7 @@ part: III
 title: The kernel: memory and the x87
 summary: The memory map as the loader leaves it, the frame bitmap, the heap, the usable-RAM arithmetic and the x87 set-up.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [kernel/src/memory.rs, kernel/src/heap.rs, kernel/src/fpu.rs, kernel/link.ld, docs/NATIVE-BOOT.md]
 log: [boot, emulators]
 anatomy: [desk:kernel]
@@ -291,3 +291,4 @@ thumb: svg
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The numbers in the worked example were derived from the code and checked against the transcript (15,871 KiB and 3,748 frames), and the commands above were run on the host. One document-against-code point: `docs/NATIVE-BOOT.md` says the reported usable RAM is "the sum of the usable entries as the BIOS gave them", which is right, and the same document's "Memory" section says nothing of the fact that the bitmap sits in `.data`, which is a property of the build and not a disagreement.
+- 2026-11-26: re-read in full against `kernel/src/memory.rs`, `heap.rs`, `fpu.rs`, `kernel/src/main.rs` (the order of `kmain`) and `docs/NATIVE-BOOT.md` at `31221b4`. Nothing the chapter says about the code is untrue: the only changes to the three files since `44f0265` are `cargo fmt` and two `div_ceil` calls that compute the same rounding. The addresses and counts in the worked example (kernel end `0x13c000`, 3,748 frames, the heap at `0x13c000`) are those of the recorded run in `media/native-serial.txt` and of the build made for the chapter; a kernel built today is larger (222,032 bytes, see M5), so its end and count differ, which the expected transcript already allows as ranges. Not rerun here: the boot of a fresh kernel for these figures.
