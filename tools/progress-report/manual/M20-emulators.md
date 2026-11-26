@@ -5,7 +5,7 @@ part: VII
 title: The machines we run on
 summary: QEMU as a 486, Bochs, 86Box, headless DOSBox Staging and js-dos; what each one is for, what each rejects or allows, how each run is driven and ended, and the standing fact that no real machine has run anything.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [tools/native-run.sh, tools/native-run-bochs.sh, tools/native-run-86box.sh, tools/native-test.sh, tools/native-test-bochs.sh, tools/native-test-86box.sh, dos/tools/dosrun.sh, tools/86box/, docs/NATIVE-EMULATORS.md, docs/S5-JSDOS.md, docs/NATIVE-BOOT.md]
 log: [emulators, browser, boot]
 anatomy: [desk:emu, dos:dosbox, desk:real]
@@ -48,7 +48,7 @@ The reason the DOS emulators cannot run the native image is stated in `docs/OPEN
 | `-no-reboot` | A triple fault ends QEMU instead of looping |
 | `-monitor none`, or `-monitor unix:SOCKET,server,nowait` | The monitor is off, or, with `--inject`, a socket that `tools/native-inject.py` types into |
 
-The whole command is run under `timeout`, which is the [watchdog](term:watchdog). The script uses the host's QEMU when there is one, and otherwise builds an `ubuntu:24.04` image from `tools/docker/Dockerfile.native-qemu` once and runs QEMU inside it, with the repository mounted at the same path. The status mapping is the table in [M5](chapter:m-boot).
+The table is the headless run. `--window gtk` or `--window sdl` (added with `tools/run-shell.sh`, for a person to watch) swaps `-display none` for a QEMU window, shows the transcript as it arrives, accepts `--timeout 0` for no limit, treats a closed window as a note and status 0 and needs the host's QEMU, because the Docker route has no display; none of the checks uses it, and it was not run for this chapter. The whole command is run under `timeout`, which is the [watchdog](term:watchdog). The script uses the host's QEMU when there is one, and otherwise builds an `ubuntu:24.04` image from `tools/docker/Dockerfile.native-qemu` once and runs QEMU inside it, with the repository mounted at the same path. The status mapping is the table in [M5](chapter:m-boot).
 
 The screen of a QEMU run, which is the same boot the serial file records, looks like this.
 
@@ -88,7 +88,7 @@ Driving it is the awkward part, and `tools/86box/run-in-container.sh` does it in
 
 DOS has no way to hand an exit status to its host, and DOSBox Staging does not expand `%ERRORLEVEL%`. The batch file therefore recovers it with a ladder of 255 lines `if errorlevel n set RC=n`, each of which holds for every `n` up to the status, so the last one that matches is the status, and it writes that to `D:\EXITCODE.TXT`. The script exits with it. Two statuses are the script's own: 124 when the command outlived `DOS_TIMEOUT` seconds (default 60) and 125 when DOSBox itself failed.
 
-The CPU section is `core = normal` (the slowest core and the most predictable) and `cputype = 486`, which makes DOSBox fault on an instruction a 486 lacks. The video card is `svga_s3`, which gives VBE and a [linear frame buffer](term:lfb). Keys are typed in with `DOS_AUTOTYPE`, the arguments of DOSBox's `autotype` command (`-w 3 -p 0.3 d e s k esc`): they go through the emulated keyboard controller, so a program that reads port 0x60 sees them as a keyboard would send them. `DOS_X11=1` instead keeps the environment's display and uses SDL's x11 driver, for a run under a virtual X server (the `desk-dos-xvfb:1` image, `tools/docker/Dockerfile.dos-xvfb`), which is how a pointer can be driven with `xdotool`.
+The CPU section is `core = normal` (the slowest core and the most predictable) and `cputype = 486`, which makes DOSBox fault on an instruction a 486 lacks. The video card is `svga_s3`, which gives VBE and a [linear frame buffer](term:lfb). Keys are typed in with `DOS_AUTOTYPE`, the arguments of DOSBox's `autotype` command (`-w 3 -p 0.3 d e s k esc`): they go through the emulated keyboard controller, so a program that reads port 0x60 sees them as a keyboard would send them. `DOS_X11=1` instead keeps the environment's display and uses SDL's x11 driver, for a run under a virtual X server (the `desk-dos-xvfb:1` image, `tools/docker/Dockerfile.dos-xvfb`), which is how a pointer can be driven with `xdotool`. Four more switches have been added since the chapter was written: `DOS_THEN` runs a second command in the same DOSBox once the first one's status is taken (to see the PIT's rate after a program exits), `DOS_CONSOLE=1` leaves the output on the DOS console instead of redirecting it, `DOS_MACHINE` overrides the card (the default is `svga_s3`) and `DOS_WINDOW=1` opens DOSBox's window for a person to watch, with `DOS_TIMEOUT=0` meaning no limit. The checks use `DOS_THEN`; the window is for `tools/run-shell.sh` and was not run here.
 
 ### js-dos
 
@@ -178,7 +178,7 @@ id: emu.cpu-lenient
 label: QEMU's -cpu 486 executes rdtsc and rejects cmov
 state: built-verified
 evidence: test:tests/native/probe.asm::probe: #UD, repo:docs/NATIVE-EMULATORS.md
-note: Rerun for this chapter with the probe on QEMU 11.1.2. The Bochs half of the table is copied from the document.
+note: Rerun for this chapter with the probe on QEMU 11.1.2 and again on 2026-11-26 on QEMU 11.1.3. The Bochs half of the table is copied from the document.
 
 id: emu.bochs
 label: The native image passes in Bochs 2.7 as a 486 with three BIOS images, including the full test
@@ -233,7 +233,7 @@ These commands need QEMU and NASM (the image is built by the native-track script
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-26 on the host, QEMU 11.1.3, NASM 3.02 (the commands were rerun and gave the same exit statuses and the same two probe results; the `pid` in the signal lines is whatever the run had)
 $ tools/native-build.sh > /dev/null && tools/native-image.sh > /dev/null && tools/native-run.sh --serial dist/serial.txt > /dev/null; echo "exit $?"
 native-run: guest reported success
 exit 0
@@ -288,3 +288,4 @@ at: figure qemu
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. The QEMU runs and the two CPU probes in the try block were run on the host; the Bochs, 86Box, DOSBox Staging and js-dos results are copied from `docs/NATIVE-EMULATORS.md` and `docs/S5-JSDOS.md` and were not rerun. The results table is copied from `docs/NATIVE-EMULATORS.md`. Found while writing: a comment in `tools/native-run.sh` says `-cpu 486` keeps the guest to 486 instructions with "no CPUID, no TSC, no MMX or SSE", while `docs/NATIVE-EMULATORS.md` and the probe run for this chapter show that QEMU's 486 executes `rdtsc` (and `cpuid`, `rdmsr`, MMX and CR4 reads, per the document); `tools/native-run-86box.sh` says a boot takes about 20 seconds where `docs/NATIVE-EMULATORS.md` says about 15; and `docs/DIRECTION.md` says of Bochs that "its debugger helps with boot code" while the repository's Bochs is built with `--disable-debugger`.
+- 2026-11-26: re-read in full against `tools/native-run.sh`, `native-test.sh`, `dos/tools/dosrun.sh`, `docs/NATIVE-EMULATORS.md`, `docs/S5-JSDOS.md` and `docs/NATIVE-BOOT.md` at `31221b4`, and the try block rerun on the host with QEMU 11.1.3 (a normal boot exits 0, a divide error 35 from QEMU and 1 from the runner, a hang 124, the `rdtsc` probe prints `probe: executed` and the `cmov` one `probe: #UD`). Added: the runner's `--window` option and four DOSBox switches (`DOS_THEN`, `DOS_CONSOLE`, `DOS_MACHINE`, `DOS_WINDOW`), read from the scripts; neither window mode was run. The QEMU arguments, the status mapping and the dosrun details the chapter gives matched the scripts. Bochs, 86Box, js-dos and DOSBox Staging were not run (the Docker images were not built and `vendor/` has no DOSBox here), so their rows rest on `docs/NATIVE-EMULATORS.md` and `docs/S5-JSDOS.md` as before; `tools/native-test.sh`, which runs against QEMU only, was run in full and passed, but this chapter does not describe its newer checks (the live and module modes).
