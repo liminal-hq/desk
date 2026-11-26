@@ -229,7 +229,7 @@ QEMU is {{state.emu.qemu}} and DOSBox {{state.emu.dosbox}}, which are the two th
 
 ## Try it yourself
 
-These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-10-23. `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` and `tools/native-test-86box.sh` were not run: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `dos/tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
+These commands need QEMU and NASM (the image is built by the native-track scripts, which use Cargo). They build the image, boot it, and run the two CPU probes. Output is from a run on 2026-11-26. `tools/native-test-bochs.sh`, `tools/native-run-bochs.sh`, `tools/native-run-86box.sh` and `tools/native-test-86box.sh` were not run: they need the Docker images `desk-native-bochs:1` and `desk-native-86box:1`, which are not on this machine, and building them compiles Bochs and downloads about 170 MB. `dos/tools/dosrun.sh` needs DOSBox from `tools/setup.sh`, which was not set up here.
 
 ```try
 needs: host: bash, nasm, cargo, qemu-system-i386
