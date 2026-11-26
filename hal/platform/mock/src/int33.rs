@@ -38,6 +38,9 @@ struct State {
     buttons: u8,
     mickeys: (i32, i32),
     wheel: i32,
+    /// Whether the mouse has a wheel, for a driver that has the wheel API. CuteMouse has the API on every mouse and answers
+    /// function 0011h with CX = 0 when it found no wheel.
+    wheel_present: bool,
     /// Presses and releases of each button since the counter was last read, and where the pointer was at the last one.
     presses: [(u16, i32, i32); 3],
     releases: [(u16, i32, i32); 3],
@@ -86,6 +89,7 @@ impl Int33Model {
             buttons: 0,
             mickeys: (0, 0),
             wheel: 0,
+            wheel_present: true,
             presses: [(0, 0, 0); 3],
             releases: [(0, 0, 0); 3],
             counts: true,
@@ -106,6 +110,14 @@ impl Int33Model {
             buttons: 2,
             wheel: false,
         })
+    }
+
+    /// A three-button driver that has the wheel API on a mouse with no wheel, as CuteMouse is on a PS/2 mouse it was not told to probe:
+    /// function 0011h answers 574Dh with CX = 0 and the wheel counter stays 0.
+    pub fn wheel_api_without_a_wheel() -> Int33Model {
+        let m = Int33Model::wheel_mouse();
+        m.state.borrow_mut().wheel_present = false;
+        m
     }
 
     /// Makes function 0000h answer BX = FFFFh for two buttons.
@@ -215,7 +227,7 @@ impl Bios for Int33Model {
             0x0001 => st.hide_counter = (st.hide_counter + 1).min(0),
             0x0002 => st.hide_counter -= 1,
             0x0003 => {
-                let w = if wheel {
+                let w = if wheel && st.wheel_present {
                     (st.wheel.clamp(-128, 127) as i8 as u8 as u32) << 8
                 } else {
                     0
@@ -253,7 +265,7 @@ impl Bios for Int33Model {
             }
             0x0011 if wheel => {
                 regs.eax = 0x574D;
-                regs.ecx = 1;
+                regs.ecx = u32::from(st.wheel_present);
             }
             0x0015 => regs.ebx = 0x0100,
             0x0024 => {
