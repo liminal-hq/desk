@@ -172,6 +172,16 @@ fn a_two_button_driver_without_the_wheel_api_never_reports_a_wheel() {
 }
 
 #[test]
+fn a_driver_with_the_wheel_api_on_a_mouse_without_a_wheel_has_no_wheel() {
+    // CuteMouse answers 574Dh on every mouse and sets bit 0 of CX only when it found a wheel.
+    let m = Mouse::detect(Int33Model::wheel_api_without_a_wheel()).unwrap();
+    assert!(!m.has_wheel());
+    let mut mi = mouse_input(Int33Model::wheel_api_without_a_wheel());
+    mi.mouse().bios.scroll(3);
+    assert_eq!(mi.poll(), None, "the counter in BH is not read");
+}
+
+#[test]
 fn a_driver_that_stops_answering_reads_as_a_still_mouse() {
     struct Gone;
     impl Bios for Gone {
