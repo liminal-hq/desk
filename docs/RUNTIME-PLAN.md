@@ -2,7 +2,7 @@
 
 The plan for making `dos/rt` the union of R132 to R136, Fizz 2's probes, `text.rs`, the press-edge `InputLatch` and safe settings writes with an INT 24h guard (R139). The owner decided on 2026-11-11 that Desk's runtime is canonical and Fizz 2's improvements come back into it ([`FIZZ2-COMPARISON.md`](FIZZ2-COMPARISON.md), a read of two code bases and not a run). The promotion itself is done (R53, R148: the runtime is `dos/rt`, and R54's fixes are merged). What is left is the union.
 
-As of 2026-11-23 T1 to T6 and T12 are built and merged (see the order table); T7 to T10, the sound drivers and the documents are not. The plan was drafted by reading Desk's code and Fizz 2's runtime (read only; its head was newer than the commit the comparison read), and it has not been reviewed by a second reader yet. Every claim about Fizz 2 is from that read, not from a run.
+As of 2026-11-26 every code task is built and merged, T1 to T10, T12 and the sound drivers S1 and S2 (see the order table); the documents pass (T13) is the one left. The plan was drafted by reading Desk's code and Fizz 2's runtime (read only; its head was newer than the commit the comparison read), and it has not been reviewed by a second reader yet. Every claim about Fizz 2 is from that read, not from a run.
 
 ## Contents
 
@@ -23,7 +23,7 @@ As of 2026-11-23 T1 to T6 and T12 are built and merged (see the order table); T7
 | D5 | The probe's x87 side effect (T8) | **Decided 2026-11-23: restore what it found** (T8 also restores the status and tag words). It detects the x87 and restores the control word it found, which keeps the float policy (R138) open |
 | D6 | Where `InputLatch` lives and who uses it first (T10) | **Decided 2026-11-23: `desk-hal::input`, over a `u32` mask, with host tests only** |
 | D7 | R136: which finished-frame present API | Open. The design note is `PRESENT-API.md` (merged, #105) |
-| D8 | Is sound (R135) part of R139 being done? | Open. Proposed: no; the OPL, speaker and Sound Blaster drivers come after, with their own plan |
+| D8 | Is sound (R135) part of R139 being done? | Decided by the owner on 2026-11-23: yes. S1 and S2 are built (the OPL #122; the Sound Blaster and speaker #123). The 560 Hz audio service that will use them gets its own plan |
 
 ## Rules for every task
 
@@ -46,10 +46,10 @@ At most two code tasks run at once.
 | 1 | T1 clean-up list (merged, #108) ∥ T5 accumulator and `Pacer` (merged, #107) ∥ T12 design note (merged, #105) | none |
 | 2 | T2 `memset` and `memcpy` (merged, #111) ∥ T4 per-interrupt chain (merged, #110) | T1; D3 |
 | 3 | T3 fast copy into device memory (merged, #112) ∥ T6 fast timer (merged, #113) | T2; T4, T5; D4 |
-| 4 | T7 safe writes and INT 24h ∥ T8 probes (not started) | T1; D5 |
-| 5 | T9 `text.rs` ∥ T10 `InputLatch` (not started) | T1, T8; D6 |
-| 6 | T13 documents and the Manual (Gregory) | all of the above |
-| later | S1 OPL driver ∥ S2 speaker and Sound Blaster drivers | T6; D8 |
+| 4 | T7 safe writes and INT 24h (merged, #116) ∥ T8 probes (merged, #119) | T1; D5 |
+| 5 | T9 `text.rs` (merged, #121) ∥ T10 `InputLatch` (merged, #118) | T1, T8; D6 |
+| 6 | T13 documents and the Manual (Gregory; this pass) | all of the above |
+| 7 | S1 OPL driver (merged, #122) ∥ S2 speaker and Sound Blaster drivers (merged, #123) | T6; D8 |
 
 T2 and T3 are in different waves on purpose, so that any change in a golden can be traced to one of them.
 
