@@ -5,14 +5,14 @@ part: I
 title: The map
 summary: The two tracks, the four kinds of code, which directory is which layer, what is built and what is not, and how to read the state tags.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [docs/DIRECTION.md, docs/HAL.md, docs/FIRST-WINDOW.md, docs/LAYERS.md, tools/layers/layers.txt, tools/progress-report/anatomy-desk.json, tools/progress-report/anatomy-dos.json, hal/, shell/, kernel/, dos/rt/]
 log: [pivot, hal, firstwindow]
 anatomy: [desk:appmodel, desk:sdk, desk:winown, desk:syscalls, desk:loader, desk:process, desk:wm, desk:shell, desk:ui, desk:gfx, desk:seam, desk:present, desk:hal, desk:drivers, desk:live, desk:native, desk:dos, desk:boot, desk:kernel, desk:freedos, desk:emu, desk:real]
 ---
 ## What it is
 
-Desk is an operating system, written in Rust, for old hardware: 486-class PCs with VGA or VBE graphics, a PS/2 keyboard and mouse, and floppy storage. It is graphical and calm. That is the goal, and this manual is about how much of it exists. The honest answer is that a good deal sits at the bottom, a small and well-tested piece sits in the middle, and nothing sits at the top: there is no application, no system call and no way to load a program yet.
+Desk is an operating system, written in Rust, for old hardware: 486-class PCs with VGA or VBE graphics, a PS/2 keyboard and mouse, and floppy storage. It is graphical and calm. That is the goal, and this manual is about how much of it exists. The honest answer is that a good deal sits at the bottom, a small and well-tested piece sits in the middle, and nothing sits at the top: there is no application, no system call and no way to load a program from disk yet (the kernel loads one test module from a buffer built into it, and a second that draws a window).
 
 This chapter is the map the rest of the manual is drawn on. It says what the [hosted track](term:hosted-track) and the [native track](term:native-track) are, what the four kinds of code are and where each lives in the repository, which of the 22 boxes of the [anatomy page](chapter:anatomydesk) are built and which are only planned, and how to read the [state tags](term:state-tag) this manual puts on every mechanism. After it you should be able to open any directory in the repository and say which layer of the system it belongs to, and to tell, for any sentence in the manual, whether it describes code that has run or code that has only been written.
 
@@ -57,7 +57,8 @@ One part of this table differs from `docs/HAL.md`, which names `core/` as the ho
 | `boot/` | Boot | The two NASM stages: the boot sector and the loader | [M4](chapter:m-loader) |
 | `kernel/` | Platform (native) and kernel | The Rust kernel: GDT, IDT, PIC and PIT set-up, memory, the BIOS trampoline, the native platform, test modes | [M5](chapter:m-boot) to [M8](chapter:m-bioscalls) |
 | `hal/hal/` | HAL | `desk-hal`: ports, interrupts, time, rings, memory-mapped regions, video and input types | [M9](chapter:m-hal) |
-| `hal/drivers/` | Drivers | `desk-serial`, `desk-pit`, `desk-pic`, `desk-vga`, `desk-kbd`, `desk-i8042`, `desk-int33`, `desk-opl` | [M10](chapter:m-sysdrivers) to [M12](chapter:m-graphics) |
+| `hal/drivers/` | Drivers | `desk-serial`, `desk-pit`, `desk-pic`, `desk-vga`, `desk-kbd`, `desk-i8042`, `desk-int33`, `desk-opl`, `desk-sb`, `desk-speaker` | [M10](chapter:m-sysdrivers) to [M12](chapter:m-graphics) |
+| `module/` | Shared, the loader | `desk-module` (the format reader), `dmdpack` (the host packer) and the test modules the kernel embeds (`module/mods`); described only in the frontier chapter and the loader's own document | [M22](chapter:m-frontier) |
 | `hal/platform/mock/` | Platform (host) | A mock port bus and device models, so drivers are tested without a machine | [M9](chapter:m-hal) |
 | `shell/` | Desk core | `desk-gfx`, `desk-font`, `desk-ui`, `desk-wm`, `desk-shell`, and `desk-present`, which the platforms use | [M13](chapter:m-pixels) to [M15](chapter:m-shell) |
 | `shell/dos/` | Platform (DOS), program | `SHELL.EXE`, the hosted wiring of the first window | [M16](chapter:m-platforms) |
@@ -96,7 +97,7 @@ The anatomy page of the native track (`tools/progress-report/anatomy-desk.json`)
 
 The top three layers are planned, and the diagram says so: an app model, the SDK ABI and windows owned by apps; system calls, an executable format and loader, and tasks, scheduling and memory protection. `docs/DIRECTION.md` lists the questions that decide them (cooperative or preemptive, one address space or several) under "Open questions", and [M22](chapter:m-frontier) says what each would need from the layers below. The kernel today has no user mode: the chapter on the processor shows why that is a finding about the code and not a gap in the documents.
 
-Below that the system is built. The Desk core is six crates; the seam between them and the platforms is that the platform owns the loop and calls `Shell::handle` and `Shell::frame`; the HAL and the drivers have host tests against a mock port bus; the two platforms run the same scenario; and the loader and kernel boot in QEMU. What is *not* built is also below that line: live keys and mouse reaching the shell (the drivers exist, but the runs hand the shell scripted events), and any real machine.
+Below that the system is built. The Desk core is six crates; the seam between them and the platforms is that the platform owns the loop and calls `Shell::handle` and `Shell::frame`; the HAL and the drivers have host tests against a mock port bus; the two platforms run the same scenario; and the loader and kernel boot in QEMU. Live keys and mouse now reach the shell on both tracks (the native `shell-live` mode played through QEMU's monitor, SHELL.EXE typed into by AUTOTYPE), though the comparison runs of the two tracks still use scripted events and the box stays unverified for want of a person at a real keyboard. What is *not* built is also below that line: a loader that reads a program from disk, and any real machine.
 
 The second diagram is the hosted track, from the Rust source of `SHELL.EXE` through the runtime, the custom target and the packer, to DOS and the hardware it touches.
 
@@ -131,11 +132,11 @@ The manual's rule is stricter than the anatomy diagram's. A box on the anatomy p
 |---|---|
 | [`tools/progress-report/anatomy-desk.json`](repo:tools/progress-report/anatomy-desk.json) | The native track's 22 boxes, their states and evidence; the status block below follows it box for box |
 | [`tools/progress-report/anatomy-dos.json`](repo:tools/progress-report/anatomy-dos.json) | The hosted track's boxes for `SHELL.EXE` |
-| [`hal/Cargo.toml`](repo:hal/Cargo.toml) | The HAL workspace: `desk-hal`, seven drivers and the mock |
+| [`hal/Cargo.toml`](repo:hal/Cargo.toml) | The HAL workspace: `desk-hal`, ten drivers and the mock |
 | [`shell/Cargo.toml`](repo:shell/Cargo.toml) | The shared core's workspace: six crates; `dos/` is excluded and has its own |
 | [`kernel/Cargo.toml`](repo:kernel/Cargo.toml) | The kernel, which depends on the HAL, the drivers and the core by path |
 | [`shell/dos/Cargo.toml`](repo:shell/dos/Cargo.toml) | `SHELL.EXE`, which depends on `rt`, the HAL, the drivers and the core |
-| [`dos/rt/Cargo.toml`](repo:dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic` and `desk-vga` |
+| [`dos/rt/Cargo.toml`](repo:dos/rt/Cargo.toml) | The DOS runtime, which depends on `desk-hal`, `desk-pic`, `desk-pit` and `desk-vga` |
 | [`kernel/src/hal.rs`](repo:kernel/src/hal.rs) | The native platform: the port bus, the driver statics and the IRQ registry |
 | [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | The DOS platform's implementations of the HAL's traits |
 | [`hal/platform/mock/src/lib.rs`](repo:hal/platform/mock/src/lib.rs) | The host platform for driver tests |
@@ -148,7 +149,7 @@ For depth: `docs/DIRECTION.md` ([two tracks](doc:docs/DIRECTION.md#two-tracks-in
 
 The two cases show how the tags are decided. Neither box is more or less true than the other; one cites something that can fail and one does not.
 
-**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds twelve members: `desk-hal`, ten drivers and the mock. The host tests pass in both workspaces, 161 tests in `shell/` and 179 in `hal/` when this chapter was written (the commands are below). The log's anatomy chapter quotes the same 161 for the core.
+**A layer's size, counted.** The shared core is six crates in `shell/`, and the HAL workspace holds twelve members: `desk-hal`, ten drivers and the mock. The host tests pass in both workspaces: 161 tests in `shell/` and 179 in `hal/` when this chapter was written, 210 and 257 on 2026-11-26 (the commands are below). The log's anatomy chapter quotes the 161 for the core.
 
 **The edge that goes one way.** `desk-gfx` lists `desk-vga` only under `[dev-dependencies]`, because one of its tests compares the software cursor sprite with the VGA driver's arrow. In production code the core never depends on a driver's register-level API, as the rules require; the tests are allowed to look across.
 
@@ -171,7 +172,7 @@ id: map.winown
 label: Windows owned by apps
 state: planned
 evidence: doc:docs/FIRST-WINDOW.md#where-it-sits
-note: Today the scenario, run by the shell, opens both windows.
+note: Today the scenario, run by the shell, opens both windows; one test module opens a window through a stopgap service (#117).
 
 id: map.syscalls
 label: System calls
@@ -183,7 +184,7 @@ id: map.loader
 label: An executable format and loader for the native track
 state: planned
 evidence: doc:docs/DIRECTION.md#what-stays-valid-and-what-changes, repo:docs/S1-DXE3.md
-note: The hosted track proved loading a Rust module with DJGPP's DXE3 format; a native loader needs a format that does not depend on DJGPP's runtime.
+note: The hosted track proved loading a Rust module with DJGPP's DXE3 format. The kernel loads a Desk module (.DMD) from a buffer built into it, through its own loader, and unloads it (R48); nothing is loaded from disk and there are no applications, so the box stays planned.
 
 id: map.process
 label: Tasks, scheduling and memory protection
@@ -238,7 +239,7 @@ id: map.live
 label: Live input into the shell
 state: built-unverified
 evidence: repo:docs/FIRST-WINDOW.md
-note: Both tracks have input drivers, but the comparison runs hand the shell scripted events. Only on DOS were keys typed through IRQ 1 into the focused field, by an interactive run in DOSBox; the mouse reached the shell on neither track, and nothing live reached the native shell. No test records it.
+note: Both tracks run the first window on live input: SHELL.EXE through IRQ 1 and INT 33h (typed into by AUTOTYPE; the xdotool mouse run is opt-in) and the kernel's shell-live mode through the PS/2 controller (played in through QEMU's monitor by tools/native-test.sh, which holds the transcript and screendumps to committed files and ran green on 2026-11-26). No person has used either at a real keyboard or mouse, the comparison runs still use scripted events, and the live records of M15 and M16 own the question of promoting this box.
 
 id: map.native
 label: The native platform: the kernel's shell test mode in QEMU
@@ -282,11 +283,11 @@ The shared core, the HAL, the loader and the kernel are {{state.map.kernel}} in 
 
 ## Try it yourself
 
-These commands read the map out of the repository. They need only `cargo` and a shell. Output is from a run on 2026-10-23 at `44f0265`; the test counts will change when tests are added.
+These commands read the map out of the repository. They need only `cargo` and a shell. Output is from a run on 2026-11-26 at `31221b4`; the test counts will change when tests are added.
 
 ```try
 needs: host: bash, cargo (host tests only; no emulator)
-ran: 2026-10-23 on the host
+ran: 2026-11-26 on the host
 $ grep -h '^name = ' hal/hal/Cargo.toml hal/drivers/*/Cargo.toml hal/platform/*/Cargo.toml shell/*/Cargo.toml kernel/Cargo.toml | sort
 name = "desk-font"
 name = "desk-gfx"
@@ -296,12 +297,15 @@ name = "desk-i8042"
 name = "desk-int33"
 name = "desk-kbd"
 name = "desk-kernel"
+name = "desk-opl"
 name = "desk-pic"
 name = "desk-pit"
 name = "desk-present"
+name = "desk-sb"
 name = "desk-serial"
 name = "desk-shell"
 name = "desk-shell-dos"
+name = "desk-speaker"
 name = "desk-ui"
 name = "desk-vga"
 name = "desk-wm"
@@ -311,12 +315,12 @@ shell/shell/Cargo.toml:21:desk-present = { path = "../present", features = ["std
 shell/dos/Cargo.toml:24:desk-present = { path = "../present" }
 kernel/Cargo.toml:21:desk-present = { path = "../shell/present" }
 $ cd hal && cargo test 2>&1 | grep -c "^test .* ok$"
-179
+257
 $ cd shell && cargo test 2>&1 | grep -c "^test .* ok$"
-161
+210
 ```
 
-The first listing is the 17 packages of the three workspaces and the kernel, and the last line, `shell`, is the name of the program that `shell/dos` builds beside its package `desk-shell-dos`; the second shows that no core crate depends on the presenters except `desk-shell`, and that only in its tests (line 21 is under `[dev-dependencies]`). The two counts are the host tests of the two workspaces.
+The first listing is the 20 packages of the HAL and shell workspaces (the mock included) and the kernel (it was 17 before the three sound drivers), and the last line, `shell`, is the name of the program that `shell/dos` builds beside its package `desk-shell-dos`; the second shows that no core crate depends on the presenters except `desk-shell`, and that only in its tests (line 21 is under `[dev-dependencies]`). The two counts are the host tests of the two workspaces.
 
 **Exercises.** (1) Without running anything, pick three directories of the repository and say which of the four kinds each is, then check against the table. (2) The `live` record is built-unverified. Say what a test would have to show to promote it, and which of the two tracks could show it first. (3) Find a second box of the anatomy page that cites only a document, say whether the manual's stricter rule would lower it, and check your answer against the status block.
 
@@ -379,3 +383,4 @@ thumb: svg
 - 2026-10-23: first written, against `44f0265`. The status block has one record for each of the 22 boxes of `anatomy-desk.json`; `map.emu` is lowered from the box's verified to built-unverified, and `map.live` follows the box. Disagreements found: `docs/HAL.md` and `AGENTS.md` name `core/` as the home of the Desk core where the code uses `shell/`; the Status paragraph at the top of `docs/HAL.md` and the comment in `hal/Cargo.toml` say nothing yet uses the HAL, while the kernel, `rt` and `SHELL.EXE` all depend on it (and the same document's "Crate layout" says so); `docs/HAL.md`'s "Today `hal/` holds" list omits `desk-vga` and `desk-int33`, which are workspace members; and `AGENTS.md` describes `shell/` as holding `desk-gfx` "so far", where it holds six crates.
 - 2026-11-20: reviewed against the layered layout of R148 (in review). The table has a `dos/` row and the remains of the d0 spike apart, and no longer lists the packer under `tools/`; a new subsection and the `m-layers` explainer draw the eight layers from `tools/layers/layers.txt`, with a sidebar on Dijkstra's levels (read from EWD 196 on 2026-11-20). The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The words "in review" and "not merged" in the subsection and in the entry above are replaced by the merge and the commit that made it. The pull requests' CI passed before they merged (the code pull requests ran every group; #98 and #99 changed documents and the report only, so the heavy groups were skipped on them); the opt-in js-dos and Bochs steps were not run and nothing ran on real hardware. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
+- 2026-11-26: re-read in full against `docs/DIRECTION.md`, `docs/HAL.md`, `docs/FIRST-WINDOW.md`, `docs/LAYERS.md`, `tools/layers/layers.txt`, the two anatomy files and the manifests of `hal/`, `shell/`, `kernel/`, `dos/rt/` and `module/` at `31221b4`, and the try block rerun on the host (20 packages and the program name; 257 and 210 host tests). Corrected: the drivers row and the workspace row (ten drivers: `desk-sb` and `desk-speaker` were missing), the `dos/rt` dependency list (`desk-pit` was missing), a row for `module/`, which had none, the sentence that live input is not built (both tracks run the first window on live input, which the native test checks through QEMU's monitor and the DOS check types into with AUTOTYPE; no one has used it at a real keyboard), and the notes of `map.winown`, `map.loader` and `map.live` and the text of the `live` box in `anatomy-desk.json` to say so. No state changed: `live` stays unverified and `loader` and `winown` stay planned; the records in M15 and M16 own any promotion of live input. The layers section matched `layers.txt` (the eight layers and the one recorded exception). The DOS anatomy's figure for the size of `SHELL.EXE` (102,400 bytes) was not checked against a build, which needs the DOS image.
