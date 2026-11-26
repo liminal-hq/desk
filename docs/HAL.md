@@ -2,7 +2,7 @@
 
 Spike H: one design that lets the same driver code (the 16550 serial port, the PIT and PIC, the keyboard and PS/2 mouse, VGA and VBE, OPL and the Sound Blaster, and later storage) run in three places: the hosted DOS runtime, the native kernel, and host unit tests against a mock port bus. The reference implementation is in [`../hal/`](../hal/).
 
-> **Status.** *Built and verified on the host:* the `hal/` workspace with the port I/O, interrupt, time, ring-buffer and memory-mapped-region surfaces, a mock platform, and three drivers (16550, 8254, 8259) tested against the mock; the crates build for the kernel's target and the pure-Rust DOS target. *Designed only:* everything else in this document, including the video, input, sound, storage and physical-memory surfaces, both real platforms, and the migration. Nothing here has run in the kernel, under DOS, in an emulator or on real hardware: the kernel and `rt` are unchanged.
+> **Status.** *Built and verified on the host:* the `hal/` workspace with the port I/O, interrupt, time, ring-buffer and memory-mapped-region surfaces, a mock platform, and the drivers (16550, 8254, 8259, VGA text, keyboard, 8042, INT 33h, and the sound drivers for the OPL, the Sound Blaster and the PC speaker), tested against the mock. *Built and run in an emulator:* the native kernel uses the older drivers (migration step 1) and the DOS runtime `dos/rt` has its own platform in `hal.rs`; both were run in QEMU or DOSBox Staging only. *Built and used by nothing yet:* the three sound drivers, verified against mock chips only (nobody has heard a note, and there is no DMA playback). *Designed only:* the storage drivers and the rest of the migration. Nothing here has run on real hardware.
 
 ## Contents
 
@@ -412,7 +412,7 @@ The core's entry is `fn run<P: Platform>(p: &mut P) -> !`. Associated types keep
 
 What each platform supplies, by surface:
 
-| Surface | Hosted DOS (`rt::hal`, planned) | Native (`kernel::hal`, planned) | Mock (`desk-hal-mock`, built) |
+| Surface | Hosted DOS (`dos/rt`, `hal.rs`, built) | Native (the kernel, built) | Mock (`desk-hal-mock`, built) |
 |---|---|---|---|
 | `PortIo` | `RawPorts` (ring 3 with I/O permission under CWSDPMI; not yet verified, spike A does) | `RawPorts` | `MockPortBus` |
 | `InterruptController` | `Pic8259` without `init` | `Pic8259` with `init(REMAPPED_BASES, …)` | `MockIrq` |
@@ -525,7 +525,7 @@ Verified on the development machine (Arch Linux, Rust 1.98.0 as pinned):
 
 Not verified:
 
-- Anything in the kernel, under DOS, in an emulator or on hardware: no binary uses these crates yet, and `RawPorts` has never executed an instruction.
+- Anything on real hardware: the kernel and the DOS programs use these crates and have run in QEMU and DOSBox Staging only, never on a real machine.
 - That the kernel and the d0 transcripts stay unchanged after migration (steps 1 and 2 are designed, not done), and the code-size cost.
-- Port I/O from ring 3 under CWSDPMI, the DOS interrupt stub with a stack switch, locked heap contexts, VDS, VBE, the 8042, sound and storage: all designed only.
+- VDS, VBE and storage: designed only. Sound (the OPL, Sound Blaster and speaker drivers) is built and tested against mock chips, with no real card, no emulated card and no listener.
 - Equivalence with the kernel is shown for the port sequences of `init`, `write_byte`, the PIT programming and the PIC initialisation, by tests against the kernel's values written out by hand, not by running the kernel against the mock.

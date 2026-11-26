@@ -1517,18 +1517,18 @@
   },
   {
    "id": "ru-sound",
-   "label": "Sound drivers ported into hal/drivers",
+   "label": "Sound drivers in hal/drivers",
    "branch": "hosted",
-   "state": "planned",
+   "state": "done-emu",
    "deps": [
     "nsound",
     "drivers",
     "ru-decision",
     "ru-pit"
    ],
-   "what": "R135: Port Fizz 2's OPL, PC speaker and Sound Blaster code into hal/drivers over PortIo with mock tests, rather than writing sound fresh for R81 and R62. Same licence (Apache-2.0 OR MIT) but parts derive from lieutenant-fizz-dos (MIT, same author): NOTICE entries needed; upstream licences not checked. Verified in Fizz 2 by write counts only; no DMA or PCM.",
+   "what": "R135: Built, written fresh from the design rather than ported (nothing is copied from Fizz 2, so no NOTICE entries): desk-opl (OPL2 and OPL3 register writes with the status-read settling and timer-test detection, #122), desk-sb (DSP reset that treats 0xFF as no card, version, speaker, BLASTER parsing) and desk-speaker (PIT channel 2 and port 0x61 with the other bits kept, #123), each tested against a mock chip. No DMA or PCM; nothing uses the drivers yet.",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R135; docs/FIZZ2-COMPARISON.md, a read of two code bases and not a run; nothing was built or measured for it."
+   "evidence": "PRs #122 and #123; docs/ROADMAP.md R135 and docs/HAL.md. Host tests against mock chips only, with mutation checks; nobody has heard a note, and no real card, emulated card or real timing was involved."
   },
   {
    "id": "ru-present",
@@ -1580,9 +1580,9 @@
     "ru-sound",
     "ru-transcript"
    ],
-   "what": "R139: The promotion itself is done (R53, R148: dos/rt). Merged so far: T1 the clean-up list in order with 16 slots (#108), T2 memset and memcpy (#111), T3 copy_from (#112), T4 the Action return (#110), T5 BiosChain and Pacer (#107), T6 the opt-in fast timer (#113), T7 rename, the INT 24h guard and safe settings writes (#116), T10 InputLatch (#118, no user yet), and the R136 design note (#105). In review and not merged: T8 the platform probes (#119) and T9 the text screen (stacked on it). Still to do: the sound drivers (R135) and the documents. Nothing is copied from Fizz 2 (decision D1).",
+   "what": "R139: The promotion itself is done (R53, R148: dos/rt). Merged so far: T1 the clean-up list in order with 16 slots (#108), T2 memset and memcpy (#111), T3 copy_from (#112), T4 the Action return (#110), T5 BiosChain and Pacer (#107), T6 the opt-in fast timer (#113), T7 rename, the INT 24h guard and safe settings writes (#116), T10 InputLatch (#118, no user yet), and the R136 design note (#105). Also merged: T8 the platform probes (#119), T9 the text screen rt::text (#121) and the sound drivers S1 and S2 (#122, #123; mock-tested only). Still to do: the documents. Nothing is copied from Fizz 2 (decision D1).",
    "why": "Follows the owner's decision of 2026-11-11 to keep Desk's runtime canonical.",
-   "evidence": "docs/ROADMAP.md R139 and docs/RUNTIME-PLAN.md (the order table marks each task); PRs #105, #107, #108, #110, #111, #112, #113, #116 and #118 (merged; #119 is open). Emulators only; nothing on real hardware."
+   "evidence": "docs/ROADMAP.md R139 and docs/RUNTIME-PLAN.md (the order table marks each task); PRs #105, #107, #108, #110, #111, #112, #113, #116, #118, #119, #121, #122 and #123 (all merged). Emulators only; nothing on real hardware."
   },
   {
    "id": "ru-adopt",
