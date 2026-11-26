@@ -15,6 +15,8 @@ The state of the Manual of the Desk Progress Report as of 2026-10-23, written fo
 - [Handoff of 2026-11-20, after the merge](#handoff-of-2026-11-20-after-the-merge)
 - [Handoff of 2026-11-23, after R139 T1 to T6](#handoff-of-2026-11-23-after-r139-t1-to-t6)
 - [Handoff of 2026-11-23, after the visible-module spike and R139 T7 and T10](#handoff-of-2026-11-23-after-the-visible-module-spike-and-r139-t7-and-t10)
+- [Handoff of 2026-11-26, the refresh after R139 and the sound drivers](#handoff-of-2026-11-26-the-refresh-after-r139-and-the-sound-drivers)
+  - [Recommendation: a chapter on the module loader](#recommendation-a-chapter-on-the-module-loader)
 
 ## What is done
 
@@ -191,3 +193,51 @@ This pass (branch `docs/progress-refresh-3`, written against `d5f3328`, #118) br
 - R46 (the Manual published) still has no record that the report built from this `main` was published, and the roadmap nodes `ru-transcript`, `f-transcript` and `breakup` drop to "progress" in the generator because CI did not pass on every merge commit it can see; that was not looked into.
 
 **What the next run should do.** After #119 and the text screen merge: run `build.py --manual-report`, update M17 (probes, text screen) and M9/M10 if the HAL changed, take M13, M11 and M12 in full next, then write or decline a module-loader chapter (see above), and correct `docs/RUNTIME-PLAN.md` and `docs/HAL.md`. Rerun M17's try block in the CI image and M20's where QEMU and NASM are present, and refresh the snapshot after the merge.
+
+## Handoff of 2026-11-26, the refresh after R139 and the sound drivers
+
+This pass (branch `docs/manual-refresh-r139`, written against `31221b4`, #126) re-read the thirteen chapters still reviewed at `44f0265`: M1, M3, M4, M6, M7, M11, M12, M13, M18, M19, M20, M21 and M22, with a look at M10 for the sound drivers. Since the last pass `main` gained the R139 runtime work to T10 (the clean-up list, the string-instruction `memset` and `memcpy`, `copy_from`, the `Action` return of a handler, `BiosChain` and `Pacer`, the opt-in fast timer, safe settings writes, the platform probes, `InputLatch` and `rt::text`), the OPL, Sound Blaster and speaker drivers (#122, #123), the layered layout, the visible-module spike (#114, #117), the INT 33h wheel fix (#124), the PS/2 mouse-alone start and stop (#125) and a documents pass (#126). Nothing ran on a real machine. The opt-in js-dos and Bochs steps were not run.
+
+**Chapters re-read in full, with `reviewed` moved to `31221b4`.** Each has a dated entry in its Revisions that says what was read, what was rerun and what was not.
+
+- **M1.** Corrected: the drivers row (ten drivers, `desk-sb` and `desk-speaker` were missing), the HAL workspace row, the `dos/rt` dependency list (`desk-pit`), a row for `module/`, which had none, the sentence that live input is not built, and the notes of `map.winown`, `map.loader` and `map.live`. The text of the `live` box in `anatomy-desk.json` was changed to say that both tracks run the first window on live input; its state stays `unverified`. The try block was rerun (20 packages, 257 and 210 host tests).
+- **M3.** Added a short section on the sound chips and a record `devices.sound` (`built-unverified`), three rows in the ports explainer (the OPL base, the speaker's counter and its gate), the INT 33h click counters and the wheel API, and the fact that `restore_bios_rate` now has a caller. The try block was rerun.
+- **M4, M7 and M18.** No claim was untrue. M4's and M7's watched files are unchanged apart from formatting, the module packing step and the test modes, and their figures are those of the build the chapters were written against and say so. M18's watched files are unchanged and `bun build.ts --check` still reports 58 files up to date. **`bun test` in `fonts/` was not run**: this checkout has no `fonts/node_modules`.
+- **M6.** A handler now returns an `Action`, which the kernel treats as `Eoi`; a sentence says the kernel uses neither `BiosChain` nor `Pacer`. The try block was rerun (QEMU 11.1.3) with the test counts of today.
+- **M11.** The DOS interrupt stub and the `Action`, the wheel probe (#124), the lost quick click (now recovered by the left button's counters, host tests only), `start_mouse` and `stop_mouse` (#125, no caller in this repository), `InputLatch` in the code table, and the live notes. The try block was rerun.
+- **M12.** `Linear8::blit` uses `copy_from` and `enter_mode13` refuses when the clean-up list is full. The try block was rerun: the VBE tour's transcript matches at 88 lines, all seven screenshots match and the two checksums are unchanged.
+- **M13.** The record `pixels.wordcopy` said word-wide copies were planned and that every byte was a volatile store; `copy_from` has been built since R139 T3 (#112), so it is now `built-verified`, with its limits written in the note (the host tests run the portable path, the string-instruction path runs in the native goldens, DOS rests on committed transcripts, and no speed is claimed). Both try blocks were rerun at depth 8.
+- **M19.** No claim was untrue: the DOS target and its linker script are unchanged from the spike's, and the strong `memcpy` and `memset` are checked by `dos/check.sh`. The host part of the try block was rerun; the CI image part was not.
+- **M20.** Added the runner's `--window` option and four DOSBox switches (`DOS_THEN`, `DOS_CONSOLE`, `DOS_MACHINE`, `DOS_WINDOW`); the QEMU part of the try block was rerun. Bochs, 86Box, js-dos and DOSBox Staging were not run.
+- **M21.** The step table (28 rows), the nine groups and the four opt-in steps were recounted against `tools/check.sh` and are right; the host test counts (257 and 210) and the negative checks of the live and module runs were added.
+- **M22.** The chapter said none of the sound was built; the three drivers are now described as built, mock-tested, unused and never heard, and `frontier.sound` stays `planned` with a note. The try block was rerun (the exception-name line moved from 157 to 172 of `idt.rs`).
+
+**Checked but not re-read, `reviewed` unchanged.** M10 (`d7775ed`): its section on the sound drivers had `desk-sb` and `desk-speaker` and now has `desk-opl`, checked against the driver's functions and constants. The only change to its watched files since `d7775ed` is `docs/HAL.md`.
+
+**What was verified here.** `tools/native-test.sh` ran in full on the host with QEMU 11.1.3 and ended `native: all checks passed` (77 `native: ok` lines, the live and module modes included). The `hal/` and `shell/` host tests pass (257 and 210) and the generator's 257 tests pass. `tools/check.sh --groups base,report` and `python3 -I tools/check-docs.py` were run, and the report of the pass gives their results.
+
+**What could not be verified.**
+
+- Nothing ran on real hardware, and nobody has heard a note from the sound drivers on any card, speaker or emulator.
+- The DOS side: the DOS image was not available, so SHELL.EXE, the strong `memcpy`, the fast timer and the DOS interrupt dispatch were read from the source and the committed transcripts, not run. The figure `102,400 bytes` in `anatomy-dos.json` was not checked against a build, and M17's try block was not rerun.
+- `bun test` in `fonts/` (no `node_modules`), the Bochs, 86Box and js-dos steps, the CI itself and `tools/check.sh` in full.
+- The FreeDOS run of the mouse-alone start that `docs/C-INPUT.md` records was not repeated.
+
+**Still stale or unverified, and what remains.**
+
+- Chapters not at the head of `main`: M2 and M8 (`fb6eba6`), M5, M9, M14 and M15 (`d5f3328`), and M10, M16 and M17 (`d7775ed`). M17 is the next to take: the platform probes (#119), `rt::text` (#121), the safe settings writes and the INT 24h guard are all in `dos/rt`, and its worked example and try block predate the string-instruction `memcpy`. M9 should say where the sound drivers sit in its migration table.
+- M15 and M16 own the live records. `tools/native-test.sh` has now run green, so `shell.livenative` (M15) and `platforms.livenative` (M16) can be looked at for promotion by whoever re-reads those chapters. This pass did not touch them, and the `live` box of the anatomy stays `unverified` for want of a person at a real keyboard.
+- The roadmap nodes that the generator drops to "progress" (`ru-transcript`, `f-transcript`, `breakup`) were not looked into, and R46 (the Manual published) still has no record of this build being published.
+- The `gh` snapshot (`snapshots/gh.json`) was not refreshed, because the pass was offline.
+
+### Recommendation: a chapter on the module loader
+
+**Recommendation: yes, write one chapter, as M23, scoped to what is built and held to the three shelves. Do not fold it into M22.** This is a decision recorded, not a chapter written.
+
+What the Manual has now is scattered. M22 holds a section on the loader and the two test modules, M5 the mode table that includes modes 16, 17, 19 and 20, M1 one row for `module/`, M15 the retained items the module window draws with, and M21 step 10 of its table. A reader who wants to know what a `.DMD` is, how the kernel loads one, what the three window services are and what was and was not proved cannot find it in one place, and the answer rests on `docs/LOADER.md` (about 360 lines) and `docs/LOADER-PLAN.md`.
+
+The case for writing it is that the loader is not a paper design. It is built and held to evidence that the Manual's rules accept: a format crate (`module/format`, `desk-module`) and a strict packer (`dmdpack`) with host tests and a real-linker test, the kernel's loader (`kernel/src/module.rs`) and window services (`kernel/src/modwin.rs`), the module checks of `tools/check-modules.sh` in the `rust` group, four native test modes with expected transcripts and negative runs (a flipped bit refused, an application refused, a transcript without a mark rejected), and a screendump check of the module window at both depths. It is also what the frontier chapter's loader and window-owner boxes stand on, and Gregory's own list of explainers includes a module being loaded, called, crashed and unloaded, which a step-through of `tests/native/expected-module.txt` would drive from real data.
+
+The case against, and how the chapter should answer it: the services are a stopgap (the `modwin` interface is not the SDK, which stays R79), nothing loads from disk, there is no `.DKX` application, no isolation and no DOS-side loader (steps M5 to M9 of `docs/LOADER-PLAN.md`), and nobody has watched the module window run, only headless screendumps. So the chapter would be short on `built-verified` records and say so. The format and the loader would be verified in QEMU and on the host, the window services `built-unverified` with the stopgap's limits written beside them, and disk, applications, a second module, isolation, the DOS loader and the SDK `planned`. A closing section would say what is expected to change.
+
+What it would need: a new row in `plan.json` (the plan has no number for it, so adding M23 moves nothing but the contents), a chapter file with the template's sections, an explainer driven by `tests/native/expected-module.txt` and `expected-module-window-8.txt`, a test file for its pins, and links from M22, M5 and M1. The work is about a day for a builder who reads `docs/LOADER.md`, `module/format` and the two kernel files in full. It is best done before the DOS-side loader lands, because that changes what the chapter says is shared. If the owner would rather wait, the next change worth waiting for is the loader reading from disk.
