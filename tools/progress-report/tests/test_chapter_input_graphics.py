@@ -128,10 +128,10 @@ class InputGraphicsChapterTests(unittest.TestCase):
     def test_the_counts_the_chapter_quotes_are_the_trees(self):
         def tests_in(*parts):
             return len(re.findall(r"#\[test\]", rd(*parts)))
-        self.assertEqual(tests_in("hal", "drivers", "i8042", "src", "tests.rs"), 47)
+        self.assertEqual(tests_in("hal", "drivers", "i8042", "src", "tests.rs"), 50)
         self.assertEqual(tests_in("hal", "drivers", "kbd", "src", "lib.rs"), 24)
         self.assertEqual(tests_in("hal", "drivers", "int33", "src", "tests.rs"), 28)
-        self.assertIn("47 host tests", self.input["raw"])
+        self.assertIn("50 host tests", self.input["raw"])
         self.assertIn("`desk-int33` now has 28 tests", self.input["raw"])
         expected = rd("tests", "native", "expected-input.txt")
         self.assertIn("input: escape released after 26 key events and 8 mouse events", expected)
