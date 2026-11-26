@@ -5,7 +5,7 @@ part: I
 title: The devices of a 486 PC
 summary: The ISA bus and port I/O, the PICs, the PIT, the 8042 with the PS/2 keyboard and mouse, the 16550, VGA and VBE, the floppy and DMA as the BIOS sees them, and the BIOS services the project calls.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [hal/drivers/, hal/hal/src/port.rs, hal/hal/src/irq.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/input.rs, kernel/src/gfx.rs, kernel/src/bios.rs, boot/stage2.asm]
 log: [input, pixels, bios]
 anatomy: [desk:emu, dos:vga, dos:lfb, dos:kbd]
@@ -42,7 +42,7 @@ At the end of an interrupt the handler must send an **[end of interrupt](term:eo
 
 ### The 8254 timer
 
-The **[PIT](term:pit)** (programmable interval timer, the Intel 8254) divides an input clock of 1,193,182 Hz (`INPUT_HZ`) by a number you give it and raises IRQ 0 at the result. Its channel 0 counter is at port `0x40` and its command register at `0x43`. To program it you write a command byte to `0x43` that says which channel, how the 16-bit divisor will be sent (low byte then high byte) and which mode, then write the two divisor bytes to `0x40`. The kernel and `desk-pit` use mode 2, a rate generator, with the command `0x34`. The BIOS runs the same channel in mode 3 (a square wave, command `0x36`) with a divisor of 65,536, written as zero, which is about 18.2 Hz. The driver has `restore_bios_rate`, which programs exactly that, and its test checks the mode, the zero and the 18,207 millihertz it works out to. Nothing in the repository calls it yet.
+The **[PIT](term:pit)** (programmable interval timer, the Intel 8254) divides an input clock of 1,193,182 Hz (`INPUT_HZ`) by a number you give it and raises IRQ 0 at the result. Its channel 0 counter is at port `0x40` and its command register at `0x43`. To program it you write a command byte to `0x43` that says which channel, how the 16-bit divisor will be sent (low byte then high byte) and which mode, then write the two divisor bytes to `0x40`. The kernel and `desk-pit` use mode 2, a rate generator, with the command `0x34`. The BIOS runs the same channel in mode 3 (a square wave, command `0x36`) with a divisor of 65,536, written as zero, which is about 18.2 Hz. The driver has `restore_bios_rate`, which programs exactly that, and its test checks the mode, the zero and the 18,207 millihertz it works out to. The DOS runtime's opt-in fast timer calls it when it unhooks (R139 T6, #113), so that a program that sped the timer up leaves the BIOS clock as it found it; the kernel never changes the rate again after the 100 Hz it starts with.
 
 ### The 8042 and the PS/2 devices
 
@@ -98,9 +98,13 @@ The BIOS is firmware that answers software interrupts, and it exists only in rea
 
 What the [E820](term:e820) call returns, and how the older [E801](term:e801) and AH=88h calls are rewritten into the same shape, is in M4. The loader calls the BIOS in real mode, before the switch. The kernel can call it afterwards only through a trampoline that drops back to real mode for the length of one call, and that, and what it must do to the PICs while it is there, is [M8](chapter:m-bioscalls).
 
+### The sound chips
+
+Three sound devices have drivers in the repository, and the honest thing to say about each is that the driver has been run against a model of the chip and nothing else. The **OPL** (the Yamaha YM3812, or OPL2, of the AdLib, and the YMF262, or OPL3, of later Sound Blasters) is two ports at `0x388` (the register index, and the status when read) and `0x389` (the data), with a second register bank at `0x38A` and `0x38B` on an OPL3; the chip needs about 3.3 microseconds after an index and 23 after a datum, which `desk-opl` covers by reading the status port 6 and 35 times, at the classic reckoning of 0.66 microseconds a read. The **Sound Blaster's DSP** sits at a base port chosen by jumpers (`0x210` to `0x280`, usually `0x220`) and is reset by writing 1 then 0 to base + 6 and waiting for the byte `0xAA` at base + `0xA`; `desk-sb` also reads its version, switches its speaker output, and reads the `BLASTER` environment string that names the base. The **PC speaker** is PIT channel 2 at port `0x42` gated by bits 0 and 1 of port `0x61`, which `desk-speaker` drives with command `0xB6` (mode 3, a square wave) and a divisor of 1,193,182 divided by the frequency. No binary calls any of the three, no DMA is programmed, and a headless run has no way to hear a note: the tests check the port writes against a mock. They are M10's subject and `docs/HAL.md`'s; the ports above are not in the explainer's table because the explainer reads only the constants of the serial, PIC, PIT, 8042 and VGA drivers.
+
 ### On DOS, the mouse is not a BIOS device
 
-Under DOS the Desk does not talk to the 8042's mouse channel. A DOS program asks the mouse *driver*, a program loaded from `CONFIG.SYS` or `AUTOEXEC.BAT`, which hooks software interrupt 33h. The comment at the top of `hal/drivers/int33/src/lib.rs` names the examples: CTMOUSE, the vendor's own driver, or the one built into DOSBox. The interface is not part of the BIOS and a machine may have no driver at all, in which case the hosted platform runs keyboard-only. The crate uses function 0000h to reset and detect the driver (AX comes back as FFFFh when one is installed), 0003h for the button state and 000Bh for the motion since the last call, in *mickeys* (the mouse's own counting units, a unit of movement that the driver does not convert to pixels), which `MouseInput` turns into the same `MouseEvent` the PS/2 packet decoder produces, so that the shared core cannot tell the two tracks apart. The keyboard on DOS is the opposite case: the hosted platform does take over IRQ 1, with a protected-mode handler, and reads port `0x60` itself.
+Under DOS the Desk does not talk to the 8042's mouse channel. A DOS program asks the mouse *driver*, a program loaded from `CONFIG.SYS` or `AUTOEXEC.BAT`, which hooks software interrupt 33h. The comment at the top of `hal/drivers/int33/src/lib.rs` names the examples: CTMOUSE, the vendor's own driver, or the one built into DOSBox. The interface is not part of the BIOS and a machine may have no driver at all, in which case the hosted platform runs keyboard-only. The crate uses function 0000h to reset and detect the driver (AX comes back as FFFFh when one is installed), 0003h for the button state, 000Bh for the motion since the last call, in *mickeys* (the mouse's own counting units, a unit of movement that the driver does not convert to pixels), and 0005h and 0006h for how many times the left button went down and up since the last call, which recover a click shorter than one poll. Function 0011h asks for the CuteMouse wheel API: the answer `574Dh` says the driver has it and bit 0 of `CX` says the mouse has a wheel. `MouseInput` turns these into the same `MouseEvent` the PS/2 packet decoder produces, so that the shared core cannot tell the two tracks apart. The keyboard on DOS is the opposite case: the hosted platform does take over IRQ 1, with a protected-mode handler, and reads port `0x60` itself.
 
 ## Why it is this way
 
@@ -212,6 +216,12 @@ state: built-verified
 evidence: test:tests/native/expected.txt::boot complete, sym:boot/stage1.asm::read_chunk
 note: QEMU may not enforce the 64 KiB rule itself, and no code touches the floppy controller or the DMA chip. The retry path has never run (see M4).
 
+id: devices.sound
+label: The OPL, Sound Blaster DSP and PC speaker drivers, against mock chips
+state: built-unverified
+evidence: test:hal/drivers/speaker/src/lib.rs::tone_programs_channel_2_in_square_wave_mode, test:hal/drivers/sb/src/lib.rs::reset_works_on_a_present_card, sym:hal/drivers/opl/src/lib.rs::Opl
+note: Host tests against models on the mock bus check the sequences of port writes. No binary uses the drivers, there is no DMA, and nobody has heard a note on a real card, a real speaker or an emulated one. The OPL settling counts rest on the classic 0.66 microseconds a read.
+
 id: devices.fdc-driver
 label: A native floppy or DMA driver
 state: planned
@@ -237,7 +247,7 @@ These commands run the host tests of the drivers this chapter describes and read
 
 ```try
 needs: host: cargo, grep
-ran: 2026-10-23 on the host at 44f0265, and rerun on 2026-11-20 at fb6eba6 (every test named below passed again and the count of passing test groups was 23 again; the raw filter also prints each group's `test result` line, which the listing leaves out, and desk-pic's tests came in a different order)
+ran: 2026-10-23 on the host at 44f0265, rerun on 2026-11-20 at fb6eba6 and again on 2026-11-26 at 31221b4 (every test named below passed again; the count of passing test groups was 23 at the first two and is 29 now, because the sound drivers and new test files added groups; the raw filter also prints each group's `test result` line, which the listing leaves out, and desk-pic's tests came in a different order)
 $ cd hal && cargo test -p desk-pit programming_100_hz 2>&1 | grep -E "^test "
 test tests::programming_100_hz_writes_what_the_kernel_writes ... ok
 $ cd hal && cargo test -p desk-i8042 packets_decode 2>&1 | grep -E "^test "
@@ -250,13 +260,13 @@ test tests::spurious_interrupts_are_told_apart_by_the_in_service_register ... ok
 test tests::the_service_and_request_registers_are_read_through_ocw3 ... ok
 test tests::native_init_matches_the_kernel_with_its_delays ... ok
 $ cd hal && cargo test --workspace 2>&1 | grep -c "test result: ok"
-23
+29
 $ grep -n "pub const CHANNEL0\|pub const COMMAND" hal/drivers/pit/src/lib.rs
 22:pub const CHANNEL0: u16 = 0x40;
 23:pub const COMMAND: u16 = 0x43;
 ```
 
-The 23 is the number of test suites (unit tests, integration tests and doc tests) in the `hal/` workspace; added up at the same commit they ran 179 tests, 0 failed.
+The 29 is the number of test suites (unit tests, integration tests and doc tests) in the `hal/` workspace; added up at the same commit they ran 257 tests, 0 failed. (It was 23 suites and 179 tests on 2026-10-23.)
 
 **Exercises.** (1) Without running anything, work out the PIT divisor for 1,000 Hz and the bytes written to ports `0x40` and `0x43`, then check them against `the_chip_model_sees_mode_2_and_the_reload_value` in `hal/drivers/pit/src/lib.rs`. (2) Decode the packet `2A 03 FD` by hand: which button, and how far in which direction does the Desk's cursor move? Then find the test that would catch you if you got the sign of dy wrong. (3) The vector of IRQ 6 under the kernel's bases and under the BIOS's: say which is which, then find the row in the table above. (4) In a scratch branch, change `REMAPPED_BASES` to `(0x20, 0x20)` and say which check refuses it first.
 
@@ -331,3 +341,4 @@ thumb: specimen
 - 2026-10-23: first written, against `44f0265`. Every port and IRQ number named was checked against the driver constant or the assembly that uses it, and the commands above were run on the host. One disagreement between a document and the code: `docs/HAL.md` ("Console and debug output") lists a VGA text console `desk-vgatext` as an implementer of `DebugOut`, but no such crate exists in `hal/` and the kernel's text console is `kernel/src/vga.rs` writing to `0xB8000` directly (`docs/C-INPUT.md` says plainly that `vga.rs` was left alone, and `docs/HAL.md` marks the move optional). Also noted: `docs/A-VGA-VBE.md`'s status block says QEMU and the native kernel are not verified, which the later `docs/D-NATIVE-VGA.md` and `docs/N3-BIOS-PATH.md` superseded.
 - 2026-11-20: the try block was rerun on the host at `fb6eba6` (see its provenance line); the commands were unchanged and the results matched. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
 - 2026-11-23: one label corrected (`restore_bios_rate` has a caller since R139 T6, #113). Only that label was checked; the chapter was not re-read in full and `reviewed` is unchanged.
+- 2026-11-26: re-read in full against `hal/drivers/`, `hal/hal/src/port.rs` and `irq.rs`, `kernel/src/pic.rs`, `pit.rs`, `input.rs`, `gfx.rs` and `bios.rs` and `boot/stage2.asm` at `31221b4`, and the try block rerun on the host (every named test passed; the workspace is now 29 test suites and 257 tests). Corrected: `restore_bios_rate` has a caller (the DOS fast timer's unhook), the INT 33h functions the driver uses now include 0005h, 0006h and the wheel API's bit 0 of `CX`. Added: a short section on the sound chips (OPL ports and settling, the Sound Blaster DSP's reset, the PC speaker's PIT channel 2 and port 0x61), read from `desk-opl`, `desk-sb` and `desk-speaker`, and a record `devices.sound`, `built-unverified`: mock-tested, used by nothing, nobody has heard a note. The ports explainer was not changed and does not list the sound ports. The kernel's files changed by formatting only; the 8042, PIC, UART, VGA and VBE statements matched the code.
