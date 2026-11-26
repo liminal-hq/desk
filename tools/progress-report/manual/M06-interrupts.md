@@ -5,7 +5,7 @@ part: III
 title: The kernel: tables, interrupts and the timer
 summary: The kernel's own GDT, the 256-gate IDT and its assembly stubs, the exception dump, the remapped PICs, the IRQ registry, end-of-interrupt, the spurious lines, the PIT at 100 Hz and the bounded first-tick spin.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [kernel/src/gdt.rs, kernel/src/idt.rs, kernel/src/pic.rs, kernel/src/pit.rs, kernel/src/hal.rs, kernel/src/sync.rs, hal/hal/src/irq.rs, hal/drivers/pic/, hal/drivers/pit/, tests/native/]
 log: [boot, hal]
 anatomy: [desk:kernel]
@@ -57,7 +57,7 @@ The shared HAL declares what an interrupt is ([M9](chapter:m-hal)): a line numbe
 
 [`register`](sym:kernel/src/hal.rs::register) refuses any `Chain` but `None` (the kernel is the only owner of its vectors, so there is no previous handler to chain to) and then, inside the critical section described below, does three things in this order: it stores the handler in the table, or fails with `Busy` if the slot is taken; it calls [`idt::set_irq_gate`](sym:kernel/src/idt.rs::set_irq_gate), which points vector `0x20 + line` at the assembly stub for that line; and only then it unmasks the line at the PIC, and for a slave line the cascade input (IRQ 2) as well, without which a slave line cannot reach the processor. The order is the safety argument: the gate is complete before the line can fire. `unregister` empties the slot and masks the line; it does not clear the gate, which is harmless because a masked line sends nothing.
 
-The sixteen stubs for hardware lines are made by a second macro in `idt.rs`. Each is `pushad`, `cld`, push the line number, `call irq_dispatch`, drop the argument, `popad`, `iretd`. [`irq_dispatch`](sym:kernel/src/hal.rs::irq_dispatch) in `hal.rs` is the one Rust function behind them: it asks the PIC whether the interrupt is spurious (below); if not it copies the handler out of the table, calls it if there is one, and then sends the [end-of-interrupt](term:eoi). The handlers in use are the timer's tick counter and, once the input code starts, the keyboard's and the mouse's (`kernel/src/input.rs` registers IRQ 1 and IRQ 12). The BIOS test mode swaps the timer's handler for a probe and back, which is the one place the kernel unregisters a line.
+The sixteen stubs for hardware lines are made by a second macro in `idt.rs`. Each is `pushad`, `cld`, push the line number, `call irq_dispatch`, drop the argument, `popad`, `iretd`. [`irq_dispatch`](sym:kernel/src/hal.rs::irq_dispatch) in `hal.rs` is the one Rust function behind them: it asks the PIC whether the interrupt is spurious (below); if not it copies the handler out of the table, calls it if there is one, and then sends the [end-of-interrupt](term:eoi). Since R139 a handler returns an [`Action`](sym:hal/hal/src/irq.rs::Action), `Eoi` or `Chain`, so that a platform that has a previous owner of the vector (the DOS runtime) can pass an interrupt on; the kernel has no previous owner, so `irq_dispatch` and `run_handler` drop the value and treat `Chain` as `Eoi`, because an interrupt that is not acknowledged blocks its line. The handlers the kernel registers (the tick counter, the keyboard and the mouse) always return `Eoi`. The handlers in use are the timer's tick counter and, once the input code starts, the keyboard's and the mouse's (`kernel/src/input.rs` registers IRQ 1 and IRQ 12). The BIOS test mode swaps the timer's handler for a probe and back, which is the one place the kernel unregisters a line.
 
 ### End-of-interrupt and the spurious lines
 
@@ -69,7 +69,7 @@ A [spurious interrupt](term:spurious-interrupt) is one the controller reports on
 
 ### The PIT at 100 Hz
 
-[`pit::init(100)`](sym:kernel/src/pit.rs::init) programs the [PIT](term:pit) through the shared driver: `Pit::new(PORTS).program_clock(&CLOCK, hz)`. The driver divides its 1,193,182 Hz input by a divisor chosen by `(1,193,182 + hz ÷ 2) ÷ hz` in whole numbers, which for 100 Hz is 11,932, and writes the command `0x34` and the two bytes of the divisor ([M3](chapter:m-devices)). `program_clock` records the divisor in the clock in the same step, so the clock's rate cannot drift from the chip's. `init` then registers the clock's tick counter as the IRQ 0 handler with `IrqHandler::from_shared`: the counter is all atomics, so it can be a plain `static`. Its `on_irq` is one `fetch_add` (`lock xadd`, which a 486 has) and the handler runs with interrupts off. Each interrupt is a [tick](term:tick); `pit::ticks()` reads the count.
+[`pit::init(100)`](sym:kernel/src/pit.rs::init) programs the [PIT](term:pit) through the shared driver: `Pit::new(PORTS).program_clock(&CLOCK, hz)`. The driver divides its 1,193,182 Hz input by a divisor chosen by `(1,193,182 + hz ÷ 2) ÷ hz` in whole numbers, which for 100 Hz is 11,932, and writes the command `0x34` and the two bytes of the divisor ([M3](chapter:m-devices)). `program_clock` records the divisor in the clock in the same step, so the clock's rate cannot drift from the chip's. `init` then registers the clock's tick counter as the IRQ 0 handler with `IrqHandler::from_shared`: the counter is all atomics, so it can be a plain `static`. Its `on_irq` is one `fetch_add` (`lock xadd`, which a 486 has) and the handler runs with interrupts off. Each interrupt is a [tick](term:tick); `pit::ticks()` reads the count. The driver has since gained `BiosChain`, `Pacer` and the stopwatch helpers for the DOS runtime's opt-in fast timer ([M10](chapter:m-sysdrivers), [M17](chapter:m-rt)); the kernel uses none of them and still runs the fixed 100 Hz clock described here.
 
 > **From the stacks — Where 1,193,182 comes from.** Wikipedia's article on the Intel 8253 says that all PC compatibles run the timer at 105/88 MHz, about 1.19318 MHz, which is one third of the NTSC colour-burst frequency, obtained by dividing the 14.31818 MHz system clock by 12. It calls this a holdover from the first CGA PCs, which derived all their frequencies from one crystal. It also says that dividing by 2^16, the largest divisor, gives the roughly 18.2 Hz interrupt that MS-DOS systems use.
 > Source: [Intel 8253, Wikipedia](https://en.wikipedia.org/wiki/Intel_8253)
@@ -209,23 +209,25 @@ The first three commands are the host tests of the drivers and the registry trai
 
 ```try
 needs: host: bash, cargo, nasm, qemu-system-i386, tr, sed
-ran: 2026-10-23 on the host at 4cc4ef2, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-26 on the host at 31221b4, QEMU 11.1.3, NASM 3.02 (the first two commands and the three runs; the dumps' addresses and registers are those of the kernel built that day)
 $ cd hal && cargo test -p desk-pic -p desk-pit 2>&1 | grep -E "^test result: ok. [1-9]"
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cd hal && cargo test -p desk-hal irq 2>&1 | grep -E "^test "
 test irq::tests::a_handler_reaches_its_context ... ok
 test irq::tests::a_shared_handler_needs_only_a_static ... ok
+test irq::tests::chains_needs_a_previous_owner_and_a_reason ... ok
 test irq::tests::lines_above_fifteen_do_not_exist ... ok
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+test irq::tests::the_handlers_of_the_old_traits_return_eoi_and_a_deciding_one_returns_its_choice ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
 $ tools/native-build.sh > /dev/null 2>&1; tools/native-image.sh --test-mode div0 --out dist/n-div0.img > /dev/null; tools/native-run.sh dist/n-div0.img 2>&1 | tr -d '\r' | sed -n '/^test:/,$p'
 test: dividing by zero
 
 EXCEPTION 0x00: divide error
 error code 0x00000000
-EIP 0x0010d125  CS 0x0008  EFLAGS 0x00010246
+EIP 0x001113ee  CS 0x0008  EFLAGS 0x00010246
 EAX 0x00000001  EBX 0x00000500  ECX 0x00000000  EDX 0x00000000
-ESI 0x00000001  EDI 0x0000000a  EBP 0x0013aff4  ESP 0x0013af04
+ESI 0x00000001  EDI 0x000186a0  EBP 0x00146ff4  ESP 0x00146dbc
 CR0 0x00000033  CR2 0x00000000  CR3 0x00000000
 halting with a failure status
 native-run: guest reported failure
@@ -241,9 +243,9 @@ EXCEPTION 0x06: invalid opcode
 error code 0x00000000
 ```
 
-Across the whole `hal/` workspace the same host tests pass (`cargo test --workspace` ran 23 suites and 179 tests, none failed, at this commit). The exit status of each failing run is 1; the `native-run:` line says so.
+Across the whole `hal/` workspace the same host tests pass (`cargo test --workspace` ran 29 suites and 257 tests, none failed, at `31221b4`). The exit status of each failing run is 1; the `native-run:` line says so.
 
-**Exercises.** (1) Without running it, work out the error code for a program that loads selector `0x18`, then the one for `0x2B` (the processor drops the requested-privilege bits, so say what the error code holds instead); say what the table indicator is, and change the test mode's selector in a scratch branch to check, remembering that its expected file pins `0x00000028`. (2) The kernel's dump prints `ESP 0x0013af04` and the interrupted program's stack pointer is not that. Say what you would add to the program's `ESP`, then find the line of `idt.rs` that proves you right. (3) Predict what the transcript's tick line would print if `TICK_WAIT` were 25, and what the run time would be, then change it and check against `expected.txt`. (4) In a scratch branch, remove the `pic::mask_timer()` call from the `notick` path and say which of the two checks, the transcript or the exit status, fails first.
+**Exercises.** (1) Without running it, work out the error code for a program that loads selector `0x18`, then the one for `0x2B` (the processor drops the requested-privilege bits, so say what the error code holds instead); say what the table indicator is, and change the test mode's selector in a scratch branch to check, remembering that its expected file pins `0x00000028`. (2) The kernel's dump prints `ESP 0x00146dbc` and the interrupted program's stack pointer is not that. Say what you would add to the program's `ESP`, then find the line of `idt.rs` that proves you right. (3) Predict what the transcript's tick line would print if `TICK_WAIT` were 25, and what the run time would be, then change it and check against `expected.txt`. (4) In a scratch branch, remove the `pic::mask_timer()` call from the `notick` path and say which of the two checks, the transcript or the exit status, fails first.
 
 ## Proved in the log
 
@@ -295,3 +297,4 @@ thumb: svg
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. Every claim was checked against `kernel/src/gdt.rs`, `idt.rs`, `pic.rs`, `pit.rs`, `hal.rs`, `sync.rs`, `main.rs`, `hal/hal/src/irq.rs` and the two drivers, and the commands above were run on the host. Found while writing: `docs/NATIVE-BOOT.md` says the IRQ 0 handler sends the end-of-interrupt, which the code does in `irq_dispatch`; two driver header comments still name the kernel's files as the reference for code that now calls the drivers. Ten status rows, three of them built-unverified (a spurious interrupt at the kernel, the lock, and the untested exception stubs).
+- 2026-11-26: re-read in full against `kernel/src/gdt.rs`, `idt.rs`, `pic.rs`, `pit.rs`, `hal.rs`, `main.rs`, `hal/hal/src/irq.rs` and the PIC and PIT drivers at `31221b4`, and the try block rerun (QEMU 11.1.3, NASM 3.02: the three exception runs gave the same dump shape with the addresses of today's kernel; the host tests now count 6 and 15 for the PIC and PIT drivers, 5 for `irq` and 257 across the `hal/` workspace). Corrected: the registry section now says a handler returns an `Action` and that the kernel treats `Chain` as `Eoi` (R134 T4, commit `127dab4`); a sentence says the kernel does not use `BiosChain` or `Pacer`. Everything else (the GDT, the 256-gate IDT, the error-code mask, the PIC remap, the divisor arithmetic, the spurious-line path, the bounded spin) matched the code, which changed here only by formatting. The two documented disagreements (`docs/NATIVE-BOOT.md` on who sends the EOI, the drivers' header comments) are still true. No test raises a spurious interrupt in the kernel, so that record stays built-unverified.

@@ -20,6 +20,8 @@ ID = "m-ports"
 PORTS = [
     ("PIT", "channel 0 counter", "hal/drivers/pit/src/lib.rs", "CHANNEL0", 0x40),
     ("PIT", "command (mode) register", "hal/drivers/pit/src/lib.rs", "COMMAND", 0x43),
+    ("PIT", "channel 2 counter (the speaker)", "hal/drivers/speaker/src/lib.rs", "CHANNEL2", 0x42),
+    ("Port B", "speaker gate (bits 0 and 1)", "hal/drivers/speaker/src/lib.rs", "PORT_B", 0x61),
     ("8042", "data port", "hal/drivers/i8042/src/lib.rs", "DATA_PORT", 0x60),
     ("8042", "status (read) and command (write)", "hal/drivers/i8042/src/lib.rs", "STATUS_PORT", 0x64),
     ("POST", "the I/O delay port", "hal/hal/src/port.rs", "POST_PORT", 0x80),
@@ -27,6 +29,7 @@ PORTS = [
     ("PIC", "slave command", "hal/drivers/pic/src/lib.rs", "SLAVE", 0xA0),
     ("UART", "COM1 base", "hal/drivers/serial/src/lib.rs", "COM1", 0x3F8),
     ("UART", "COM2 base", "hal/drivers/serial/src/lib.rs", "COM2", 0x2F8),
+    ("OPL", "index and status (the data port is one above)", "hal/drivers/opl/src/lib.rs", "BASE", 0x388),
     ("CMOS", "index port (bit 7 masks NMI)", "kernel/src/bios.rs", "CMOS_INDEX", 0x70),
     ("VGA", "attribute controller address", "hal/drivers/vga/src/regs.rs", "ATTR_ADDR", 0x3C0),
     ("VGA", "miscellaneous output (write)", "hal/drivers/vga/src/regs.rs", "MISC_OUTPUT", 0x3C2),

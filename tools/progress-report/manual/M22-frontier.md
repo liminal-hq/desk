@@ -5,16 +5,16 @@ part: VIII
 title: What is not built
 summary: Every planned box said plainly: apps and the SDK, window ownership, system calls, a loader and executable format, processes and protection, storage, sound, FreeDOS and a real machine; what each would need from the layers below, and the decisions that are open.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [docs/DIRECTION.md, docs/SDK.md, docs/OPEN-QUESTIONS.md, tools/progress-report/anatomy-desk.json, kernel/src/main.rs, kernel/src/gdt.rs, kernel/src/idt.rs]
 log: [decisions, path]
 anatomy: [desk:appmodel, desk:sdk, desk:winown, desk:syscalls, desk:loader, desk:process, desk:freedos, desk:real]
 ---
 ## What it is
 
-The rest of this manual describes what exists. This chapter describes what does not, because a manual that stopped at the edge of the code would leave the most important sentence unsaid: **there is no operating system yet**. What exists is a kernel that boots and checks itself, a hosted program on DOS, a set of shared drivers, and the first piece of a shared core that draws two windows, text and a cursor on both tracks. It has no apps, no system calls, no processes, no storage and no sound, and its loader is a first piece: a kernel that loads one test module from a buffer built into it, and nothing from disk. Everything in this chapter is a plan, and the chapter's job is to say which parts of each plan are written down, which are open, and what the built layers would have to provide before the plan could start.
+The rest of this manual describes what exists. This chapter describes what does not, because a manual that stopped at the edge of the code would leave the most important sentence unsaid: **there is no operating system yet**. What exists is a kernel that boots and checks itself, a hosted program on DOS, a set of shared drivers, and the first piece of a shared core that draws two windows, text and a cursor on both tracks. It has no apps, no system calls, no processes, no storage and no sound that anyone has heard (three sound drivers are built and tested against a mock chip, and nothing uses them), and its loader is a first piece: a kernel that loads one test module from a buffer built into it, and nothing from disk. Everything in this chapter is a plan, and the chapter's job is to say which parts of each plan are written down, which are open, and what the built layers would have to provide before the plan could start.
 
-On the map ([M1](chapter:m-map)) these are the boxes drawn dashed: eight of them on [the anatomy page](chapter:anatomydesk), at the top, bottom and in the middle of the stack. Nothing in the state table below is built; every record is tagged `planned`, and each cites the document that plans it, so a reader can follow the claim to where it was made. The chapter adds four more records for things the documents sketch without a box of their own: paging, storage, sound and the V86 task that FreeDOS might need. It invents nothing: where a document leaves a decision open the chapter says it is open, and where the chapter explains what a thing would need it says what the built code offers, not what a design would choose.
+On the map ([M1](chapter:m-map)) these are the boxes drawn dashed: eight of them on [the anatomy page](chapter:anatomydesk), at the top, bottom and in the middle of the stack. Nothing in the state table below is built; every record is tagged `planned`, and each cites the document that plans it, so a reader can follow the claim to where it was made. The chapter adds four more records (the one for sound is partly built, see below) for things the documents sketch without a box of their own: paging, storage, sound and the V86 task that FreeDOS might need. It invents nothing: where a document leaves a decision open the chapter says it is open, and where the chapter explains what a thing would need it says what the built code offers, not what a design would choose.
 
 <!-- figure anatomy-desk -->
 
@@ -59,7 +59,7 @@ Nothing on the native track reads a file. The loader reads the floppy by BIOS ca
 
 ### Sound
 
-Sound is specified on paper twice, in the SDK (`desk_opl_write`, sampled playback) and in the HAL, which sketches `Opl` and `PcmOut` traits over the OPL chip, the Sound Blaster's DSP and the DMA controller, with the platform's only parts being the DMA buffer, the interrupt and the configuration. None of it is built. Audio also cannot be checked headless (the DOSBox runs of the checks have sound off), so the first test of a sound driver would be a test of its register sequence against the mock, and nothing would show that a speaker made a noise. Detecting a card without `BLASTER` and without DOS is an open question in `docs/DIRECTION.md`.
+Sound is specified on paper twice, in the SDK (`desk_opl_write`, sampled playback) and in the HAL, which sketches `Opl` and `PcmOut` traits over the OPL chip, the Sound Blaster's DSP and the DMA controller, with the platform's only parts being the DMA buffer, the interrupt and the configuration. Since the last pass three of the drivers under it are built, and they are the first piece of this chapter that has moved: `desk-opl` (register writes to the OPL2 and OPL3, R139 S1, #122), `desk-sb` (the Sound Blaster's DSP reset, version and the `BLASTER` string) and `desk-speaker` (the PC speaker through PIT channel 2 and port 0x61), the last two in #123. They are tested against mock chips only, so what the host tests show is the sequence of port writes; no binary uses them, there is no DMA driver, no playback and no audio service, and nobody has heard a note, on a real card, a real speaker or an emulated one. Audio also cannot be checked headless (the DOSBox runs of the checks have sound off). The record below therefore stays `planned`: the sound the box promises is not built, and the drivers' own state is recorded in `docs/HAL.md` and is not promoted here. Detecting a card without `BLASTER` and without DOS is an open question in `docs/DIRECTION.md`.
 
 ### FreeDOS, and a real machine
 
@@ -81,7 +81,7 @@ These come from `docs/DIRECTION.md` ("Open questions"), where each is stated wit
 | Early disk access | BIOS calls in the loader; own drivers in the kernel | BIOS calls in the loader and, from the kernel, through a trampoline |
 | Real-mode switching | Never; a trampoline; a V86 monitor | A trampoline, measured; V86 left as the later upgrade (`docs/N3-BIOS-PATH.md`) |
 | Graphics driver strategy | VBE before the switch; V86 calls; native drivers per card | VBE before the switch and register modes |
-| Sound detection | Probe for a Sound Blaster, OPL or MPU-401 without `BLASTER` | Nothing |
+| Sound detection | Probe for a Sound Blaster, OPL or MPU-401 without `BLASTER` | Only the parse of a `BLASTER` string and a DSP reset, in `desk-sb`, tested against a mock; no probe |
 | Input | Own PS/2 drivers; whether USB is ever in scope (the document says not for the 486 target) | Own PS/2 drivers |
 | Launching DOS programs | Boot into FreeDOS; a V86 task; both | Nothing |
 | Licensing of FreeDOS components | What is bundled, and how | Nothing |
@@ -183,6 +183,7 @@ id: frontier.sound
 label: Sound: the OPL, the Sound Blaster DSP and DMA
 state: planned
 evidence: doc:docs/HAL.md#sound-sketch-the-sound-milestone-builds-it, repo:docs/SDK.md
+note: The OPL, Sound Blaster and speaker drivers are built (R139 S1 and S2) and tested against mock chips only; nothing uses them, there is no DMA, no playback and no audio service, and nobody has heard a note. The sound itself is still planned.
 
 id: frontier.v86
 label: A V86 monitor for DOS programs and calls that must not turn interrupts off
@@ -194,15 +195,15 @@ The chapter's one claim, that none of this is built, is the claim the whole arch
 
 ## Try it yourself
 
-The commands below look for the things this chapter says do not exist, in the code that is there, and list the planned boxes of the anatomy data. They need only a shell and Python 3. Output is from a run on 2026-10-23.
+The commands below look for the things this chapter says do not exist, in the code that is there, and list the planned boxes of the anatomy data. They need only a shell and Python 3. Output is from a run on 2026-11-26 (the line of the exception name moved from 157 to 172).
 
 ```try
 needs: host: grep, python3
-ran: 2026-10-23 on the host
+ran: 2026-11-26 on the host, at 31221b4
 $ grep -n "static GDT" kernel/src/gdt.rs
 13:static GDT: [u64; 3] = [0, 0x00CF_9A00_0000_FFFF, 0x00CF_9200_0000_FFFF];
 $ grep -rn -i "tss\|task-state\|ring 3" kernel/src/*.rs
-kernel/src/idt.rs:157:    "invalid TSS",
+kernel/src/idt.rs:172:    "invalid TSS",
 $ grep -rn -i "syscall\|sysenter\|call gate" kernel/src/ | wc -l
 0
 $ python3 -I -c "import json; d=json.load(open('tools/progress-report/anatomy-desk.json')); print(' '.join(b['id'] for b in d['boxes'] if b['status']=='planned'))"
@@ -242,3 +243,4 @@ at: figure anatomy-desk
 
 - 2026-10-23: first written, against `44f0265`. Every planned box of `anatomy-desk.json` has a record in the status block with the box's evidence, and a test keeps the two in step. The `try` commands were run on the host. No disagreement was found between the documents and the code for this layer.
 - 2026-11-23: prose corrected against `d5f3328` where the loader work had made it untrue (the opening, "Apps and the SDK", "Windows owned by apps", "A loader and an executable format", one cell of the table and the notes of two records, and the matching boxes in `anatomy-desk.json`). The chapter was **not** re-read in full against `kernel/src/main.rs`, `gdt.rs` and `idt.rs` beyond the statements it makes about them, so `reviewed` stays `44f0265`. The records stay `planned`: there is no app model, no interface and nothing from disk.
+- 2026-11-26: re-read in full against `docs/DIRECTION.md`, `kernel/src/gdt.rs`, `idt.rs` and `main.rs` and `anatomy-desk.json` at `31221b4`. Changes since `44f0265` in those files are formatting, the module test modes and the loader's boxes (already corrected on 2026-11-23); one claim was out of date: the chapter said none of the sound is built. The OPL, Sound Blaster and speaker drivers (#122, #123) are now said to exist, tested against mock chips only, used by nothing, never heard; the `frontier.sound` record stays `planned` and gains a note, and the sound-detection row of the decisions table says what the `BLASTER` parser and DSP reset cover. The try block was rerun on the host (the exception-name line moved from 157 to 172). The statements on the loader and the window owner were checked against `kernel/src/module.rs` and `modwin.rs` (the four slots, the three window services and `desk_log`); the claim that nothing is checked in a module's pointers rests on `docs/LOADER.md` and was not re-derived.

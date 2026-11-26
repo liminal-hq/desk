@@ -5,7 +5,7 @@ part: V
 title: The core I: surfaces, damage and presenting
 summary: The 8-bit back buffer, rectangles and sprites, dirty rectangles and how damage merges, the compositor, frame digests, and the linear and planar presenters with the capture read-back.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [shell/gfx/, shell/present/, tests/shell/, tests/native/expected-shell-8.txt, tests/native/expected-shell-4.txt, kernel/src/shell.rs]
 log: [firstwindow]
 anatomy: [desk:gfx, desk:present, dos:gfx, dos:present]
@@ -152,7 +152,7 @@ The decisions are `docs/FIRST-WINDOW.md`, "Decisions", written as part of the de
 | [`shell/present/src/readback.rs`](repo:shell/present/src/readback.rs) | [`read_back_linear`](sym:shell/present/src/readback.rs::read_back_linear) and [`read_back_planar`](sym:shell/present/src/readback.rs::read_back_planar) |
 | [`tests/shell/first-window.sums`](repo:tests/shell/first-window.sums) | The twelve digest lines every run is held to |
 | [`tests/native/expected-shell-8.txt`](repo:tests/native/expected-shell-8.txt) | The native transcript at depth 8, with the `shell: damage` lines |
-| [`kernel/src/shell.rs`](repo:kernel/src/shell.rs) | The native wiring: builds the presenter for the depth and runs the scenario |
+| [`kernel/src/shell.rs`](repo:kernel/src/shell.rs) | The native wiring: builds the presenter for the depth and runs the scenario; it also holds the live loop and the module window ([M15](chapter:m-shell), [M16](chapter:m-platforms)), which this chapter does not describe |
 
 For depth: `docs/FIRST-WINDOW.md` ([the pixel model](doc:docs/FIRST-WINDOW.md#the-pixel-model), [desk-gfx](doc:docs/FIRST-WINDOW.md#desk-gfx-surfaces-damage-and-presenting), [desk-present](doc:docs/FIRST-WINDOW.md#desk-present-the-linear-and-planar-presenters) and [goldens and frame digests](doc:docs/FIRST-WINDOW.md#goldens-and-frame-digests)); the design notes on speed are in `docs/D-NATIVE-VGA.md`.
 
@@ -204,7 +204,7 @@ The table of digests that all three runs are held to:
 
 ## State of this layer
 
-Verified here means that the record cites a test that runs in `cargo test` in `shell/` or a native transcript that the native test checks. It means on the host and in QEMU, never on a real machine. The 161 host tests were run for this chapter on 2026-10-23 and passed; the native `shell` mode was also run for this chapter at both depths in QEMU 11.1.2 (std card at depth 8, Cirrus at depth 4), and both transcripts and all twelve screendump digests matched.
+Verified here means that the record cites a test that runs in `cargo test` in `shell/` or a native transcript that the native test checks. It means on the host and in QEMU, never on a real machine. The host tests were run for this chapter on 2026-10-23 (161) and again on 2026-11-26 (210) and passed; the native `shell` mode was run for this chapter at both depths in QEMU 11.1.2 on the first date (std card at depth 8, Cirrus at depth 4), where both transcripts and all twelve screendump digests matched, and at depth 8 again on the second (QEMU 11.1.3), and `tools/native-test.sh` was run in full that day and passed, which holds the depth-4 run to its transcript and digests too.
 
 ```status
 id: pixels.rect
@@ -271,50 +271,53 @@ evidence: doc:docs/FIRST-WINDOW.md#not-verified
 note: Nothing here ran on real hardware; real DAC rounding and bus timing are untested.
 
 id: pixels.wordcopy
-label: Word-wide copies in the linear presenter
-state: planned
-evidence: doc:docs/FIRST-WINDOW.md#where-it-sits
-note: Each span byte is one volatile store today; the design leaves faster copies to a later HAL change.
+label: Word-wide copies in the linear and planar presenters (MmioRegion::copy_from)
+state: built-verified
+evidence: pr:112, test:hal/hal/src/mmio.rs::copy_from_matches_a_byte_loop_and_stays_inside, test:hal/hal/src/mmio.rs::copy_from_refuses_out_of_bounds_and_writes_nothing, test:tests/native/expected-shell-8.txt::shell: damage moved: 0 pixels repainted
+note: Built in R139 T3 (#112): the presenters copy each span with the HAL's frame-buffer copy, which writes every byte once, in order, in 32-bit words where it can (a `rep movsd` on x86). The host tests run its portable path only; the string-instruction path is run by the native goldens in QEMU (rerun on 2026-11-26) and, by the committed transcripts, on DOS (not rerun). No speed claim is made: nothing here was timed on a 486.
 ```
 
 The back buffer, the damage lists and the compositor are {{state.pixels.compositor}} on the host, and the two presenters are {{state.pixels.linear}} and {{state.pixels.planar}} in QEMU. What the table cannot say is how a real card behaves when its map mask is written four times per row: the cost figures in the design (a full mode 12h frame is 4 × 38,400 byte writes and 4 × 480 map-mask writes) are counts of operations, not measured times.
 
 ## Try it yourself
 
-The first block runs the whole host test suite of the shared core and counts the passing tests. The second runs the native kernel's `shell` test mode at depth 8 in QEMU and checks its transcript, its damage lines and its screendumps against the committed sums. They need a Rust toolchain, NASM and `qemu-system-i386` on the host (or Docker for the last two; `tools/native-run.sh` falls back to it). Output is from a run on 2026-10-23 at `44f0265` with QEMU 11.1.2 and NASM 3.02.
+The first block runs the whole host test suite of the shared core and counts the passing tests. The second runs the native kernel's `shell` test mode at depth 8 in QEMU and checks its transcript, its damage lines and its screendumps against the committed sums. They need a Rust toolchain, NASM and `qemu-system-i386` on the host (or Docker for the last two; `tools/native-run.sh` falls back to it). Output is from a run on 2026-11-26 at `31221b4` with QEMU 11.1.3 and NASM 3.02.
 
 ```try
 needs: host: cargo
-ran: 2026-10-23 on the host, cargo 1.98.0
+ran: 2026-11-26 on the host at 31221b4
 $ cd shell && cargo test 2>&1 | grep -E "^test result: ok. [1-9]"
 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.72s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
-test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.60s
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cd shell && cargo test 2>&1 | grep -c "^test .* ok$"
-161
+210
 $ cd shell && cargo test -p desk-gfx 2>&1 | grep -E "^test .*(touching|the_list_fills|cursor_move)"
 test compose::tests::a_cursor_move_presents_only_the_two_sprite_rectangles_and_paints_nothing ... ok
 test damage::tests::touching_edges_merge_but_corners_do_not ... ok
 test damage::tests::the_list_fills_to_sixteen_before_merging_the_cheapest_pair ... ok
 ```
 
-The eleven lines are the test binaries that have tests: `desk-font` (15), `desk-gfx` (42), `desk-present` (5 linear and 7 planar), `desk-shell` (11, 12, 16 and 1), `desk-ui` (24) and `desk-wm` (17 and 11), which add up to the 161 that the second command counts. The scenario test (the 1) takes about a second because it runs every frame through three presenters. Now the same scenario on the native kernel:
+The fourteen lines are the test binaries that have tests: `desk-font` (15), `desk-gfx` (47), `desk-present` (5 linear and 7 planar), `desk-shell` (13, 12, 12, 6, 17 and 2), `desk-ui` (25) and `desk-wm` (17, 11 and 21), which add up to the 210 that the second command counts (it was eleven lines and 161 on 2026-10-23). The slowest binary, the scenario test of two, takes a few seconds because it runs every frame through three presenters. Now the same scenario on the native kernel:
 
 ```try
 needs: host: bash, nasm, cargo, python3, qemu-system-i386 (or Docker for nasm and qemu)
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-26 on the host, QEMU 11.1.3, NASM 3.02
 $ tools/native-build.sh
-dist/native/kernel.bin: 173968 bytes, load address 0x100000
+dist/native/kernel.bin: 222032 bytes, load address 0x100000
 $ tools/native-image.sh --test-mode shell --video vbe --out dist/native-shell-8.img
-dist/native-shell-8.img: 1474560 bytes, kernel 173968 bytes in 340 sectors, test mode shell, video vbe
+dist/native-shell-8.img: 1474560 bytes, kernel 222032 bytes in 434 sectors, test mode shell, video vbe
 $ python3 -I tools/frames.py inject tests/shell/first-window.scn > dist/shell.inject
 $ tools/native-run.sh --timeout 60 --vga std --inject dist/shell.inject --shots dist/shell-native-8 dist/native-shell-8.img > dist/shell-8.txt
 $ tr -d '\r' < dist/shell-8.txt > dist/shell-8.plain
@@ -378,3 +381,4 @@ at: figure fw-digests
 - 2026-10-23: first written, against `44f0265`. The host tests (161) and the native `shell` mode at both depths were run for this chapter. Every damage number in the worked example is derived from the merge rules and checked against `tests/native/expected-shell-8.txt` and `expected-shell-4.txt` by the chapter's test. Disagreements between the documents and the code were small: `docs/FIRST-WINDOW.md` describes the sprite's transparent cells as `.` where the code treats any byte other than `X` and `o` as transparent, and a comment in `shell/wm/src/wm.rs` says a focus change adds "four rings" while the code paints three (`HALO` is 3); neither changes a pixel.
 - 2026-11-23: two sentences corrected after R139 T3 (#112): the presenters now call `MmioRegion::copy_from`, not `write_bytes`. Only those sentences were checked, against `shell/present/src/linear.rs` and `planar.rs`; the chapter was not re-read in full and `reviewed` is unchanged.
 - 2026-11-23: the compositor's cursor handling corrected after the live-input work (`shown`, `is_dirty` and the coalescing of a burst of moves: `shell/gfx/src/compose.rs`, five new tests), in the frame's first step, in the cursor-move paragraph and in the worked example's first sentence. The numbers of the worked example are unchanged (456 and 608 are still what the native transcripts print). Only these paragraphs were checked against the code; the rest of the chapter was not re-read, so `reviewed` stays `44f0265`. The host test counts quoted in the chapter (161) are those of 2026-10-23; the workspace now has 210.
+- 2026-11-26: re-read in full against `shell/gfx/`, `shell/present/`, `tests/shell/`, the native shell transcripts and `kernel/src/shell.rs` at `31221b4`, and both try blocks rerun (host: 210 tests in 14 binaries; native `shell` at depth 8 in QEMU 11.1.3: the transcript matches at 64 lines, the six damage lines are 307200, 456, 149776, 74736, 123956 and 123956 as before, and the six screendumps match `first-window.sums`; the kernel is 222,032 bytes). The prose of 2026-11-23 on `copy_from`, `shown` and `is_dirty` was re-checked against `mmio.rs` and `compose.rs` and stands. Corrected: the record `pixels.wordcopy` said word-wide copies were planned and that each byte was one volatile store; `copy_from` has been built since R139 T3 (#112), so it is now `built-verified` with its limits (the host tests run the portable path, the string-instruction path runs in the native goldens, the DOS side rests on committed transcripts, and no speed claim is made). The code table notes that `kernel/src/shell.rs` now also holds the live loop and the module window, which M15 and M16 describe. The depth-4 run and the DOS run were not repeated by hand.

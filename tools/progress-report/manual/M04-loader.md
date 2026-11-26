@@ -5,7 +5,7 @@ part: II
 title: The boot sector and the loader
 summary: The floppy image, the 512-byte boot sector, stage 2, the A20 test, the memory map, the boot information block, the switch to protected mode and the copy to 1 MiB.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [boot/, tools/native-image.sh, tools/native-build.sh, kernel/link.ld]
 log: [boot, pixels, emulators]
 anatomy: [desk:boot]
@@ -348,3 +348,4 @@ at: explainer m-gdt
 - 2026-10-23: first written, against `44f0265`. Every status row was checked against the repository and the commands above were run on the host. Two disagreements between the documents and the code were found: `docs/D-NATIVE-VGA.md` lists the map source as 1 (E820) or 2 (E801) where the code also uses 3 (AH=88), and `docs/NATIVE-BOOT.md` says `tests/native/wrong-expected.txt` "differs in one number", while the file is a stale copy that is rejected at its first missing line (see M5).
 - 2026-10-23: linked the processor terms that M2 now defines (real and protected mode, segment, A20, descriptor, GDT, CR0, selector, ring) at their first natural use. No claim changed.
 - 2026-11-23: two sentences corrected against `d5f3328` and the chapter was **not** re-read in full, so `reviewed` stays `44f0265`: `tools/native-build.sh` now packs the test modules before building the kernel, and the kernel is 222,032 bytes in 434 sectors, not 340. The boot sector, stage 2 and `kernel/link.ld` have not changed since `44f0265` (a diff over `boot/` and `kernel/link.ld` is empty). This chapter is the boot sector and loader, not the module loader of `docs/LOADER.md`, which has no Manual chapter of its own yet (M22 touches it).
+- 2026-11-26: re-read in full against `boot/`, `kernel/link.ld`, `tools/native-build.sh` and `tools/native-image.sh` at `31221b4`. The boot sector, stage 2 and the linker script are byte-for-byte as at `44f0265` (a diff over `boot/` and `kernel/link.ld` is empty), and the two scripts changed only by the module packing step and the extra test modes, both already said above. No claim needed changing. The sector counts and addresses are of the 340-sector build the chapter was checked with (a kernel built today is 222,032 bytes, see M5), and the chapter says so. The try block was not rerun in this pass.

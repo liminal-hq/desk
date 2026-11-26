@@ -5,7 +5,7 @@ part: VII
 title: The toolchain and the custom targets
 summary: The pinned Rust, the three target specification files compared field by field, build-std, rust-lld and the linker scripts, the two packers that replace objcopy and a linker, NASM, the Docker images and the setup scripts, and the std question.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [rust-toolchain.toml, kernel/.cargo/config.toml, kernel/i486-desk-none.json, kernel/link.ld, dos/dos-elf.json, dos/link.ld, dos/.cargo/config.toml, shell/dos/.cargo/config.toml, core/dos.json, core/.cargo/config.toml, tools/elf2bin.py, tools/native-build.sh, tools/setup.sh, tools/fetch-tools.sh, tools/docker/]
 log: [scaffold, wheels, std]
 anatomy: [dos:target, dos:lld]
@@ -250,9 +250,9 @@ The first command builds the kernel the way the native track does (NASM and carg
 
 ```try
 needs: host: bash, nasm, cargo (Rust 1.98.0 with rust-src), python3
-ran: 2026-10-23 on the host, NASM 3.02, rustc 1.98.0, and in ghcr.io/liminal-hq/ci-dos by its digest in .github/workflows/ci.yml (Docker, no host packages installed)
+ran: 2026-10-23 on the host, NASM 3.02, rustc 1.98.0, and in ghcr.io/liminal-hq/ci-dos by its digest in .github/workflows/ci.yml (Docker, no host packages installed); the four commands below were rerun on the host alone on 2026-11-26 at 31221b4 and gave these results except the kernel's size, which was 173,968 bytes then
 $ tools/native-build.sh 2>&1 | tail -1
-dist/native/kernel.bin: 173968 bytes, load address 0x100000
+dist/native/kernel.bin: 222032 bytes, load address 0x100000
 $ python3 -I -c "import json;f=['kernel/i486-desk-none.json','dos/dos-elf.json','core/dos.json'];d=[json.load(open(x)) for x in f];k=sorted(set().union(*d));s=[x for x in k if len({json.dumps(y.get(x)) for y in d})==1];print(len(k),'fields;',len(s),'the same in all three:',', '.join(s))"
 26 fields; 8 the same in all three: arch, cpu, disable-redzone, dynamic-linking, max-atomic-width, panic-strategy, relocation-model, target-pointer-width
 $ cd shell/dos && cargo build --release --locked 2>&1 | head -1
@@ -305,3 +305,4 @@ thumb: steps
 - 2026-11-20: reviewed against R148 (in review). The DOS target's cargo configuration is `dos/.cargo/config.toml` (the spike's stage 1 keeps its own copy), and the chapter's pointers, watches and evidence follow; the target and linker script are `dos/dos-elf.json` and `dos/link.ld`. The target-file comparison and its numbers are unchanged. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The entry above says the move is merged: the DOS target's configuration, `dos/dos-elf.json` and `dos/link.ld` are on `main`. The CI passed on #94 with every group, and the opt-in js-dos and Bochs steps were not run. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
 - 2026-11-23: one sentence added on the strong `memcpy` and `memset` of `rt` (R139 T2, #111). The chapter was not re-read in full and `reviewed` is unchanged.
+- 2026-11-26: re-read in full against `rust-toolchain.toml`, `kernel/.cargo/config.toml` and `kernel/i486-desk-none.json`, `dos/dos-elf.json`, `dos/link.ld` and `dos/.cargo/config.toml`, `shell/dos/.cargo/config.toml`, `core/`, `tools/elf2bin.py`, `native-build.sh`, `setup.sh` and `fetch-tools.sh` and `tools/docker/` at `31221b4`. The target specification of the DOS runtime is byte-identical to the spike's of `44f0265` and its linker script differs by one path in a comment; the toolchain pin, `core/` and the Docker files are unchanged. The four try commands were rerun on the host (the 26 fields and 8 shared ones are the same, the missing-variable error and the build with it are as quoted, the kernel is now 222,032 bytes); the DOS CI image part of the block was not rerun. The sentence of 2026-11-23 on the strong `memcpy` and `memset` was checked against `dos/check.sh`, which does test that the `rep movsd` and `rep stosd` versions linked. The CI image digest the chapter names was read from `.github/workflows/ci.yml` and was not pulled.
