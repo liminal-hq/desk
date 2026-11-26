@@ -5,7 +5,7 @@ part: VII
 title: Fonts and formats
 summary: The four bitmap faces and their grid, how one build writes .DFN, TrueType and OpenType files from the same pixels, the Windows 3.1-era constraints, the outline faces, the emoji set with its tiers and the .DEM file, and the file formats that are only designed.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [fonts/build.ts, fonts/src/, fonts/generated/, docs/FONTS.md, docs/EMOJI.md, docs/FORMATS.md]
 log: [faces, pictures]
 anatomy: [dos:assets]
@@ -367,3 +367,4 @@ at: explainer m-dfn
 ## Revisions
 
 - 2026-10-23: first written, against `44f0265`. Every number from the `.dfn` and `.dem` files was read from the files, and the chapter's tests check them. `bun build.ts --check` and `bun test` (436 tests) were run on the host; `fonts/validate.sh` was not. The `m-dfn` explainer (a glyph read out of `ui.dfn` field by field) is drawn here by reuse from M14, beside the log's `font-matrix` and `emoji-coverage` figures. Found while writing: the header comment of `fonts/build.ts` and the doc comment of `buildModern` say the outline faces are "Regular and Bold", where `docs/FONTS.md` and the 24 generated files have four styles each.
+- 2026-11-26: re-read against `fonts/`, `docs/FONTS.md`, `docs/EMOJI.md` and `docs/FORMATS.md` at `31221b4`. None of the chapter's watched files has changed since `44f0265` (a diff over them is empty), so no statement needed correcting. The try block was rerun on the host (Bun 1.3.10 here as before): `bun build.ts --check` reports 58 generated files up to date, and the three header checks print the same bytes (DFN1, height 14, baseline 11, 289 glyphs, 5,639 bytes; the DEM headers and the 198-byte record). `bun test` could not be run: this checkout has no `fonts/node_modules` (the packages `opentype.js` and `clipper-lib` are missing and a `bun install` needs the network), so the font suite was not run and the chapter's claims about it rest on 2026-10-23. The 59-file count (58 plus the licence) was recounted with `find`. The sidebar history was not re-fetched.
