@@ -5,7 +5,7 @@ part: IV
 title: Drivers III: VGA and VBE
 summary: The desk-vga driver: mode 13h and 12h by register programming, planes, the DAC and fades, text mode and the way back, the VBE layer over the Bios trait, the linear frame buffer on each track, the software cursor and what QEMU hides.
 date: 2026-10-23
-reviewed: 44f0265
+reviewed: 31221b4
 watches: [hal/drivers/vga/, hal/hal/src/video.rs, kernel/src/video.rs, kernel/src/gfx.rs, kernel/src/vga.rs, dos/rt/src/vga.rs, tests/native/]
 log: [pixels, browser, bios]
 anatomy: [desk:drivers, dos:drivers, dos:vga, dos:lfb]
@@ -50,7 +50,7 @@ Mode 12h has one deliberate difference from a BIOS. A BIOS leaves the EGA-compat
 
 ### Where a pixel lives
 
-In mode 13h with chain-4 a pixel is one byte, at `0xA0000 + y × 320 + x`, a surface of 64,000 bytes. `Linear8` is that view over an `MmioRegion` and also over a VBE linear frame buffer: it takes a `width`, a `height` and a [pitch](term:pitch), checks that a row of `pitch` bytes holds the width and that `pitch × height` fits the region, and then the address of a pixel is `y × pitch + x`. The pitch is the number of bytes from the start of one row to the start of the next, and it is not always the width: the information the BIOS reports for VBE mode `0x101` is 640 for 640 pixels, but 1,280 for a 640 by 480 mode at 16 bits per pixel (`spikes/s5-jsdos/evidence/vbe-jsdos.txt` is the listing the probe printed), and a planar mode has a pitch in bytes of one plane, 100 for 800 pixels. The driver reads the pitch; it never computes it.
+In mode 13h with chain-4 a pixel is one byte, at `0xA0000 + y × 320 + x`, a surface of 64,000 bytes. `Linear8` is that view over an `MmioRegion` and also over a VBE linear frame buffer: it takes a `width`, a `height` and a [pitch](term:pitch), checks that a row of `pitch` bytes holds the width and that `pitch × height` fits the region, and then the address of a pixel is `y × pitch + x`. A `blit` of a block of pixels copies each visible row with one `MmioRegion::copy_from`, the frame-buffer copy added for the runtime (`write_bytes` stays the byte-exact write for register windows); the pixels it writes are the same, and the checksums below still match on a kernel built with it. The pitch is the number of bytes from the start of one row to the start of the next, and it is not always the width: the information the BIOS reports for VBE mode `0x101` is 640 for 640 pixels, but 1,280 for a 640 by 480 mode at 16 bits per pixel (`spikes/s5-jsdos/evidence/vbe-jsdos.txt` is the listing the probe printed), and a planar mode has a pitch in bytes of one plane, 100 for 800 pixels. The driver reads the pitch; it never computes it.
 
 Mode 12h is different, and `Planar16` (`planar.rs`) is the longest piece of the crate. The 640 by 480 picture is four [bit planes](term:bit-plane), each 80 bytes per row, all at `0xA0000`, and the same address in each plane holds one bit of eight pixels' colours: bit 0 of the colour in plane 0, up to bit 3 in plane 3. One CPU write goes through the graphics controller's logic into every plane the sequencer's map mask enables. `Planar16` sets the controller to write mode 0 with enable set/reset on all four planes: the colour goes into the set/reset register (GC register 0), the **bit mask** (GC register 8) selects which of the eight pixels of the byte change, and the *latches*, loaded by any read of that address, keep the others. So the value the CPU writes does not matter; the driver writes zero. A whole byte (mask `0xFF`) needs no read, and a horizontal line is two masked ends and a run of whole bytes. Reading the picture back goes the other way: the read map select (GC register 4) names one plane per read, so `get_pixel` makes four reads. `Planar16` leaves the controller in that state while it lives and puts set/reset off and the mask open when dropped. The cost is port traffic: a 640 by 480 mode 12h fill measured about 190 per second under QEMU's emulation, against about 8,300 for the 8-bit linear fill (`docs/D-NATIVE-VGA.md`, "Speed", emulated speed and not 486 numbers).
 
@@ -152,7 +152,7 @@ Each of these is recorded in a document; the manual cites the section and does n
 | [`kernel/src/gfx.rs`](repo:kernel/src/gfx.rs) | The tour: [`tour`](sym:kernel/src/gfx.rs::tour), [`leave_vbe`](sym:kernel/src/gfx.rs::leave_vbe), [`restore_text`](sym:kernel/src/gfx.rs::restore_text), the paced fade and the kernel's own `Cursor` |
 | [`kernel/src/vga.rs`](repo:kernel/src/vga.rs) | The kernel's text console at `0xB8000`; it does not use `desk-vga` |
 | [`dos/rt/src/hal.rs`](repo:dos/rt/src/hal.rs) | [`DosDisplay`](sym:dos/rt/src/hal.rs::DosDisplay): the `Display` for DOS, with the mode set, the DPMI 0800h mapping and the clean-up |
-| [`dos/rt/src/vga.rs`](repo:dos/rt/src/vga.rs) | Mode 13h by INT 10h and the frame buffer at `0xA0000` through the near-pointer arithmetic |
+| [`dos/rt/src/vga.rs`](repo:dos/rt/src/vga.rs) | Mode 13h by INT 10h and the frame buffer at `0xA0000` through the near-pointer arithmetic; `enter_mode13` registers the return to text with the clean-up list first and leaves the mode alone if the list is full |
 | [`hal/drivers/vga/tests/registers.rs`](repo:hal/drivers/vga/tests/registers.rs) | The 128-write test and the other register tests, against the model in [`hal/platform/mock/src/vga.rs`](repo:hal/platform/mock/src/vga.rs) |
 | [`tests/native/expected-gfx-vbe.txt`](repo:tests/native/expected-gfx-vbe.txt) | The expected transcript of the VBE tour; [`expected-gfx-vbefail.txt`](repo:tests/native/expected-gfx-vbefail.txt) and [`expected-gfx-fallback.txt`](repo:tests/native/expected-gfx-fallback.txt) are the failed-VBE and register-only ones |
 
@@ -292,7 +292,7 @@ These commands run the driver's host tests and then the native kernel's graphics
 
 ```try
 needs: host: cargo; native run: bash, nasm, qemu-system-i386 (or Docker), python3
-ran: 2026-10-23 on the host, QEMU 11.1.2, NASM 3.02
+ran: 2026-11-26 on the host at 31221b4, QEMU 11.1.3, NASM 3.02
 $ cd hal && cargo test -p desk-vga --test registers 2>&1 | grep -E "^test "
 test mode_12h_writes_the_documented_sequence ... ok
 test mode_13h_writes_the_documented_sequence ... ok
@@ -308,7 +308,7 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ tools/native-image.sh --test-mode gfx --video vbe --out dist/gfx.img
-dist/gfx.img: 1474560 bytes, kernel 173968 bytes in 340 sectors, test mode gfx, video vbe
+dist/gfx.img: 1474560 bytes, kernel 222032 bytes in 434 sectors, test mode gfx, video vbe
 $ tools/native-run.sh --timeout 60 --vga std --inject tests/native/gfx-vbe.inject --shots dist/shots dist/gfx.img > dist/gfx-run.txt
 native-run: guest reported success
 $ python3 -I tools/native-check.py tests/native/expected-gfx-vbe.txt dist/gfx-run.txt
@@ -392,3 +392,4 @@ at: explainer vbeattrs
 - 2026-11-20: reviewed against R148 (in review). The VGA test scene moved from spike A into `kernel/src/scene.rs`, and spike A includes it from there; the section on the checksum identity now says so. The pull requests are open and not merged, so the chapter describes the layout of that branch. `reviewed` is unchanged: this was a review of what the move changed, not of everything that has landed on `main` since `44f0265`.
 - 2026-11-20: brought up to date after the merge of the layered layout (R148, #90 to #99, merge commit `fb6eba6`). The section on the checksum identity says the scene's move merged in #93. `reviewed` is unchanged: the chapter was not re-read against everything that has landed since `44f0265`.
 - 2026-11-23, at `d5f3328`: checked, not re-read in full, `reviewed` unchanged. The changes to this chapter's watched files since `44f0265` are formatting in `kernel/src/gfx.rs` and `video.rs`, `Linear8` now copying a row with `MmioRegion::copy_from` (the chapter does not say which call it uses) and `dos/rt/src/vga.rs`, which is the move to `dos/` with `enter_mode13` now refusing when the clean-up list is full. One stale figure: the try block's `kernel 173968 bytes in 340 sectors` is from the 2026-10-23 build (222,032 bytes in 434 sectors on `d5f3328`; the rest of its output is unchanged in kind, and `tools/native-test.sh` passed in full on the host on 2026-11-23, including the `gfx-vbe` section).
+- 2026-11-26: re-read in full against `hal/drivers/vga/`, `hal/hal/src/video.rs`, `kernel/src/video.rs`, `gfx.rs` and `vga.rs`, `dos/rt/src/vga.rs` and `tests/native/` at `31221b4`, and the try block rerun (QEMU 11.1.3, NASM 3.02: the host tests of `desk-vga` pass, the VBE tour's transcript matches `expected-gfx-vbe.txt` at 88 lines, all seven screenshots match their sums, and the checksums `0x5bc65936` and `0x5c0f1f16` are unchanged). The kernel in the try block is now 222,032 bytes in 434 sectors. Added: `Linear8::blit` copies rows with `copy_from`, and `enter_mode13` refuses when the clean-up list is full. The rest matched the code, which changed in the kernel's graphics files by formatting only. The statements about real cards, monitors and the retrace bit are still the documents' guesses, not results, and nothing here ran on a real VGA chip.
